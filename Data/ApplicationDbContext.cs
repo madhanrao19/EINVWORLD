@@ -80,7 +80,9 @@ namespace eInvWorld.Data
         public DbSet<LHDNTokenLog> LHDNTokenLogs { get; set; }
         public DbSet<UserActivityLog> UserActivityLogs { get; set; }
 
-        public DbSet<SystemLog> SystemLogs { get; set; }
+        // NOTE: SystemLogs is intentionally NOT an EF DbSet/entity. The table is owned and auto-created by
+        // the Serilog MSSqlServer sink (autoCreateSqlTable=true). The admin Logs page reads it via
+        // Database.SqlQueryRaw<SystemLog>. See Models/SystemLog.cs.
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
