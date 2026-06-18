@@ -1,18 +1,14 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace eInvWorld.Models
 {
-    // Maps to the "SystemLogs" table that the Serilog MSSqlServer sink writes to.
-    // The table schema is owned and auto-created/updated by EF migrations (AddSystemLogsTable /
-    // AddUserNameToLogs), which run on startup when DatabaseSettings:AutoMigrateOnStartup is true.
-    // The Serilog sink therefore keeps autoCreateSqlTable=false so it never races EF's CreateTable on a
-    // fresh database. Keep these columns in sync with the sink's columnOptionsSection in appsettings.json.
-    [Table("SystemLogs")]
+    // Plain read DTO for the "SystemLogs" table. The table is OWNED by the Serilog MSSqlServer sink,
+    // which auto-creates it (autoCreateSqlTable=true in appsettings) — it is NOT an EF entity and is not
+    // managed by EF migrations. The admin "System Logs" page reads it via a raw SQL query
+    // (ApplicationDbContext.Database.SqlQueryRaw<SystemLog>). Keep these properties matching the sink's
+    // columnOptionsSection columns in appsettings.json (standard columns + IPAddress + UserName).
     public class SystemLog
     {
-        [Key]
         public int Id { get; set; }
 
         public string Message { get; set; } = null!;
@@ -27,7 +23,6 @@ namespace eInvWorld.Models
 
         public string? IPAddress { get; set; }
 
-        // ✅ ADD THIS NEW COLUMN
         public string? UserName { get; set; }
     }
 }

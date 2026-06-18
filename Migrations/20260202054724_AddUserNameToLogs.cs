@@ -10,29 +10,16 @@ namespace eInvWorld.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "IPAddress",
-                table: "SystemLogs",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "UserName",
-                table: "SystemLogs",
-                type: "nvarchar(max)",
-                nullable: true);
+            // Neutralised: the SystemLogs table (incl. IPAddress / UserName columns) is now created and
+            // owned by the Serilog MSSqlServer sink (autoCreateSqlTable=true), not EF migrations.
+            // Already applied on existing databases (never re-runs); a no-op on a fresh database so the
+            // sink owns the schema. See Migrations/20260202025711_AddSystemLogsTable.cs.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "IPAddress",
-                table: "SystemLogs");
-
-            migrationBuilder.DropColumn(
-                name: "UserName",
-                table: "SystemLogs");
+            // No-op: EF no longer owns the SystemLogs table.
         }
     }
 }
