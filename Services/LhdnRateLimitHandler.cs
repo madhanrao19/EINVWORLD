@@ -16,25 +16,32 @@ namespace EINVWORLD.Services
     /// Official limits (verify against the current MyInvois SDK portal — they change and differ
     /// between preprod/prod): token 12 · validate 60 · submit 100 · get-submission 300 ·
     /// search/recent 12 · get-document 60 · cancel/reject 12.
+    ///
+    /// IMPORTANT — requests are PACED EVENLY, not bursted. A token bucket sized at the full per-minute
+    /// limit (e.g. 50 tokens) lets 50 requests fire in one instant; LHDN enforces a tighter window and
+    /// replies 429 ("try again in 59 seconds"), which then stalls the whole sync. Per the MyInvois SDK
+    /// guidance we instead release ONE request every (60s / rate) with only a tiny burst — staying under
+    /// the limit at all times so 429s do not occur. Excess requests queue (and wait) rather than fail.
     /// </summary>
     public class LhdnRateLimitHandler : DelegatingHandler
     {
-        private static readonly RateLimiter _token    = Bucket(10);   // official 12  (/connect/token)
-        private static readonly RateLimiter _validate = Bucket(50);   // official 60  (/taxpayer/validate)
-        private static readonly RateLimiter _submit   = Bucket(85);   // official 100 (POST /documentsubmissions)
-        private static readonly RateLimiter _poll     = Bucket(240);  // official 300 (GET  /documentsubmissions/{id})
-        private static readonly RateLimiter _search   = Bucket(8);    // official 12  (/documents/search)
-        private static readonly RateLimiter _getDoc   = Bucket(50);   // official ~60 (/documents/{uuid}/raw and other doc reads)
-        private static readonly RateLimiter _state    = Bucket(10);   // official 12  (PUT /documents/state/{id}/state)
-        private static readonly RateLimiter _general  = Bucket(30);   // fallback for anything else
+        // PacedBucket(perMinute, burst): sustained ≈ perMinute, max instantaneous burst = burst.
+        private static readonly RateLimiter _token    = PacedBucket(10,  burst: 1);  // official 12  (/connect/token)
+        private static readonly RateLimiter _validate = PacedBucket(50,  burst: 2);  // official 60  (/taxpayer/validate)
+        private static readonly RateLimiter _submit   = PacedBucket(60,  burst: 3);  // official 100 (POST /documentsubmissions)
+        private static readonly RateLimiter _poll     = PacedBucket(200, burst: 5);  // official 300 (GET  /documentsubmissions/{id})
+        private static readonly RateLimiter _search   = PacedBucket(10,  burst: 1);  // official 12  (/documents/search)
+        private static readonly RateLimiter _getDoc   = PacedBucket(50,  burst: 2);  // official ~60 (/documents/{uuid}/raw) — main 429 source
+        private static readonly RateLimiter _state    = PacedBucket(10,  burst: 1);  // official 12  (PUT /documents/state/{id}/state)
+        private static readonly RateLimiter _general  = PacedBucket(20,  burst: 2);  // fallback for anything else
 
-        private static RateLimiter Bucket(int perMinute) => new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+        private static RateLimiter PacedBucket(int perMinute, int burst) => new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
-            TokenLimit = perMinute,
-            TokensPerPeriod = perMinute,
-            ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+            TokenLimit = burst,                                                   // small burst, not the full minute's worth
+            TokensPerPeriod = 1,                                                  // release one at a time…
+            ReplenishmentPeriod = TimeSpan.FromMilliseconds(60000.0 / perMinute), // …every (60s / rate) → even pacing
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = 1000,
+            QueueLimit = 5000,                                                    // queue (wait) rather than drop, since callers can wait
             AutoReplenishment = true
         });
 

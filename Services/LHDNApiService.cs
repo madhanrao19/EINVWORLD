@@ -457,10 +457,11 @@ public class LHDNApiService : ILHDNApiService
         }
     }
 
-    public async Task<List<string>> GetAllUuidsForTinAsync(string tin, string accessToken)
+    public async Task<List<string>> GetAllUuidsForTinAsync(string tin, string accessToken, int lookbackDays = 3)
     {
         var uuids = new List<string>();
-        DateTime start = DateTime.Today.AddDays(-3);
+        if (lookbackDays < 1) lookbackDays = 1;
+        DateTime start = DateTime.Today.AddDays(-lookbackDays);
         DateTime end = DateTime.Today;
         int pageSize = 100;
         int chunkSize = 10;

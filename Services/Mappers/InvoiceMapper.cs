@@ -128,10 +128,14 @@ namespace eInvWorld.Services.Mappers
 
 
             //string generatedJson = JsonConvert.SerializeObject(root, Formatting.Indented);
+            // Omit nulls AND empty collections so LHDN receives only populated fields. Empty arrays
+            // (e.g. "Percent": [], buyer "IndustryClassificationCode": []) are rejected by LHDN as
+            // "TooFewItems"; omitting them is valid and matches the long-standing submission behaviour.
             string generatedJson = JsonConvert.SerializeObject(root, new JsonSerializerSettings
             {
                 Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore
+                NullValueHandling = NullValueHandling.Ignore,
+                ContractResolver = new EINVWORLD.Helpers.SkipEmptyCollectionsContractResolver()
             });
 
 

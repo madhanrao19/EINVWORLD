@@ -5179,5 +5179,82 @@
             }
         };
     </script>
+
+    @* ── AI Assistant prefill ───────────────────────────────────────────────────
+       When the user comes from the E-Invoice Assistant with ?prefill=1, populate the
+       form from the suggestion stashed in sessionStorage. Fully defensive + wrapped in
+       try/catch so it can never break normal Create Invoice behaviour. *@
+    <script>
+        (function () {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                if (params.get('prefill') !== '1') return;
+
+                var raw = sessionStorage.getItem('einv_prefill');
+                if (!raw) return;
+                sessionStorage.removeItem('einv_prefill'); // one-shot; survive refreshes cleanly
+
+                var s = JSON.parse(raw);
+
+                function fire(el, type) { try { el.dispatchEvent(new Event(type, { bubbles: true })); } catch (e) { } }
+
+                function applyPrefill() {
+                    try {
+                        // 1) Document type (select2-aware)
+                        if (s.documentType) {
+                            var dt = document.getElementById('docTypeCode');
+                            if (dt && Array.from(dt.options).some(o => o.value === String(s.documentType))) {
+                                dt.value = String(s.documentType);
+                                if (window.jQuery && jQuery.fn.select2) { jQuery(dt).trigger('change'); } else { fire(dt, 'change'); }
+                            }
+                        }
+
+                        // 2) Line items — make sure there are enough rows, then fill them
+                        var items = Array.isArray(s.lineItems) ? s.lineItems : [];
+                        var tbody = document.getElementById('lineItems');
+                        var addBtn = document.getElementById('addItemBtn');
+                        if (tbody && items.length) {
+                            var existing = tbody.querySelectorAll('.item-row, tr').length;
+                            for (var k = existing; k < items.length && addBtn; k++) { addBtn.click(); }
+
+                            var rows = tbody.querySelectorAll('tr');
+                            for (var r = 0; r < items.length && r < rows.length; r++) {
+                                var row = rows[r], it = items[r] || {};
+                                var desc = row.querySelector('.item-description');
+                                var qty = row.querySelector('.quantity-input');
+                                var price = row.querySelector('.price-input');
+                                var cls = row.querySelector('.item-classification');
+                                if (desc && it.description) { desc.value = it.description; fire(desc, 'input'); }
+                                if (qty && (it.quantity || it.quantity === 0)) { qty.value = it.quantity; fire(qty, 'input'); }
+                                if (price && (it.unitPrice || it.unitPrice === 0)) { price.value = it.unitPrice; fire(price, 'input'); }
+                                if (cls && it.classificationCode && Array.from(cls.options).some(o => o.value === String(it.classificationCode))) {
+                                    cls.value = String(it.classificationCode);
+                                    if (window.jQuery && jQuery.fn.select2) { jQuery(cls).trigger('change'); } else { fire(cls, 'change'); }
+                                }
+                            }
+                        }
+
+                        var note = [s.buyerName ? ('Buyer: ' + s.buyerName) : '', s.buyerTin ? ('TIN: ' + s.buyerTin) : '', s.notes || '']
+                            .filter(Boolean).join(' | ');
+                        if (note) {
+                            console.info('[AI prefill] Review the suggested values. ' + note);
+                            try {
+                                var banner = document.createElement('div');
+                                banner.className = 'alert alert-info';
+                                banner.textContent = '🤖 Prefilled from AI suggestion — review every field (especially supplier/customer, tax and classification) before saving. ' + note;
+                                var form = document.querySelector('form');
+                                if (form && form.parentNode) form.parentNode.insertBefore(banner, form);
+                            } catch (e) { }
+                        }
+                    } catch (e) { console.error('[AI prefill] failed', e); }
+                }
+
+                // Run after the page's own scripts (select2, row handlers) have initialised.
+                if (window.jQuery) { jQuery(function () { setTimeout(applyPrefill, 800); }); }
+                else { window.addEventListener('load', function () { setTimeout(applyPrefill, 800); }); }
+            } catch (e) { console.error('[AI prefill] init failed', e); }
+        })();
+    </script>
+
     <script type="module" src="~/js/template-invoice.js"></script>
 }

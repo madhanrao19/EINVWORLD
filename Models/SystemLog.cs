@@ -4,7 +4,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace eInvWorld.Models
 {
-    // This maps to the table created by Serilog
+    // Maps to the "SystemLogs" table that the Serilog MSSqlServer sink writes to.
+    // The table schema is owned and auto-created/updated by EF migrations (AddSystemLogsTable /
+    // AddUserNameToLogs), which run on startup when DatabaseSettings:AutoMigrateOnStartup is true.
+    // The Serilog sink therefore keeps autoCreateSqlTable=false so it never races EF's CreateTable on a
+    // fresh database. Keep these columns in sync with the sink's columnOptionsSection in appsettings.json.
     [Table("SystemLogs")]
     public class SystemLog
     {

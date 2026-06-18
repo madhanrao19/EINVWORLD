@@ -1,4 +1,4 @@
-# EINVWORLD v1.1 — IIS Deployment Guide
+# EINVWORLD — IIS Deployment Guide
 
 **Beginner / Intern Friendly Guide**
 
@@ -301,6 +301,60 @@ Create one test invoice and submit to **LHDN PREPROD**.
 
 ---
 
+## PART O — (Optional) AI E-Invoice Assistant
+
+The system includes an optional **AI E-Invoice Assistant** (menu: *E-Invoice Assistant*). It answers
+e-invoicing questions and turns a plain-English description into a suggested invoice that pre-fills the
+Create Invoice form. It is **OFF by default** and the site runs perfectly fine without it.
+
+It runs on a **local, free, open-source** model engine called **Ollama**, installed on the same server.
+**No invoice data ever leaves your server** — nothing is sent to any external/cloud AI service.
+
+> ⚠️ Skip this part unless you actually want the assistant. A reasonably modern CPU works; a GPU is faster.
+> Allow ~5–10 GB disk for the model.
+
+### Step 1 — Install Ollama
+
+1. Download the Windows installer from **https://ollama.com/download** and run it.
+2. After install, Ollama runs as a local service listening on **http://localhost:11434**.
+
+### Step 2 — Download a model
+
+Open a Command Prompt / PowerShell on the server and run **one** of:
+
+```
+ollama pull llama3.1
+```
+
+(or a smaller/faster option such as `ollama pull qwen2.5` or `ollama pull mistral`).
+
+Test it works:
+
+```
+ollama run llama3.1 "Say hello"
+```
+
+### Step 3 — Turn the assistant on
+
+In the IIS **environment variables** (same place as PART G/H), add:
+
+| Name | Value |
+|------|-------|
+| `AIAssistant__Enabled` | `true` |
+| `AIAssistant__Model` | `llama3.1` *(must match the model you pulled)* |
+| `AIAssistant__BaseUrl` | `http://localhost:11434` *(only if Ollama is not on the default port)* |
+
+Then **restart IIS** (PART J).
+
+**Expected:** Open *E-Invoice Assistant* from the menu, type a question, and get an answer. If it says
+the assistant is disabled or unreachable, re-check `AIAssistant__Enabled`, that Ollama is running, and
+that the model name matches.
+
+> The assistant only **suggests** — it never submits, cancels, or changes any document. Always review
+> every field (especially supplier/customer, tax and classification) before saving a prefilled invoice.
+
+---
+
 ## PART N — Troubleshooting
 
 **Website Not Opening** — Check: Is the IIS site started?
@@ -312,6 +366,8 @@ Create one test invoice and submit to **LHDN PREPROD**.
 **LHDN Error** — Check `LHDNApiConfig__ClientSecret` and `LHDNApiConfig__ClientSecret2` in the IIS environment variables.
 
 **Email Not Sending** — Check `EmailConfiguration__Default__SmtpPassword` in the IIS environment variables.
+
+**AI Assistant says "disabled" or "could not reach"** — Confirm `AIAssistant__Enabled=true`, that Ollama is installed and running (open `http://localhost:11434` on the server — it should say "Ollama is running"), and that `AIAssistant__Model` exactly matches a model you pulled (`ollama list`).
 
 ---
 

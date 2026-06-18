@@ -1,8 +1,37 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-19 — v1.2 (Background jobs · Job visibility · AI assistant · Docs)
+
+> Build clean (0 errors) with **58 passing unit tests** on .NET 10. Follow-up to the v1.1 modernization: moves the heavy manual LHDN operations onto a paced background queue, adds job visibility, an optional on-prem AI assistant, and refreshes the documentation.
+
+### Added
+
+- **Background "Sync Jobs" admin page** (`/Admin/SyncJobs`) — every manual sync/import/refresh now writes a `SyncJobs` row (Queued → Running → Completed/Failed) with timing, result message and who triggered it, so users can confirm a backgrounded job actually ran instead of it disappearing into the queue. The page auto-refreshes while work is active. Backed by a new `ISyncJobTracker` service and the additive `SyncJobs` table (migration `AddSyncJobTable`; idempotent script `Migrations/Apply_AddSyncJobTable.sql`).
+- **AI E-Invoice Assistant (config-gated, OFF by default)** — a local-LLM assistant at `/Assistant` that (a) answers Malaysian e-invoicing / LHDN questions and (b) turns a plain-English transaction description into a suggested invoice (document type, lines, tax) for the user to review. Runs entirely on-prem via **Ollama** (FOSS, open-weight models) so **no invoice data leaves the server**; it only suggests and never submits. The suggestion prompt is grounded with the real LHDN classification codes (loaded from `wwwroot/codes/ClassificationCodes.json`) so it emits valid codes. A **"Use in Create Invoice form"** button carries the suggestion (via `sessionStorage`) into the real Create Invoice form and pre-fills document type + line items client-side — the user still selects the actual supplier/customer and reviews every field before saving through the existing, tested path; nothing is persisted or submitted automatically. Enable via the `AIAssistant` config section after installing Ollama and pulling a model; fails gracefully when disabled/unreachable.
+- **Unit tests expanded 49 → 58** — added coverage for the per-TIN background queue (incl. the re-enqueue-after-drain regression) and the AI assistant disabled-state guard.
+
+### Changed
+
+- **Manual LHDN operations now run in the background** — the admin **"Run Invoice Sync Now"** / **"Import All Invoices from LHDN"** buttons and the supplier **"Refresh from API"** button previously ran the whole LHDN pull synchronously inside the HTTP request (blocking the page, risking timeouts, bursting LHDN calls). They now **enqueue work onto the existing `IBackgroundTaskQueue`** (one paced job per company TIN, General TINs excluded) and return immediately; the work runs in the background, evenly paced by `LhdnRateLimitHandler`.
+- **Sync lookback windows are now explicit** — new `lookbackDays` parameter on `RunFullImportFromLhdnAsync` / `GetAllUuidsForTinAsync`. The supplier "Refresh from API" is capped to **7 days** (and keeps its 5-minute per-session cooldown); the admin "Import All" now uses the previously-dead `LHDNApiConfig:SyncRetentionDays` setting (default 60 days) so that config finally has an effect; other callers default to 3 days.
+- **Removed redundant manual `Task.Delay` pacing** inside the sync loops (pacing is centralized in `LhdnRateLimitHandler`); the functional 15-second wait for LHDN to generate the `LongId`/QR code is retained. The old synchronous `RefreshInvoicesFromApi` (and its bespoke retry helpers) was removed in favour of the shared `InvoiceSyncHelper.RunFullImportFromLhdnAsync`.
+
+### Fixed
+
+- **Background queue silently dropped repeat jobs per TIN** — `BackgroundTaskQueue.EnqueueAsync` registered a TIN in the round-robin rotation only inside the `GetOrAdd` factory (runs once per TIN), but `DequeueAsync` removes a drained TIN from the rotation while leaving its queue entry. So the **2nd and every later** job for the same TIN was enqueued and released the semaphore, but `DequeueAsync` could never find it and returned `null` — the job was lost. `EnqueueAsync` now re-registers the TIN on every enqueue. This surfaced once the manual buttons were routed through the queue (a supplier's 2nd "Refresh from API" would have done nothing). Covered by a regression test.
+
+### Docs
+
+- Renamed `IIS-DEPLOYMENT-GUIDE-v1.1.md` → **`IIS-DEPLOYMENT-GUIDE.md`** (and updated its in-document title) and added **PART O — (Optional) AI E-Invoice Assistant** with Ollama install/enable steps + a troubleshooting entry.
+- Added **`SECRETS-SETUP.md`** documenting every secret and how to configure it via user-secrets (dev) and IIS environment variables (server).
+- Rewrote **`README.md`** (overview, tech stack, features, getting started, configuration table, docs index).
+- Clarified that the Serilog `SystemLogs` table is **EF-migration managed** — it is auto-created/updated on startup by EF migrations (`AddSystemLogsTable` / `AddUserNameToLogs`), so the sink keeps `autoCreateSqlTable: false` to avoid a fresh-DB race with the EF `CreateTable`. Purpose: a queryable system/audit log (Serilog sink) surfaced on the **Admin → System Logs** page, with custom `IPAddress` / `UserName` columns.
+
+---
+
 ## 📅 2026-06-14 — v1.1 (Production-Readiness · .NET 10 · Security · FOSS)
 
-> Major hardening and modernization release. Build is clean (0 errors, no CS/CA/IDE warnings) with **49 passing unit tests** on .NET 10. Secrets are externalized; the deployment procedure is in `IIS-DEPLOYMENT-GUIDE-v1.1.md`.
+> Major hardening and modernization release. Build is clean (0 errors) with **49 passing unit tests** on .NET 10. Secrets are externalized; the deployment procedure is in `IIS-DEPLOYMENT-GUIDE.md` and secret setup in `SECRETS-SETUP.md`.
 
 ### Added
 
@@ -14,7 +43,7 @@
 - **DIP/testability interfaces** (registered via forwarders so runtime resolution is unchanged): `ILHDNApiService`, `IPdfGeneratorService`, `IEInvoiceNotificationService`, `IJsonFileService`.
 - **`.editorconfig`** with code-style, analyzer, and naming conventions (IDE-level, non-breaking).
 - **Unit test project expanded to 49 tests** covering invoice numbering, submitter-TIN resolution, status-refresh cooldown rules, submission guard behaviour, and the signing no-op/fail-closed guarantees.
-- **IIS Deployment Guide (v1.1)** — beginner-friendly production setup (`IIS-DEPLOYMENT-GUIDE-v1.1.md`).
+- **IIS Deployment Guide** — beginner-friendly production setup (`IIS-DEPLOYMENT-GUIDE.md`).
 
 ### Changed
 
@@ -28,6 +57,9 @@
 
 ### Fixed
 
+- **LHDN 429 "Too Many Requests" storm + delayed QR/LongId capture** — the client rate limiter used token buckets sized at the full per-minute limit (e.g. `TokenLimit = 50`), so it released a 50-request **burst** that LHDN's stricter window rejected with `429 "try again in 59 seconds"`, stalling the whole status-sync (and therefore delaying `LongId`/QR-code capture for hours). Per MyInvois SDK guidance, `LhdnRateLimitHandler` now **paces requests evenly** — one release every `(60s / rate)` with only a tiny burst (`PacedBucket`) — staying under each endpoint's limit at all times so 429s no longer occur; excess requests queue and wait instead of failing. With the sync no longer 429-stalled, validated invoices get their `LongId` (QR code) populated promptly. *(Note: the status sync still polls `GET /documents/{uuid}/raw` per invoice; a future optimization is to use the bulk "Get Recent Documents" endpoint for status checks.)*
+- **DataProtection key ring wiped on redeploy** — keys were persisted to `{App}\DataProtectionKeys`, which the deploy procedure clears, resetting the key ring on every release. That caused `"The key {…} was not found in the key ring"`, mass logouts, antiforgery failures, and the intermittent **"TIN not found in session"** submission error. The key-ring path is now configurable via `DataProtection:KeyRingPath` (or env var `DataProtection__KeyRingPath`) — point it at a stable folder **outside** `App\` (e.g. `D:\EINVWORLD\Keys`) so keys survive deployments.
+- **LHDN submission rejected with "Validation Error / TooFewItems" after the upgrade** — the generated MyInvois document was emitting **empty arrays** (`"Percent": []`, buyer `"IndustryClassificationCode": []`, header `"MultiplierFactorNumeric": []`, `"InvoiceDocumentReference": []`, top-level `"AdditionalDocumentReference": []`) for unpopulated optional fields. `NullValueHandling.Ignore` only drops nulls, not empty `List<>` (the JSON models default to `= new()`), so LHDN read them as "TooFewItems" and rejected the document. Added `SkipEmptyCollectionsContractResolver` and applied it to the document serialization in `InvoiceMapper`, so the document now contains **only fields that have data** (empty collections are omitted) — restoring the long-standing "submit required/populated fields only" behaviour. Covered by unit tests. **Note:** existing draft `.json` files generated by the broken build must be re-saved (re-opened and saved) to regenerate clean JSON before resubmitting.
 - **EF Core 10 startup crash — `PendingModelChangesWarning`** (`Database.Migrate()` threw on boot after the .NET 10 upgrade because EF Core 9/10 promote this warning to a hard error). Root-caused and resolved without risk to the existing database:
   - Added an **`IDesignTimeDbContextFactory`** (`Data/ApplicationDbContextFactory.cs`) so the EF CLI builds the context **without** running `Program.Main` (which migrates, seeds and loads the native wkhtmltox DLL).
   - **Pinned the ASP.NET Identity key columns to `nvarchar(128)`** in `OnModelCreating` (`AspNetUserTokens.LoginProvider/Name`, `AspNetUserLogins.LoginProvider/ProviderKey`) — matching the existing DB and preventing EF's auto-widening to `nvarchar(450)`, which would have blown past SQL Server's 900-byte clustered-index key limit and **failed** on apply.

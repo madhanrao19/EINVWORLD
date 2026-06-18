@@ -5,10 +5,12 @@ using eInvWorld.Models.Audit;
 using eInvWorld.Models.Document;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
+using eInvWorld.Models.Background;
 using eInvWorld.Services;
 using eInvWorld.Services.Logging;
 using eInvWorld.Services.Mappers;
 using EINVWORLD.Helpers;
+using EINVWORLD.Services.Background;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -51,8 +53,9 @@ namespace eInvWorld.Pages.Invoices
         private readonly ITokenService _tokenService;
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly InvoiceFullSyncHelper _fullSyncHelper;
         private readonly InvoiceSyncHelper _invoiceSyncHelper;
+        private readonly IBackgroundTaskQueue _taskQueue;
+        private readonly ISyncJobTracker _jobTracker;
 
         public List<InvoiceHeader> DraftInvoices { get; set; } = new List<InvoiceHeader>();
         public List<InvoiceHeader> Invoices { get; set; } = new List<InvoiceHeader>();
@@ -91,8 +94,9 @@ namespace eInvWorld.Pages.Invoices
                                  ITokenService tokenService,
                                  IPdfGeneratorService pdfGeneratorService,
                                  IHttpClientFactory httpClientFactory,
-                                 InvoiceFullSyncHelper fullSyncHelper,
-                                 InvoiceSyncHelper invoiceSyncHelper)
+                                 InvoiceSyncHelper invoiceSyncHelper,
+                                 IBackgroundTaskQueue taskQueue,
+                                 ISyncJobTracker jobTracker)
         {
             _context = context;
             _configuration = configuration;
@@ -106,8 +110,9 @@ namespace eInvWorld.Pages.Invoices
             _tokenService = tokenService;
             _pdfGeneratorService = pdfGeneratorService;
             _httpClientFactory = httpClientFactory;
-            _fullSyncHelper = fullSyncHelper;
             _invoiceSyncHelper = invoiceSyncHelper;
+            _taskQueue = taskQueue;
+            _jobTracker = jobTracker;
         }
         public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
         {
@@ -333,11 +338,72 @@ namespace eInvWorld.Pages.Invoices
 
             try
             {
-                // 🚀 TRIGGER API REFRESH FIRST
+                // 🚀 TRIGGER API REFRESH FIRST — backgrounded so the page returns immediately.
+                // The actual LHDN import runs on the shared queue (paced by LhdnRateLimitHandler),
+                // so clicking "Refresh from API" no longer blocks the request or risks a 429 storm.
                 if (refresh)
                 {
-                    _logger.LogInformation("Forced refresh triggered for Invoice List.");
-                    await RefreshInvoicesFromApi(submissionDateFrom, submissionDateTo);
+                    _logger.LogInformation("Forced refresh triggered for Invoice List by user {UserId}.", user.Id);
+
+                    // 1. Cooldown check (5 min) — keep users from spamming LHDN.
+                    var lastRefresh = HttpContext.Session.GetString("LastLHDNSync");
+                    if (!string.IsNullOrEmpty(lastRefresh) &&
+                        DateTime.TryParse(lastRefresh, out var lastTime) &&
+                        (DateTime.UtcNow - lastTime).TotalMinutes < 5)
+                    {
+                        var remaining = Math.Max(1, (int)Math.Ceiling(5 - (DateTime.UtcNow - lastTime).TotalMinutes));
+                        TempData["Message"] = $"⏳ Refresh was run recently. Please wait about {remaining} more minute(s) before refreshing again.";
+                        return RedirectToPage("./InvoiceLists", new { invoiceDirection = this.invoiceDirection });
+                    }
+
+                    // 2. Resolve this user's own company TINs (exclude General TINs — they can't request a token).
+                    var allUserTins = await _context.UserCompanies
+                        .Where(uc => uc.UserId == user.Id)
+                        .Include(uc => uc.PartyInfo)
+                        .Select(uc => uc.PartyInfo.TIN)
+                        .Distinct()
+                        .ToListAsync();
+
+                    var refreshTins = allUserTins.Where(tin => !GeneralTINHelper.IsGeneralTIN(tin)).ToList();
+
+                    if (!refreshTins.Any())
+                    {
+                        TempData["Message"] = "❌ No valid company TIN linked to your account for an LHDN refresh.";
+                        return RedirectToPage("./InvoiceLists", new { invoiceDirection = this.invoiceDirection });
+                    }
+
+                    HttpContext.Session.SetString("LastLHDNSync", DateTime.UtcNow.ToString("o"));
+
+                    string refreshUserName = User?.Identity?.Name ?? "System";
+
+                    // 3. Enqueue one paced background import per TIN; the request returns right away.
+                    foreach (var tin in refreshTins)
+                    {
+                        var capturedTin = tin; // avoid closure capture of the loop variable
+                        var jobId = await _jobTracker.CreateAsync(capturedTin, SyncJobType.SupplierRefresh, refreshUserName);
+
+                        await _taskQueue.EnqueueAsync(capturedTin, async token =>
+                        {
+                            using var scope = _serviceScopeFactory.CreateScope();
+                            var tracker = scope.ServiceProvider.GetRequiredService<ISyncJobTracker>();
+                            await tracker.MarkRunningAsync(jobId);
+                            try
+                            {
+                                var syncHelper = scope.ServiceProvider.GetRequiredService<InvoiceSyncHelper>();
+                                // Supplier-initiated refresh is capped to a short 7-day lookback window.
+                                var result = await syncHelper.RunFullImportFromLhdnAsync(capturedTin, refreshUserName, lookbackDays: 7);
+                                _logger.LogInformation("[Refresh] TIN {Tin}: {Result}", capturedTin, result);
+                                await tracker.MarkCompletedAsync(jobId, result);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "[Refresh] TIN {Tin} job {JobId} failed", capturedTin, jobId);
+                                await tracker.MarkFailedAsync(jobId, ex.Message);
+                            }
+                        });
+                    }
+
+                    TempData["Message"] = $"✅ Refresh started for {refreshTins.Count} company(ies). It runs in the background — reload this list in a moment to see the latest invoices.";
 
                     // Redirect to clear the ?refresh=true from the URL and clean up the address bar
                     return RedirectToPage("./InvoiceLists", new
@@ -436,214 +502,9 @@ namespace eInvWorld.Pages.Invoices
             return Page();
         }
 
-        private async Task RefreshInvoicesFromApi(DateTime? submissionDateFrom, DateTime? submissionDateTo)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null) return;
-
-                // 1. Cooldown Check
-                var lastRefresh = HttpContext.Session.GetString("LastLHDNSync");
-                if (!string.IsNullOrEmpty(lastRefresh) &&
-                    DateTime.TryParse(lastRefresh, out var lastTime) &&
-                    (DateTime.UtcNow - lastTime).TotalMinutes < 5)
-                {
-                    _logger.LogInformation("Manual refresh skipped for user {UserId}: Cooldown active.", user.Id);
-                    return;
-                }
-
-                HttpContext.Session.SetString("LastLHDNSync", DateTime.UtcNow.ToString());
-
-                var userTins = await _context.UserCompanies
-                    .Where(uc => uc.UserId == user.Id)
-                    .Include(uc => uc.PartyInfo)
-                    .Select(uc => uc.PartyInfo.TIN)
-                    .Distinct()
-                    .ToListAsync();
-
-                if (userTins == null || !userTins.Any()) return;
-
-                // FORCE strictly to 7 days maximum, ignoring older UI inputs
-                DateTime requestedStart = submissionDateFrom ?? DateTime.UtcNow.AddDays(-7);
-                DateTime limit7Days = DateTime.UtcNow.AddDays(-7);
-
-                // If the user requested a date older than 7 days ago, force it to 7 days ago
-                DateTime start = requestedStart < limit7Days ? limit7Days : requestedStart;
-                DateTime end = submissionDateTo ?? DateTime.UtcNow;
-                if (start > end) start = end;
-
-                int newOrUpdatedCount = 0;
-
-                // 2. Fetch summaries from LHDN in chunks
-                foreach (var tin in userTins)
-                {
-                    try
-                    {
-                        var accessToken = await GetAccessTokenWithRetry(tin);
-                        if (string.IsNullOrEmpty(accessToken)) continue;
-
-                        DateTime currentStart = start;
-                        int chunkSizeDays = 30;
-
-                        while (currentStart <= end)
-                        {
-                            DateTime currentEnd = currentStart.AddDays(chunkSizeDays);
-                            if (currentEnd > end) currentEnd = end;
-
-                            int currentPage = 1;
-                            bool hasMorePages = true;
-
-                            while (hasMorePages)
-                            {
-                                var chunkInput = new SearchDocumentInput
-                                {
-                                    submissionDateFrom = currentStart.ToUniversalTime(),
-                                    submissionDateTo = currentEnd.ToUniversalTime(),
-                                    pageNo = currentPage,
-                                    pageSize = 100,
-                                    invoiceDirection = SearchInput.invoiceDirection,
-                                    status = SearchInput.status,
-                                    documentType = SearchInput.documentType,
-                                    searchQuery = SearchInput.searchQuery,
-                                    lhdnStatus = SearchInput.lhdnStatus,
-                                    internalStatus = SearchInput.internalStatus
-                                };
-
-                                var (apiInvoices, metadata) = await SearchDocumentsWithRetry(chunkInput, tin);
-
-                                if (apiInvoices != null && apiInvoices.Any())
-                                {
-                                    var apiUuids = apiInvoices.Select(a => a.uuid).Where(u => !string.IsNullOrEmpty(u)).Distinct().ToList();
-
-                                    // Fast check: Look at what we already have in the DB
-                                    var existingInvoicesInDb = await _context.InvoiceHeaders
-                                        .AsNoTracking()
-                                        .Where(i => i.UUID != null && apiUuids.Contains(i.UUID))
-                                        .Select(i => new { i.UUID, i.LHDNStatusId })
-                                        .ToListAsync();
-
-                                    // 3. Compare and trigger FULL SYNC for lines/taxes only when needed
-                                    foreach (var apiInvoice in apiInvoices)
-                                    {
-                                        var dbInvoice = existingInvoicesInDb.FirstOrDefault(i => i.UUID == apiInvoice.uuid);
-
-                                        // If it's a NEW invoice OR the Status has changed -> Fetch full details!
-                                        if (dbInvoice == null || dbInvoice.LHDNStatusId != apiInvoice.status)
-                                        {
-                                            bool success = false;
-                                            int retries = 0;
-
-                                            while (!success && retries < 3)
-                                            {
-                                                try
-                                                {
-                                                    var fullDocSummary = await _lhdnApiService.GetDocumentDetailsAsync(apiInvoice.uuid, accessToken);
-                                                    if (fullDocSummary != null)
-                                                    {
-                                                        await _fullSyncHelper.SyncAllFromApiAsync(fullDocSummary);
-                                                        newOrUpdatedCount++;
-                                                    }
-                                                    success = true;
-                                                }
-                                                catch (HttpRequestException ex) when (ex.Message.Contains("429"))
-                                                {
-                                                    retries++;
-                                                    _logger.LogWarning("⚠️ 429 Too Many Requests for UUID {Uuid}. Waiting 5s before retry {Attempt}/3", apiInvoice.uuid, retries);
-                                                    await Task.Delay(5000); // LHDN requires cooling off for a few seconds
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    _logger.LogError(ex, "Failed to sync full details for UUID: {Uuid}", apiInvoice.uuid);
-                                                    break; // Break on 404 or other non-rate-limit errors to prevent infinite loops
-                                                }
-                                            }
-
-                                            //  Add a standard delay between EVERY request to prevent hitting the limit in the first place
-                                            await Task.Delay(1500);
-                                        }
-                                    }
-                                }
-
-                                if (metadata != null && currentPage < metadata.totalPages)
-                                {
-                                    currentPage++;
-                                    await Task.Delay(1000); // Prevent LHDN 429 Error
-                                }
-                                else
-                                {
-                                    hasMorePages = false;
-                                }
-                            }
-
-                            currentStart = currentEnd.AddDays(1);
-                            if (currentStart <= end) await Task.Delay(1000);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"❌ Failed to process TIN: {tin}");
-                    }
-                }
-
-                _logger.LogInformation($" Manual API Refresh Complete. Processed {newOrUpdatedCount} new/updated full invoices with lines.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refreshing invoices from API");
-            }
-        }
-
-        // Resilient API methods inspired by Polly patterns
-        private async Task<string?> GetAccessTokenWithRetry(string tin, int maxRetries = 3)
-        {
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    return await _tokenService.GetAccessTokenForTIN(tin);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning($"🔄 Token retrieval attempt {attempt}/{maxRetries} failed for TIN {tin}: {ex.Message}");
-
-                    if (attempt == maxRetries)
-                    {
-                        _logger.LogError($"❌ All {maxRetries} attempts failed for token retrieval for TIN {tin}");
-                        return null;
-                    }
-
-                    // Exponential backoff: 1s, 2s, 4s
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
-                }
-            }
-            return null;
-        }
-
-        private async Task<(List<DocumentSummary>, Metadata?)> SearchDocumentsWithRetry(SearchDocumentInput input, string tin, int maxRetries = 3)
-        {
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    return await _lhdnApiService.SearchDocumentsAsync(input, tin);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning($"🔄 API search attempt {attempt}/{maxRetries} failed for TIN {tin}: {ex.Message}");
-
-                    if (attempt == maxRetries)
-                    {
-                        _logger.LogError($"❌ All {maxRetries} attempts failed for API search for TIN {tin}");
-                        return (new List<DocumentSummary>(), null);
-                    }
-
-                    // Exponential backoff: 1s, 2s, 4s
-                    await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
-                }
-            }
-            return (new List<DocumentSummary>(), null);
-        }
+        // NOTE: The old synchronous RefreshInvoicesFromApi (+ its GetAccessTokenWithRetry /
+        // SearchDocumentsWithRetry helpers) was removed. The "Refresh from API" button now enqueues
+        // a paced background import (see the refresh branch in OnGet) instead of blocking the request.
 
         private IQueryable<InvoiceHeader> ApplyFilters(
             IQueryable<InvoiceHeader> query,

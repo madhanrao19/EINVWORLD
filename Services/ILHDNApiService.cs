@@ -23,5 +23,5 @@ public interface ILHDNApiService
     Task<DocumentSummary> GetDocumentDetailsAsync(string uuid, string accessToken, string? tin = null);
     string Base64Encode(string content);
     string ComputeSHA256Hash(string content);
-    Task<List<string>> GetAllUuidsForTinAsync(string tin, string accessToken);
+    Task<List<string>> GetAllUuidsForTinAsync(string tin, string accessToken, int lookbackDays = 3);
 }

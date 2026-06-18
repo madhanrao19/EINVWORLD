@@ -64,6 +64,9 @@ namespace eInvWorld.Data
         public DbSet<eInvWorld.Models.Recurring.RecurringProfile> RecurringProfiles { get; set; }
         public DbSet<eInvWorld.Models.Recurring.RecurringRunHistory> RecurringRunHistories { get; set; }
 
+        // --- Background sync/import job tracking ---
+        public DbSet<eInvWorld.Models.Background.SyncJob> SyncJobs { get; set; }
+
         //for dashboard
         public DbSet<InvoiceTopProduct> InvoiceTopProducts { get; set; }
         public DbSet<InvoiceKpiSummary> InvoiceKpiSummaries { get; set; }
