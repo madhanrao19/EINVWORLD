@@ -195,7 +195,7 @@ namespace EINVWORLD.Helpers
                     _logger.LogError(ex, "[SYNC] {Context} - Unexpected error in sync loop.", context);
                     errored++;
                 }
-                await Task.Delay(1000);
+                // Pacing is handled centrally by LhdnRateLimitHandler; no manual delay needed here.
             }
 
             _logger.LogInformation("[SYNC] LHDN invoice status sync job completed. Processed: {Processed}, Skipped: {Skipped}, Errors: {Errored}", processed, skipped, errored);
@@ -372,10 +372,10 @@ namespace EINVWORLD.Helpers
             return updated;
         }
 
-        public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System")
+        public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3)
         {
             var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
-            var allUuids = await GetAllUuidsForSubmitterAsync(tin, accessToken);
+            var allUuids = await GetAllUuidsForSubmitterAsync(tin, accessToken, lookbackDays);
 
             if (allUuids == null || !allUuids.Any())
                 return $"No documents found for TIN: {tin}";
@@ -388,9 +388,7 @@ namespace EINVWORLD.Helpers
             {
                 try
                 {
-                    // Add a small 1-second delay between each document so LHDN doesn't get angry
-                    await Task.Delay(1000);
-
+                    // Pacing is handled centrally by LhdnRateLimitHandler (even-paced per endpoint).
                     var docSummary = await _lhdnService.GetDocumentDetailsAsync(uuid, accessToken);
                     if (docSummary != null)
                     {
@@ -410,11 +408,11 @@ namespace EINVWORLD.Helpers
         /// <summary>
         /// Gets all document UUIDs submitted by the specified TIN (both regular and self-billed)
         /// </summary>
-        private async Task<List<string>?> GetAllUuidsForSubmitterAsync(string tin, string accessToken)
+        private async Task<List<string>?> GetAllUuidsForSubmitterAsync(string tin, string accessToken, int lookbackDays = 3)
         {
             // Use the existing method that searches by date range and gets all submitted documents
             // This will include both regular invoices (where tin is issuer) and self-billed invoices (where tin is submitter but receiver)
-            return await _lhdnService.GetAllUuidsForTinAsync(tin, accessToken);
+            return await _lhdnService.GetAllUuidsForTinAsync(tin, accessToken, lookbackDays);
         }
 
 

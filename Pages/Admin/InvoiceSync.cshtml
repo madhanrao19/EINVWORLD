@@ -4,7 +4,10 @@
     ViewData["Title"] = "Manual Invoice Sync";
 }
 
-<h3>🔁 Manual Invoice Status Updater</h3>
+<div class="d-flex justify-content-between align-items-center">
+    <h3>🔁 Manual Invoice Status Updater</h3>
+    <a asp-page="/Admin/SyncJobs" class="btn btn-sm btn-outline-secondary">📋 View Sync Jobs</a>
+</div>
 
 <form method="post" asp-page-handler="FullImportAll" onsubmit="showLoader()">
     <button type="submit" class="btn btn-warning" id="importButton">
@@ -20,7 +23,7 @@
 </form>
 
 <div id="loader" class="mt-3" style="display:none;">
-    <i class="fa fa-spinner fa-spin"></i> Syncing invoices, please wait...
+    <i class="fa fa-spinner fa-spin"></i> Starting background sync, please wait...
 </div>
 
 @if (TempData["Message"] != null)
