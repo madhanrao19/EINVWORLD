@@ -1,0 +1,27 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Codes.UnitTypes.AddNewUnitTypeModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add New Unit Type";
+}
+
+<h2>Add New Unit Type</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label asp-for="UnitType.Code"></label>
+        <input asp-for="UnitType.Code" class="form-control" />
+        <span asp-validation-for="UnitType.Code" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="UnitType.Name"></label>
+        <input asp-for="UnitType.Name" class="form-control" />
+        <span asp-validation-for="UnitType.Name" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="UnitType.IsActive"></label>
+        <input asp-for="UnitType.IsActive" class="form-check-input" />
+        <span asp-validation-for="UnitType.IsActive" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>

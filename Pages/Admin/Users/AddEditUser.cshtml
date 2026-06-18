@@ -1,0 +1,206 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Users.AddEditUserModel
+@{
+    // The bug is fixed in the backend, so isNew will now correctly evaluate to true for New Users!
+    bool isNew = string.IsNullOrWhiteSpace(Model.AppUser?.Id);
+    ViewData["Title"] = isNew ? "Add New User" : "Edit User Profile";
+
+    // Define color themes based on mode
+    string themeColor = isNew ? "success" : "primary";
+    string headerIcon = isNew ? "ri-user-add-fill" : "ri-user-settings-fill";
+}
+
+<style>
+    /* Prevent double eye icons by hiding the default browser password reveal button */
+    input::-ms-reveal,
+    input::-ms-clear {
+        display: none;
+    }
+
+    /* Dynamic UI styling based on Add/Edit mode */
+    .new-user-header {
+        background-color: rgba(25, 135, 84, 0.05) !important;
+        border-bottom: 2px solid #198754 !important;
+    }
+
+    .edit-user-header {
+        background-color: rgba(13, 110, 253, 0.05) !important;
+        border-bottom: 2px solid #0d6efd !important;
+    }
+</style>
+
+<div class="container-fluid p-4">
+    @* Page Header *@
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark">@ViewData["Title"]</h2>
+        <p class="text-muted">
+            @(isNew ? "Create a new user profile, configure their credentials, and assign system roles."
+                        : "Update the existing user's contact information, security settings, and permissions.")
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 bg-white">
+
+                @* ✅ Visually Distinct Card Header *@
+                <div class="card-header @(isNew ? "new-user-header text-success" : "edit-user-header text-primary") d-flex justify-content-between align-items-center p-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="@headerIcon me-2"></i>
+                        @(isNew ? "New User Information" : "Existing Profile Details")
+                    </h5>
+                    @if (!isNew)
+                    {
+                        <span class="badge bg-primary rounded-pill px-3 py-2">Editing: @Model.AppUser?.UserName</span>
+                    }
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="post">
+                        @if (!isNew)
+                        {
+                            <input type="hidden" asp-for="AppUser.Id" />
+                        }
+                        <input type="hidden" asp-for="EnablePasswordChange" />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="AppUser.FullName" class="form-label fw-bold small text-uppercase text-muted">Full Name</label>
+                                <input asp-for="AppUser.FullName" class="form-control bg-light border-light" placeholder="Enter full name" />
+                                <span asp-validation-for="AppUser.FullName" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="AppUser.UserName" class="form-label fw-bold small text-uppercase text-muted">Username</label>
+                                <input asp-for="AppUser.UserName" class="form-control bg-light border-light" placeholder="Username"
+                                       readonly="@(isNew ? null : "readonly")" /> @* Optionally lock username during edit *@
+                                <span asp-validation-for="AppUser.UserName" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="AppUser.Email" class="form-label fw-bold small text-uppercase text-muted">Email Address</label>
+                            <input asp-for="AppUser.Email" class="form-control bg-light border-light" placeholder="name@example.com" />
+                            <span asp-validation-for="AppUser.Email" class="text-danger small"></span>
+                        </div>
+
+                        <hr class="my-4 opacity-25" />
+
+                        @* Password Section *@
+                        @if (isNew)
+                        {
+                            <div class="alert alert-success bg-success-subtle border-0 mb-4">
+                                <i class="ri-information-line me-1"></i> Please set an initial secure password for this new account.
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Password" class="form-label fw-bold small text-uppercase text-muted">Initial Password</label>
+                                    <div class="input-group">
+                                        <input asp-for="Password" type="password" class="form-control bg-light border-light" id="newUserPassword" />
+                                        <button type="button" class="btn btn-outline-secondary border-light" onclick="togglePasswordVisibility('newUserPassword', this)">
+                                            <i class="ri-eye-line"></i>
+                                        </button>
+                                    </div>
+                                    <span asp-validation-for="Password" class="text-danger small"></span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="ConfirmPassword" class="form-label fw-bold small text-uppercase text-muted">Confirm Initial Password</label>
+                                    <div class="input-group">
+                                        <input asp-for="ConfirmPassword" type="password" class="form-control bg-light border-light" id="newUserConfirmPassword" />
+                                        <button type="button" class="btn btn-outline-secondary border-light" onclick="togglePasswordVisibility('newUserConfirmPassword', this)">
+                                            <i class="ri-eye-line"></i>
+                                        </button>
+                                    </div>
+                                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <button type="submit" name="TriggerPasswordChange" value="true" class="btn btn-outline-warning btn-sm px-3">
+                                    <i class="ri-lock-password-line me-1"></i> Change Password
+                                </button>
+                            </div>
+
+                            @if (Model.EnablePasswordChange)
+                            {
+                                <div class="row animate__animated animate__fadeIn border border-warning rounded p-3 bg-warning-subtle mb-3">
+                                    <div class="col-12 mb-2"><strong class="text-warning-emphasis"><i class="ri-error-warning-line me-1"></i> Resetting User Password</strong></div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Password" class="form-label fw-bold small text-uppercase text-muted">New Password</label>
+                                        <div class="input-group">
+                                            <input asp-for="Password" type="password" class="form-control bg-light border-light" id="editUserPassword" />
+                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" onclick="togglePasswordVisibility('editUserPassword', this)">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <span asp-validation-for="Password" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="ConfirmPassword" class="form-label fw-bold small text-uppercase text-muted">Confirm New Password</label>
+                                        <div class="input-group">
+                                            <input asp-for="ConfirmPassword" type="password" class="form-control bg-light border-light" id="editUserConfirmPassword" />
+                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" onclick="togglePasswordVisibility('editUserConfirmPassword', this)">
+                                                <i class="ri-eye-line"></i>
+                                            </button>
+                                        </div>
+                                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-3">
+                                <label for="SelectedRole" class="form-label fw-bold small text-uppercase text-muted">Assigned System Role</label>
+                                <select asp-for="SelectedRole" class="form-select bg-light border-light"
+                                        asp-items="Model.AllRoles.Select(r => new SelectListItem { Value = r.Name, Text = r.Name })">
+                                    <option value="">-- Select Role --</option>
+                                </select>
+                                <span asp-validation-for="SelectedRole" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6 mb-3 d-flex align-items-end">
+                                <div class="form-check form-switch ms-2 mb-2">
+                                    <input asp-for="AppUser.IsApproved" class="form-check-input fs-5" />
+                                    <label asp-for="AppUser.IsApproved" class="form-check-label fw-bold ms-2 pt-1">Approve User Access</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ✅ Visually Distinct Footer Actions *@
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a asp-page="/Admin/Users/ManageUser" class="btn btn-secondary waves-effect waves-light px-4">
+                                <i class="ri-arrow-left-line me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-@themeColor waves-effect waves-light px-4">
+                                <i class="@(isNew ? "ri-user-add-line" : "ri-save-line") me-1"></i>
+                                @(isNew ? "Create New User" : "Save Changes")
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function togglePasswordVisibility(inputId, button) {
+            const passwordInput = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.className = 'ri-eye-off-line';
+                button.setAttribute('title', 'Hide password');
+            } else {
+                passwordInput.type = 'password';
+                icon.className = 'ri-eye-line';
+                button.setAttribute('title', 'Show password');
+            }
+        }
+    </script>
+}

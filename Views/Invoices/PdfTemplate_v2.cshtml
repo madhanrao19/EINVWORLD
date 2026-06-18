@@ -1,0 +1,633 @@
+﻿@model EINVWORLD.Models.ViewModels.PdfTemplate_v2ViewModel
+@{
+    Layout = null;
+
+    var invoice = Model?.InvoiceDetail ?? new eInvWorld.Models.InputModel.InvoiceHeader();
+    var items = Model?.InvoiceLines ?? new List<eInvWorld.Models.InputModel.InvoiceLine>();
+
+    // Count actual item + tax rows to determine filler rows needed
+    int maxRows = 8;
+    int itemAndTaxRows = 0;
+    foreach (var item in items)
+    {
+        itemAndTaxRows++;
+        if (item.InvoiceTaxes != null)
+            itemAndTaxRows += item.InvoiceTaxes.Count();
+    }
+    int blankRows = Math.Max(0, maxRows - (itemAndTaxRows + 1)); // +1 for total row
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Invoice @invoice.InvoiceNo</title>
+
+    <style>
+        @@page {
+            size: A4;
+            margin-top: 12mm;
+            margin-bottom: 12mm;
+            margin-left: 10mm;
+            margin-right: 10mm;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 10pt;
+            color: #000;
+            background: #fff;
+        }
+
+        #invoiceWrapper {
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+            #invoiceWrapper h4 {
+                font-size: 12pt !important;
+                font-weight: bold !important;
+                margin: 0 0 8px 0 !important;
+            }
+        /* ── Supplier Header ── */
+        .supplier-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+        }
+
+        .supplier-name {
+            font-size: 15pt;
+            font-weight: bold;
+            letter-spacing: 0.07em;
+            line-height: 1.2;
+            display: inline;
+            white-space: nowrap;
+        }
+
+        .supplier-meta {
+            font-size: 10pt;
+            font-weight: normal;
+            letter-spacing: 0.01em;
+            line-height: 1.2;
+            display: inline;
+            margin-left: 10px;
+            white-space: nowrap;
+        }
+
+        .supplier-subline {
+            font-size: 10pt !important;
+            line-height: 1.2;
+            margin-top: 4px;
+        }
+
+        /* ── Bill To / Invoice Info ── */
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 10pt;
+        }
+
+            .info-grid td {
+                vertical-align: top;
+                border: none;
+                background: none;
+                padding: 2px 0;
+            }
+
+        .billto-address p {
+            margin: 0;
+            padding: 0;
+            line-height: 1.3;
+        }
+
+        .billto-address {
+            margin-bottom: 0;
+        }
+
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt;
+        }
+
+            .meta-table td {
+                border: none;
+                white-space: nowrap;
+                padding: 2px 0;
+                text-align: left;
+            }
+
+        .meta-label {
+            width: 27%;
+            font-weight: bold;
+        }
+
+        .meta-sep {
+            width: 3%;
+            text-align: left;
+        }
+
+        .meta-value {
+            width: 70%;
+            word-break: break-all;
+        }
+
+        /* ── Items Table ── */
+        .invoice-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+            page-break-inside: auto;
+            padding-top: 10px;
+        }
+
+            .invoice-table thead {
+                display: table-header-group;
+            }
+
+            .invoice-table tbody {
+                display: table-row-group;
+            }
+
+            .invoice-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            /* All cells: left border only, no top/bottom/right */
+            .invoice-table th,
+            .invoice-table td {
+                border-right: none;
+                border-left: 1px solid #000;
+                border-top: none;
+                border-bottom: none;
+                font-size: 10pt;
+                padding: 6px 4px;
+                vertical-align: top;
+                word-wrap: break-word;
+            }
+                /* Last column gets right border */
+                .invoice-table th:last-child,
+                .invoice-table td:last-child {
+                    border-right: 1px solid #000;
+                }
+
+            /* Header gets top + bottom border */
+            .invoice-table th {
+                border-top: 1px solid #000;
+                border-bottom: 1px solid #000;
+                font-weight: bold;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+        /* Column widths — matching InvoiceDetails2 exactly */
+        .col-itemno {
+            width: 8.5%;
+            text-align: center;
+        }
+
+        .col-desc {
+            width: 46.5%;
+            text-align: left;
+
+        }
+
+        .col-qty {
+            width: 12.5%;
+            text-align: center;
+        }
+
+        .col-unit {
+            width: 14.5%;
+            text-align: right;
+        }
+
+        .col-total {
+            width: 18%;
+            text-align: right;
+        }
+
+        .invoice-table td:nth-child(2) {
+            white-space: normal !important;
+            text-align: left !important;
+        }
+
+        /* Filler rows */
+        .filler-row td {
+            height: 18px;
+            line-height: 18px;
+        }
+
+        .repeat-footer {
+            display: table-footer-group;
+        }
+
+            .repeat-footer td {
+                border-top: 1px solid #000 !important;
+                border-bottom: none !important;
+                border-left: none !important;
+                border-right: none !important;
+                padding: 0 !important;
+                height: 1px !important;
+            }
+
+        /* ── Total Row ── */
+        .invoice-table .total-row td {
+            border-top: 1px solid #000 !important;
+            border-bottom: none !important; /* CHANGE THIS TO NONE */
+            border-left: none !important;
+            border-right: none !important;
+            padding: 4px 4px;
+            background-color: rgba(58, 165, 100, 0.1) !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+            .invoice-table .total-row td.total-label {
+                border-left: 1px solid #000 !important;
+                text-align: left;
+                font-weight: bold;
+            }
+
+            .invoice-table .total-row td.total-amount {
+                border-left: 1px solid #000 !important;
+                border-right: 1px solid #000 !important;
+                text-align: right;
+                font-weight: bold;
+            }
+
+            .invoice-table .total-row td.total-right {
+                border-right: none !important;
+                border-left: none !important;
+                text-align: right !important;
+                font-weight: bold;
+            }
+
+        /* ── Footer ── */
+        .footer-note-table,
+        .footer-note-table tr,
+        .footer-note-table td {
+            border: none !important;
+        }
+
+        #invoiceFooter {
+            margin-top: 8px;
+            page-break-inside: avoid;
+        }
+
+        .footer-outer {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .footer-outer td {
+                border: none;
+                vertical-align: top;
+                padding: 0;
+            }
+
+        .summary-box {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt;
+        }
+
+        .summary-label {
+            width: 60%;
+            text-align: right;
+        }
+
+        .total-payable-cell {
+            font-weight: bold;
+        }
+
+        .signoff-table {
+            width: 100%;
+            margin-top: 8px;
+            border-collapse: collapse;
+        }
+
+            .signoff-table td {
+                border: none;
+                vertical-align: middle;
+                padding: 0;
+            }
+
+        .signoff {
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+
+        .payment-block {
+            font-size: 10pt; /* Reduced from 12pt slightly for better fit */
+            line-height: 1.2; /* Reduced from 1.5 to close the gap between lines */
+        }
+
+        .summary-box td {
+            border: 1px solid #000;
+            padding: 3px 6px; /* Reduced from 6px 8px to make the rows tighter */
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="invoiceWrapper">
+
+        <!-- ═══ SUPPLIER HEADER ═══ -->
+        <table class="supplier-table">
+            <tr>
+                <td style="width:15%; vertical-align:top;padding-left:20px;">
+                    @if (!string.IsNullOrEmpty(invoice.Supplier?.LogoPath))
+                    {
+                        <img src="@invoice.Supplier.LogoPath"
+                             alt="@invoice.Supplier?.CompanyName Logo"
+                             style="width:90px; height:96px; object-fit:contain; display:block;" />
+                    }
+                </td>
+                <td style="width:85%; vertical-align:top; padding-left:20px;">
+                    <div style="margin-bottom:2px;">
+                        <span class="supplier-name">@invoice.Supplier?.CompanyName</span>
+                        @if (invoice.Supplier?.CompanyName != "General Public" && invoice.Supplier?.CompanyName != "Foreign Supplier")
+                        {
+                            <span class="supplier-meta">
+                                &nbsp;&nbsp;@invoice.Supplier?.RegNo
+                                @if (!string.IsNullOrWhiteSpace(invoice.Supplier?.OldRegNo))
+                                {
+                                    <text> (@invoice.Supplier?.OldRegNo)</text>
+                                }
+                            </span>
+                        }
+                    </div>
+
+                    @if (invoice.Supplier?.CompanyName != "General Public" && invoice.Supplier?.CompanyName != "Foreign Supplier")
+                    {
+                        <div class="supplier-subline">
+                            @Html.Raw(invoice.Supplier?.Addr1)<br />
+                            @{
+                                var suppCountry = invoice.Supplier?.Country?.Country ?? "";
+                                var suppCountryTitle = string.IsNullOrEmpty(suppCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(suppCountry.ToLower());
+                            }
+                            @invoice.Supplier?.PostalCode @invoice.Supplier?.CityName, @invoice.Supplier?.State?.State, @suppCountryTitle.
+                        </div>
+                        <div class="supplier-subline">
+                            Tel: @invoice.Supplier?.PhoneNo
+                            @if (!string.IsNullOrEmpty(invoice.Supplier?.FaxNo))
+                            {
+                                <text> | Fax: @invoice.Supplier?.FaxNo</text>
+                            }
+                        </div>
+                        <div class="supplier-subline">
+                            SST: @invoice.Supplier?.SST
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="supplier-subline">
+                            <strong>TIN:</strong> @invoice.Supplier?.TIN
+                        </div>
+                    }
+                </td>
+            </tr>
+        </table>
+
+        <!-- ═══ INVOICE TYPE TITLE ═══ -->
+        <div style="text-align:center; margin:10px 0;">
+            <span style="font-size:18pt; font-weight:bold; text-transform:uppercase;">
+                @(Model?.InvoiceTypeDescription)
+            </span>
+        </div>
+
+        <!-- ═══ BILL TO / INVOICE META ═══ -->
+        <table class="info-grid">
+            <tr>
+                <!-- Bill To -->
+                <td style="width:52.5%; vertical-align:top; padding-left:2.5%;">
+                    <h4 style="margin:0 0 8px 0; font-weight:bold; font-size:14pt;">Bill To</h4>
+                    <div class="billto-address">
+                        @{
+                            var buyerName = invoice.Customer != null ? invoice.Customer.CompanyName : invoice.PublicCustomer?.CompanyName;
+                            var buyerAddr1 = invoice.Customer != null ? invoice.Customer.Addr1 : invoice.PublicCustomer?.Addr1;
+                            var buyerPostalCode = invoice.Customer != null ? invoice.Customer.PostalCode : invoice.PublicCustomer?.PostalCode;
+                            var buyerCity = invoice.Customer != null ? invoice.Customer.CityName : invoice.PublicCustomer?.CityName;
+                            var buyerTIN = invoice.Customer != null ? invoice.Customer.TIN : invoice.PublicCustomer?.TIN;
+                            var buyerAttention = invoice.Customer != null ? invoice.Customer.Attention : invoice.PublicCustomer?.Attention;
+                            var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer?.State?.State;
+                            var buyerCountry = invoice.Customer != null ? invoice.Customer.Country?.Country : invoice.PublicCustomer?.Country?.Country;
+                            var buyerCountryTitle = string.IsNullOrEmpty(buyerCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(buyerCountry.ToLower());
+                        }
+                        <p>@buyerName</p>
+                        @if (buyerName != "General Public" && buyerName != "Foreign Buyer / Shipping Recipient" && buyerName != "Government and Related Entities")
+                        {
+                            <p>@Html.Raw(buyerAddr1?.Replace("\n", "<br/>")?.Replace("\r", ""))</p>
+                            <p>@buyerPostalCode @buyerCity@(!string.IsNullOrEmpty(buyerState) || !string.IsNullOrEmpty(buyerCountryTitle) ? "," : "")</p>
+                            @if (!string.IsNullOrEmpty(buyerState) || !string.IsNullOrEmpty(buyerCountryTitle))
+                            {
+                                <p>@buyerState@(!string.IsNullOrEmpty(buyerState) && !string.IsNullOrEmpty(buyerCountryTitle) ? ", " : "")@buyerCountryTitle.</p>
+                            }
+                        }
+                        else
+                        {
+                            <br />
+                            <p><strong>TIN:</strong> @buyerTIN</p>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerAttention))
+                        {
+                            <p style="padding-top:12px">Attention: @buyerAttention</p>
+                        }
+                    </div>
+                </td>
+
+                <!-- Invoice Meta -->
+                <td style="width:47.5%; vertical-align:top;">
+                    <table class="meta-table">
+                        <tr>
+                            <td class="meta-label">Date</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value">@invoice.OriginalInvoiceDate?.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">Invoice No.</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value">@invoice.RefDocumentNo</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">PO/DO No.</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value">@invoice.PoDoNo</td>
+                        </tr>
+                        <tr><td colspan="3" style="height:4px;"></td></tr>
+                        <tr>
+                            <td class="meta-label">E-Invoice No</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value">@invoice.InvoiceNo</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">E-Invoice Date</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value">@invoice.IssueDate?.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                        <tr>
+                            <td class="meta-label">UUID</td>
+                            <td class="meta-sep">:</td>
+                            <td class="meta-value" style="word-break:break-all; white-space:normal;">@invoice.UUID</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- ═══ ITEMS TABLE ═══ -->
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th class="col-itemno">ITEM</th>
+                    <th class="col-desc">DESCRIPTION</th>
+                    <th class="col-qty">QUANTITY</th>
+                    <th class="col-unit">UNIT PRICE</th>
+                    <th class="col-total">TOTAL AMOUNT</th>
+                </tr>
+            </thead>
+
+            <tfoot class="repeat-footer">
+                <tr>
+                    <td colspan="5"></td>
+                </tr>
+            </tfoot>
+
+            <tbody>
+                @for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+                    <tr>
+                        <td class="col-itemno" style="text-align:center; font-weight:bold;">@(i + 1)</td>
+                        <td class="col-desc" style="white-space:pre-wrap; text-align:left;">
+                            @Html.Raw(item.ItemDescription?.Replace("\n", "<br/>"))
+                        </td>
+                        <td class="col-qty" style="text-align:center;">@item.Quantity</td>
+                        <td class="col-unit" style="text-align:right;">@item.UnitPrice?.ToString("N2")</td>
+                        <td class="col-total" style="text-align:right;">@((item.Quantity * item.UnitPrice)?.ToString("N2"))</td>
+                    </tr>
+                    @if (item.InvoiceTaxes != null)
+                    {
+                        foreach (var tax in item.InvoiceTaxes)
+                        {
+                            <tr>
+                                <td class="col-itemno"></td>
+                                <td class="col-desc">
+                                    @if (tax.TaxCategoryDescription == "Not Applicable")
+                                    {
+                                        @:Tax Rate @tax.TaxPercentage?.ToString("N2")%
+                                    }
+                                    else
+                                    {
+                                        @($"{tax.TaxCategoryDescription} Rate {tax.TaxPercentage?.ToString("N2")}%")
+                                    }
+                                </td>
+                                <td class="col-qty"></td>
+                                <td class="col-unit" style="text-align:right;">@tax.TaxAmount?.ToString("N2")</td>
+                                <td class="col-total" style="text-align:right;">@tax.TaxAmount?.ToString("N2")</td>
+                            </tr>
+                        }
+                    }
+                }
+
+                @* Filler rows to keep footer in a consistent position 
+                @for (int j = 0; j < blankRows; j++)
+                {
+                    <tr class="filler-row">
+                        <td class="col-itemno">&nbsp;</td>
+                        <td class="col-desc">&nbsp;</td>
+                        <td class="col-qty">&nbsp;</td>
+                        <td class="col-unit">&nbsp;</td>
+                        <td class="col-total">&nbsp;</td>
+                    </tr>
+                }*@
+
+                @* Total row — stays inside tbody (avoids tfoot page-break glitches in wkhtmltopdf) *@
+                <tr class="total-row">
+                    <td colspan="3" class="total-label">
+                        <strong>@(Model?.FullCurrencyName):</strong><br />
+                        <span style="font-weight:normal;">
+                            @EINVWORLD.Helpers.AmountInWordsHelper.ToWordsEnglish(invoice.TotalAmountIncTax ?? 0)
+                        </span>
+                    </td>
+                    <td class="total-right">Total (@(invoice.Currency ?? "MYR")):</td>
+                    <td class="total-amount">@invoice.TotalAmountIncTax?.ToString("N2")</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- ═══ FOOTER: PAYMENT + SUMMARY + SIGN-OFF + QR ═══ -->
+        <div id="invoiceFooter">
+
+            <!-- Payment Terms & Summary Box side by side -->
+            <table class="footer-outer" style="margin-top:15px;">
+                <tr>
+                    <td style="width:55%; vertical-align:top; padding-right: 15px;">
+                        <div class="payment-block">
+                            <strong>PAYMENT TERMS:</strong> @(invoice.PaymentTerms ?? "")<br /><br />
+                            <strong>Bank Acc.No.:</strong> @(invoice.BankAccountNo ?? "")<br />
+                            <strong>Bank Name:</strong> @(invoice.BankName ?? "")
+                        </div>
+                    </td>
+
+                    <td style="width:45%; vertical-align:top;">
+                        <table class="summary-box">
+                            <tr>
+                                <td class="summary-label">Subtotal (@(invoice.Currency ?? "")):</td>
+                                <td style="width:40%;">@(Model?.InvoiceDetail?.TotalAmountExclTax?.ToString("N2"))</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Total Excluding Tax (@(invoice.Currency ?? "")):</td>
+                                <td>@(Model?.InvoiceDetail?.TotalAmountExclTax?.ToString("N2"))</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Tax Amount (@(invoice.Currency ?? "")):</td>
+                                <td>@invoice.TotalTaxAmount?.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <td class="summary-label">Total Including Tax (@(invoice.Currency ?? "")):</td>
+                                <td>@invoice.TotalAmountIncTax?.ToString("N2")</td>
+                            </tr>
+                            <tr class="total-payable-cell">
+                                <td class="summary-label total-payable-cell">Total Payable (@(invoice.Currency ?? "")):</td>
+                                <td class="total-payable-cell">@invoice.TotalPayableAmount?.ToString("N2")</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Sign-off & QR Code side by side -->
+            <table class="signoff-table">
+                <tr>
+                    <td style="width:55%; vertical-align:middle;">
+                        <div class="signoff">
+                            <strong>For and on Behalf of</strong><br />
+                            <strong style="font-size:12pt;">@invoice.Supplier?.CompanyName</strong><br />
+                            <em>This is computer generated document.</em><br />
+                            <em>No signature is required.</em>
+                        </div>
+                    </td>
+                    <td style="width:45%; vertical-align:top;">
+                        @if (!string.IsNullOrEmpty(Model?.QRCodeBase64))
+                        {
+                            <img src="data:image/png;base64,@Model.QRCodeBase64"
+                                 style="width:75px; height:75px;"
+                                 alt="Invoice QR Code" />
+                        }
+                    </td>
+                </tr>
+            </table>
+
+        </div><!-- /invoiceFooter -->
+
+    </div><!-- /invoiceWrapper -->
+</body>
+</html>

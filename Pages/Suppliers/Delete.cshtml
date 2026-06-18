@@ -1,0 +1,124 @@
+﻿@page
+@model eInvWorld.Pages.Suppliers.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete";
+}
+
+<h1>Delete</h1>
+
+<h3>Are you sure you want to delete this supplier?</h3>
+<div>
+    <h4>Supplier</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.Name)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.Name)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.TaxIdentificationNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.TaxIdentificationNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.RegistrationIdentificationNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.RegistrationIdentificationNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.SSTRegistrationNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.SSTRegistrationNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.TourismTaxRegistrationNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.TourismTaxRegistrationNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.Email)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.Email)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.MSICCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.MSICCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.ContactNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.ContactNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.LogoPath)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.LogoPath)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.AddressLine1)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.AddressLine1)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.AddressLine2)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.AddressLine2)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.AddressLine3)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.AddressLine3)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.PostalZone)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.PostalZone)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.CityName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.CityName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.StateCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.StateCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.CountryCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.CountryCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Supplier.Remarks)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Supplier.Remarks)
+        </dd>
+    </dl>
+
+    <form method="post">
+        <input type="hidden" asp-for="Supplier.Id" />
+        <input type="submit" value="Delete" class="btn btn-danger" /> |
+        <a asp-page="./Index">Back to List</a>
+    </form>
+</div>

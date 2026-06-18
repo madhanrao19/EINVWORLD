@@ -1,0 +1,51 @@
+﻿@page "/about"
+@model eInvWorld.Pages.AboutModel
+@{
+    ViewData["Title"] = "About eInvWorld | E-Invoicing Solutions for Malaysian SMEs";
+    ViewData["Description"] = "Discover how eInvWorld empowers Malaysian SMEs with LHDN-compliant e-invoicing solutions, streamlining operations and ensuring tax compliance.";
+    ViewData["Keywords"] = "about einvworld, e-invoicing Malaysia, LHDN compliance, SME e-invoicing solutions";
+}
+
+<!-- Page Header Start -->
+
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="images/header_images/header-page-about.png" class="profile-wid-img w-100" alt="">
+
+        <!-- Overlay Content -->
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <!-- Page Title & Breadcrumb -->
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">About Us</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+
+<!-- About Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        <div class="row g-5">
+            <div class="col-lg-6 wow fadeIn" data-wow-delay="0.1s">
+                <div class="d-flex flex-column">
+                    <img class="img-fluid rounded w-75 align-self-end" src="images/about.jpg" alt="">
+                </div>
+            </div>
+            <div class="col-lg-6 wow fadeIn" data-wow-delay="0.5s">
+                <p class="d-inline-block border rounded-pill py-1 px-4">About Us</p>
+                <h1 class="mb-4">About Us</h1>
+                <p>eInvworld is Malaysia's leading provider of innovative e-invoicing solutions tailored to streamline your business operations. Founded with a vision to simplify and automate invoicing processes, we empower businesses of all sizes to enhance their financial management with efficiency, accuracy, and compliance.</p>
+                <p class="mb-4">Our comprehensive e-invoicing platform is designed to facilitate seamless electronic transactions, reduce paperwork, minimize errors, and accelerate cash flow. Whether you're a small enterprise or a large corporation, our scalable solutions are customized to meet your unique needs.</p>
+                <p class="mb-4">Our solutions is fully compliant with LHDN regulatory requirements, ensuring that your invoicing process is not only efficient but also meets all necessary legal standards.</p>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- About End -->

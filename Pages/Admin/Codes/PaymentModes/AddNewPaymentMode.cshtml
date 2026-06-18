@@ -1,0 +1,27 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Codes.PaymentModes.AddNewPaymentModeModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add New Payment Mode";
+}
+
+<h2>Add New Payment Mode</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label asp-for="PaymentMode.Code"></label>
+        <input asp-for="PaymentMode.Code" class="form-control" />
+        <span asp-validation-for="PaymentMode.Code" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="PaymentMode.PaymentMethod"></label>
+        <input asp-for="PaymentMode.PaymentMethod" class="form-control" />
+        <span asp-validation-for="PaymentMode.PaymentMethod" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="PaymentMode.IsActive"></label>
+        <input asp-for="PaymentMode.IsActive" class="form-check-input" />
+        <span asp-validation-for="PaymentMode.IsActive" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>

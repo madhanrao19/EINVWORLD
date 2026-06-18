@@ -1,0 +1,270 @@
+﻿@page "{handler?}"
+@model eInvWorld.Pages.PublicCustomer.ListModel
+
+@{
+    ViewData["Title"] = "Manage Buyers";
+    bool isAdmin = User.IsInRole("Admin");
+
+    // ✅ Updated to include CurrentPage
+    string GetSortUrl(string column)
+    {
+        string newSortOrder = (Model.SortBy == column && Model.SortOrder == "asc") ? "desc" : "asc";
+        return Url.Page("./List", new { SortBy = column, SortOrder = newSortOrder, SearchTerm = Model.SearchTerm, CurrentPage = Model.CurrentPage }) ?? "#";
+    }
+
+    Microsoft.AspNetCore.Html.IHtmlContent GetSortIcon(string column)
+    {
+        if (Model.SortBy == column)
+        {
+            return Html.Raw(Model.SortOrder == "asc" ? "<i class='ri-arrow-up-s-fill ms-1'></i>" : "<i class='ri-arrow-down-s-fill ms-1'></i>");
+        }
+        return Html.Raw("");
+    }
+}
+
+<form method="post" id="__afForm">@Html.AntiForgeryToken()</form>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">Manage Buyers</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Buyers Management</a></li>
+                    <li class="breadcrumb-item active">Buyers</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <div class="flex-grow-1">
+                        <a class="btn btn-info add-btn"
+                           asp-page="/PublicCustomer/Create"
+                           asp-route-from="@(isAdmin ? "admin" : null)">
+                            <i class="ri-add-fill me-1 align-bottom"></i> Create New
+                        </a>
+                        <a class="btn btn-secondary ms-2" asp-page="Import"><i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+
+                <form method="get" class="mb-4">
+                    <input type="hidden" name="SortBy" value="@Model.SortBy" />
+                    <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-5">
+                            <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search..." />
+                        </div>
+                        <div class="col-md-5">
+                            <button type="submit" class="btn btn-primary"><i class="ri-search-line align-bottom me-1"></i> Filter</button>
+                            <a asp-page="./List" class="btn btn-soft-secondary">Clear</a>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="table-responsive">
+                    <table class="table table-nowrap align-middle" id="customerTable">
+                        <thead class="text-muted table-light">
+                            <tr>
+                                <th scope="col">
+                                    <a href="@GetSortUrl("name")" class="text-dark text-decoration-none">
+                                        Company Name @GetSortIcon("name")
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a href="@GetSortUrl("tin")" class="text-dark text-decoration-none">
+                                        TIN @GetSortIcon("tin")
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a href="@GetSortUrl("email")" class="text-dark text-decoration-none">
+                                        Email @GetSortIcon("email")
+                                    </a>
+                                </th>
+                                <th scope="col">
+                                    <a href="@GetSortUrl("phone")" class="text-dark text-decoration-none">
+                                        Phone @GetSortIcon("phone")
+                                    </a>
+                                </th>
+
+                                <th scope="col">Updated By</th>
+                                <th scope="col">
+                                    <a href="@GetSortUrl("updated")" class="text-dark text-decoration-none">
+                                        Updated Date @GetSortIcon("updated")
+                                    </a>
+                                </th>
+
+                                @if (isAdmin)
+                                {
+                                    <th scope="col">Status</th>
+                                }
+                                else
+                                {
+                                    <th scope="col">Action</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.CustomerViewModels.Any())
+                            {
+                                @foreach (var wrapper in Model.CustomerViewModels)
+                                {
+                                    var item = wrapper.Customer;
+                                    var isAssignedToCurrentUser = Model.AssignedBuyerKeys.Contains($"{item.CreatedByCompanyId}_{item.PublicCustomerId}");
+                                    var isAssignedByAnySupplier = Model.AssignedPublicCustomerIds.Contains(item.PublicCustomerId);
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="flex-grow-1 ms-2 name">
+                                                    @item.CompanyName
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@item.TIN</td>
+                                        <td>@item.Email</td>
+                                        <td>@item.PhoneNo</td>
+
+                                        @if (isAdmin)
+                                        {
+                                            <td>
+                                                <strong>@wrapper.CreatorCompanyName</strong><br />
+                                                <small class="text-muted">User: @(string.IsNullOrEmpty(item.UpdatedBy) ? "-" : item.UpdatedBy)</small><br />
+
+                                                @if (item.IsAdminCreated)
+                                                {
+                                                    <span class="badge bg-info mt-1">Admin</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary mt-1">Supplier</span>
+                                                }
+                                            </td>
+
+                                            <td>@(item.UpdatedDate.HasValue? item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+
+                                            <td>
+                                                @if (isAssignedByAnySupplier)
+                                                {
+                                                    <span class="badge bg-success">Assigned</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">Not Assigned</span>
+                                                }
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td>@(string.IsNullOrEmpty(item.UpdatedBy) ? "-" : item.UpdatedBy)</td>
+                                            <td>@(item.UpdatedDate.HasValue? item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+                                            <td>
+                                                <div class="dropdown d-inline-block">
+                                                    <button class="btn @(isAssignedToCurrentUser ? "btn-soft-success" : "btn-soft-warning") btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="ri-more-fill align-middle"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            @if (isAssignedToCurrentUser)
+                                                            {
+                                                                <form method="post" asp-page-handler="RemoveFromBuyers" asp-route-publicCustomerId="@item.PublicCustomerId" onsubmit="return confirm('Remove this buyer from your active list?');">
+                                                                    <button type="submit" class="dropdown-item text-warning" title="Remove from My Buyers">
+                                                                        <i class="ri-user-unfollow-line align-bottom me-2"></i> Remove from My Buyers List
+                                                                    </button>
+                                                                </form>
+                                                            }
+                                                            else
+                                                            {
+                                                                <form method="post" asp-page-handler="AddToBuyers" asp-route-publicCustomerId="@item.PublicCustomerId">
+                                                                    <button type="submit" class="dropdown-item text-success" title="Add to My Buyers List">
+                                                                        <i class="ri-user-add-line align-bottom me-2"></i> Add to My Buyers List
+                                                                    </button>
+                                                                </form>
+                                                            }
+                                                        </li>
+                                                        <li>
+                                                            <a asp-page="./Details" asp-route-id="@item.PublicCustomerId" class="dropdown-item">
+                                                                <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <form method="post" asp-page-handler="Delete" asp-route-buyerId="@item.PublicCustomerId" onsubmit="return confirm('Are you sure you want to delete this buyer?');">
+                                                                <button type="submit" class="dropdown-item text-danger">
+                                                                    <i class="ri-delete-bin-fill align-bottom me-2"></i> Delete
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(isAdmin ? "6" : "7")" class="text-center">No buyers found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="row mt-3 align-items-center">
+                        <div class="col-sm">
+                            <div class="text-muted">
+                                Showing <span class="fw-semibold">@(((Model.CurrentPage - 1) * Model.PageSize) + 1)</span> to
+                                <span class="fw-semibold">@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalRecords)</span> of
+                                <span class="fw-semibold">@Model.TotalRecords</span> entries
+                            </div>
+                        </div>
+                        <div class="col-sm-auto">
+                            <ul class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-start mb-0">
+                                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                    <a class="page-link" href="@Url.Page("./List", new { CurrentPage = Model.CurrentPage - 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm })">Previous</a>
+                                </li>
+
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Page("./List", new { CurrentPage = i, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm })">@i</a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="@Url.Page("./List", new { CurrentPage = Model.CurrentPage + 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm })">Next</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    </div>
+</div>

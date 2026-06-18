@@ -1,0 +1,787 @@
+{
+    "_D": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
+    "_A": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+    "_B": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+    "Invoice": [
+        {
+            "ID": [
+                {
+                    "_": "INV00105"
+                }
+            ],
+            "IssueDate": [
+                {
+                    "_": "2024-12-11"
+                }
+            ],
+            "IssueTime": [
+                {
+                    "_": "09:42:10Z"
+                }
+            ],
+            "InvoiceTypeCode": [
+                {
+                    "_": "01",
+                    "listVersionID": "1.0"
+                }
+            ],
+            "DocumentCurrencyCode": [
+                {
+                    "_": "MYR"
+                }
+            ],
+            "InvoicePeriod": [
+                {
+                    "StartDate": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "EndDate": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "Description": [
+                        {
+                            "_": ""
+                        }
+                    ]
+                }
+            ],
+            "BillingReference": [
+                {
+                    "AdditionalDocumentReference": [
+                        {
+                            "ID": [
+                                {
+                                    "_": "1234"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "AdditionalDocumentReference": [
+                {
+                    "ID": [
+                        {
+                            "_": "777666552005"
+                        }
+                    ]
+                }
+            ],
+            "AccountingSupplierParty": [
+                {
+                    "AdditionalAccountID": [
+                        {
+                            "_": "",
+                            "schemeAgencyName": "CertEx"
+                        }
+                    ],
+                    "Party": [
+                        {
+                            "IndustryClassificationCode": [
+                                {
+                                    "_": "61902",
+                                    "name": "Provision of telecommunications services over existing telecom connection"
+                                }
+                            ],
+                            "PartyIdentification": [
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "C1865315040",
+                                            "schemeID": "TIN"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "199601004511",
+                                            "schemeID": "BRN"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "NA",
+                                            "schemeID": "SST"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "NA",
+                                            "schemeID": "TTX"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PostalAddress": [
+                                {
+                                    "CityName": [
+                                        {
+                                            "_": "PETALING JAYA"
+                                        }
+                                    ],
+                                    "PostalZone": [
+                                        {
+                                            "_": "46350"
+                                        }
+                                    ],
+                                    "CountrySubentityCode": [
+                                        {
+                                            "_": "01"
+                                        }
+                                    ],
+                                    "AddressLine": [
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "18.2, CP Tower"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "Pusat Dagang"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "Seksyen 16"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "Country": [
+                                        {
+                                            "IdentificationCode": [
+                                                {
+                                                    "_": "MYS",
+                                                    "listID": "3166-1",
+                                                    "listAgencyID": "ISO"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PartyLegalEntity": [
+                                {
+                                    "RegistrationName": [
+                                        {
+                                            "_": "Datamation Technology (M) Sdn Bhd"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "Contact": [
+                                {
+                                    "Telephone": [
+                                        {
+                                            "_": "0376602222"
+                                        }
+                                    ],
+                                    "ElectronicMail": [
+                                        {
+                                            "_": "finance@eadsworld.com"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "AccountingCustomerParty": [
+                {
+                    "Party": [
+                        {
+                            "PartyIdentification": [
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "C1865315040",
+                                            "schemeID": "TIN"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "199601004511",
+                                            "schemeID": "BRN"
+                                        }
+                                    ]
+                                },
+								{
+                                    "ID": [
+                                        {
+                                            "_": "NA",
+                                            "schemeID": "SST"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PostalAddress": [
+                                {
+                                    "CityName": [
+                                        {
+                                            "_": "PETALING JAYA"
+                                        }
+                                    ],
+                                    "PostalZone": [
+                                        {
+                                            "_": "46350"
+                                        }
+                                    ],
+                                    "CountrySubentityCode": [
+                                        {
+                                            "_": "01"
+                                        }
+                                    ],
+                                    "AddressLine": [
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "CP TOWER"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "18.2, CP Tower"
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": "Seksyen 16"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "Country": [
+                                        {
+                                            "IdentificationCode": [
+                                                {
+                                                    "_": "MYS",
+                                                    "listID": "3166-1",
+                                                    "listAgencyID": "ISO"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PartyLegalEntity": [
+                                {
+                                    "RegistrationName": [
+                                        {
+                                            "_": "Datamation Technology (M) Sdn Bhd (BUYER)"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "Contact": [
+                                {
+                                    "Telephone": [
+                                        {
+                                            "_": "0376602222"
+                                        }
+                                    ],
+                                    "ElectronicMail": [
+                                        {
+                                            "_": "finance@eadsworld.com"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "Delivery": [
+                {
+                    "DeliveryParty": [
+                        {
+                            "PartyLegalEntity": [
+                                {
+                                    "RegistrationName": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PostalAddress": [
+                                {
+                                    "CityName": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ],
+                                    "PostalZone": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ],
+                                    "CountrySubentityCode": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ],
+                                    "AddressLine": [
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": ""
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": ""
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "Line": [
+                                                {
+                                                    "_": ""
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "Country": [
+                                        {
+                                            "IdentificationCode": [
+                                                {
+                                                    "_": "",
+                                                    "listID": "",
+                                                    "listAgencyID": ""
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ],
+                            "PartyIdentification": [
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "",
+                                            "schemeID": ""
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "Shipment": [
+                        {
+                            "ID": [
+                                {
+                                    "_": ""
+                                }
+                            ],
+                            "FreightAllowanceCharge": [
+                                {
+                                    "ChargeIndicator": [
+                                        {
+                                            "_": true
+                                        }
+                                    ],
+                                    "AllowanceChargeReason": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ],
+                                    "Amount": [
+                                        {
+                                            "_": 0,
+                                            "currencyID": "MYR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "PaymentMeans": [
+                {
+                    "PaymentMeansCode": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "PayeeFinancialAccount": [
+                        {
+                            "ID": [
+                                {
+                                    "_": ""
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "PaymentTerms": [
+                {
+                    "Note": [
+                        {
+                            "_": ""
+                        }
+                    ]
+                }
+            ],
+            "PrepaidPayment": [
+                {
+                    "ID": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "PaidAmount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "PaidDate": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "PaidTime": [
+                        {
+                            "_": ""
+                        }
+                    ]
+                }
+            ],
+            "AllowanceCharge": [
+                {
+                    "ChargeIndicator": [
+                        {
+                            "_": true
+                        }
+                    ],
+                    "AllowanceChargeReason": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "Amount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ]
+                },
+                {
+                    "ChargeIndicator": [
+                        {
+                            "_": false
+                        }
+                    ],
+                    "AllowanceChargeReason": [
+                        {
+                            "_": ""
+                        }
+                    ],
+                    "Amount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ]
+                }
+            ],
+            "TaxTotal": [
+                {
+                    "TaxAmount": [
+                        {
+                            "_": 15680,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "TaxSubtotal": [
+                        {
+                            "TaxableAmount": [
+                                {
+                                    "_": 784000,
+                                    "currencyID": "MYR"
+                                }
+                            ],
+                            "TaxAmount": [
+                                {
+                                    "_": 15680,
+                                    "currencyID": "MYR"
+                                }
+                            ],
+                            "TaxCategory": [
+                                {
+                                    "ID": [
+                                        {
+                                            "_": "02"
+                                        }
+                                    ],
+                                    "TaxScheme": [
+                                        {
+                                            "ID": [
+                                                {
+                                                    "_": "OTH",
+                                                    "schemeAgencyID": "6",
+                                                    "schemeID": "UN/ECE 5153"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "LegalMonetaryTotal": [
+                {
+                    "LineExtensionAmount": [
+                        {
+                            "_": 784000,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "TaxExclusiveAmount": [
+                        {
+                            "_": 784000,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "TaxInclusiveAmount": [
+                        {
+                            "_": 799680,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "AllowanceTotalAmount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "ChargeTotalAmount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "PayableAmount": [
+                        {
+                            "_": 799680,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "PayableRoundingAmount": [
+                        {
+                            "_": 0,
+                            "currencyID": "MYR"
+                        }
+                    ]
+                }
+            ],
+            "InvoiceLine": [
+                {
+                    "AllowanceCharge": [
+                        {
+                            "Amount": [
+                                {
+                                    "_": 16000,
+                                    "currencyID": "MYR"
+                                }
+                            ],
+                            "ChargeIndicator": [
+                                {
+                                    "_": false
+                                }
+                            ],
+                            "MultiplierFactorNumeric": [
+                                {
+                                    "_": 2
+                                }
+                            ],
+                            "AllowanceChargeReason": [
+                                {
+                                    "_": "Reason"
+                                }
+                            ]
+                        }
+                    ],
+                    "ID": [
+                        {
+                            "_": "1"
+                        }
+                    ],
+                    "InvoicedQuantity": [
+                        {
+                            "_": 80,
+                            "unitCode": "KAT"
+                        }
+                    ],
+                    "Item": [
+                        {
+                            "CommodityClassification": [
+                                {
+                                    "ItemClassificationCode": [
+                                        {
+                                            "_": "001",
+                                            "listID": "CLASS"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ItemClassificationCode": [
+                                        {
+                                            "_": "002",
+                                            "listID": "CLASS"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "ItemClassificationCode": [
+                                        {
+                                            "_": "003",
+                                            "listID": "CLASS"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "Description": [
+                                {
+                                    "_": "Product"
+                                }
+                            ],
+                            "OriginCountry": [
+                                {
+                                    "IdentificationCode": [
+                                        {
+                                            "_": ""
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ItemPriceExtension": [
+                        {
+                            "Amount": [
+                                {
+                                    "_": 800000,
+                                    "currencyID": "MYR"
+                                }
+                            ]
+                        }
+                    ],
+                    "LineExtensionAmount": [
+                        {
+                            "_": 784000,
+                            "currencyID": "MYR"
+                        }
+                    ],
+                    "Price": [
+                        {
+                            "PriceAmount": [
+                                {
+                                    "_": 10000,
+                                    "currencyID": "MYR"
+                                }
+                            ]
+                        }
+                    ],
+                    "TaxTotal": [
+                        {
+                            "TaxAmount": [
+                                {
+                                    "_": 15680,
+                                    "currencyID": "MYR"
+                                }
+                            ],
+                            "TaxSubtotal": [
+                                {
+                                    "TaxableAmount": [
+                                        {
+                                            "_": 784000,
+                                            "currencyID": "MYR"
+                                        }
+                                    ],
+                                    "TaxAmount": [
+                                        {
+                                            "_": 15680,
+                                            "currencyID": "MYR"
+                                        }
+                                    ],
+                                    "Percent": [
+                                        {
+                                            "_": 2
+                                        }
+                                    ],
+                                    "TaxCategory": [
+                                        {
+                                            "ID": [
+                                                {
+                                                    "_": "02"
+                                                }
+                                            ],
+                                            "TaxScheme": [
+                                                {
+                                                    "ID": [
+                                                        {
+                                                            "_": "OTH",
+                                                            "schemeAgencyID": "6",
+                                                            "schemeID": "UN/ECE 5153"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "TaxExchangeRate": [
+                {
+                    "SourceCurrencyCode": [
+                        {
+                            "_": "MYR"
+                        }
+                    ],
+                    "TargetCurrencyCode": [
+                        {
+                            "_": "MYR"
+                        }
+                    ],
+                    "CalculationRate": [
+                        {
+                            "_": 0
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

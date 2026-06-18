@@ -1,0 +1,54 @@
+﻿@page "/resources/article/{slug}"
+@model EINVWORLD.Pages.Resources.ArticleModel
+@{
+    Layout = "_HomeLayout";
+    ViewData["Title"] = Model.Article?.Title + " | eInvWorld";
+    ViewData["Description"] = Model.Article?.Summary;
+    // ViewData["Keywords"] = Model.Article.ResourceType + ", e-invoicing, Malaysia";
+}
+
+<!-- Page Header Start -->
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="/images/header_images/header-page-contact.png" class="profile-wid-img w-100" alt="Resources Header">
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item"><a href="/resources" class="text-white">Resources</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">Article</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+
+<div class="container-xxl py-5">
+    <div class="container">
+        <h1 class="fw-bold mb-3">@Model.Article?.Title</h1>
+        @* <span class="badge bg-secondary text-capitalize">@Model.Article.ResourceType</span> *@
+        <p class="text-muted mb-3">@Model.Article?.DatePublished.ToString("dd MMM yyyy")</p>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Article?.ImageUrl))
+        {
+            <figure>
+                <img src="@Model.Article.ImageUrl"
+                     class="img-fluid rounded mb-4 w-100"
+                     style="max-height: 400px; object-fit: cover;"
+                     alt="@Model.Article.Title"
+                     title="@Model.Article.Title"
+                     loading="lazy" />
+            </figure>
+        }
+
+        <div class="article-body text-dark">
+            @Html.Raw(Model.Article?.ContentHtml ?? "")
+        </div>
+
+        <a href="/resources" class="btn btn-outline-secondary mt-4">&larr; Back to Resources</a>
+    </div>
+</div>

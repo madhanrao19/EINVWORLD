@@ -1,0 +1,51 @@
+﻿@* @model string // The model will be the UserType
+
+<div class="card-body">
+    <ul>
+        @if (Model == "Supplier")
+        {
+            <li>
+                <b>Draft:</b> You can
+                <i class="ri-pencil-fill text-primary me-1"></i><b>Edit</b>,
+                <i class="ri-delete-bin-5-fill text-danger me-1"></i><b>Delete</b>,
+                <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b>, or
+                <i class="ri-send-plane-fill text-success me-1"></i><b>Submit</b> the invoice.
+            </li>
+            <li>
+                <b>Valid:</b> You can
+                <i class="ri-eye-fill text-primary me-1"></i> <b>View</b>,
+                <i class="ri-close-circle-fill text-danger me-1"></i><b>Cancel</b>,
+                <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b>, or
+                <i class="ri-download-2-line text-secondary me-1"></i><b>Download</b> the invoice.
+            </li>
+            <li>
+                <b>Invalid:</b> You can
+                <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b> the invoice after correction.
+            </li>
+            <li>
+                <b>Cancelled:</b> You can
+                <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b> the invoice if necessary.
+            </li>
+            <li>
+                <b>Submitted:</b>
+                <i class="ri-eye-fill text-primary me-1"></i> The invoice is <b>view-only</b>; no further actions can be taken.
+            </li>
+        }
+        else if (Model == "Buyer")
+        {
+            <li>
+                <b>Valid:</b>
+                <i class="ri-eye-fill text-primary me-1"></i> <b>View</b>,
+                <i class="ri-close-line text-danger me-1"></i><b>Request Reject</b>,
+                or
+                <i class="ri-download-2-line text-secondary me-1"></i><b>Download</b> the invoice.
+            </li>
+            <li>
+                <b>Cancelled:</b> You can
+                <i class="ri-eye-fill text-primary me-1"></i> The invoice is <b>view-only</b>; no further actions can be taken.
+            </li>
+        }
+    </ul>
+    <p class="mb-0">Hover over action icons for quick tips, and check the <b>Status</b> column for more context.</p>
+</div>
+ *@
