@@ -1,0 +1,86 @@
+@page
+@model eInvWorld.Pages.Assistant.IndexModel
+@{
+    ViewData["Title"] = "E-Invoice Assistant";
+}
+
+<h3>🤖 E-Invoice Assistant <small class="text-muted">(beta)</small></h3>
+<p class="text-muted">
+    Ask questions about Malaysian e-invoicing, or describe a transaction and get a suggested invoice to review.
+    The assistant runs on a local, on-prem model — your invoice data never leaves this server. It only suggests; it never submits.
+</p>
+
+@if (!Model.Enabled)
+{
+    <div class="alert alert-warning">
+        ⚙️ The assistant is currently <strong>disabled</strong>. To enable it, install
+        <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> on the server, pull a model
+        (e.g. <code>ollama pull llama3.1</code>), then set <code>AIAssistant:Enabled = true</code> in configuration.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorText))
+{
+    <div class="alert alert-danger">@Model.ErrorText</div>
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">💬 Ask a question</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Ask">
+                    <textarea name="Question" class="form-control mb-2" rows="3"
+                              placeholder="e.g. When should I use a Credit Note vs a Refund Note?">@Model.Question</textarea>
+                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Ask</button>
+                </form>
+                @if (!string.IsNullOrEmpty(Model.AnswerText))
+                {
+                    <hr />
+                    <div class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.AnswerText</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">🧾 Suggest an invoice</div>
+            <div class="card-body">
+                <form method="post" asp-page-handler="Suggest">
+                    <textarea name="Description" class="form-control mb-2" rows="3"
+                              placeholder="e.g. Sold 3 laptops to Acme Sdn Bhd in Penang at RM4500 each, 8% SST.">@Model.Description</textarea>
+                    <button type="submit" class="btn btn-success" disabled="@(!Model.Enabled)">Suggest invoice</button>
+                </form>
+                @if (!string.IsNullOrEmpty(Model.SuggestionJson))
+                {
+                    <hr />
+                    <p class="text-muted mb-1"><small>Review the suggestion below. "Use in Create Invoice form" pre-fills the real form — you still pick the supplier/customer and confirm everything before saving. Nothing is submitted automatically.</small></p>
+                    <pre id="suggestionJson" class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.SuggestionJson</pre>
+                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm">✏️ Use in Create Invoice form</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var btn = document.getElementById('useSuggestionBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                try {
+                    var pre = document.getElementById('suggestionJson');
+                    if (!pre) return;
+                    // Validate it parses before sending the user to the form.
+                    var parsed = JSON.parse(pre.textContent.trim());
+                    sessionStorage.setItem('einv_prefill', JSON.stringify(parsed));
+                    window.location.href = '/Invoices/CreateInvoice?prefill=1';
+                } catch (e) {
+                    alert('The suggestion is not valid JSON, so it cannot be loaded into the form. Try regenerating it.');
+                }
+            });
+        })();
+    </script>
+}

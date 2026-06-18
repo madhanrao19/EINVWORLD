@@ -23,13 +23,18 @@ namespace EINVWORLD.Services.Background
         {
             if (workItem is null) throw new ArgumentNullException(nameof(workItem));
 
-            var queue = _tenantQueues.GetOrAdd(tin, _ =>
-            {
-                lock (_activeTenants) { if (!_activeTenants.Contains(tin)) _activeTenants.Add(tin); }
-                return new ConcurrentQueue<Func<CancellationToken, Task>>();
-            });
+            var queue = _tenantQueues.GetOrAdd(tin, _ => new ConcurrentQueue<Func<CancellationToken, Task>>());
 
             queue.Enqueue(workItem);
+
+            // Ensure this TIN is in the active rotation on EVERY enqueue. A drained TIN is removed
+            // from _activeTenants by DequeueAsync (but its queue entry stays), so registering only
+            // inside the GetOrAdd factory would silently drop the 2nd+ job for the same TIN.
+            lock (_activeTenants)
+            {
+                if (!_activeTenants.Contains(tin)) _activeTenants.Add(tin);
+            }
+
             _signal.Release(); // Signal that work is available
 
             return ValueTask.CompletedTask;

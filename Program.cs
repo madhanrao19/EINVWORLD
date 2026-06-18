@@ -86,10 +86,18 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 
 builder.Services.AddSingleton<EINVWORLD.Services.Background.IBackgroundTaskQueue, EINVWORLD.Services.Background.BackgroundTaskQueue>();
 builder.Services.AddHostedService<EINVWORLD.Services.Background.QueuedHostedService>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobTracker, EINVWORLD.Services.Background.SyncJobTracker>();
 
 
 // 🔐 Data Protection (Persist Keys)
-var dataProtectionDir = Path.Combine(Directory.GetCurrentDirectory(), "DataProtectionKeys");
+// IMPORTANT: keep the key ring OUTSIDE the deployable App folder, otherwise a redeploy that clears
+// App/ wipes the keys → every existing session cookie and antiforgery token becomes undecryptable
+// ("The key {...} was not found in the key ring"), logging all users out and breaking session-based
+// flows (e.g. the submission TIN stored in session). Configure DataProtection:KeyRingPath to a stable
+// location such as D:\EINVWORLD\Keys; falls back to an in-app folder only if not configured.
+var dataProtectionDir = builder.Configuration["DataProtection:KeyRingPath"];
+if (string.IsNullOrWhiteSpace(dataProtectionDir))
+    dataProtectionDir = Path.Combine(Directory.GetCurrentDirectory(), "DataProtectionKeys");
 Directory.CreateDirectory(dataProtectionDir); // Ensure it exists
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionDir))
@@ -274,6 +282,17 @@ builder.Services.Configure<TaxpayerValidationSettings>(builder.Configuration.Get
 // Disabled by default; flip LHDNApiConfig:SigningEnabled to true in appsettings to activate (see SECRETS-SETUP.md / §14).
 builder.Services.Configure<DigitalSignatureSettings>(builder.Configuration.GetSection("LHDNApiConfig"));
 builder.Services.AddScoped<eInvWorld.Services.IDocumentSigningService, eInvWorld.Services.DocumentSigningService>();
+
+// AI E-invoice Assistant (local Ollama LLM — FOSS, on-prem; OFF by default, see appsettings "AIAssistant").
+var aiOptions = builder.Configuration.GetSection(EINVWORLD.Services.Assistant.AIAssistantOptions.SectionName)
+    .Get<EINVWORLD.Services.Assistant.AIAssistantOptions>() ?? new EINVWORLD.Services.Assistant.AIAssistantOptions();
+builder.Services.AddSingleton(aiOptions);
+builder.Services.AddHttpClient<EINVWORLD.Services.Assistant.IEInvoiceAssistantService, EINVWORLD.Services.Assistant.EInvoiceAssistantService>(client =>
+{
+    if (Uri.TryCreate(aiOptions.BaseUrl, UriKind.Absolute, out var baseUri))
+        client.BaseAddress = baseUri;
+    client.Timeout = TimeSpan.FromSeconds(aiOptions.TimeoutSeconds <= 0 ? 120 : aiOptions.TimeoutSeconds);
+});
 
 // Add HttpClient services to the DI container
 builder.Services.AddHttpClient();

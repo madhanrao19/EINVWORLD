@@ -1,0 +1,88 @@
+@page
+@model eInvWorld.Pages.Admin.SyncJobsModel
+@using eInvWorld.Models.Background
+@{
+    ViewData["Title"] = "Sync Jobs";
+
+    string BadgeClass(string status) => status switch
+    {
+        SyncJobStatus.Completed => "bg-success",
+        SyncJobStatus.Running => "bg-primary",
+        SyncJobStatus.Queued => "bg-secondary",
+        SyncJobStatus.Failed => "bg-danger",
+        _ => "bg-light text-dark"
+    };
+
+    string Dur(SyncJob j)
+    {
+        if (j.StartedAtUtc == null) return "—";
+        var end = j.FinishedAtUtc ?? DateTime.UtcNow;
+        var s = (end - j.StartedAtUtc.Value).TotalSeconds;
+        return s < 60 ? $"{s:F0}s" : $"{s / 60:F1}m";
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>🔄 Background Sync Jobs</h3>
+    <div>
+        @if (Model.RunningCount > 0 || Model.QueuedCount > 0)
+        {
+            <span class="badge bg-primary">@Model.RunningCount running</span>
+            <span class="badge bg-secondary">@Model.QueuedCount queued</span>
+            <span class="text-muted ms-2">auto-refreshing…</span>
+        }
+        else
+        {
+            <span class="text-muted">No active jobs</span>
+        }
+        <a asp-page="/Admin/InvoiceSync" class="btn btn-sm btn-outline-primary ms-2">← Sync controls</a>
+    </div>
+</div>
+
+<p class="text-muted">Showing the latest 100 jobs. Times are UTC.</p>
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>TIN</th>
+                <th>Status</th>
+                <th>Queued</th>
+                <th>Duration</th>
+                <th>Result</th>
+                <th>By</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Jobs.Any())
+            {
+                <tr><td colspan="8" class="text-center text-muted">No sync jobs yet.</td></tr>
+            }
+            @foreach (var j in Model.Jobs)
+            {
+                <tr>
+                    <td>@j.Id</td>
+                    <td>@j.JobType</td>
+                    <td>@j.Tin</td>
+                    <td><span class="badge @BadgeClass(j.Status)">@j.Status</span></td>
+                    <td>@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
+                    <td>@Dur(j)</td>
+                    <td style="max-width:480px;"><small>@j.Message</small></td>
+                    <td><small>@j.TriggeredBy</small></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-refresh while there is active work, so progress shows without manual reloads.
+        var hasActive = @((Model.RunningCount > 0 || Model.QueuedCount > 0).ToString().ToLower());
+        if (hasActive) {
+            setTimeout(function () { window.location.reload(); }, 8000);
+        }
+    </script>
+}
