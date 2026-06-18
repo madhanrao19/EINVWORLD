@@ -1,0 +1,225 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Logs.IndexModel
+@{
+    ViewData["Title"] = "System Logs";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid py-4">
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filter Logs</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" name="SearchTerm" value="@Model.SearchTerm" placeholder="Msg, User, IP...">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Level</label>
+                    <select class="form-select" name="LogLevelFilter" asp-for="LogLevelFilter">
+                        <option value="">All Levels</option>
+                        <option value="Information">Information</option>
+                        <option value="Warning">Warning</option>
+                        <option value="Error">Error</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" name="StartDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))">
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2 w-100">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <a asp-page="./Index" class="btn btn-secondary w-50">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Log Results (@Model.TotalLogs found)</h6>
+
+            <div>
+                <form method="post" asp-page-handler="ClearAll" onsubmit="return confirm('⚠️ ARE YOU SURE?\n\nThis will permanently delete ALL system logs from the database.');" class="d-inline me-2">
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="fas fa-trash"></i> Delete Logs
+                    </button>
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('csv')">Export as CSV (.csv)</a></li>
+                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('txt')">Export as Text (.txt)</a></li>
+                        </ul>
+                    </div>
+                </form>
+                <button class="btn btn-sm btn-outline-primary" onclick="location.reload();">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="logsTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%">Timestamp</th>
+                            <th style="width: 10%">User</th>
+                            <th style="width: 10%">IP Address</th>
+                            <th style="width: 10%">Level</th>
+                            <th style="width: 35%">Message</th>
+                            <th style="width: 20%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Logs.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No logs found matching your criteria.</td>
+                            </tr>
+                        }
+
+                        @foreach (var log in Model.Logs)
+                        {
+                            var badgeClass = log.Level switch
+                            {
+                                "Error" => "badge bg-danger",
+                                "Warning" => "badge bg-warning text-dark",
+                                "Information" => "badge bg-info text-dark",
+                                _ => "badge bg-secondary"
+                            };
+
+                            <tr>
+                                <td>@log.TimeStamp.ToString("dd-MM-yyyy HH:mm:ss")</td>
+                                <td>
+                                    @if (log.UserName != "Anonymous" && !string.IsNullOrEmpty(log.UserName))
+                                    {
+                                        <span class="badge bg-primary">@log.UserName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">System/Anon</span>
+                                    }
+                                </td>
+                                <td><span class="badge bg-secondary">@log.IPAddress</span></td>
+                                <td><span class="@badgeClass">@log.Level</span></td>
+                                <td class="text-break">
+                                    @log.Message
+                                    @if (!string.IsNullOrEmpty(log.Exception))
+                                    {
+                                        <div class="text-danger small mt-1">
+                                            <strong>Exception:</strong> @log.Exception.Substring(0, Math.Min(log.Exception.Length, 100))...
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#logModal-@log.Id">
+                                        View Details
+                                    </button>
+
+                                    <div class="modal fade" id="logModal-@log.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Log Details (ID: @log.Id)</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>Timestamp:</strong> @log.TimeStamp</p>
+                                                    <p><strong>Level:</strong> @log.Level</p>
+                                                    <p><strong>User:</strong> @log.UserName (@log.IPAddress)</p>
+                                                    <p><strong>Message:</strong></p>
+                                                    <div class="p-2 bg-light border rounded">@log.Message</div>
+
+                                                    @if (!string.IsNullOrEmpty(log.Exception))
+                                                    {
+                                                        <hr />
+                                                        <p class="text-danger"><strong>Exception Trace:</strong></p>
+                                                        <pre class="bg-dark text-white p-3 rounded" style="max-height: 300px; overflow: auto;">@log.Exception</pre>
+                                                    }
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="row mt-3 align-items-center">
+                <div class="col-md-6 text-muted small">
+                    Showing Page <strong>@Model.CurrentPage</strong> of <strong>@Model.TotalPages</strong>
+                </div>
+                <div class="col-md-6 text-end">
+                    <nav aria-label="Log navigation">
+                        <ul class="pagination justify-content-end mb-0">
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link"
+                                   asp-route-pageIndex="@(Model.CurrentPage - 1)"
+                                   asp-route-SearchTerm="@Model.SearchTerm"
+                                   asp-route-LogLevelFilter="@Model.LogLevelFilter"
+                                   asp-route-StartDate="@(Model.StartDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-EndDate="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+                                   aria-label="Previous">
+                                    <span aria-hidden="true">&laquo; Previous</span>
+                                </a>
+                            </li>
+
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link"
+                                   asp-route-pageIndex="@(Model.CurrentPage + 1)"
+                                   asp-route-SearchTerm="@Model.SearchTerm"
+                                   asp-route-LogLevelFilter="@Model.LogLevelFilter"
+                                   asp-route-StartDate="@(Model.StartDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-EndDate="@(Model.EndDate?.ToString("yyyy-MM-dd"))"
+                                   aria-label="Next">
+                                    <span aria-hidden="true">Next &raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function exportLogs(format) {
+            // Capture current filter values from the form
+            const searchTerm = document.querySelector('input[name="SearchTerm"]').value;
+            const level = document.querySelector('select[name="LogLevelFilter"]').value;
+            const start = document.querySelector('input[name="StartDate"]').value;
+            const end = document.querySelector('input[name="EndDate"]').value;
+
+            // Build the URL with query parameters [cite: 47, 48]
+            const url = `/api/LogExport/download?format=${format}` +
+                        `&searchTerm=${encodeURIComponent(searchTerm)}` +
+                        `&level=${encodeURIComponent(level)}` +
+                        `&startDate=${start}` +
+                        `&endDate=${end}`;
+
+            // Trigger download
+            window.location.href = url;
+        }
+    </script>
+}

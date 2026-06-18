@@ -11,29 +11,17 @@ namespace eInvWorld.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "SystemLogs",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Level = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TimeStamp = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Exception = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LogEvent = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SystemLogs", x => x.Id);
-                });
+            // SystemLogs is now OWNED by the Serilog MSSqlServer sink (autoCreateSqlTable=true), not EF.
+            // This original CreateTable is intentionally neutralised so a FRESH database lets Serilog
+            // create the table (avoiding a race where EF's CREATE TABLE collides with the sink's).
+            // On existing databases this migration is already recorded as applied and never re-runs,
+            // so emptying the body has no effect there.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "SystemLogs");
+            // No-op: EF no longer owns the SystemLogs table (see Up).
         }
     }
 }

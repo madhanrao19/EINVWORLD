@@ -23,7 +23,9 @@ web.config
 DataProtectionKeys/
 
 # ---- Runtime data / generated artifacts ----
-logs/
+# Anchor to repo root so this only ignores the Serilog output dir (logs/log.txt), NOT source
+# directories like Pages/Admin/Logs/ or Models/Logs/ (git is case-insensitive on Windows).
+/logs/
 Documents/
 invoice-counter.txt
 
