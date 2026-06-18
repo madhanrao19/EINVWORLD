@@ -1,0 +1,75 @@
+﻿@page
+@model eInvWorld.Pages.Templates.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>InvoiceTemplate</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="InvoiceTemplate.Id" />
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.TemplateName" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.TemplateName" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.TemplateName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.DocTypeCode" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.DocTypeCode" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.DocTypeCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.SupplierId" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.SupplierId" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.SupplierId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.CustomerId" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.CustomerId" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.CustomerId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.Currency" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.Currency" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.Currency" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.ExchangeRate" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.ExchangeRate" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.ExchangeRate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.StartDate" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.StartDate" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.StartDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.EndDate" class="control-label"></label>
+                <input asp-for="InvoiceTemplate.EndDate" class="form-control" />
+                <span asp-validation-for="InvoiceTemplate.EndDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="InvoiceTemplate.InvoicePeriod" class="control-label"></label>
+                <select asp-for="InvoiceTemplate.InvoicePeriod" class="form-control"></select>
+                <span asp-validation-for="InvoiceTemplate.InvoicePeriod" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./TemplateLists">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

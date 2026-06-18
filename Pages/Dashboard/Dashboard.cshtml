@@ -1,0 +1,981 @@
+﻿@page
+@model eInvWorld.Pages.Invoices.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-soft: #eef2ff;
+        --primary-text: #4f46e5;
+        --success-soft: #f0fdf4;
+        --success-text: #16a34a;
+        --danger-soft: #fef2f2;
+        --danger-text: #dc2626;
+        --warning-soft: #fffbeb;
+        --warning-text: #d97706;
+        --chart-bg: #ffffff;
+    }
+
+    /* Consolidated Card Aesthetics */
+    .card {
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 12px !important; /* Slightly sharper corners as per image */
+        box-shadow: none !important;
+        transition: none !important;
+    }
+
+        .card:hover {
+            transform: none !important;
+        }
+
+    /* KPI Icon Box Styling */
+    .icon-box {
+        background: transparent !important; /* Image shows subtle outlines or transparent backgrounds */
+        color: var(--text-muted) !important;
+        font-size: 1.2rem;
+        margin-bottom: 0;
+        width: auto;
+        height: auto;
+    }
+
+    /* Typography Overrides */
+    .metric-value {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        color: var(--text-main) !important;
+        margin: 0.5rem 0;
+    }
+
+    .metric-label-top {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .metric-label-bottom {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Status Dot Indicators (Bottom row of the image) */
+    .status-dot {
+        height: 10px;
+        width: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    /* Wave Background Decorations */
+    .wave-container {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        line-height: 0;
+        z-index: 1;
+    }
+
+    .wave-svg {
+        width: 100%;
+        height: 60px;
+    }
+
+    /* Chart Headers */
+    .card-header-clean {
+        background: transparent;
+        border-bottom: none;
+        padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+    }
+
+        .card-header-clean h5 {
+            font-weight: 600;
+            color: #374151;
+        }
+
+    /* Styling for Quick Action Buttons and Table Badges */
+    .bg-success-soft {
+        background-color: var(--success-soft);
+        color: var(--success-text);
+    }
+
+    .bg-warning-soft {
+        background-color: var(--warning-soft);
+        color: var(--warning-text);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-text);
+        border-color: var(--primary-text);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+
+    .table thead th {
+        border-top: none;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+    }
+
+    .transition-hover {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .transition-hover:hover {
+        box-shadow: 0 6px 15px rgba(0,0,0,0.1) !important;
+        transform: translateY(-2px); /* A slight lift up looks more natural for buttons than shifting right */
+    }
+
+    /* Force calendar picker to open when clicking anywhere on the input */
+    #filterDate {
+        position: relative;
+    }
+    
+        #filterDate::-webkit-calendar-picker-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+</style>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Dashboard Overview</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb m-0 bg-transparent p-0">
+                        <li class="breadcrumb-item text-muted">Dashboards</li>
+                        <li class="breadcrumb-item active fw-semibold text-primary">Overview</li>
+                    </ol>
+                </nav>
+            </div>
+            
+            <form method="get" id="filterForm" class="d-flex align-items-center gap-2 bg-white p-2 rounded shadow-sm border">
+                <select name="FilterType" id="filterType" class="form-select form-select-sm border-0" style="width: 110px; background-color: var(--primary-soft); color: var(--primary-text); font-weight: 600;">
+                    <option value="Day" selected="@(Model.FilterType == "Day")">Specific Day</option>
+                    <option value="Month" selected="@(Model.FilterType == "Month")">Full Month</option>
+                    <option value="Year" selected="@(Model.FilterType == "Year")">Full Year</option>
+                </select>
+    
+                <input id="filterDate"
+                       type="@(Model.FilterType == "Month" ? "month" : "date")"
+                       class="form-control form-control-sm border-0"
+                       value="@(Model.FilterType == "Month" ? Model.FilterDate?.ToString("yyyy-MM") : Model.FilterDate?.ToString("yyyy-MM-dd"))"
+                       data-default-date="@(Model.FilterDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"))"
+                       style="width: 160px; cursor: pointer;"
+                       onkeydown="return false;" />
+           
+                <select id="filterYear" class="form-select form-select-sm border-0" style="width: 160px; display: none;">
+                    @for (int i = 2020; i <= DateTime.Now.Year + 5; i++)
+                    {
+                        <option value="@i-01-01" selected="@(Model.FilterDate?.Year == i)">@i</option>
+                    }
+                </select>
+           
+                <button type="submit" class="btn btn-sm btn-primary px-3 rounded">Apply</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (Model.UserType == "Admin")
+{
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden h-100 shadow-sm border-0">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">Total Invoices</p>
+                        <h2 class="metric-value mb-1">@Model.TotalInvoices</h2>
+                        <p class="text-muted mb-0" style="font-size: 0.75rem;">(Includes Submitted, Rejected, Valid, Invalid, and Cancelled)</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-file-list-3-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #6b7280;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden h-100">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">Total Companies</p>
+                        <h2 class="metric-value mb-1">@Model.TotalCompaniesCount</h2>
+                        <p class="metric-label-bottom mb-0">Registered suppliers</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-building-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #9ca3af;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden h-100">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">Total Users</p>
+                        <h2 class="metric-value mb-1">@Model.TotalUsersCount</h2>
+                        <p class="metric-label-bottom mb-0">Active users</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-user-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,80 C40,40 80,130 130,80 C180,30 230,140 280,80 C330,20 380,130 430,80 C470,40 500,80 500,80 L500,150 L0,150 Z" style="stroke: none; fill: #3b82f6;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden h-100">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">Total Buyers</p>
+                        <h2 class="metric-value mb-1">@Model.TotalBuyerCount</h2>
+                        <p class="metric-label-bottom mb-0">Registered buyers</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-group-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,80 C40,40 80,130 130,80 C180,30 230,140 280,80 C330,20 380,130 430,80 C470,40 500,80 500,80 L500,150 L0,150 Z" style="stroke: none; fill: #6b7280;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #4b49ac !important;">
+            <h5 class="fw-bold text-dark mb-1">Quick Actions</h5>
+            <p class="text-muted mb-4 small">Common administrative tasks</p>
+
+            <div class="row g-3 h-100 align-content-start">
+                <div class="col-md-6">
+                    <a asp-page="/Suppliers/Index" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="ri-building-line fs-5"></i>
+                        </div>
+                        <span class="fw-semibold">Manage Companies</span>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a asp-page="/Admin/Users/ManageUser" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="ri-user-settings-line fs-5"></i>
+                        </div>
+                        <span class="fw-semibold">Manage Users</span>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a asp-page="/Admin/InvoiceSync" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="ri-refresh-line fs-5"></i>
+                        </div>
+                        <span class="fw-semibold">Invoice Sync</span>
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a asp-page="/Admin/Logs/Index" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="ri-file-list-3-line fs-5"></i>
+                        </div>
+                        <span class="fw-semibold">System Audit</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.UserType == "Supplier")
+{
+    // --- Generate bulletproof Start and End dates for the Invoice List ---
+    DateTime baseDate = Model.FilterDate ?? DateTime.Now;
+    DateTime start, end;
+
+    if (Model.FilterType == "Day")
+    {
+        start = baseDate.Date;
+        end = baseDate.Date.AddDays(1).AddTicks(-1);
+    }
+    else if (Model.FilterType == "Year")
+    {
+        start = new DateTime(baseDate.Year, 1, 1);
+        end = new DateTime(baseDate.Year, 12, 31, 23, 59, 59);
+    }
+    else
+    {
+        start = new DateTime(baseDate.Year, baseDate.Month, 1);
+        end = start.AddMonths(1).AddTicks(-1);
+    }
+
+    string dateParams = $"&submissionDateFrom={start:s}&submissionDateTo={end:s}";
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">Total Invoices</p>
+                        <h2 class="metric-value mb-0">@Model.TotalInvoices</h2>
+                        <p class="text-muted mb-1" style="font-size: 0.75rem;">(Include Submitted, Rejected, Valid, Invalid and Cancelled)</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-file-list-3-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #9ca3af;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">My Users</p>
+                        <h2 class="metric-value">@Model.TotalUsersCount</h2>
+                        <p class="metric-label-bottom mb-0">Assigned to your company</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-user-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,80 C40,40 80,130 130,80 C180,30 230,140 280,80 C330,20 380,130 430,80 C470,40 500,80 500,80 L500,150 L0,150 Z" style="stroke: none; fill: #3b82f6;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card p-4 position-relative overflow-hidden">
+                <div class="d-flex justify-content-between position-relative" style="z-index: 2;">
+                    <div>
+                        <p class="metric-label-top mb-0">My Buyers</p>
+                        <h2 class="metric-value">@Model.TotalBuyerCount</h2>
+                        <p class="metric-label-bottom mb-0">Your active buyer list</p>
+                    </div>
+                    <div class="icon-box"><i class="ri-group-line"></i></div>
+                </div>
+                <div class="wave-container" style="opacity: 0.1; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none">
+                        <path d="M0,80 C40,40 80,130 130,80 C180,30 230,140 280,80 C330,20 380,130 430,80 C470,40 500,80 500,80 L500,150 L0,150 Z" style="stroke: none; fill: #6b7280;"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #374151;"></span>Draft</p>
+                    <h2 class="metric-value mb-0">@Model.DraftInvoices</h2>
+                    <p class="text-muted small mb-0">&nbsp;</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #374151;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #3b82f6;"></span>Submitted</p>
+                    <h2 class="metric-value mb-0">@Model.SubmittedInvoices</h2>
+                    <p class="text-muted small mb-0">RM @Model.SubmittedAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #3b82f6;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #10b981;"></span>Valid</p>
+                    <h2 class="metric-value mb-0">@Model.ValidInvoices</h2>
+                    <p class="text-muted small mb-0">RM @Model.TotalValidAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #10b981;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #f59e0b;"></span>Rejected</p>
+                    <h2 class="metric-value mb-0">@Model.RejectRequestInvoices</h2>
+                    <p class="text-muted small mb-0">RM @Model.RejectRequestAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #ef4444;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #ef4444;"></span>Invalid</p>
+                    <h2 class="metric-value mb-0">@Model.InvalidInvoices</h2>
+                    <p class="text-muted small mb-0">RM @Model.InvalidAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #ef4444;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 position-relative overflow-hidden">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-bottom"><span class="status-dot" style="background-color: #6b7280;"></span>Cancelled</p>
+                    <h2 class="metric-value mb-0">@Model.CancelledInvoices</h2>
+                    <p class="text-muted small mb-0">RM @Model.CancelledAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #6b7280;"></path></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-7">
+            <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #4b49ac !important;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h5 class="fw-bold text-dark mb-0">Action Center</h5>
+                </div>
+                <p class="text-muted mb-4 small">Common supplier tasks and items requiring attention</p>
+
+                <div class="row g-3 h-100 align-content-start">
+                    <div class="col-md-4">
+                        <a asp-page="/Invoices/CreateInvoice" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                                <i class="ri-add-box-line fs-5"></i>
+                            </div>
+                            <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Create Invoice</span>
+                            <span class="small text-muted" style="font-size: 0.8rem;">Generate new</span>
+                        </a>
+                    </div>
+
+                    <div class="col-md-4">
+                        <a href="/PublicCustomer/List" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                                <i class="ri-user-add-line fs-5"></i>
+                            </div>
+                            <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Manage Buyers</span>
+                            <span class="small text-muted" style="font-size: 0.8rem;">View and add</span>
+                        </a>
+                    </div>
+
+                    <div class="col-md-4">
+                        <a href="/Suppliers/Details?id=@Model.PrimaryCompanyId" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                                <i class="ri-building-line fs-5"></i>
+                            </div>
+                            <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">My Company</span>
+                            <span class="small text-muted" style="font-size: 0.8rem;">Update profile</span>
+                        </a>
+                    </div>
+                
+                    <div class="col-md-6">
+                        <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&LHDNStatus=Invalid&status=Invalid@(dateParams)"
+                               class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-danger-subtle transition-hover position-relative"
+                               style="background-color: #fef2f2;">
+                        
+                            @if (Model.ActionInvalidCount > 0)
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light shadow-sm" style="font-size: 0.8rem; padding: 0.35em 0.65em;">
+                                    @Model.ActionInvalidCount
+                                </span>
+                            }
+                            <div class="me-3 shadow-sm bg-danger text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                <i class="ri-error-warning-line fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">LHDN Invalid</span>
+                                <span class="small text-muted" style="font-size: 0.85rem;">Fix & Resubmit</span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-md-6">
+                        <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&InternalStatus=TransmissionError"
+                               class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-warning-subtle transition-hover position-relative"
+                               style="background-color: #fffbeb;">
+                        
+                            @if (Model.ActionTransmissionErrorCount > 0)
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-dark border border-light shadow-sm" style="font-size: 0.8rem; padding: 0.35em 0.65em; background-color: #fbbf24;">
+                                    @Model.ActionTransmissionErrorCount
+                                </span>
+                            }
+                            <div class="me-3 shadow-sm text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background-color: #f59e0b;">
+                                <i class="ri-wifi-off-line fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">Connection Failed</span>
+                                <span class="small text-muted" style="font-size: 0.85rem;">Server down. Retry later.</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Invoice Trends</h5>
+                    <small class="text-muted" id="selectedYearText">(Year)</small>
+                </div>
+                <div class="card-body">
+                    <div style="height: 350px; width: 100%;"><canvas id="invoiceTypesMonthlyChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-4">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Status Breakdown</h5></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 250px; width: 100%;"><canvas id="statusChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Customer Share</h5></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 250px; width: 100%;"><canvas id="customerChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Invoice Types</h5></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 250px; width: 100%;"><canvas id="invoiceTypesChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-5">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Rejections & Cancellations</h5></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 320px; width: 100%;"><canvas id="rejectedReasonsChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-body overflow-auto" style="max-height: 410px;">
+                    <div id="rejectionFixesTable">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-6">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Top Buyers by Rejection Rate</h5>
+                    <i class="ri-user-unfollow-line text-muted fs-5"></i>
+                </div>
+                <div class="card-body p-4">
+                    <div id="buyerRejectionTable">
+                        <div class="d-flex justify-content-center align-items-center h-100 py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Top Internal Errors</h5>
+                    <i class="ri-user-settings-line text-muted fs-5"></i>
+                </div>
+                <div class="card-body p-4">
+                    <div id="internalErrorsTable">
+                        <div class="d-flex justify-content-center align-items-center h-100 py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4 mb-4">
+        <div class="col-12">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center">
+                        <h5 class="mb-0 me-3 fw-bold text-dark">Recent System Invoices</h5>
+                        <span class="badge bg-primary-soft text-primary">Latest 5</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/Invoices/ImportCsv" class="btn btn-sm btn-outline-secondary fw-semibold transition-hover"><i class="ri-upload-cloud-2-line me-1 align-bottom"></i>Bulk Invoice Import</a>
+                        <button type="button" onclick="exportRecentInvoices()" class="btn btn-sm btn-primary fw-semibold transition-hover"><i class="ri-download-2-line me-1 align-bottom"></i>Export</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="recentInvoicesTable">
+                            <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
+                                <tr>
+                                    <th class="ps-4">Invoice #</th>
+                                    <th>Customer / Buyer</th>
+                                    <th>UUID</th>
+                                    <th>Total (MYR)</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Error / Reason</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.RecentInvoices)
+                                {
+                                    <tr>
+                                        <td class="ps-4 fw-bold text-dark">@item.InvoiceNo</td>
+                                        <td class="text-truncate fw-semibold" style="max-width: 200px;" title="@(item.Customer?.CompanyName ?? item.PublicCustomer?.CompanyName ?? "Unknown Buyer")">
+                                            @(item.Customer?.CompanyName ?? item.PublicCustomer?.CompanyName ?? "Unknown Buyer")
+                                        </td>
+                                        <td class="text-muted font-monospace" style="font-size: 0.8rem;">
+                                            @(string.IsNullOrEmpty(item.UUID) ? "-" : (item.UUID.Length > 8 ? item.UUID.Substring(0, 8) + "..." : item.UUID))
+                                        </td>
+                                        <td>@item.TotalAmountIncTax?.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge rounded-pill @(item.LHDNStatusId == "Valid" ? "bg-success-soft text-success" : (item.LHDNStatusId == "Invalid" || item.LHDNStatusId == "Cancelled" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"))">
+                                                @item.LHDNStatusId
+                                            </span>
+                                        </td>
+                                        <td class="text-muted small">@item.CreatedDate.ToString("dd MMM yyyy, HH:mm")</td>
+                                        <td class="text-truncate text-danger small fw-medium" style="max-width: 150px;" title="@item.RejectedReason">
+                                            @(string.IsNullOrEmpty(item.RejectedReason) ? "-" : item.RejectedReason)
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-light border dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Action
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.85rem;">
+                                                    <li>
+                                                        <a class="dropdown-item py-2" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)">
+                                                            <i class="ri-eye-line me-2 text-primary align-bottom"></i>View Document
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item py-2" href="/Invoices/CreateInvoice?refId=@item.InvoiceNo&type=CreditNote"><i class="ri-file-damage-line me-2 text-secondary align-bottom"></i>Issue CN / DN</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100 border-0 shadow-sm" style="border-left: 5px solid #f59e0b !important;">
+                <div class="card-header-clean d-flex justify-content-between align-items-center" style="background-color: #fffbeb; border-radius: 12px 12px 0 0;">
+                    <h5 class="mb-0 text-warning-emphasis fw-bold">
+                        <i class="ri-timer-flash-line me-2 fs-5 align-middle"></i>Action Required: Aging Drafts
+                    </h5>
+                    <span class="badge bg-warning text-dark">Older than 3 Days</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
+                                <tr>
+                                    <th class="ps-4">Invoice #</th>
+                                    <th>Buyer Name</th>
+                                    <th>Created Date</th>
+                                    <th>Days Stuck</th>
+                                    <th class="text-end pe-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agingDraftsTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <div class="spinner-border text-warning" role="status"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.UserType == "Buyer")
+{
+    // --- DATE CALCULATION FOR BUYER LINKS ---
+    DateTime baseDate = Model.FilterDate ?? DateTime.Now;
+    DateTime start, end;
+    if (Model.FilterType == "Day") { start = baseDate.Date; end = baseDate.Date.AddDays(1).AddTicks(-1); }
+    else if (Model.FilterType == "Year") { start = new DateTime(baseDate.Year, 1, 1); end = new DateTime(baseDate.Year, 12, 31, 23, 59, 59); }
+    else { start = new DateTime(baseDate.Year, baseDate.Month, 1); end = start.AddMonths(1).AddTicks(-1); }
+    string dateParams = $"&submissionDateFrom={start:s}&submissionDateTo={end:s}";
+
+    <div class="row mb-4">
+        <div class="col-12">
+                <form method="get" class="row g-3 align-items-end">
+                    <input type="hidden" name="FilterType" value="@Model.FilterType" />
+                    <input type="hidden" name="FilterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" />
+                </form>
+            </div>
+        </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-3 position-relative overflow-hidden h-100 border-0 shadow-sm">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-top mb-0 text-primary"><span class="status-dot bg-primary"></span>Total Received</p>
+                    <h2 class="metric-value mb-1">@Model.BuyerTotalReceivedCount</h2>
+                    <p class="metric-label-bottom mb-0 fw-semibold text-primary">RM @Model.BuyerTotalReceivedAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #3b82f6;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-3 position-relative overflow-hidden h-100 border-0 shadow-sm">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-top mb-0 text-success"><span class="status-dot bg-success"></span>Valid / Payable</p>
+                    <h2 class="metric-value mb-1 text-success">@Model.BuyerValidCount</h2>
+                    <p class="metric-label-bottom mb-0 fw-semibold text-success">RM @Model.BuyerValidAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #10b981;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-3 position-relative overflow-hidden h-100 border-0 shadow-sm">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-top mb-0 text-danger"><span class="status-dot bg-danger"></span>Reject</p>
+                    <h2 class="metric-value mb-1 text-danger">@Model.BuyerRequestRejectCount</h2>
+                    <p class="metric-label-bottom mb-0 fw-semibold text-danger">RM @Model.BuyerRequestRejectAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #ef4444;"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card p-3 position-relative overflow-hidden h-100 border-0 shadow-sm">
+                <div class="position-relative" style="z-index: 2;">
+                    <p class="metric-label-top mb-0 text-secondary"><span class="status-dot bg-secondary"></span>Cancelled</p>
+                    <h2 class="metric-value mb-1 text-secondary">@Model.BuyerCancelledCount</h2>
+                    <p class="metric-label-bottom mb-0 fw-semibold text-secondary">RM @Model.BuyerCancelledAmount.ToString("N2")</p>
+                </div>
+                <div class="wave-container" style="opacity: 0.05; pointer-events: none;">
+                    <svg class="wave-svg" viewBox="0 0 500 150" preserveAspectRatio="none"><path d="M0,70 C50,20 100,120 150,70 C200,20 250,120 300,70 C350,20 400,120 450,70 C480,50 500,70 500,70 L500,150 L0,150 Z" style="stroke: none; fill: #6b7280;"></path></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-12">
+            <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #f59e0b !important;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h5 class="fw-bold text-dark mb-0">Purchasing Action Center</h5>
+                </div>
+                <p class="text-muted mb-4 small">Manage incoming invoices and resolve disputes</p>
+
+                <div class="row g-3 h-100 align-content-start">
+                    <div class="col-md-3">
+                        <a href="/Invoices/InvoiceLists?invoiceDirection=Received&LHDNStatus=Valid@(dateParams)" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-success-subtle transition-hover bg-light position-relative">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #f0fdf4; color: #16a34a; border-radius: 8px;">
+                                <i class="ri-checkbox-circle-line fs-5"></i>
+                            </div>
+                            <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Review Valid Invoices</span>
+                            <span class="small text-muted" style="font-size: 0.8rem;">Ready for processing</span>
+                        </a>
+                    </div>
+
+                    <div class="col-md-3">
+                        <a href="/Invoices/InvoiceLists?invoiceDirection=Received&InternalStatus=RequestReject@(dateParams)" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-danger-subtle transition-hover bg-light position-relative">
+                            @if (Model.BuyerRequestRejectCount > 0)
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light shadow-sm" style="font-size: 0.8rem; padding: 0.35em 0.65em;">@Model.BuyerRequestRejectCount</span>
+                            }
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #fef2f2; color: #dc2626; border-radius: 8px;">
+                                <i class="ri-error-warning-line fs-5"></i>
+                            </div>
+                            <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Review Rejections</span>
+                            <span class="small text-muted" style="font-size: 0.8rem;">Rejected by you</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Spend Trends</h5>
+                    <small class="text-muted">(Year)</small>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px; width: 100%;"><canvas id="invoiceTypesMonthlyChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-lg-6">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Top Suppliers by Spend</h5></div>
+                <div class="card-body d-flex justify-content-center align-items-center">
+                    <div style="height: 300px; width: 100%;"><canvas id="buyerTopSuppliersChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">Supplier Quality (Issues)</h5>
+                    <i class="ri-shield-star-line text-muted fs-5"></i>
+                </div>
+                <div class="card-body p-4 overflow-auto" style="max-height: 380px;">
+                    <div id="supplierRejectionTable">
+                        <div class="d-flex justify-content-center align-items-center h-100 py-4">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="card-header-clean d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div class="d-flex align-items-center">
+                        <h5 class="mb-0 me-3 fw-bold text-dark">Recent Incoming Invoices</h5>
+                        <span class="badge bg-primary-soft text-primary">Latest 5</span>
+                    </div>
+                    <a href="/Invoices/InvoiceLists?invoiceDirection=Received" class="btn btn-sm btn-outline-primary transition-hover shadow-sm">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
+                                <tr>
+                                    <th class="ps-4">Invoice #</th>
+                                    <th>Supplier Name</th>
+                                    <th>Total (MYR)</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th class="text-end pe-4">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.RecentInvoices != null && Model.RecentInvoices.Count > 0)
+                                {
+                                    @foreach (var item in Model.RecentInvoices)
+                                    {
+                                        bool isHighRisk = item.InternalStatusId == "RequestReject" || item.LHDNStatusId == "Invalid";
+                                        
+                                        <tr style="@(isHighRisk ? "background-color: #fff5f5;" : "")">
+                                            <td class="ps-4 fw-bold text-dark">
+                                                @if (isHighRisk)
+                                                {
+                                                    <i class="ri-error-warning-fill text-danger me-1" title="Requires Attention"></i>
+                                                }
+                                                @item.InvoiceNo
+                                            </td>
+                                            <td class="text-truncate fw-semibold" style="max-width: 200px;" title="@(item.Supplier?.CompanyName ?? "Unknown Supplier")">
+                                                @(item.Supplier?.CompanyName ?? "Unknown Supplier")
+                                            </td>
+                                            <td class="fw-medium text-dark">@item.TotalAmountIncTax?.ToString("N2")</td>
+                                            <td>
+                                                <span class="badge rounded-pill @(item.LHDNStatusId == "Valid" ? "bg-success-soft text-success" : (item.LHDNStatusId == "Invalid" || item.LHDNStatusId == "Cancelled" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"))">
+                                                    @item.LHDNStatusId
+                                                </span>
+                                                
+                                                @if (item.InternalStatusId == "RequestReject")
+                                                {
+                                                    <span class="badge rounded-pill bg-danger text-white ms-1 shadow-sm"><i class="ri-alert-line me-1"></i>Rejected</span>
+                                                }
+                                                else if (item.LHDNStatusId == "Invalid")
+                                                {
+                                                    <span class="badge rounded-pill bg-danger text-white ms-1 shadow-sm"><i class="ri-error-warning-line me-1"></i>Action Req.</span>
+                                                }
+                                            </td>
+                                            <td class="text-muted small">@item.CreatedDate.ToString("dd MMM yyyy")</td>
+                                            <td class="text-end pe-4">
+                                                <a class="btn btn-sm @(isHighRisk ? "btn-danger" : "btn-light border") fw-semibold shadow-sm transition-hover" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)">
+                                                    @(isHighRisk ? "View Issue" : "Review")
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr><td colspan="6" class="text-center py-5 text-muted"><i class="ri-inbox-line fs-3 d-block mb-2 text-light"></i>No invoices found for the selected filters.</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script> 
+    <script src="~/js/dashboard.js"></script>
+}

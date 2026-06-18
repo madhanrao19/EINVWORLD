@@ -1,0 +1,37 @@
+# ---- Build output ----
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+publish/
+*.user
+*.suo
+.vs/
+
+# ---- Secrets & certificates (NEVER commit) ----
+# appsettings.json should contain only placeholders; if you must keep a filled copy locally, ignore it:
+appsettings.*.local.json
+secrets.json
+*.p12
+*.pfx
+*.pem
+Cert/
+
+# web.config can carry environment variables / secrets on the server
+web.config
+
+# ---- Data Protection keys (machine-specific; back up separately, don't commit) ----
+DataProtectionKeys/
+
+# ---- Runtime data / generated artifacts ----
+logs/
+Documents/
+invoice-counter.txt
+
+# ---- Backups / scratch ----
+*.bak
+*.bak-*
+EINVWORLD.csproj.bak-net8
+
+# ---- OS / editor ----
+Thumbs.db
+.DS_Store

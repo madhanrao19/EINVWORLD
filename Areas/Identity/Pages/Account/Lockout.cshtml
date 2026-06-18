@@ -1,0 +1,68 @@
+﻿@* @page
+@model LockoutModel
+@{
+    ViewData["Title"] = "Locked out";
+}
+
+<header>
+    <h1 class="text-danger">@ViewData["Title"]</h1>
+    <p class="text-danger">This account has been locked out, please try again later.</p>
+</header>
+ *@
+
+@page
+@model eInvWorld.Areas.Identity.Pages.Account.LockoutModel
+@{
+    ViewData["Title"] = "Account Locked";
+}
+
+<section class="container mt-5">
+    <div class="card shadow-sm p-4 text-center">
+        <h1 class="text-danger mb-3">@ViewData["Title"]</h1>
+
+        <p class="text-danger">
+            This account has been locked due to too many failed login attempts.
+        </p>
+
+        @if (Model.RemainingLockoutTime.HasValue)
+        {
+            var totalSeconds = (int)Model.RemainingLockoutTime.Value.TotalSeconds;
+
+            <p class="text-info">
+                You may try logging in again in:
+                <span id="countdown">@Model.RemainingLockoutTime.Value.Minutes</span> minutes and
+                <span id="seconds">@Model.RemainingLockoutTime.Value.Seconds</span> seconds.
+            </p>
+
+            <script>
+                let secondsRemaining = @totalSeconds;
+
+                const countdown = () => {
+                    if (secondsRemaining <= 0) {
+                        document.getElementById("countdown").innerText = "0";
+                        document.getElementById("seconds").innerText = "0";
+                        return;
+                    }
+
+                    secondsRemaining--;
+
+                    const minutes = Math.floor(secondsRemaining / 60);
+                    const seconds = secondsRemaining % 60;
+
+                    document.getElementById("countdown").innerText = minutes;
+                    document.getElementById("seconds").innerText = seconds.toString().padStart(2, '0');
+                };
+
+                setInterval(countdown, 1000);
+            </script>
+        }
+        else
+        {
+            <p class="text-info">Please try again later.</p>
+        }
+
+        <a href="mailto:info@einvworld.com" class="btn btn-outline-primary mt-4">
+            📩 Contact Support
+        </a>
+    </div>
+</section>

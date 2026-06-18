@@ -1,0 +1,75 @@
+﻿@page
+@model EINVWORLD.Pages.Resources.IndexModel
+@{
+    ViewData["Title"] = "Resources | eInvWorld";
+}
+
+<!-- Page Header Start -->
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="~/images/header_images/header-page-contact.png" class="profile-wid-img w-100" alt="Resources Header" />
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">Resources</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+
+<section class="py-5 bg-light" id="resources">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <select class="form-select w-auto" id="categoryFilter" onchange="filterResources(this.value)">
+                <option value="all">All Types</option>
+                <option value="article">Articles</option>
+                <option value="guide">Guides</option>
+                <option value="video">Videos</option>
+                <option value="announcement">Announcements</option>
+            </select>
+        </div>
+
+        <div class="row g-4" id="resourceGrid">
+            @foreach (var item in Model.Resources)
+            {
+                var articleUrl = Url.Page("/Resources/Article", new { slug = item.Slug });
+                var imageUrl = item.ThumbnailUrl ?? item.ImageUrl ?? Url.Content("~/images/placeholder.jpg");
+
+                <div class="col-xl-4 col-sm-6 resource-card" data-category="@item.ResourceTypeCode?.ToLower()">
+                    <div class="card h-100 shadow-sm border-0">
+                        <a href="@articleUrl">
+                            <img src="@imageUrl" class="card-img-top" alt="@item.Title" loading="lazy" />
+                        </a>
+                        <div class="card-body">
+                            <span class="badge bg-secondary mb-2 text-capitalize">@item.ResourceTypeCode</span>
+                            <p class="text-muted mb-1">@item.DatePublished.ToString("dd MMM yyyy")</p>
+                            <h5 class="card-title">
+                                <a href="@articleUrl" class="text-dark text-decoration-none">@item.Title</a>
+                            </h5>
+                            <p class="card-text">@item.Summary</p>
+                            <a href="@articleUrl" class="btn btn-sm btn-primary">Read More</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        function filterResources(type) {
+            const cards = document.querySelectorAll('.resource-card');
+            cards.forEach(card => {
+                const cardType = card.getAttribute('data-category');
+                card.style.display = (type === 'all' || cardType === type) ? 'block' : 'none';
+            });
+        }
+    </script>
+}

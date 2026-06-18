@@ -1,0 +1,302 @@
+﻿@page
+@model EINVWORLD.Pages.Admin.Resources.ManageModel
+@using EINVWORLD.Models.Public
+@{
+    ViewData["Title"] = "Manage Resources | Admin";
+}
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">Manage Resources</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Tools</a></li>
+                    <li class="breadcrumb-item active">Manage Resources</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@if (TempData["Message"] != null)
+{
+    <div id="successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="ri-check-double-line me-2"></i>
+        @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <div class="flex-grow-1">
+                        <a class="btn btn-success add-btn" asp-page="Create">
+                            <i class="ri-add-fill me-1 align-bottom"></i> Add New Resource
+                        </a>
+                    </div>
+                    <a class="btn btn-primary add-btn" asp-page="/Admin/Resources/Types/Index">
+                        <i class="ri-folder-settings-line me-1"></i> Manage Resource Types
+                    </a>
+
+                    <button type="button" class="btn btn-info add-btn" data-bs-toggle="modal" data-bs-target="#addTypeModal">
+                        <i class="ri-folder-add-line me-1"></i> Add Resource Type
+                    </button>
+
+                    <form method="post" asp-page-handler="BackfillSlugs">
+                        <button type="submit" class="btn btn-warning add-btn">
+                            🛠 Generate Missing Slugs
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="addTypeModal" tabindex="-1" aria-labelledby="addTypeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="post" asp-page-handler="AddType">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addTypeModalLabel">Add Resource Type</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="code" class="form-label">Code</label>
+                                <input name="Code" id="code" class="form-control" maxlength="50" required />
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name</label>
+                                <input name="Name" id="name" class="form-control" maxlength="100" required />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Type</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="col-xxl-12">
+        <div class="card">
+            <div class="card-header">
+                <form method="get">
+                    <div class="row g-2 align-items-end">
+
+                        <!-- Title -->
+                        <div class="col-md-3">
+                            <label class="form-label">Search by Title</label>
+                            <input type="text" name="FilterTitle" class="form-control form-control-sm" value="@Model.FilterTitle" />
+                        </div>
+
+                        <!-- Type -->
+                        <div class="col-md-2">
+                            <label class="form-label">Type</label>
+                            <select asp-for="FilterType" class="form-select form-select-sm" asp-items="Model.ResourceTypeCodeOptions">
+                                <option value="">-- All Types --</option>
+                            </select>
+                        </div>
+
+                        <!-- Date From -->
+                        <div class="col-md-2">
+                            <label class="form-label">Date From</label>
+                            <input id="filterDateFrom" name="FilterDateFrom" class="form-control form-control-sm"
+                                   placeholder="Start Date" value="@Model.FilterDateFrom?.ToString("yyyy-MM-dd")" />
+                        </div>
+
+                        <!-- Date To -->
+                        <div class="col-md-2">
+                            <label class="form-label">Date To</label>
+                            <input id="filterDateTo" name="FilterDateTo" class="form-control form-control-sm"
+                                   placeholder="End Date" value="@Model.FilterDateTo?.ToString("yyyy-MM-dd")" />
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-2">
+                            <label class="form-label">Status</label>
+                            <select name="FilterStatus" class="form-select form-select-sm">
+                                <option value="">📁 All</option>
+                                <option value="Published" selected="@(Model.FilterStatus == "Published")">✅ Published</option>
+                                <option value="Draft" selected="@(Model.FilterStatus == "Draft")">📝 Draft</option>
+                                <option value="Archived" selected="@(Model.FilterStatus == "Archived")">📦 Archived</option>
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="col-md-auto d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-outline-primary mt-3">🔍 Filter</button>
+                            <a href="/Admin/Resources/Manage" class="btn btn-sm btn-outline-secondary mt-3">✖ Reset</a>
+                        </div>
+
+                    </div>
+                </form>
+
+                <div class="text-muted small mb-2">
+                    Showing <strong>@Model.Resources.Count</strong> result(s)
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive table-card mb-3">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Image</th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Resources.Any())
+                            {
+                                foreach (var item in Model.Resources)
+                                {
+                                    <tr>
+                                        <td>@item.Id</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                            {
+                                                <a href="@item.ImageUrl" target="_blank" title="Click to view full image">
+                                                    <img src="@item.ImageUrl" alt="Preview" class="rounded shadow-sm" style="max-height: 60px; cursor: zoom-in;" />
+                                                </a>
+                                            }
+                                        </td>
+                                        <td>@item.Title</td>
+                                        <td class="text-capitalize">@item.ResourceType?.Name</td>
+                                        <td>@item.DatePublished.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @switch (item.Status)
+                                            {
+                                                case ResourceStatus.Published:
+                                                    <span class="badge bg-success">Published</span>
+                                                    break;
+                                                case ResourceStatus.Draft:
+                                                    <span class="badge bg-warning text-dark">Draft</span>
+                                                    break;
+                                                case ResourceStatus.Archived:
+                                                    <span class="badge bg-secondary">Archived</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="/Admin/Resources/Edit?id=@item.Id" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
+                                            @if (!string.IsNullOrWhiteSpace(item.Slug))
+                                            {
+                                                <a href="/resources/article/@item.Slug" target="_blank" class="btn btn-sm btn-outline-primary me-2">Preview</a>
+                                            }
+                                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline delete-form">
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete(this)">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center">No resources found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+</div>
+
+
+
+@section Scripts {
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const message = document.getElementById('successMessage');
+            if (message) {
+                setTimeout(() => {
+                    message.classList.remove('show');
+                    setTimeout(() => message.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+
+    <script>
+        function confirmDelete(button) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This will permanently delete the resource.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                buttonsStyling: false,
+                showCloseButton: true,
+                customClass: {
+                    confirmButton: 'btn btn-danger w-xs me-2 mt-2',
+                    cancelButton: 'btn btn-outline-secondary w-xs mt-2'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Find the parent form and submit
+                    const form = button.closest('form');
+                    if (form) form.submit();
+                }
+            });
+        }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fromInput = document.querySelector('input[name="FilterDateFrom"]');
+            const toInput = document.querySelector('input[name="FilterDateTo"]');
+
+            const fromPicker = flatpickr(fromInput, {
+                dateFormat: "Y-m-d",
+                onChange: function (selectedDates) {
+                    if (selectedDates.length > 0) {
+                        toPicker.set('minDate', selectedDates[0]);
+                    }
+                }
+            });
+
+            const toPicker = flatpickr(toInput, {
+                dateFormat: "Y-m-d",
+                onChange: function (selectedDates) {
+                    if (selectedDates.length > 0) {
+                        fromPicker.set('maxDate', selectedDates[0]);
+                    }
+                }
+            });
+
+            // If values are already populated (e.g., after filter), sync min/max
+            if (fromInput.value) {
+                toPicker.set('minDate', fromInput.value);
+            }
+            if (toInput.value) {
+                fromPicker.set('maxDate', toInput.value);
+            }
+        });
+    </script>
+
+
+
+
+}

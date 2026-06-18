@@ -1,0 +1,27 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Codes.TaxTypes.AddNewTaxTypeModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Add New Tax Type";
+}
+
+<h2>Add New Tax Type</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label asp-for="TaxType.Code"></label>
+        <input asp-for="TaxType.Code" class="form-control" />
+        <span asp-validation-for="TaxType.Code" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="TaxType.Description"></label>
+        <input asp-for="TaxType.Description" class="form-control" />
+        <span asp-validation-for="TaxType.Description" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="TaxType.IsActive"></label>
+        <input asp-for="TaxType.IsActive" class="form-check-input" />
+        <span asp-validation-for="TaxType.IsActive" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>

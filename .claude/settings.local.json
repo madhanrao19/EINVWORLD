@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/Dev/EinvWorld/Source Code/**)",
+      "Bash(cat EINVWORLD.Tests/*.csproj)",
+      "Bash(ls -la EINVWORLD.Tests/)"
+    ]
+  }
+}

@@ -1,0 +1,73 @@
+﻿@page
+@model eInvWorld.Pages.Templates.DetailsModel
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>InvoiceTemplate</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.TemplateName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.TemplateName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.DocTypeCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.DocTypeCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.SupplierId)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.SupplierId)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.CustomerId)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.CustomerId)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.Currency)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.Currency)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.ExchangeRate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.ExchangeRate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.StartDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.StartDate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.EndDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.EndDate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.InvoiceTemplate.InvoicePeriod)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.InvoiceTemplate.InvoicePeriod)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Edit" asp-route-id="@Model.InvoiceTemplate.Id">Edit</a> |
+    <a asp-page="./TemplateLists">Back to List</a>
+</div>

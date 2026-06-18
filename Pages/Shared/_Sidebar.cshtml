@@ -1,0 +1,595 @@
+﻿@using eInvWorld.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject eInvWorld.Data.ApplicationDbContext DbContext
+@using System.Security.Claims
+
+
+@if (SignInManager.IsSignedIn(User))
+{
+    
+    var me = await UserManager.GetUserAsync(User);
+    var fullName   = me?.FullName ?? User?.Identity?.Name ?? "";
+    var profilePic = me?.ProfilePicture;
+    var roles      = me != null ? await UserManager.GetRolesAsync(me) : new List<string>();
+    var firstRole  = roles.FirstOrDefault() ?? "";
+    var firstLetter = string.IsNullOrWhiteSpace(fullName) ? "" : fullName.Substring(0,1).ToUpper();
+    
+<header id="page-topbar">
+    <div class="layout-width">
+        <div class="navbar-header">
+            <div class="d-flex">
+                <!-- LOGO -->
+                <div class="navbar-brand-box horizontal-logo">
+                    <a href="/Home/Index" class="logo logo-dark">
+                        <span class="logo-sm">
+                            <img src="~/assets/images/einvworld-logo-light.png" alt="" height="22">
+                        </span>
+                        <span class="logo-lg">
+                            <img src="~/assets/images/einvworld-logo-dark.png" alt="" height="22">
+                        </span>
+                    </a>
+
+                        <a href="/Home/Index" class="logo logo-light">
+                        <span class="logo-sm">
+                            <img src="~/assets/images/einvworld-logo-light.png" alt="" height="55">
+                        </span>
+                        <span class="logo-lg">
+                            <img src="~/assets/images/einvworld-logo-light.png" alt="" height="22">
+                        </span>
+                    </a>
+                </div>
+
+                <button type="button" class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger material-shadow-none" id="topnav-hamburger-icon">
+                    <span class="hamburger-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </button>
+
+                <!-- App Search-->
+                <form class="app-search d-none d-md-block" onsubmit="return false;">
+                    <div class="position-relative">
+                        <input type="text" class="form-control" placeholder="Search..." autocomplete="off" id="searchInput">
+                        <span class="mdi mdi-magnify search-widget-icon"></span>
+                        <span class="mdi mdi-close-circle search-widget-icon search-widget-icon-close d-none" id="search-close-options"></span>
+                    </div>
+
+                    <div class="dropdown-menu dropdown-menu-lg" id="search-dropdown">
+                        <div data-simplebar style="max-height: 320px;">
+                            <div id="search-results-container"></div>
+                        </div>
+                        <div class="text-center pt-3 pb-1 d-none" id="search-view-all">
+                            <a href="#" class="btn btn-primary btn-sm">View All Results <i class="ri-arrow-right-line ms-1"></i></a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="d-flex align-items-center">
+
+                <div class="dropdown d-md-none topbar-head-dropdown header-item">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" id="page-header-search-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="bx bx-search fs-22"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end p-0" aria-labelledby="page-header-search-dropdown">
+                        <form class="p-3">
+                            <div class="form-group m-0">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search ..." aria-label="Recipient's username">
+                                    <button class="btn btn-primary" type="submit"><i class="mdi mdi-magnify"></i></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="ms-1 header-item d-none d-sm-flex">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle" data-toggle="fullscreen">
+                        <i class='bx bx-fullscreen fs-22'></i>
+                    </button>
+                </div>
+
+                <div class="ms-1 header-item d-none d-sm-flex">
+                    <button type="button" class="btn btn-icon btn-topbar material-shadow-none btn-ghost-secondary rounded-circle light-dark-mode">
+                        <i class='bx bx-moon fs-22'></i>
+                    </button>
+                </div>
+
+                <div class="dropdown ms-sm-3 header-item topbar-user">
+                        <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="d-flex align-items-center">
+
+                                <!-- Avatar with fallback -->
+                                <span class="position-relative me-2">
+                                    @if (!string.IsNullOrEmpty(profilePic))
+                                    {
+                                        <img src="@profilePic"
+                                             alt="@fullName"
+                                             class="rounded-circle header-profile-user"
+                                             style="border: 3px solid #3AA564; width: 40px; height: 40px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="rounded-circle d-flex justify-content-center align-items-center"
+                                             style="width: 40px; height: 40px; background-color: #f8f9fa; color: #055332; font-size: 1rem; font-weight: bold; border: 3px solid #3AA564;">
+                                            @firstLetter
+                                        </span>
+                                    }
+
+                                    <!-- Green check badge -->
+                                    <span class="position-absolute bottom-0 end-0 badge bg-success rounded-pill"
+                                          style="background-color: #3AA564 !important; width: 12px; height: 12px; padding: 0;">
+                                        <i class="ri-check-line" style="font-size: 0.6rem;"></i>
+                                    </span>
+                                </span>
+
+                                <!-- Name + admin-assigned role (from Identity) -->
+                                <span class="text-start ms-xl-2">
+                                    <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">@fullName</span>
+                                    <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">@firstRole</span>
+                                </span>
+
+                            </span>
+                        </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <!-- item-->
+                            <h6 class="dropdown-header">Welcome @(fullName)!</h6>
+                            <!-- 🔁 Replaced default Identity link with custom Profile page -->
+                            <a class="dropdown-item" asp-page="/Profile/Index" title="My Profile">
+                                <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
+                                <span class="align-middle">My Profile</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                                <!-- 🆕 Add this hidden input to pass logoutReason -->
+                                <input type="hidden" name="logoutReason" value="manual" />
+
+                                <button type="submit" class="dropdown-item">
+                                    <i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i>
+                                    <span class="align-middle" data-key="t-logout">Logout</span>
+                                </button>
+                            </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+        <!-- ========== App Menu ========== -->
+        <div class="app-menu navbar-menu">
+            <!-- LOGO -->
+            <div class="navbar-brand-box">
+                <!-- Dark Logo-->
+            <a href="/Dashboard/Dashboard" class="logo logo-dark">
+                    <span class="logo-sm">
+                    <img src="~/assets/images/einvworld-logo-light.png" alt="" height="22">
+                    </span>
+                    <span class="logo-lg">
+                    <img src="~/assets/images/einvworld-logo-dark.png" alt="" height="55">
+                    </span>
+                </a>
+                <!-- Light Logo-->
+                <a href="/Dashboard/Dashboard" class="logo logo-light">
+                    <span class="logo-sm">
+                    <img src="~/assets/images/einvworld-logo-light.png" alt="" height="22"> <!--logo side bar small-->
+                    </span>
+                    <span class="logo-lg">
+                    <img src="~/assets/images/einvworld-logo-light.png" alt="" height="55"> <!--logo side bar large-->
+                    </span>
+                </a>
+                <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">
+                    <i class="ri-record-circle-line"></i>
+                </button>
+            </div>
+    
+            <div class="dropdown sidebar-user m-1 rounded">
+                <button type="button" class="btn material-shadow-none" id="page-header-user-dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="d-flex align-items-center gap-2">
+                    <!-- Avatar with fallback -->
+                    <span class="position-relative me-2">
+                        @if (!string.IsNullOrEmpty(profilePic))
+                        {
+                            <img src="@profilePic"
+                                 alt="@fullName"
+                                 class="rounded-circle header-profile-user"
+                                 style="border: 3px solid #3AA564; width: 40px; height: 40px; object-fit: cover;" />
+                        }
+                        else
+                        {
+                            <span class="rounded-circle d-flex justify-content-center align-items-center"
+                                 style="width: 40px; height: 40px; background-color: #f8f9fa; color: #055332; font-size: 1rem; font-weight: bold; border: 3px solid #3AA564;">
+                                @firstLetter
+                            </span>
+                        }
+
+                        <!-- Green check badge -->
+                        <span class="position-absolute bottom-0 end-0 badge bg-success rounded-pill"
+                              style="background-color: #3AA564 !important; width: 12px; height: 12px; padding: 0;">
+                            <i class="ri-check-line" style="font-size: 0.6rem;"></i>
+                        </span>
+                    </span>
+
+                    <!-- Name + admin-assigned role (from Identity) -->
+                    <span class="text-start ms-xl-2">
+                        <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">@fullName</span>
+                        <span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text">@firstRole</span>
+                    </span>
+                    </span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <!-- item-->
+                    <h6 class="dropdown-header">Welcome @(fullName)!</h6>
+                    <a class="dropdown-item" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">
+                        <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i><span class="align-middle">Profile</span>
+                    </a>
+                    <a class="dropdown-item" href="pages-faqs.html"><i class="mdi mdi-lifebuoy text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Help</span></a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="pages-profile-settings.html"><span class="badge bg-success-subtle text-success mt-1 float-end">New</span><i class="mdi mdi-cog-outline text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Settings</span></a>
+                    <a class="dropdown-item" href="auth-lockscreen-basic.html"><i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Lock screen</span></a>
+                  
+                    <!-- Logout Form (ASP.NET Identity Logout) -->
+                    <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                    <!-- 🆕 Hidden input to pass logoutReason -->
+                    <input type="hidden" name="logoutReason" value="manual" />
+                        <button type="submit" class="dropdown-item">
+                            <i class="mdi mdi-logout text-muted fs-16 align-middle me-1"></i>
+                            <span class="align-middle" data-key="t-logout">Logout</span>
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+            <div id="scrollbar">
+                <div class="container-fluid">
+                    <div id="two-column-menu">
+                    </div>
+                    @if (User?.IsInRole("Admin") == true)
+                    {
+                    <ul class="navbar-nav" id="navbar-nav">
+                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
+                                <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboards</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarDashboards">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Dashboard/Dashboard" class="nav-link" data-key="t-crm"> Overview </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li> <!-- end Dashboard Menu -->
+                        <!-- Codes Management Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarCodes" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarCodes">
+                                <i class="ri-list-check"></i> <span data-key="t-apps">Codes Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarCodes">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/StateCodes/ListState" class="nav-link" data-key="t-state-codes"> State Codes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/CountryCodes/ListCountry" class="nav-link" data-key="t-country-codes"> Country Codes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/CurrencyCodes/ListCurrency" class="nav-link" data-key="t-currency-codes"> Currency Codes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/ClassificationCodes/ListClassification" class="nav-link" data-key="t-classification-codes"> Classification Codes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/MSICSubCategoryCodes/ListMSICSubCategory" class="nav-link" data-key="t-msic-codes"> MSIC SubCategory Codes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/PaymentModes/ListPaymentMode" class="nav-link" data-key="t-payment-modes"> Payment Modes </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/TaxTypes/ListTaxType" class="nav-link" data-key="t-tax-types"> Tax Types </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/UnitTypes/ListUnitType" class="nav-link" data-key="t-unit-types"> Unit Types </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Codes/EInvoiceTypes/ListEInvoiceType" class="nav-link" data-key="t-e-invoice-types"> E-Invoice Types </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Item Management Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarItems" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarItems">
+                                <i class="ri-file-list-line"></i> <span data-key="t-apps">Item Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarItems">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Items/Index" class="nav-link" data-key="t-items"> Items </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Items/Create" class="nav-link" data-key="t-create-item"> Create Item </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarApps" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarApps">
+                                <i class="ri-group-line"></i> <span data-key="t-apps">User Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarApps">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Admin/Users/ManageUser" class="nav-link" data-key="t-chat"> Manage Users </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarLead" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLead">
+                                <i class="ri-user-add-line"></i><span data-key="t-leads">Lead Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarLead">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="sidebar-item">
+                                        <a href="/Lead/List" class="nav-link">Customer Submissions</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarSupplier" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSupplier">
+                                <i class="ri-store-line"></i><span data-key="t-apps">Company Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarSupplier">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="sidebar-item">
+                                        <a href="/Suppliers/Create" class="nav-link">Create New Company</a>
+                                    </li>
+                                    <li class="sidebar-item">
+                                        <a href="/Suppliers/Index" class="nav-link">List of Companies</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarLead" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLead">
+                                <i class="ri-team-line"></i><span data-key="t-leads">Buyers Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarLead">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="sidebar-item">
+                                        <a href="/PublicCustomer/List" class="nav-link">List of Buyers</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarInvoices" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarInvoices">
+                                <i class="ri-file-list-3-line"></i> <span data-key="t-layouts">Invoice Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarInvoices">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Invoices/CreateInvoice" class="nav-link" data-key="t-create-invoice"> Create e-Invoice </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Invoices/ImportCSV" class="nav-link" data-key="t-create-invoice"> Import Invoices </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Invoices/InvoiceLists" class="nav-link" data-key="t-list-view">
+                                            View All e-Invoices
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li> <!-- end Dashboard Menu -->
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarTools" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarTools">
+                                <i class="ri-tools-line"></i><span data-key="t-tools">Tools</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarTools">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Admin/InvoiceSync" class="nav-link" data-key="t-invoice-sync">Invoice Sync</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Admin/Resources/Manage" class="nav-link" data-key="t-create-resource">Manage Resource</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="/Admin/Logs/Index">
+                                <i class="ri-history-line"></i> <span data-key="t-system-logs">System Logs</span>
+                            </a>
+                        </li>
+
+                    </ul>
+                }
+                else if (User?.IsInRole("Supplier") == true)
+                {
+
+                    <ul class="navbar-nav" id="navbar-nav">
+                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+                        @{
+                            string? companyId = null;
+
+                            if (User.IsInRole("Supplier"))
+                            {
+                                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                                companyId = DbContext.UserCompanies
+                                .Where(uc => uc.UserId == userId)
+                                .Select(uc => uc.PartyInfoId.ToString())
+                                .FirstOrDefault();
+                            }
+                        }
+
+                        <!-- Dashboards Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
+                                <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboards</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarDashboards">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Dashboard/Dashboard" class="nav-link" data-key="t-crm">Overview</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- My Invoice Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarInvoices" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarInvoices">
+                                <i class="ri-file-list-3-line"></i> <span data-key="t-layouts">My Invoice</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarInvoices">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Invoices/InvoiceLists" class="nav-link" data-key="t-list-view">
+                                            View All e-Invoices
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Invoices/CreateInvoice" class="nav-link" data-key="t-create-invoice"> Create e-Invoice </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Templates/TemplateLists" class="nav-link" data-key="t-templates">
+                                            Manage Templates
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Invoices/ImportCsv" class="nav-link" data-key="t-create-invoice">
+                                            Bulk Invoice Import
+                                        </a>
+                                    </li>
+@*                                     <li class="nav-item">
+                                        <a href="/Invoices/ExtractInvoice" class="nav-link" data-key="t-create-invoice">
+                                            Extract Invoice (Beta)
+                                        </a>
+                                    </li> *@
+                                    <li class="nav-item">
+                                        <a href="/RecurringInvoices/Index" class="nav-link" data-key="t-create-invoice">
+                                            Recurring Invoices
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <!-- Item Management Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarItems" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarItems">
+                                <i class="ri-file-list-line"></i> <span data-key="t-apps">Item Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarItems">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Items/Index" class="nav-link" data-key="t-items"> Items </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="/Items/Create" class="nav-link" data-key="t-create-item"> Create Item </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarLead" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLead">
+                                <i class="ri-user-add-line"></i><span data-key="t-leads">Buyers Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarLead">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="sidebar-item">
+                                        <a href="/PublicCustomer/List" class="nav-link">List of Buyers</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarLead" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLead">
+                                <i class="ri-building-line"></i><span data-key="t-leads">My Company Management</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarLead">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="sidebar-item">
+                                        <a href="/Suppliers/Details?id=@companyId" class="nav-link">
+                                            <span>My Company Details</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        </li>
+                    </ul>
+                }
+
+                else if (User?.IsInRole("Buyer") == true)
+                {
+                    <ul class="navbar-nav" id="navbar-nav">
+                        <li class="menu-title"><span data-key="t-menu">Menu</span></li>
+
+                        <!-- Dashboards Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarDashboards" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarDashboards">
+                                <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboards</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarDashboards">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Dashboard/Dashboard" class="nav-link" data-key="t-crm">Overview</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li> <!-- end Dashboard Menu -->
+                        <!-- My Invoice Menu -->
+                        <li class="nav-item">
+                            <a class="nav-link menu-link" href="#sidebarInvoices" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarInvoices">
+                                <i class="ri-file-list-2-line"></i> <span data-key="t-layouts">My Invoice</span>
+                            </a>
+                            <div class="collapse menu-dropdown" id="sidebarInvoices">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="/Invoices/InvoiceLists" class="nav-link" data-key="t-list-view">
+                                            View All e-Invoices
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        
+                    </ul>
+                }
+                else
+                {
+                    <!-- Login Link -->
+                    <a class="dropdown-item" href="login.html">
+                        <i class="mdi mdi-login text-muted fs-16 align-middle me-1"></i>
+                        <span class="align-middle">Login</span>
+                    </a>
+                }
+                   
+                </div>
+                <!-- Sidebar -->
+            </div>
+
+            <div class="sidebar-background"></div>
+        </div>
+        <!-- Left Sidebar End -->
+        <!-- Vertical Overlay-->
+        <div class="vertical-overlay"></div>
+}
+
+

@@ -1,0 +1,62 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Notifications.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>Notification</h4>
+<hr />
+<div class="row">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Notification.Id" />
+            <div class="form-group">
+                <label asp-for="Notification.TemplateName" class="control-label"></label>
+                <input asp-for="Notification.TemplateName" class="form-control" />
+                <span asp-validation-for="Notification.TemplateName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Notification.Subject" class="control-label"></label>
+                <input asp-for="Notification.Subject" class="form-control" />
+                <span asp-validation-for="Notification.Subject" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Notification.Body" class="control-label"></label>
+                <textarea id="notificationBody" asp-for="Notification.Body" class="form-control" placeholder="Enter the notification body here..."></textarea>
+                <span asp-validation-for="Notification.Body" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Notification.NotificationType"></label>
+                <select asp-for="Notification.NotificationType" class="form-control" asp-items="Model.NotificationTypeOptions">
+                    <option value="">Select Notification Type</option>
+                </select>
+                <span asp-validation-for="Notification.NotificationType" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="Notification.IsActive" /> @Html.DisplayNameFor(model => model.Notification.IsActive)
+                </label>
+            </div>
+            @* <div class="form-group">
+                <label asp-for="Notification.CreatedDate" class="control-label"></label>
+                <p>@Model.Notification.CreatedDate.ToString("g")</p> <!-- Displaying Created Date -->
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Notification.UpdatedDate" class="control-label"></label>
+                <p>@Model.Notification.UpdatedDate.ToString("g")</p> <!-- Displaying Updated Date -->
+            </div> *@
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+

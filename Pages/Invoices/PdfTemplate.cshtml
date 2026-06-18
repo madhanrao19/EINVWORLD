@@ -1,0 +1,465 @@
+﻿@page
+@model eInvWorld.Pages.Invoices.PdfTemplateModel
+@{
+    Layout = null;
+    var invoice = Model.InvoiceDetail;
+    var items = Model.InvoiceLines;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Invoice @invoice.InvoiceNo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+            margin: 20px;
+            color: #000;
+        }
+
+        p {
+            margin: 2px 0;
+            line-height: 1.2;
+            font-size: 8pt;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .supplier-block {
+            display: flex;
+            width: 50%;
+            align-items: flex-start;
+        }
+
+        .supplier-logo {
+            max-width: 60px;
+            max-height: 60px;
+            object-fit: contain;
+            margin-right: 10px;
+        }
+
+        .supplier-info h4 {
+            margin: 0;
+            font-size: 10pt;
+            color: #007bff;
+        }
+
+        .invoice-block {
+            width: 48%;
+        }
+
+            .invoice-block h3 {
+                color: #007bff;
+                margin: 0;
+                font-size: 16pt;
+            }
+
+            .invoice-block p {
+                font-size: 8pt;
+            }
+
+        .divider {
+            border-top: 1px solid #000;
+            margin: 10px 0 5px;
+        }
+
+        .two-col {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .col {
+            width: 48%;
+            font-size: 8pt;
+        }
+
+            .col h4 {
+                color: #007bff;
+                margin-bottom: 5px;
+                font-size: 8pt;
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 8pt;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #eee;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .qr {
+            width: 80px;
+            height: 80px;
+        }
+
+        .summary p {
+            margin: 2px 0;
+            font-size: 8pt;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 8pt;
+        }
+
+        td ul {
+            margin: 0 0 4px 0;
+            padding-left: 16px;
+        }
+
+        td li {
+            margin-bottom: 3px;
+            line-height: 1.4;
+        }
+
+        td div {
+            margin: 2px 0;
+        }
+
+    </style>
+
+</head>
+<body>
+    <div id="invoiceContainer">
+        <!-- ADD THIS WRAPPER -->
+            <!-- Header Section with Logo + Supplier + Invoice Info -->
+        <div class="header" style="display: flex; justify-content: space-between;">
+            <div class="supplier-block" style="width: 50%;">
+                @* <img src="~/images/dm-logo-small.png" alt="Logo" class="supplier-logo" /> *@
+                @if (!string.IsNullOrEmpty(invoice.Supplier?.LogoPath))
+                {
+                    <img src="@invoice.Supplier.LogoPath" alt="Company Logo" class="supplier-logo" />
+                }
+                else
+                {
+                    <img src="~/assets/images/users/multi-user.jpg" alt="Default Logo" class="supplier-logo" />
+                }
+
+                <div class="supplier-info">
+                    <h4>@invoice.Supplier?.CompanyName</h4>
+                    <p>@invoice.Supplier?.Addr1 @invoice.Supplier?.Addr2</p>
+                    <p>@invoice.Supplier?.Addr3 @invoice.Supplier?.PostalCode @invoice.Supplier?.CityName</p>
+                    <p>@invoice.Supplier?.State?.State, @invoice.Supplier?.Country?.Country</p>
+                    <p>Phone: @invoice.Supplier?.PhoneNo</p>
+                    <p>Email: @invoice.Supplier?.Email</p>
+                    <p>Tax Identification Number (TIN): @invoice.Supplier?.TIN</p>
+                    <p>
+                        ID Type/Number: @invoice.Supplier?.RegTypeCode/@invoice.Supplier?.RegNo
+                        @if (!string.IsNullOrEmpty(invoice.Supplier?.OldRegNo))
+                        {
+                            <text> (@invoice.Supplier?.OldRegNo)</text>
+                        }
+                    </p>
+                    @if (!string.IsNullOrEmpty(invoice.Supplier?.BankAccountNo))
+                    {
+                        <p>Bank Account: @invoice.Supplier?.BankAccountNo</p>
+                    }
+                    @if (!string.IsNullOrEmpty(invoice.Supplier?.BankName))
+                    {
+                        <p>Bank Name: @invoice.Supplier?.BankName</p>
+                    }
+                    @if (!string.IsNullOrEmpty(invoice.Supplier?.Attention))
+                    {
+                        <p>Attention: @invoice.Supplier?.Attention</p>
+                    }
+                </div>
+            </div>
+
+            <div class="invoice-block" style="width: 48%;">
+                <h3>E-INVOICE</h3>
+                <p><strong>e-Invoice Type:</strong> @invoice.DocTypeCode</p>
+                <p><strong>e-Invoice No:</strong> @invoice.InvoiceNo</p>
+                @* <p><strong>Seller Original Inv. No:</strong> @invoice.RefDocumentNo</p> *@
+                <p><strong>Original e-Invoice Ref. No:</strong> @invoice.RefDocumentNo</p>
+                <p><strong>Billing Period:</strong> @invoice.StartDate?.ToString("dd MMM yyyy") - @invoice.EndDate?.ToString("dd MMM yyyy")</p>
+                <p><strong>Issue Date:</strong> @invoice.IssueDate?.ToString("dd.MM.yyyy hh:mm:ss tt")</p>
+                <p><strong>UUID:</strong> @invoice.UUID</p>
+                <p><strong>Submission ID:</strong> @invoice.SubmissionID</p>
+                <p><strong>Currency:</strong> @invoice.Currency</p>
+            </div>
+        </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- BUYER & SHIPPING -->
+    <div class="section two-col">
+        <div class="col">
+            <h4>BUYER</h4>
+            <p>@invoice.Customer?.CompanyName</p>
+            <p>@invoice.Customer?.Addr1 @invoice.Customer?.Addr2</p>
+            <p>@invoice.Customer?.Addr3 @invoice.Customer?.PostalCode @invoice.Customer?.CityName</p>
+            <p>@invoice.Customer?.State?.State, @invoice.Customer?.Country?.Country</p>
+            <p>Phone: @invoice.Customer?.PhoneNo</p>
+            <p>Email: @invoice.Customer?.Email</p>
+            <p>TIN: @invoice.Customer?.TIN</p>
+                <p>
+                    ID Type/No: @invoice.Customer?.RegTypeCode/@invoice.Customer?.RegNo
+                    @if (!string.IsNullOrEmpty(invoice.Customer?.OldRegNo))
+                    {
+                        <text> (@invoice.Customer?.OldRegNo)</text>
+                    }
+                </p>
+            @if (!string.IsNullOrEmpty(invoice.Customer?.BankAccountNo))
+            {
+                <p>Bank Account: @invoice.Customer?.BankAccountNo</p>
+            }
+            @if (!string.IsNullOrEmpty(invoice.Customer?.BankName))
+            {
+                <p>Bank Name: @invoice.Customer?.BankName</p>
+            }
+            @if (!string.IsNullOrEmpty(invoice.Customer?.Attention))
+            {
+                <p>Attention: @invoice.Customer?.Attention</p>
+            }
+        </div>
+        <div class="col">
+            <h4>SHIPPING ADDRESS</h4>
+            <p>@invoice.Customer?.CompanyName</p>
+            <p>@invoice.Customer?.Addr1 @invoice.Customer?.Addr2</p>
+            <p>@invoice.Customer?.Addr3 @invoice.Customer?.PostalCode @invoice.Customer?.CityName</p>
+            <p>@invoice.Customer?.State?.State, @invoice.Customer?.Country?.Country</p>
+            <p>Phone: @invoice.Customer?.PhoneNo</p>
+            <p>Email: @invoice.Customer?.Email</p>
+            <p>TIN: @invoice.Customer?.TIN</p>
+                <p>
+                    ID Type/No: @invoice.Customer?.RegTypeCode/@invoice.Customer?.RegNo
+                    @if (!string.IsNullOrEmpty(invoice.Customer?.OldRegNo))
+                    {
+                        <text> (@invoice.Customer?.OldRegNo)</text>
+                    }
+                </p>
+            @if (!string.IsNullOrEmpty(invoice.Customer?.BankAccountNo))
+            {
+                <p>Bank Account: @invoice.Customer?.BankAccountNo</p>
+            }
+            @if (!string.IsNullOrEmpty(invoice.Customer?.BankName))
+            {
+                <p>Bank Name: @invoice.Customer?.BankName</p>
+            }
+            @if (!string.IsNullOrEmpty(invoice.Customer?.Attention))
+            {
+                <p>Attention: @invoice.Customer?.Attention</p>
+            }
+        </div>
+    </div>
+
+        <!-- INVOICE ITEMS -->
+        <table>
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Classification Code</th>
+                <th>Description</th>
+                <th class="right">Unit Price</th>
+                <th class="right">Quantity</th>
+                <th class="right">Total</th>
+                <th class="right">Incl. Tax</th>
+            </tr>
+            </thead>
+            <tbody>
+            @for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                <tr>
+                    <td>@(i + 1)</td>
+                    <td>@item.ClassificationCode</td>
+                    <td class="formatted-description">@Html.Raw(item.ItemDescription?.Replace("\n", "<br/>"))</td>
+                    <td class="right">@(item.UnitPrice?.ToString("N2"))</td>
+                    <td class="right">@item.Quantity</td>
+                    <td class="right">@((item.Quantity * item.UnitPrice)?.ToString("N2"))</td>
+                    <td class="right">@item.AmountInclTax?.ToString("N2")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <!-- PAYMENT SUMMARY + QR -->
+        <div class="section two-col">
+            <div class="col">
+                <h4>QR Code</h4>
+                @if (!string.IsNullOrEmpty(Model.QRCodeBase64))
+                {
+                    <img id="qrImage" class="qr" src="data:image/png;base64,@Model.QRCodeBase64" />
+                }
+            </div>
+            <div class="col summary right">
+                <h4>Payment Summary</h4>
+                <p><strong>Subtotal:</strong> MYR @Model.TotalAmount.ToString("N2")</p>
+                <p><strong>Tax Amount:</strong> MYR @invoice.TotalTaxAmount?.ToString("N2")</p>
+                <p style="font-size: 14pt;"><strong>Total Amount:</strong> <strong>MYR @invoice.TotalPayableAmount?.ToString("N2")</strong></p>
+            </div>
+        </div>
+
+        <!-- FOOTER REMARK -->
+        <div class="footer-note">
+            <p><strong>Payment Info:</strong> @invoice.Supplier?.CompanyName | Bank: Malayan Banking Berhad 5-14084-58076-1</p>
+            <p><strong>Terms:</strong> Payment Upon Invoice</p>
+            <p><strong>Remarks:</strong> Thank you for your business. Please include your invoice number in your payment and send confirmation to <a href="mailto:@invoice.Supplier?.Email">@invoice.Supplier?.Email</a></p>
+            <p>This document is a validated e-invoice by LHDN. Scan the QR code to verify.</p>
+        </div>
+
+        <!-- Buttons for automation -->
+        <button id="printBtn" onclick="window.print()" style="display:none;">Print</button>
+        <a id="savePdfBtn" href="javascript:window.print()" style="display:none;">Download</a>
+
+    </div> <!-- CLOSE WRAPPER HERE -->
+
+
+    <span id="invoiceNumber" style="display:none;">@invoice.InvoiceNo</span>
+
+</body>
+</html>
+
+
+@* <script>
+    window.onload = function () {
+        window.print(); // auto-open print dialog
+    };
+</script> *@
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+
+    window.onload = function () {
+        saveInvoicePdf("local");
+    };
+
+    document.getElementById("savePdfBtn").addEventListener("click", function () {
+        saveInvoicePdf("local"); // Save as PDF (Download)
+    });
+
+    // document.getElementById("saveToServerBtn").addEventListener("click", function () {
+    //     saveInvoicePdf("server"); // Save to Server
+    // });
+
+    function saveInvoicePdf(destination) {
+        const { jsPDF } = window.jspdf;
+        const invoice = document.getElementById("invoiceContainer"); // Invoice content
+        const invoiceNumber = document.getElementById("invoiceNumber").innerText.trim(); // Extract invoice number
+
+        html2canvas(invoice, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL("image/png"); // Convert to image
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4"
+            });
+
+            const imgWidth = 210; // A4 width in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width; // Scale height proportionally
+
+            pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+
+            const now = new Date();
+
+            const formattedDateTime =
+                String(now.getDate()).padStart(2, '0') + "" +
+                String(now.getMonth() + 1).padStart(2, '0') + "" +
+                now.getFullYear() + "_" +
+                String(now.getHours()).padStart(2, '0') + "" +
+                String(now.getMinutes()).padStart(2, '0') + "" +
+                String(now.getSeconds()).padStart(2, '0');
+
+            const pdfFileName = invoiceNumber.replace(/\s+/g, "_") + "_" + formattedDateTime + ".pdf";
+
+            if (destination === "local") {
+                // Download PDF locally & IntersectionObserver (when user click save PDF)
+
+                pdf.save(invoiceNumber.replace(/\s+/g, "_") + ".pdf");
+                saveInvoicePdf("server");
+            } else if (destination === "server") {
+                // Convert PDF to Blob and send to server
+                const pdfBlob = pdf.output("blob"); // This is synchronous
+                const formData = new FormData();
+                formData.append("file", pdfBlob, pdfFileName);
+
+                fetch("/api/invoice/save-pdf", {
+                    // fetch("https://localhost:7073/api/invoice/save-pdf", {  To test only -> Ensure correct URL
+                    method: "POST",
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        console.log("Server Response:", result);
+                        alert(result.message);
+                    })
+                    .catch(error => console.error("Error:", error));
+            }
+        });
+    }
+
+
+    document.getElementById("printBtn").addEventListener("click", function () {
+        const buttonWrapper = document.querySelector(".button-container-wrapper");
+        buttonWrapper.style.display = "none"; // Hide buttons before printing
+        window.scrollTo(0, 0); // Scroll to the top before printing
+        document.body.style.margin = "0"; // Remove body margin
+        document.body.style.padding = "0"; // Remove body padding
+
+        // Fix extra space by adjusting invoice height dynamically
+        const invoice = document.getElementById("invoiceContainer");
+        invoice.style.minHeight = "auto"; // Removes forced height
+        invoice.style.height = "auto"; // Shrinks to fit content
+
+        let printTriggered = false; // Prevents looping issue
+        let printCancelled = false; // New flag to detect cancellation
+
+        window.onbeforeprint = function () {
+            printTriggered = true; // Set flag when print is triggered
+            document.querySelector(".button-container-wrapper").style.display = "none"; // Hide before print
+        };
+
+        window.onafterprint = function () {
+            buttonWrapper.style.display = "flex"; // Restore buttons
+            if (!printTriggered) {
+                printCancelled = true; // User canceled print
+            }
+
+            if (window.opener) {
+                // Close only if it's a popup window
+                window.close();
+            } else if (printTriggered && !printCancelled) {
+                // Only reload if print was actually completed
+                location.reload();
+            }
+        };
+
+        setTimeout(() => {
+            printTriggered = true; // Ensure flag is set before printing
+            window.print(); // Print only visible content
+        }, 500);
+
+        buttonWrapper.style.display = "flex"; // Restore buttons after printing
+    });
+
+
+
+</script>
