@@ -1,0 +1,147 @@
+﻿@page "/contact"
+@model eInvWorld.Pages.ContactModel
+@{
+    ViewData["Title"] = "Contact eInvWorld | E-Invoicing Solutions for Malaysian SMEs";
+    ViewData["Description"] = "Reach out to eInvWorld for expert guidance on LHDN-compliant e-invoicing solutions tailored for Malaysian SMEs. Streamline your invoicing process today.";
+    ViewData["Keywords"] = "contact einvworld, e-invoicing help, LHDN compliance, SME support Malaysia";
+}
+
+<!-- Page Header Start -->
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="images/header_images/header-page-contact.png" class="profile-wid-img w-100" alt="">
+
+        <!-- Overlay Content -->
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">Contact</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+<!-- Contact Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+        {
+            <div class="alert alert-success">@Model.SuccessMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <div class="row g-4">
+            <!-- Contact Info Section -->
+            <div class="col-lg-4 col-md-6">
+                <div class="h-100 bg-light rounded d-flex align-items-center p-4">
+                    <div class="d-flex flex-shrink-0 align-items-center justify-content-center rounded-circle bg-white"
+                         style="width: 55px; height: 55px;">
+                        <i class="las la-map-marked fs-4 me-2 text-primary"></i>
+                    </div>
+                    <div class="ms-4">
+                        <p class="mb-2 fw-bold">Address</p>
+                        <h6 class="mb-0">18.2, CP Tower, Pusat Dagang, Seksyen 16, 46350 Petaling Jaya, Selangor, MYS</h6>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="h-100 bg-light rounded d-flex align-items-center p-4">
+                    <div class="d-flex flex-shrink-0 align-items-center justify-content-center rounded-circle bg-white"
+                         style="width: 55px; height: 55px;">
+                        <i class="las la-phone fs-4 me-2 text-primary"></i>
+                    </div>
+                    <div class="ms-4">
+                        <p class="mb-2 fw-bold">Call Us Now</p>
+                        <h6 class="mb-0">+603-7660 2222</h6>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-12">
+                <div class="h-100 bg-light rounded d-flex align-items-center p-4">
+                    <div class="d-flex flex-shrink-0 align-items-center justify-content-center rounded-circle bg-white"
+                         style="width: 55px; height: 55px;">
+                        <i class="las la-envelope-open fs-4 me-2 text-primary"></i>
+                    </div>
+                    <div class="ms-4">
+                        <p class="mb-2 fw-bold">Mail Us Now</p>
+                        <h6 class="mb-0">info@einvworld.com</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Form -->
+            <div class="col-lg-6">
+                <div class="bg-light rounded p-5">
+                    <p class="d-inline-block border rounded-pill py-1 px-4 text-uppercase fw-bold">Contact Us</p>
+                    <h1 class="mb-4">Have Any Query? Please Contact Us!</h1>
+                    <form method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ContactForm.Name" type="text" class="form-control" id="name" placeholder="Your Name" required>
+                                    <label for="name"><span>Your Name</span></label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ContactForm.Company" type="text" class="form-control" id="company" placeholder="Your Company" required>
+                                    <label for="company"><span>Your Company</span></label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ContactForm.Telephone" type="text" class="form-control" id="telephone" placeholder="Your Telephone" required>
+                                    <label for="telephone"><span>Telephone</span></label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input asp-for="ContactForm.Email" type="email" class="form-control" id="email" placeholder="Your Email" required>
+                                    <label for="email"><span>Your Email</span></label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <textarea asp-for="ContactForm.Message" class="form-control" placeholder="Leave a message here" id="message" style="height: 100px" required></textarea>
+                                    <label for="message"><span>Message</span></label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="cf-turnstile"
+                                     data-sitekey="@ViewData["TurnstileSiteKey"]"
+                                     data-theme="light">
+                                </div>
+                            </div>                            <div class="col-12">
+                                <button class="btn btn-primary w-100 py-3" type="submit">
+                                    <i class="las la-paper-plane me-2"></i> Send Message
+                                </button>
+                            </div>
+                            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Google Maps -->
+            <div class="col-lg-6">
+                <div class="h-100" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+                    @* <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.8776890881877!2d101.64178097497116!3d3.127024396848462!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc49b9ada48f3f%3A0xc8549d0b58d1658f!2sDatamation%20Group!5e0!3m2!1sen!2smy!4v1726121712748!5m2!1sen!2smy"
+                            width="100%" height="100%" style="position: absolute; top: 0; left: 0; border:0;" allowfullscreen="" loading="lazy"></iframe> *@
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d248.99236971238565!2d101.64427720329218!3d3.126964819065044!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc49b9ada48f3f%3A0xc8549d0b58d1658f!2sDatamation%20Group!5e0!3m2!1sen!2smy!4v1748315032200!5m2!1sen!2smy" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Contact End -->

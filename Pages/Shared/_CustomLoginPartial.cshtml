@@ -1,0 +1,33 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using eInvWorld.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+
+<ul class="navbar-nav">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Hello @User.Identity?.Name!</a>
+        </li>
+        <li class="nav-item">
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+                <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        @* <li class="nav-item">
+            <a class="nav-link text-dark btn btn-pr rounded-0 py-4 px-lg-5 d-none d-lg-block" asp-area="Identity" asp-page="/Account/Register">Register</a>
+        </li> *@
+        @* <li class="nav-item">
+            <a class="nav-link text-white btn btn-primary rounded-0 py-4 px-lg-5 d-none d-lg-block" asp-area="Identity" asp-page="/Account/Login">
+                Login <i class="fa fa-arrow-right ms-3"></i>
+            </a>
+        </li> *@
+        <div class="">
+            <a class="btn btn-soft-primary" asp-area="Identity" asp-page="/Account/Login"><i class="ri-user-3-line align-bottom me-1"></i> Login</a>
+        </div>
+    }
+</ul>

@@ -1,0 +1,72 @@
+# eInvWorld — solution code style & analyzer conventions
+# Applies in IDEs and `dotnet format`. Severities here do NOT fail the build unless
+# <EnforceCodeStyleInBuild> is enabled in the project, so adopting this is non-breaking.
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8-bom
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{json,js,ts,css,scss,html,cshtml,yml,yaml}]
+indent_size = 2
+
+[*.{csproj,props,targets,config,xml}]
+indent_size = 2
+
+[*.cs]
+# --- Language conventions ---
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:silent
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_prefer_braces = true:suggestion
+csharp_style_var_for_built_in_types = false:silent
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+
+# --- 'this.' qualification (off — matches existing style) ---
+dotnet_style_qualification_for_field = false:silent
+dotnet_style_qualification_for_property = false:silent
+
+# --- Modern C# preferences ---
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_throw_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = true:silent
+
+# --- Quality nudges (surface, don't block) ---
+dotnet_diagnostic.CA2007.severity = none      # ConfigureAwait not required in ASP.NET Core
+dotnet_diagnostic.CA1848.severity = none      # LoggerMessage delegates — optional perf
+dotnet_diagnostic.IDE0005.severity = warning  # remove unnecessary usings
+dotnet_diagnostic.CS8602.severity = warning   # possible null dereference (nullable is enabled)
+dotnet_diagnostic.CS8618.severity = suggestion
+
+# --- Naming: async methods end with 'Async', interfaces start with 'I' ---
+dotnet_naming_rule.async_methods_async_suffix.severity = suggestion
+dotnet_naming_rule.async_methods_async_suffix.symbols = async_methods
+dotnet_naming_rule.async_methods_async_suffix.style = end_with_async
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.end_with_async.required_suffix = Async
+dotnet_naming_style.end_with_async.capitalization = pascal_case
+
+dotnet_naming_rule.interfaces_start_with_i.severity = suggestion
+dotnet_naming_rule.interfaces_start_with_i.symbols = interfaces
+dotnet_naming_rule.interfaces_start_with_i.style = begins_with_i
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+# Generated code — don't analyze
+[*.{Designer.cs,g.cs,g.i.cs}]
+generated_code = true
+
+[Migrations/**.cs]
+generated_code = true

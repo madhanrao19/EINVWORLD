@@ -1,0 +1,91 @@
+﻿@* @page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Register confirmation";
+}
+
+<h1>@ViewData["Title"]</h1>
+@{
+    if (@Model.DisplayConfirmAccountLink)
+    {
+<p>
+    This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
+    Normally this would be emailed: <a id="confirm-link" href="@Model.EmailConfirmationUrl">Click here to confirm your account</a>
+</p>
+    }
+    else
+    {
+<p>
+        Please check your email to confirm your account.
+</p>
+    }
+}
+
+ *@
+
+@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Email Confirmation";
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="text-center mt-sm-5 mb-4 text-white-50">
+            <div>
+                <a href="/" class="d-inline-block auth-logo">
+                    <img src="~/images/einvworld-logo-light.png" alt="eInvWorld Logo" style="width: 100px; height: auto;" class="me-2">
+                </a>
+            </div>
+            <p class="mt-3 fs-15 fw-medium">eInvWorld</p>
+        </div>
+    </div>
+</div>
+<!-- end row -->
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+        <div class="card mt-4 card-bg-fill">
+            <div class="card-body p-4">
+                <div class="text-center mt-2">
+                    <h5 class="text-primary">Confirm Your Email</h5>
+                    <p class="text-muted">
+                        A confirmation email has been sent to <strong>@Model.Email</strong>.
+                        Please check your inbox and click the verification link to activate your account.
+                    </p>
+                </div>
+
+                @* <div class="p-2">
+                    <p class="text-center">
+                        Didn't receive an email? <a asp-page="./ResendConfirmationEmail">Resend Email</a>
+                    </p>
+                    <form method="post" asp-page="./ResendConfirmationEmail">
+                        <div class="mb-4">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="Enter Email" required>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button class="btn btn-success w-100" type="submit">Resend Confirmation Email</button>
+                        </div>
+                    </form><!-- end form -->
+                </div> *@
+            </div>
+            <!-- end card body -->
+        </div>
+        <!-- end card -->
+    </div>
+</div>
+<!-- end row -->
+@* <div class="text-white text-center">
+    <h2 class="text-success">Confirm Your Email</h2>
+    <p class="text-muted">
+        A confirmation email has been sent to <strong>@Model.Email</strong>.
+        Please check your inbox and click the verification link to activate your account.
+    </p>
+    <p>
+        Didn't receive an email? <a asp-page="./ResendConfirmationEmail">Resend Email</a>
+    </p>
+</div>
+
+ *@

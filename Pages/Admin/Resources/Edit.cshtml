@@ -1,0 +1,216 @@
+﻿@* Pages/Admin/Resources/Edit.cshtml *@
+@page
+@model EINVWORLD.Pages.Admin.Resources.EditModel
+@{
+    ViewData["Title"] = "Edit Resource";
+}
+
+
+<h2 class="mb-4">Edit Resource</h2>
+<form method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Resource.Id" />
+
+    <div class="mb-3">
+        <label asp-for="Resource.Title"></label>
+        <input asp-for="Resource.Title" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Resource.Slug" class="form-label">Slug (optional)</label>
+        <input asp-for="Resource.Slug" class="form-control" placeholder="Leave blank to auto-generate" />
+        <span asp-validation-for="Resource.Slug" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Resource.Summary"></label>
+        <textarea asp-for="Resource.Summary" class="form-control" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Resource.ResourceType" class="form-label">Category</label>
+        <select asp-for="Resource.ResourceTypeCode" class="form-select" asp-items="Model.TypeOptions">
+            <option value="">-- Select Type --</option>
+        </select>
+        <span asp-validation-for="Resource.ResourceTypeCode" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ImageFile">Current Image</label>
+        @if (!string.IsNullOrEmpty(Model.Resource.ImageUrl))
+        {
+            <div class="mb-2">
+                <img src="@Model.Resource.ImageUrl" alt="Current Image" class="img-fluid rounded shadow-sm" style="max-height: 200px;" />
+            </div>
+        }
+        <label class="form-label">Upload New Image (optional)</label>
+        <input type="file" asp-for="ImageFile" class="form-control" accept="image/*" onchange="compressAndPreviewImage(event)" />
+        <img id="imagePreview" class="img-fluid rounded shadow-sm d-none mt-3" style="max-height: 200px;" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Resource.ContentHtml"></label>
+        <textarea asp-for="Resource.ContentHtml" class="form-control" rows="10"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Resource.DatePublished" class="form-label">Date Published</label>
+        <input asp-for="Resource.DatePublished" class="form-control" type="date" />
+        <span asp-validation-for="Resource.DatePublished" class="text-danger"></span>
+        </div>
+
+    <div class="mb-3">
+        <label asp-for="Resource.Status" class="form-label">Status</label>
+        <select asp-for="Resource.Status" class="form-select">
+            <option value="0">Draft</option>
+            <option value="1">Published</option>
+            <option value="2">Archived</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update</button>
+    <a asp-page="/Admin/Resources/Manage" class="btn btn-secondary">Cancel</a>
+    <a href="/resources/article/@Model.Resource.Slug" class="btn btn-secondary" target="_blank">
+        Preview Article
+    </a>
+
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/assets/js/tinymce/tinymce.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing TinyMCE for Edit page...');
+            
+            if (typeof tinymce === 'undefined') {
+                console.error('TinyMCE not loaded! Check the script path.');
+                return;
+            }
+            
+            tinymce.init({
+                selector: '#Resource_ContentHtml',
+                height: 400,
+                menubar: false,
+                plugins: 'image link code lists autoresize autolink',
+                toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link unlink | image | code',
+                branding: false,
+                resize: true,
+                
+                // Enhanced link options
+                link_title: false,
+                link_assume_external_targets: true,
+                link_context_toolbar: true,
+                autolink_pattern: /^https?:\/\/\S+$/,
+                
+                // Link target options
+                target_list: [
+                    {title: 'Same window', value: ''},
+                    {title: 'New window', value: '_blank'},
+                    {title: 'Parent frame', value: '_parent'}
+                ],
+                
+                // Custom link list for common internal pages
+                link_list: [
+                    {title: 'Home Page', value: '/'},
+                    {title: 'About Us', value: '/about'},
+                    {title: 'Contact Us', value: '/contact'},
+                    {title: 'Resources', value: '/resources'},
+                    {title: 'Invoice List', value: '/Invoices/InvoiceLists'},
+                    {title: 'Create Invoice', value: '/Invoices/CreateInvoice'}
+                ],
+                
+                images_upload_url: '/Admin/Resources/Edit?handler=UploadImage',
+                automatic_uploads: true,
+                file_picker_types: 'image',
+                setup: function (editor) {
+                    editor.on('init', function () {
+                        console.log('TinyMCE initialized successfully on Edit page!');
+                    });
+                    editor.on('LoadContent', function () {
+                        console.log('TinyMCE content loaded on Edit page');
+                    });
+                },
+                images_upload_handler: function (blobInfo, success, failure) {
+                    const formData = new FormData();
+                    formData.append('image', blobInfo.blob(), blobInfo.filename());
+                    
+                    // Add CSRF token
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    if (token) {
+                        formData.append('__RequestVerificationToken', token);
+                    }
+
+                    fetch('/Admin/Resources/Edit?handler=UploadImage', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(res => {
+                            if (!res.ok) {
+                                throw new Error('Upload failed with status: ' + res.status);
+                            }
+                            return res.json();
+                        })
+                        .then(data => {
+                            if (data.location) {
+                                success(data.location);
+                            } else {
+                                failure('Server did not return image location.');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Image upload error:', err);
+                            failure('Image upload error: ' + err.message);
+                        });
+                }
+            }).then(function(editors) {
+                console.log('TinyMCE editors created on Edit page:', editors.length);
+            }).catch(function(error) {
+                console.error('TinyMCE initialization failed on Edit page:', error);
+            });
+
+            // Form submit handler
+            document.querySelector("form").addEventListener("submit", function () {
+                console.log('Form submitting, triggering TinyMCE save...');
+                tinymce.triggerSave();
+            });
+        });
+    </script>
+
+    <script>
+        function compressAndPreviewImage(event) {
+            const file = event.target.files[0];
+            if (!file || !file.type.startsWith("image/")) return;
+
+            const img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                img.src = e.target.result;
+            };
+
+            img.onload = function () {
+                const canvas = document.createElement("canvas");
+                const maxWidth = 1024;
+                const scale = Math.min(maxWidth / img.width, 1);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob(function (blob) {
+                    const newFile = new File([blob], file.name, { type: "image/jpeg" });
+
+                    const dt = new DataTransfer();
+                    dt.items.add(newFile);
+                    event.target.files = dt.files;
+
+                    const preview = document.getElementById("imagePreview");
+                    preview.src = URL.createObjectURL(newFile);
+                    preview.classList.remove("d-none");
+                }, "image/jpeg", 0.75);
+            };
+
+            reader.readAsDataURL(file);
+        }
+    </script>
+}

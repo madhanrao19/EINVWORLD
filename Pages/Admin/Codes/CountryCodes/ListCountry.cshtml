@@ -1,0 +1,115 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Codes.CountryCodes.ListCountryModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Country Codes List";
+
+    string GetSortUrl(string column)
+    {
+        string newSortOrder = (Model.SortBy == column && Model.SortOrder == "asc") ? "desc" : "asc";
+        return Url.Page(null, new { SortBy = column, SortOrder = newSortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter, CurrentPage = Model.CurrentPage }) ?? "#";
+    }
+
+    Microsoft.AspNetCore.Html.IHtmlContent GetSortIcon(string column)
+    {
+        if (Model.SortBy == column)
+        {
+            return Html.Raw(Model.SortOrder == "asc" ? "<i class='ri-arrow-up-s-fill ms-1'></i>" : "<i class='ri-arrow-down-s-fill ms-1'></i>");
+        }
+        return Html.Raw("");
+    }
+}
+
+<h2>Country Codes</h2>
+
+<form method="get" class="mb-4">
+    <input type="hidden" name="SortBy" value="@Model.SortBy" />
+    <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+    <div class="row g-3 align-items-center">
+        <div class="col-md-4">
+            <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search by Code or Country..." />
+        </div>
+        <div class="col-md-3">
+            <select asp-for="StatusFilter" class="form-select">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="">All Statuses</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <button type="submit" class="btn btn-primary"><i class="ri-search-line align-bottom me-1"></i> Filter</button>
+            <a asp-page="./ListCountry" class="btn btn-soft-secondary">Clear</a>
+        </div>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table id="dataTable" class="table table-sm table-bordered table-hover table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>
+                    <a href="@GetSortUrl("code")" class="text-white text-decoration-none">
+                        Code @GetSortIcon("code")
+                    </a>
+                </th>
+                <th>
+                    <a href="@GetSortUrl("country")" class="text-white text-decoration-none">
+                        Country @GetSortIcon("country")
+                    </a>
+                </th>
+                <th>Updated By</th>
+                <th>Updated Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.CountryCodes.Any())
+            {
+                @foreach (var country in Model.CountryCodes)
+                {
+                    <tr>
+                        <td>@country.Code</td>
+                        <td>@country.Country</td>
+                        <td>@(string.IsNullOrEmpty(country.UpdatedBy) ? "-" : country.UpdatedBy)</td>
+                        <td>@(country.UpdatedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="4" class="text-center">No country codes found.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+@if (Model.TotalPages > 1)
+{
+    <div class="row mt-3 align-items-center">
+        <div class="col-sm">
+            <div class="text-muted">
+                Showing <span class="fw-semibold">@(((Model.CurrentPage - 1) * Model.PageSize) + 1)</span> to
+                <span class="fw-semibold">@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalRecords)</span> of
+                <span class="fw-semibold">@Model.TotalRecords</span> entries
+            </div>
+        </div>
+        <div class="col-sm-auto">
+            <ul class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-start mb-0">
+                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Page(null, new { CurrentPage = Model.CurrentPage - 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">Previous</a>
+                </li>
+
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="@Url.Page(null, new { CurrentPage = i, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Page(null, new { CurrentPage = Model.CurrentPage + 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">Next</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+}

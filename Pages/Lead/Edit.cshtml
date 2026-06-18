@@ -1,0 +1,176 @@
+﻿@page
+@model eInvWorld.Pages.Lead.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>PartyInfo</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="PartyInfo.PartyInfoId" />
+            <div class="form-group">
+                <label asp-for="PartyInfo.IndustryClassificationCode" class="control-label"></label>
+                <input asp-for="PartyInfo.IndustryClassificationCode" class="form-control" />
+                <span asp-validation-for="PartyInfo.IndustryClassificationCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.BizDescription" class="control-label"></label>
+                <input asp-for="PartyInfo.BizDescription" class="form-control" />
+                <span asp-validation-for="PartyInfo.BizDescription" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.CompanyName" class="control-label"></label>
+                <input asp-for="PartyInfo.CompanyName" class="form-control" />
+                <span asp-validation-for="PartyInfo.CompanyName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.TIN" class="control-label"></label>
+                <input asp-for="PartyInfo.TIN" class="form-control" />
+                <span asp-validation-for="PartyInfo.TIN" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.RegTypeCode" class="control-label"></label>
+                <select asp-for="PartyInfo.RegTypeCode" class="form-control" asp-items="ViewBag.RegTypeCode"></select>
+                <span asp-validation-for="PartyInfo.RegTypeCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.RegNo" class="control-label"></label>
+                <input asp-for="PartyInfo.RegNo" class="form-control" />
+                <span asp-validation-for="PartyInfo.RegNo" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.SST" class="control-label"></label>
+                <input asp-for="PartyInfo.SST" class="form-control" />
+                <span asp-validation-for="PartyInfo.SST" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.TTX" class="control-label"></label>
+                <input asp-for="PartyInfo.TTX" class="form-control" />
+                <span asp-validation-for="PartyInfo.TTX" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.Addr1" class="control-label"></label>
+                <input asp-for="PartyInfo.Addr1" class="form-control" />
+                <span asp-validation-for="PartyInfo.Addr1" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.Addr2" class="control-label"></label>
+                <input asp-for="PartyInfo.Addr2" class="form-control" />
+                <span asp-validation-for="PartyInfo.Addr2" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.Addr3" class="control-label"></label>
+                <input asp-for="PartyInfo.Addr3" class="form-control" />
+                <span asp-validation-for="PartyInfo.Addr3" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.PostalCode" class="control-label"></label>
+                <input asp-for="PartyInfo.PostalCode" class="form-control" />
+                <span asp-validation-for="PartyInfo.PostalCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.CityName" class="control-label"></label>
+                <input asp-for="PartyInfo.CityName" class="form-control" />
+                <span asp-validation-for="PartyInfo.CityName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.StateCode" class="control-label"></label>
+                <select asp-for="PartyInfo.StateCode" class="form-control" asp-items="ViewBag.StateCode"></select>
+                <span asp-validation-for="PartyInfo.StateCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.CountryCode" class="control-label"></label>
+                <select asp-for="PartyInfo.CountryCode" class="form-control" asp-items="ViewBag.CountryCode"></select>
+                <span asp-validation-for="PartyInfo.CountryCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.Email" class="control-label"></label>
+                <input asp-for="PartyInfo.Email" class="form-control" />
+                <span asp-validation-for="PartyInfo.Email" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.PhoneNo" class="control-label"></label>
+                <input asp-for="PartyInfo.PhoneNo" class="form-control" />
+                <span asp-validation-for="PartyInfo.PhoneNo" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="PartyInfo.IsActive" /> @Html.DisplayNameFor(model => model.PartyInfo.IsActive)
+                </label>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.Remarks" class="control-label"></label>
+                <input asp-for="PartyInfo.Remarks" class="form-control" />
+                <span asp-validation-for="PartyInfo.Remarks" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.LogoPath" class="control-label"></label>
+                <input asp-for="PartyInfo.LogoPath" class="form-control" />
+                <span asp-validation-for="PartyInfo.LogoPath" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.CreatedDate" class="control-label"></label>
+                <input asp-for="PartyInfo.CreatedDate" class="form-control" />
+                <span asp-validation-for="PartyInfo.CreatedDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="PartyInfo.CreatedBy" class="control-label"></label>
+                <input asp-for="PartyInfo.CreatedBy" class="form-control" />
+                <span asp-validation-for="PartyInfo.CreatedBy" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.UpdatedDate" class="control-label"></label>
+                <input asp-for="PartyInfo.UpdatedDate" class="form-control" />
+                <span asp-validation-for="PartyInfo.UpdatedDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.UpdatedBy" class="control-label"></label>
+                <input asp-for="PartyInfo.UpdatedBy" class="form-control" />
+                <span asp-validation-for="PartyInfo.UpdatedBy" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PartyInfo.InviteCode" class="control-label"></label>
+                <input asp-for="PartyInfo.InviteCode" class="form-control" />
+                <span asp-validation-for="PartyInfo.InviteCode" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="PartyInfo.IsApproved" /> @Html.DisplayNameFor(model => model.PartyInfo.IsApproved)
+                </label>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="PartyInfo.IsAdminCreated" /> @Html.DisplayNameFor(model => model.PartyInfo.IsAdminCreated)
+                </label>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Theme API Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <h1>Theme API Test Page</h1>
+    
+    <div>
+        <h2>Test API Endpoints</h2>
+        <button onclick="testGetTheme()">Test GET /api/Theme/global</button>
+        <button onclick="testAuth()">Test GET /api/Theme/test-auth</button>
+        <button onclick="testSaveTheme()">Test POST /api/Theme/save</button>
+    </div>
+    
+    <div id="results" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; min-height: 200px;">
+        <h3>Results:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toISOString() + ': ' + message + '\n';
+        }
+
+        function testGetTheme() {
+            log('Testing GET /api/Theme/global...');
+            
+            fetch('/api/Theme/global')
+                .then(response => {
+                    log(`Response status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    log('Success: ' + JSON.stringify(data, null, 2));
+                })
+                .catch(error => {
+                    log('Error: ' + error.message);
+                });
+        }
+
+        function testAuth() {
+            log('Testing GET /api/Theme/test-auth...');
+            
+            fetch('/api/Theme/test-auth', {
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    log(`Response status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    log('Auth Success: ' + JSON.stringify(data, null, 2));
+                })
+                .catch(error => {
+                    log('Auth Error: ' + error.message);
+                });
+        }
+
+        function testSaveTheme() {
+            log('Testing POST /api/Theme/save...');
+            
+            const testData = {
+                'data-layout': 'vertical',
+                'data-theme': 'default',
+                'data-theme-colors': 'green',
+                'data-topbar': 'light',
+                'data-sidebar': 'dark'
+            };
+
+            fetch('/api/Theme/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(testData)
+            })
+                .then(response => {
+                    log(`Save response status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    log('Save Success: ' + JSON.stringify(data, null, 2));
+                })
+                .catch(error => {
+                    log('Save Error: ' + error.message);
+                });
+        }
+    </script>
+</body>
+</html>

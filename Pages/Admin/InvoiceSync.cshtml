@@ -1,0 +1,46 @@
+﻿@page
+@model eInvWorld.Pages.Admin.InvoiceSyncModel
+@{
+    ViewData["Title"] = "Manual Invoice Sync";
+}
+
+<h3>🔁 Manual Invoice Status Updater</h3>
+
+<form method="post" asp-page-handler="FullImportAll" onsubmit="showLoader()">
+    <button type="submit" class="btn btn-warning" id="importButton">
+        Import All Invoices from LHDN
+    </button>
+</form>
+
+
+<form method="post" asp-page-handler="Run" onsubmit="showLoader()">
+    <button type="submit" class="btn btn-primary" id="syncButton">
+        Run Invoice Sync Now
+    </button>
+</form>
+
+<div id="loader" class="mt-3" style="display:none;">
+    <i class="fa fa-spinner fa-spin"></i> Syncing invoices, please wait...
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success mt-3">@TempData["Message"]</div>
+}
+@if (TempData["ResultSummary"] != null)
+{
+    <div class="alert alert-info mt-2">
+        @Html.Raw(TempData["ResultSummary"])
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function showLoader() {
+            if (document.getElementById('syncButton')) document.getElementById('syncButton').disabled = true;
+            if (document.getElementById('importButton')) document.getElementById('importButton').disabled = true;
+            document.getElementById('loader').style.display = 'block';
+        }
+
+    </script>
+}

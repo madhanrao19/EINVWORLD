@@ -1,0 +1,855 @@
+﻿@page
+@model eInvWorld.Pages.Suppliers.DetailsModel
+
+@{
+    ViewData["Title"] = (Model.From == "lead") ? "Lead Details" : "Company Details";
+}
+
+<!-- Start Page Title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">@((Model.From == "lead") ? "Lead Info" : "Company Info")</h4>
+
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item">
+                        <a href="javascript:void(0);">@((Model.From == "lead") ? "Lead Management" : "Company Management")</a>
+                    </li>
+                    <li class="breadcrumb-item active">@((Model.From == "lead") ? "Lead Details" : "Company Details")</li>
+
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End Page Title -->
+
+<div class="row">
+    <!-- Left Column: Company Details -->
+    <div class="col-xxl-4">
+        <div class="card" id="company-view-detail">
+            <div class="card-body text-center">
+                <div class="position-relative d-inline-block mb-2">
+                    <div class="avatar-md mx-auto">
+                        <div class="avatar-title bg-light rounded-circle material-shadow overflow-hidden">
+                            <img src="@Url.Content(string.IsNullOrEmpty(Model.PartyInfo.LogoPath)
+            ? "~/assets/images/users/multi-user.jpg"
+            : Model.PartyInfo.LogoPath)"
+                                 alt="Company Logo"
+                                 class="avatar-sm rounded-circle object-fit-cover w-100 h-100">
+                        </div>
+                    </div>
+
+                </div>
+                <h5 class="mt-3 mb-1">@Model.PartyInfo.CompanyName</h5>
+                <p class="text-muted">@Model.PartyInfo.Email</p>
+
+                <div class="table-responsive table-card">
+                    <table class="table table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="fw-medium">Registration Type</td>
+                                <td>@Model.PartyInfo.RegTypeCode</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Tax ID</td>
+                                <td>@Model.PartyInfo.TIN</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Registration Number</td>
+                                <td>@Model.PartyInfo.RegNo</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Old Registration Number</td>
+                                <td>@Model.PartyInfo.OldRegNo</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Industry Classification</td>
+                                <td>@Model.PartyInfo.IndustryClassificationCode</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Business Description</td>
+                                <td>@Model.PartyInfo.BizDescription</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Phone Number</td>
+                                <td>@Model.PartyInfo.PhoneNo</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Fax Number</td>
+                                <td>@Model.PartyInfo.FaxNo</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">SST Registration</td>
+                                <td>@Model.PartyInfo.SST</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Tourism Tax (TTX)</td>
+                                <td>@Model.PartyInfo.TTX</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Remarks</td>
+                                <td>@Model.PartyInfo.Remarks</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Bank Account Number</td>
+                                <td>@Model.PartyInfo.BankAccountNo</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Bank Name</td>
+                                <td>@Model.PartyInfo.BankName</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Attention</td>
+                                <td>@Model.PartyInfo.Attention</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-medium">Location</td>
+                                <td>
+                                    @{
+                                        var addressParts = new[]
+                                        {
+                                    Model.PartyInfo.Addr1,
+                                    Model.PartyInfo.Addr2,
+                                    Model.PartyInfo.Addr3,
+                                    Model.PartyInfo.PostalCode,
+                                    Model.PartyInfo.CityName,
+                                    Model.StateName,
+                                    Model.CountryName
+                                    }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+
+                                        var addressDisplay = string.Join(", ", addressParts);
+                                        var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
+                                    }
+
+                                    @addressDisplay
+                                    <div class="mt-2">
+                                        <a href="@googleMapsUrl" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="ri-map-pin-fill fs-16"></i> View on Google Maps
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 d-flex justify-content-center gap-2">
+                    @if (User.IsInRole("Admin"))
+                    {
+                    <a asp-page="/Suppliers/Edit"
+                       asp-route-id="@Model.PartyInfo.PartyInfoId"
+                       asp-route-from="@(Model.From == "lead" ? "lead" : null)"
+                       class="btn btn-warning btn-sm">
+                        <i class="ri-pencil-fill fs-16" title="Edit"></i> Edit
+                    </a>
+                    }
+                    @if (User.IsInRole("Admin"))
+                    {
+                    <a class="btn btn-secondary btn-sm"
+                       asp-page="@(Model.From == "lead" ? "/Lead/List" : "./Index")">
+                        <i class="ri-arrow-left-fill fs-16" title="Back"></i> Back to List
+                    </a>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- Conditionally Render Right Section -->
+    @if (Model.From != "lead")
+    {
+
+        <!-- Right Column: Assigned Users & Assigned Buyers -->
+        <div class="col-xxl-8">
+            <div class="row">
+                <!-- Assigned Users Section -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex mb-3">
+                                <h6 class="card-title mb-0 flex-grow-1">Assigned Users</h6>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                                        <i class="ri-user-add-line me-1 align-bottom"></i> Create User
+                                    </button>
+
+                                    <button type="button" class="btn btn-soft-danger btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
+                                        <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover table-sm align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col">Name</th>
+                                            @if (User.IsInRole("Admin"))
+                                            {
+                                                <th class="text-center" style="width: 10%;">Primary</th>
+                                            }
+                                            else
+                                            {
+                                                <th class="text-center" style="width: 15%;">Company Access</th>
+                                                <th class="text-center" style="width: 10%;">View Only</th>
+                                            }
+                                            <th class="text-center" style="width: 15%;">Role</th>
+                                            <th class="text-center" style="width: 10%;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.AssignedUsers.Any())
+                                        {
+                                            @foreach (var user in Model.AssignedUsers)
+                                            {
+                                                var userCompany = Model.AssignedUserCompanies.FirstOrDefault(uc => uc.UserId == user.Id);
+                                                var userRole = Model.UserRoles.GetValueOrDefault(user.Id, "User"); // Fetch the role
+
+                                                <tr>
+                                                    <td style="max-width: 150px;">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-medium text-truncate" title="@user.FullName">@user.FullName</span>
+                                                            <small class="text-muted text-truncate" title="@user.Email">@user.Email</small>
+                                                        </div>
+                                                    </td>
+
+                                                    @if (User.IsInRole("Admin"))
+                                                    {
+                                                        <td class="text-center">
+                                                            @if (userRole == "Supplier")
+                                                            {
+                                                                <input type="checkbox" class="primary-checkbox form-check-input"
+                                                                       data-userid="@user.Id"
+                                                                       data-companyid="@Model.PartyInfo.PartyInfoId"
+                                                                       @(userCompany?.IsPrimaryCompany == true ? "checked" : "") />
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">-</span>
+                                                            }
+                                                        </td>
+                                                    }
+                                                    else
+                                                    {
+                                                        @if (userRole == "Supplier")
+                                                        {
+                                                            <td class="text-center">
+                                                                <input type="radio" class="form-check-input permission-radio"
+                                                                       name="permission_@user.Id"
+                                                                       data-userid="@user.Id"
+                                                                       data-type="access"
+                                                                       @(userCompany?.HasCompanyAccess == true ? "checked" : "")
+                                                                       onchange="updatePermission('@user.Id', 'access', true)">
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <input type="radio" class="form-check-input permission-radio"
+                                                                       name="permission_@user.Id"
+                                                                       data-userid="@user.Id"
+                                                                       data-type="view"
+                                                                       @(userCompany?.IsViewOnly == true ? "checked" : "")
+                                                                       onchange="updatePermission('@user.Id', 'view', true)">
+                                                            </td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td class="text-center text-muted">-</td>
+                                                            <td class="text-center text-muted">-</td>
+                                                        }
+                                                    }
+                                                    <td class="text-center">
+                                                        <span class="badge @(userRole == "Admin" ? "bg-danger" : userRole == "Supplier" ? "bg-primary" : "bg-success")">
+                                                            @userRole
+                                                        </span>
+                                                        <button type="button" class="btn btn-sm btn-link text-decoration-none shadow-none p-0 ms-1"
+                                                                onclick="openChangeRoleModal('@user.Id', '@user.FullName')" title="Change Role">
+                                                            <i class="ri-edit-line fs-14"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-danger btn-sm w-100" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')">
+                                                            <i class="ri-delete-bin-line"></i> Unassign
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="@(User.IsInRole("Admin") ? "3" : "4")" class="text-center text-muted">
+                                                    No users assigned.
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assigned Buyers Section -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex mb-3">
+                                <h6 class="card-title mb-0 flex-grow-1">Assigned Buyers</h6>
+                                <!-- NEW -->
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <button type="button" class="btn btn-soft-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignBuyersModal">
+                                            <i class="ri-building-line me-1 align-bottom"></i> From Company List
+                                        </button>
+                                    }
+                                    <button type="button" class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#assignPublicBuyersModal">
+                                        <i class="ri-user-add-line me-1 align-bottom"></i> From Suppliers
+                                    </button>
+                            </div>
+
+
+                                @if (Model.AssignedBuyers.Any())
+                                {
+                                    @foreach (var buyer in Model.AssignedBuyers)
+                                    {
+                                        var isPublic = buyer.CompanyName.EndsWith("(Buyers) ");
+
+                                        <ul class="list-unstyled vstack gap-3 mb-0">
+                                            <li class="d-flex align-items-center">
+                                                <img src="/assets/images/users/buyer-icon.png" alt="" class="avatar-md rounded-circle material-shadow me-2">
+                                                <div>
+                                                    <h6 class="mb-1">@buyer.CompanyName</h6>
+                                                    <p class="text-muted mb-0">@buyer.Email</p>
+                                                </div>
+
+                                                <button class="btn btn-danger btn-sm ms-auto"
+                                                        onclick="unassignBuyer(
+                                                            @Model.PartyInfo.PartyInfoId,
+                                                            @buyer.PartyInfoId,
+                                                            '@(isPublic ? "PC" : "PI")'
+                                                        )">
+                                                    <i class="ri-delete-bin-line"></i> Unassign
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No buyers assigned.</p>
+                                }
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Assign User Modal -->
+<div class="modal fade" id="assignUsersModal" tabindex="-1" aria-labelledby="assignUsersLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignUsersLabel">Assign User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" asp-page-handler="AssignUser">
+                    <input type="hidden" name="supplierId" value="@Model.PartyInfo.PartyInfoId" />
+                    @Html.AntiForgeryToken()
+
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Select User</label>
+                            <select class="form-select" name="SelectedUserId" id="SelectedUserId">
+                                <option value="">-- Select User --</option>
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.Id">@user.FullName</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">User Email Address</label>
+                            <input type="email" class="form-control" name="UserEmail" id="UserEmail" placeholder="Enter existing user's email" required />
+                            <div class="form-text text-muted">Enter the email address of the user you want to assign. The user must already exist in the system.</div>
+                        </div>
+                    }
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Assign Buyer Modal -->
+<div class="modal fade" id="assignBuyersModal" tabindex="-1" aria-labelledby="assignBuyersLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignBuyersLabel">Assign Buyer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" asp-page-handler="AssignBuyer">
+                    <input type="hidden" name="supplierId" value="@Model.PartyInfo.PartyInfoId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Buyers</label>
+                        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
+                            @foreach (var buyer in Model.AvailableBuyers.Where(b => b.TIN.StartsWith("EI0000000000")))
+                            {
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="SelectedBuyerIds" value="@buyer.PartyInfoId" id="cb_@buyer.PartyInfoId">
+                                    <label class="form-check-label" for="cb_@buyer.PartyInfoId">
+                                        @buyer.CompanyName (@buyer.TIN)
+                                    </label>
+                                </div>
+                            }
+
+                            @foreach (var buyer in Model.AvailableBuyers.Where(b => !b.TIN.StartsWith("EI0000000000")))
+                            {
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="SelectedBuyerIds" value="@buyer.PartyInfoId" id="cb_@buyer.PartyInfoId">
+                                    <label class="form-check-label" for="cb_@buyer.PartyInfoId">
+                                        @buyer.CompanyName
+                                    </label>
+                                </div>
+                            }
+                            @if (!Model.AvailableBuyers.Any())
+                            {
+                                <div class="text-muted small">No available buyers found.</div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NEW Create User -->
+<div class="modal fade" id="assignPublicBuyersModal" tabindex="-1" aria-labelledby="assignPublicBuyersLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignPublicBuyersLabel">Assign From My Buyers</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" asp-page-handler="AssignPublicBuyer">
+                    <input type="hidden" name="supplierId" value="@Model.PartyInfo.PartyInfoId" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Buyers (Created by Company)</label>
+                        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
+                            @foreach (var buyer in Model.AvailablePublicBuyers)
+                            {
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="SelectedPublicBuyerIds" value="@buyer.PublicCustomerId" id="pub_@buyer.PublicCustomerId">
+                                    <label class="form-check-label" for="pub_@buyer.PublicCustomerId">
+                                        @buyer.CompanyName (@buyer.TIN)
+                                    </label>
+                                </div>
+                            }
+                            @if (!Model.AvailablePublicBuyers.Any())
+                            {
+                                <div class="text-muted small">No available buyers found.</div>
+                            }
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            Only buyers created by this company account are shown here.
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success">Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Staff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" asp-page-handler="CreateUser" onsubmit="return validateCreateUser()">
+                    <input type="hidden" name="supplierId" value="@Model.PartyInfo.PartyInfoId" />
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" name="NewUserFullName" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-control" name="NewUserEmail" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" name="NewUserPassword" required minlength="6" />
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success">Create & Assign</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="changeRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Change User Role</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="changeRoleModalLabel" class="text-muted mb-4 small"></p>
+                <form id="changeRoleForm" method="post" asp-page-handler="ChangeUserRole">
+                    <input type="hidden" name="userId" id="changeRoleUserId" />
+                    @Html.AntiForgeryToken()
+                    <div class="list-group list-group-flush border-top">
+                        <button type="button" onclick="submitRoleChange('Supplier')" class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
+                            Supplier <i class="ri-briefcase-line text-primary"></i>
+                        </button>
+                        <button type="button" onclick="submitRoleChange('Buyer')" class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
+                            Buyer <i class="ri-shopping-cart-line text-success"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    document.querySelector("#createUserModal form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var formData = new FormData(this);
+
+    fetch(this.action, { method: "POST", body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire("Success!", data.message, "success").then(() => location.reload());
+            } else {
+                Swal.fire("Error!", data.message, "error");
+            }
+        });
+});
+
+    function updatePermission(userId, type, isChecked) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const companyId = '@Model.PartyInfo.PartyInfoId';
+
+        fetch(`./Details?handler=SetSupplierPermission`, {
+            method: "POST",
+            headers: {
+                "RequestVerificationToken": token,
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: `userId=${encodeURIComponent(userId)}&companyId=${companyId}&type=${type}&isChecked=true`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                Swal.fire("Error", data.message, "error").then(() => location.reload());
+            }
+        })
+        .catch(() => {
+            Swal.fire("Error", "Failed to update permission.", "error").then(() => location.reload());
+        });
+    }
+
+    function toggleViewOnly(userId, isViewOnly) {
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const companyId = '@Model.PartyInfo.PartyInfoId';
+
+        fetch(`/Suppliers/Details?handler=ToggleViewOnly`, {
+            method: "POST",
+            headers: {
+                "RequestVerificationToken": token,
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: `userId=${userId}&companyId=${companyId}&isViewOnly=${isViewOnly}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({ title: "Updated!", icon: "success", timer: 1000, showConfirmButton: false });
+            } else {
+                Swal.fire("Error!", data.message || "Failed to update.", "error");
+            }
+        })
+        .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
+    }
+
+    document.querySelectorAll('.primary-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', function () {
+            var userId = this.getAttribute('data-userid');
+            var companyId = this.getAttribute('data-companyid');
+            var isPrimary = this.checked;
+
+            fetch(`/Suppliers/Details?handler=SetPrimaryCompany`, {
+                method: "POST",
+                headers: {
+                    "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value,
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `userId=${userId}&companyId=${companyId}&isPrimary=${isPrimary}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire("Updated!", "Primary company has been updated.", "success")
+                            .then(() => location.reload()); // Reload to reflect the change
+                    } else {
+                        Swal.fire("Error!", data.message, "error");
+                    }
+                })
+                .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
+        });
+    });
+
+    document.querySelector("#assignBuyersModal form").addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent default form submission
+
+        var formData = new FormData(this);
+
+        fetch(this.action, {
+            method: "POST",
+            body: formData
+        })
+            .then(response => {
+                if (response.ok) {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Buyer Assigned!",
+                        text: "The buyer has been successfully assigned.",
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "Failed to assign buyer.",
+                        showConfirmButton: true
+                    });
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                Swal.fire({
+                    icon: "error",
+                    title: "Error!",
+                    text: "An unexpected error occurred.",
+                    showConfirmButton: true
+                });
+            });
+    });
+
+    function unassignBuyer(supplierId, buyerId, buyerType) {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "Do you want to remove this buyer?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, remove",
+            cancelButtonText: "Cancel"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/Suppliers/Details?handler=UnassignBuyer`, {
+                    method: "POST",
+                    headers: {
+                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value,
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: `supplierId=${supplierId}&buyerId=${buyerId}&buyerType=${buyerType}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire("Success", "Buyer removed successfully.", "success")
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire("Error", data.message, "error");
+                    }
+                })
+                .catch(() => Swal.fire("Error", "Unexpected error occurred.", "error"));
+            }
+        });
+    }
+    document.querySelector("#assignUsersModal form").addEventListener("submit", function (event) {
+        event.preventDefault(); // Prevent default form submission
+
+        var formData = new FormData(this);
+
+        console.log("🚀 DEBUG: Form Data Sent to Server:");
+        for (var pair of formData.entries()) {
+            console.log(pair[0] + ": " + pair[1]);  // ✅ Print form values in Console
+        }
+
+        fetch(this.action, {
+            method: "POST",
+            body: formData
+        })
+            .then(response => {
+                return response.text(); // ✅ Ensure response is properly parsed
+            })
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    console.log("🔄 DEBUG: Response from Server:", data);
+
+                    if (data.success) {
+                        Swal.fire("Success!", "User assigned successfully!", "success").then(() => location.reload());
+                    } else {
+                        Swal.fire("Error!", data.message, "error");
+                    }
+                } catch (error) {
+                    console.error("❌ ERROR: Invalid JSON response:", text);
+                    Swal.fire("Error!", "Unexpected server response.", "error");
+                }
+            })
+            .catch(error => console.error("❌ ERROR:", error));
+    });
+
+    function unassignUser(supplierId, userId) {
+        Swal.fire({
+            title: "Are you sure?",
+            text: "Do you want to remove this user?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, remove",
+            cancelButtonText: "Cancel"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/Suppliers/Details?handler=UnassignUser`, {
+                    method: "POST",
+                    headers: {
+                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value,
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: `supplierId=${supplierId}&userId=${userId}`
+                })
+                    .then(response => response.text())  // ✅ Handle plain text response
+                    .then(text => {
+                        try {
+                            const data = JSON.parse(text); // ✅ Ensure response is parsed correctly
+                            console.log("DEBUG: Server Response:", data);
+
+                            if (data.success) {
+                                Swal.fire("Success!", "User removed successfully.", "success")
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire("Error!", data.message || "Failed to unassign user.", "error");
+                            }
+                        } catch (error) {
+                            console.error("❌ ERROR: Invalid JSON response:", text);
+                            Swal.fire("Error!", "Unexpected server response.", "error");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("❌ ERROR:", error);
+                        Swal.fire("Error!", "Unexpected error occurred while communicating with the server.", "error");
+                    });
+            }
+        });
+    }
+    
+    document.querySelector("#assignPublicBuyersModal form").addEventListener("submit", function (event) {
+        event.preventDefault(); 
+
+        var formData = new FormData(this);
+
+        fetch(this.action, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json()) // The new handler returns JSON
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Buyer Assigned!",
+                    text: data.message,
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error!",
+                    text: data.message || "Failed to assign buyer.",
+                    showConfirmButton: true
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            Swal.fire({
+                icon: "error",
+                title: "Error!",
+                text: "An unexpected error occurred.",
+                showConfirmButton: true
+            });
+        });
+    });
+    function openChangeRoleModal(id, name) {
+        document.getElementById('changeRoleUserId').value = id;
+        document.getElementById('changeRoleModalLabel').innerText = "Select a new role for " + name;
+        new bootstrap.Modal(document.getElementById('changeRoleModal')).show();
+    }
+
+    function submitRoleChange(roleName) {
+        var form = document.getElementById("changeRoleForm");
+        var formData = new FormData(form);
+        formData.append("roleName", roleName); // Pass the selected role
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({ icon: "success", title: "Role Updated!", text: data.message, timer: 1500, showConfirmButton: false })
+                .then(() => location.reload());
+            } else {
+                Swal.fire("Error!", data.message, "error");
+            }
+        })
+        .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
+    }
+</script>
+

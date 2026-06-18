@@ -1,0 +1,4 @@
+InvoiceNo,IssueDate,CustomerName,CustomerTIN,CustomerAddress,ItemDescription,Quantity,UnitPrice,TaxDetails
+INV001,2025-06-04,ABC Sdn Bhd,12345678901,Kuala Lumpur,Web Hosting,1,500,SR:6%:30|DS:10%:50
+INV001,2025-06-04,ABC Sdn Bhd,12345678901,Kuala Lumpur,SSL Cert,1,100,SR:6%:6
+INV002,2025-06-03,XYZ Enterprise,98765432109,Selangor,Consultation,2,150,

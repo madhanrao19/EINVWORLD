@@ -1,0 +1,72 @@
+﻿@page
+@model eInvWorld.Pages.Admin.Notifications.IndexModel
+
+@{
+    ViewData["Title"] = "List of Templates for Notification Emails";
+}
+
+<h1>List of Templates for Notification Emails</h1>
+
+<p>
+    <a asp-page="Create">Create New Template</a>
+</p>
+<table id="dataTable1" class="table table-sm table-bordered table-hover table-striped">
+    <thead class="table-dark">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].TemplateName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].Subject)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].Body)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].NotificationType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].IsActive)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].CreatedDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Notification[0].UpdatedDate)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.Notification) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.TemplateName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Subject)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Body)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.NotificationType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsActive)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UpdatedDate)
+            </td>
+            <td>
+                <a asp-page="./Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-page="./Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

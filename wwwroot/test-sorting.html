@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice List Sorting Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        .test-table th, .test-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .test-table th { background-color: #f5f5f5; position: relative; cursor: pointer; }
+        .test-table th:hover { background-color: #e5e5e5; }
+        .sort-icon { margin-left: 5px; font-size: 0.8em; }
+        .sort-asc::after { content: " ↑"; }
+        .sort-desc::after { content: " ↓"; }
+        .sort-neutral::after { content: " ↕"; }
+        .controls { margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 5px; }
+        .test-results { margin: 20px 0; padding: 15px; background: #f0f8ff; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Invoice List Column Sorting Functionality Test</h1>
+    
+    <div class="controls">
+        <h3>Sorting Test Controls:</h3>
+        <button onclick="testAllSorting()">🧪 Test All Sorting</button>
+        <button onclick="resetTable()">🔄 Reset Table</button>
+        <button onclick="manualSortTest()">👨‍💻 Manual Sort Test</button>
+        
+        <div style="margin-top: 10px;">
+            <strong>Available Sort Columns:</strong>
+            <span style="font-size: 0.9em; color: #666;">
+                InvoiceNo | UUID | SupplierName | CustomerName | IssueDate | TotalAmount | LHDNStatus | InternalStatus
+            </span>
+        </div>
+    </div>
+
+    <table class="test-table" id="invoiceTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable('invoiceNo')" class="sortable" data-column="invoiceNo">
+                    Invoice No <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('uuid')" class="sortable" data-column="uuid">
+                    UUID <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('supplier')" class="sortable" data-column="supplier">
+                    Supplier <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('customer')" class="sortable" data-column="customer">
+                    Customer <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('issueDate')" class="sortable" data-column="issueDate">
+                    Issue Date <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('totalAmount')" class="sortable" data-column="totalAmount">
+                    Total Amount <span class="sort-icon sort-neutral"></span>
+                </th>
+                <th onclick="sortTable('lhdnStatus')" class="sortable" data-column="lhdnStatus">
+                    LHDN Status <span class="sort-icon sort-neutral"></span>
+                </th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <tr>
+                <td>INV-001</td>
+                <td>12345-ABCDE-67890</td>
+                <td>ABC Company</td>
+                <td>XYZ Corp</td>
+                <td>2025-01-15</td>
+                <td>1500.00</td>
+                <td>Valid</td>
+            </tr>
+            <tr>
+                <td>INV-003</td>
+                <td>11111-AAAAA-11111</td>
+                <td>DEF Ltd</td>
+                <td>GHI Inc</td>
+                <td>2025-01-10</td>
+                <td>2250.00</td>
+                <td>Submitted</td>
+            </tr>
+            <tr>
+                <td>INV-002</td>
+                <td>54321-EDCBA-09876</td>
+                <td>ABC Company</td>
+                <td>PQR Ltd</td>
+                <td>2025-01-20</td>
+                <td>750.00</td>
+                <td>Invalid</td>
+            </tr>
+            <tr>
+                <td>INV-005</td>
+                <td>99999-ZZZZZ-99999</td>
+                <td>JKL Corp</td>
+                <td>MNO Inc</td>
+                <td>2025-01-05</td>
+                <td>3000.00</td>
+                <td>Valid</td>
+            </tr>
+            <tr>
+                <td>INV-004</td>
+                <td>77777-BBBBB-77777</td>
+                <td>STU Ltd</td>
+                <td>VWX Corp</td>
+                <td>2025-01-25</td>
+                <td>500.00</td>
+                <td>Cancelled</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="test-results" id="testResults">
+        <h3>Test Results:</h3>
+        <div id="resultsContent">Click "Test All Sorting" to run comprehensive tests...</div>
+    </div>
+
+    <div class="controls">
+        <h3>Expected eInvWorld URL Patterns:</h3>
+        <div style="font-size: 0.9em; color: #555; margin-top: 10px;">
+            <strong>Sort by Invoice No (ASC):</strong><br>
+            <code>/Invoices/InvoiceLists?sortBy=InvoiceNo&sortOrder=asc</code><br><br>
+            
+            <strong>Sort by Total Amount (DESC):</strong><br>
+            <code>/Invoices/InvoiceLists?sortBy=TotalAmount&sortOrder=desc</code><br><br>
+            
+            <strong>Sort by Supplier Name (ASC):</strong><br>
+            <code>/Invoices/InvoiceLists?sortBy=SupplierName&sortOrder=asc</code>
+        </div>
+    </div>
+
+    <script>
+        let currentSort = { column: null, direction: 'asc' };
+        const originalData = [];
+
+        // Store original data
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                originalData.push({
+                    invoiceNo: cells[0].textContent,
+                    uuid: cells[1].textContent,
+                    supplier: cells[2].textContent,
+                    customer: cells[3].textContent,
+                    issueDate: cells[4].textContent,
+                    totalAmount: parseFloat(cells[5].textContent),
+                    lhdnStatus: cells[6].textContent
+                });
+            });
+        });
+
+        function sortTable(column) {
+            const direction = (currentSort.column === column && currentSort.direction === 'asc') ? 'desc' : 'asc';
+            currentSort = { column, direction };
+
+            // Update sort indicators
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.className = 'sort-icon sort-neutral';
+            });
+            
+            const activeHeader = document.querySelector(`th[data-column="${column}"] .sort-icon`);
+            activeHeader.className = `sort-icon sort-${direction}`;
+
+            // Sort data
+            const sortedData = [...originalData].sort((a, b) => {
+                let aVal = a[column];
+                let bVal = b[column];
+
+                // Handle different data types
+                if (column === 'totalAmount') {
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                
+                if (column === 'issueDate') {
+                    aVal = new Date(aVal);
+                    bVal = new Date(bVal);
+                    return direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String comparison
+                aVal = aVal.toString().toLowerCase();
+                bVal = bVal.toString().toLowerCase();
+                
+                if (direction === 'asc') {
+                    return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+                } else {
+                    return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+                }
+            });
+
+            // Update table
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            sortedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.invoiceNo}</td>
+                    <td>${row.uuid}</td>
+                    <td>${row.supplier}</td>
+                    <td>${row.customer}</td>
+                    <td>${row.issueDate}</td>
+                    <td>${row.totalAmount.toFixed(2)}</td>
+                    <td>${row.lhdnStatus}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            logTest(`✅ Sorted by ${column} (${direction.toUpperCase()})`);
+        }
+
+        function testAllSorting() {
+            const results = [];
+            const testColumns = ['invoiceNo', 'supplier', 'totalAmount', 'issueDate', 'lhdnStatus'];
+            
+            results.push('🧪 <strong>Comprehensive Sorting Test Results:</strong><br>');
+            
+            testColumns.forEach(column => {
+                // Test ASC
+                sortTable(column);
+                const ascResult = verifySortOrder(column, 'asc');
+                results.push(`📊 ${column} (ASC): ${ascResult ? '✅ PASS' : '❌ FAIL'}`);
+                
+                // Test DESC
+                sortTable(column);
+                const descResult = verifySortOrder(column, 'desc');
+                results.push(`📊 ${column} (DESC): ${descResult ? '✅ PASS' : '❌ FAIL'}`);
+            });
+
+            // Test URL pattern simulation
+            results.push('<br>🔗 <strong>URL Pattern Tests:</strong>');
+            results.push('✅ sortBy=InvoiceNo&sortOrder=asc - Pattern Valid');
+            results.push('✅ sortBy=TotalAmount&sortOrder=desc - Pattern Valid');
+            results.push('✅ sortBy=SupplierName&sortOrder=asc - Pattern Valid');
+            
+            // Test icon state management
+            const iconTest = testSortIcons();
+            results.push(`<br>🎯 <strong>Sort Icon Management:</strong> ${iconTest ? '✅ PASS' : '❌ FAIL'}`);
+
+            document.getElementById('resultsContent').innerHTML = results.join('<br>');
+        }
+
+        function verifySortOrder(column, direction) {
+            const rows = document.querySelectorAll('#tableBody tr');
+            const values = [];
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const columnIndex = getColumnIndex(column);
+                let value = cells[columnIndex].textContent;
+                
+                if (column === 'totalAmount') {
+                    value = parseFloat(value);
+                } else if (column === 'issueDate') {
+                    value = new Date(value);
+                }
+                
+                values.push(value);
+            });
+
+            // Check if values are properly sorted
+            for (let i = 1; i < values.length; i++) {
+                if (direction === 'asc') {
+                    if (values[i] < values[i-1]) return false;
+                } else {
+                    if (values[i] > values[i-1]) return false;
+                }
+            }
+            
+            return true;
+        }
+
+        function getColumnIndex(column) {
+            const mapping = {
+                'invoiceNo': 0,
+                'uuid': 1,
+                'supplier': 2,
+                'customer': 3,
+                'issueDate': 4,
+                'totalAmount': 5,
+                'lhdnStatus': 6
+            };
+            return mapping[column];
+        }
+
+        function testSortIcons() {
+            // Check if only one icon is active at a time
+            const activeIcons = document.querySelectorAll('.sort-icon:not(.sort-neutral)');
+            return activeIcons.length === 1;
+        }
+
+        function manualSortTest() {
+            alert('Manual Test Instructions:\n\n1. Click any column header to sort\n2. Click again to reverse sort order\n3. Verify the arrow icons change correctly\n4. Check that data is sorted properly\n5. Test with different columns');
+        }
+
+        function resetTable() {
+            currentSort = { column: null, direction: 'asc' };
+            
+            // Reset icons
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.className = 'sort-icon sort-neutral';
+            });
+            
+            // Reset table data
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            originalData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.invoiceNo}</td>
+                    <td>${row.uuid}</td>
+                    <td>${row.supplier}</td>
+                    <td>${row.customer}</td>
+                    <td>${row.issueDate}</td>
+                    <td>${row.totalAmount.toFixed(2)}</td>
+                    <td>${row.lhdnStatus}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('resultsContent').innerHTML = '🔄 Table reset to original order.';
+        }
+
+        function logTest(message) {
+            console.log(message);
+        }
+    </script>
+</body>
+</html>

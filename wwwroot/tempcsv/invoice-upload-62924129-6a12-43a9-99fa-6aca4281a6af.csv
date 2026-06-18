@@ -1,0 +1,4 @@
+InvoiceNo,IssueDate,RefDocumentNo,StartDate,EndDate,ExchangeRate,DocTypeCode,InvoicePeriod,CustomerName,CustomerTIN,CustomerAddr1,CustomerAddr2,CustomerAddr3,ItemCode,ItemDescription,UnitOfMeasure,Quantity,UnitPrice,DiscountAmount,ClassificationCode,TaxDetails
+INV-001,2025-07-01,PO-1001,2025-07-01,2025-07-31,1.0,01,2025-07,ABC Sdn Bhd,12345678901,123 Jalan Ampang,Level 2,Kuala Lumpur,ITEM001,Product A,pcs,2,100.0,10.0,0101,SST:6%:12.00
+INV-001,2025-07-01,PO-1001,2025-07-01,2025-07-31,1.0,01,2025-07,ABC Sdn Bhd,12345678901,123 Jalan Ampang,Level 2,Kuala Lumpur,ITEM002,Product B,pcs,1,150.0,0.0,0102,SST:6%:9.00|Service:8%:12.00
+INV-002,2025-07-01,PO-1002,2025-07-01,2025-07-31,1.0,01,2025-07,XYZ Berhad,98765432109,456 Jalan Damansara,Suite 8,Petaling Jaya,CONSULT01,Consulting,hours,1,500.0,0.0,0201,

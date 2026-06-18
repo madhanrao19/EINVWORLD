@@ -1,0 +1,114 @@
+﻿@page
+@model eInvWorld.Pages.Dashboard.MainDashboardModel
+@{
+    ViewData["Title"] = "Main Dashboard";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="page-title-box d-sm-flex align-items-center justify-content-between">
+    <h4 class="mb-sm-0">Main Dashboard</h4>
+</div>
+
+@* <!-- KPI Metrics Row -->
+<div class="row text-center mb-4">
+    @foreach (var card in Model.KPIs)
+    {
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h6 class="card-title">@card.Label</h6>
+                    <h2 class="fw-bold">@card.Value</h2>
+                </div>
+            </div>
+        </div>
+    }
+</div> *@
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label>Period</label>
+        <select class="form-control" id="filterPeriod" onchange="reloadDashboard()">
+            <option>Monthly</option>
+            <option>Quarterly</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label>Year</label>
+        <select class="form-control" id="filterYear" onchange="reloadDashboard()">
+            <option>2025</option>
+            <option>2024</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label>Currency</label>
+        <select class="form-control" id="filterCurrency" onchange="reloadDashboard()">
+            <option>MYR</option>
+            <option>USD</option>
+        </select>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow h-100">
+            <div class="card-header bg-white">Top Submitted Products/Services</div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="topProductsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow h-100">
+            <div class="card-header bg-white">Rejected Reasons</div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="rejectedReasonsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow h-100">
+            <div class="card-header bg-white">Invoices by Customer</div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="customerChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow h-100">
+            <div class="card-header bg-white">Invoice Type Breakdown</div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="invoiceTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0 shadow">
+            <div class="card-header bg-white">Monthly & Quarterly Summary</div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="monthlySummaryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/main-dashboard.js"></script>
+}

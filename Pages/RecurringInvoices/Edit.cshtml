@@ -1,0 +1,159 @@
+﻿@page
+@model eInvWorld.Pages.RecurringInvoices.EditModel
+@{
+    ViewData["Title"] = "Edit Recurring Profile";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">Edit Recurring Profile</h4>
+            <div class="page-title-right">
+                <a asp-page="./Index" class="btn btn-soft-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                </a>
+            </div>
+        </div>
+        <p class="text-muted">Update the schedule for: <strong>@Model.Input.ProfileName</strong>.</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post">
+                    <input type="hidden" asp-for="Input.Id" />
+                    
+                    <input type="hidden" asp-for="Input.InvoiceTemplateId" />
+                    <input type="hidden" asp-for="Input.SupplierId" />
+                    <input type="hidden" asp-for="Input.CustomerId" />
+                    <input type="hidden" asp-for="Input.PublicCustomerId" />
+                    <input type="hidden" asp-for="Input.Status" />
+                    <input type="hidden" asp-for="Input.CreatedByUserId" />
+                    <input type="hidden" asp-for="Input.CreatedAt" />
+
+                    <div class="mb-4">
+                        <label asp-for="Input.ProfileName" class="form-label fw-semibold">Profile Name <span class="text-danger">*</span></label>
+                        <input asp-for="Input.ProfileName" class="form-control" required />
+                        <span asp-validation-for="Input.ProfileName" class="text-danger"></span>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted">Base Template</label>
+                            <input type="text" class="form-control bg-light" value="@Model.BaseTemplateName" readonly />
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label text-muted">Company</label>
+                            <input type="text" class="form-control bg-light" value="@Model.SupplierName" readonly />
+                        </div>
+                        <div class="col-md-4 mt-3 mt-md-0">
+                            <label class="form-label text-muted">Buyer</label>
+                            <input type="text" class="form-control bg-light" value="@Model.BuyerName" readonly />
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Frequency" class="form-label fw-semibold">Frequency <span class="text-danger">*</span></label>
+                            <select asp-for="Input.Frequency" class="form-select" required>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Annually">Annually</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label asp-for="Input.NextRunDate" class="form-label fw-semibold">Next Run Date <span class="text-danger">*</span></label>
+                            <input asp-for="Input.NextRunDate" type="date" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch form-switch-lg mb-4" dir="ltr">
+                        <input type="checkbox" class="form-check-input" id="autoSubmitSwitch" asp-for="Input.AutoSubmitToMyInvois">
+                        <label class="form-check-label fw-semibold ms-2" for="autoSubmitSwitch">Auto-submit to MyInvois after generation</label>
+                    </div>
+
+                    <div class="text-end">
+                        <a asp-page="./Index" class="btn btn-light me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header align-items-center d-flex">
+                <h4 class="card-title mb-0 flex-grow-1">Automation Run History</h4>
+                <div class="flex-shrink-0">
+                    <button type="button" class="btn btn-soft-primary btn-sm" onclick="location.reload();">
+                        <i class="ri-refresh-line align-middle"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-nowrap align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Generated Invoice</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RunHistories.Any())
+                            {
+                                foreach (var log in Model.RunHistories)
+                                {
+                                    <tr>
+                                        <td>@log.RunTimestamp.ToString("dd MMM yyyy, HH:mm")</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(log.GeneratedInvoiceNo))
+                                            {
+                                                <span class="fw-medium text-primary">@log.GeneratedInvoiceNo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (log.RunStatus.Contains("Success"))
+                                            {
+                                                <span class="badge bg-success-subtle text-success">@log.RunStatus</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger">@log.RunStatus</span>
+                                            }
+                                        </td>
+                                        <td class="text-wrap" style="max-width: 250px;">
+                                            <small class="text-muted">@(log.ErrorMessage ?? "Completed successfully")</small>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">No automated runs recorded yet.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

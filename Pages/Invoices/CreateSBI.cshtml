@@ -1,0 +1,336 @@
+﻿@page
+@model EINVWORLD.Pages.Invoices.CreateSBIModel
+
+@{
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">Create Self-Billed Invoice</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Invoice Management</a></li>
+                    <li class="breadcrumb-item active">Create Self-Billed Invoice</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <ul>
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <form class="needs-validation" novalidate id="invoice_form" method="post" asp-page-handler="SubmitDocuments">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">General Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="invoiceNo">e-Invoice Number</label>
+                                <input type="text" asp-for="Invoice.InvoiceNo" class="form-control" id="invoiceNo" hidden />
+                                <small class="form-text text-muted">This number is auto-generated.</small>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="refDocumentNo">Reference Document Number</label>
+                                <input type="text" asp-for="Invoice.RefDocumentNo" class="form-control" id="refDocumentNo" />
+                            </div>
+                        </div>
+
+                        <!-- Document Type Code -->
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="docTypeCode">Document Type Code <span class="text-danger">*</span></label>
+                                <select asp-for="Invoice.DocTypeCode" class="form-control" id="docTypeCode" required>
+                                    <option value="11">Self-Billed Invoice</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Currency Field -->
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="currency">Currency Code <span class="text-danger">*</span></label>
+                                <select asp-for="Invoice.Currency" class="form-control" id="currency" required onchange="updateExchangeRate()">
+                                    <option value="">Select Currency</option>
+                                    @if (Model.CurrencyCodes != null && Model.CurrencyCodes.Any())
+                                    {
+                                        @foreach (var currency in Model.CurrencyCodes)
+                                        {
+                                            <option value="@currency.Value">@currency.Text</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option disabled>No Currency Codes Available</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Foreign Currency Field -->
+                        <div class="col-lg-6 d-none">
+                            <div>
+                                <label for="foreignCurrency">Foreign Currency</label>
+                                <select asp-for="Invoice.ForeignCurrency" class="form-control" id="foreignCurrency" onchange="updateExchangeRate()">
+                                    <option value="">Select Foreign Currency</option>
+                                    @if (Model.CurrencyCodes != null && Model.CurrencyCodes.Any())
+                                    {
+                                        @foreach (var currency in Model.CurrencyCodes)
+                                        {
+                                            <option value="@currency.Value">@currency.Text</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option disabled>No Currency Codes Available</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Exchange Rate Field -->
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="exchangeRate">Exchange Rate</label>
+                                <input type="number" asp-for="Invoice.ExchangeRate" class="form-control" id="exchangeRate" step="0.01" />
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="supplierSelect">Supplier Name <span class="text-danger">*</span></label>
+                                <select asp-for="Invoice.SupplierId" class="form-control" id="supplierSelect" name="Invoice.SupplierId">
+                                    <option value="">-- Select Supplier --</option>
+                                    @if (Model.Suppliers != null)
+                                    {
+                                        @foreach (var supplier in Model.Suppliers)
+                                        {
+                                            var isGeneralTIN = supplier.Text.Contains("TIN") || supplier.Text.Contains("General"); // Detect General TIN
+
+                                            <option value="@supplier.Value"
+                                                    data-tin="@(isGeneralTIN ? "General TIN" : "")">
+                                                @supplier.Text
+                                            </option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="">No Suppliers Available</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Invoice.SupplierId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="buyerSelect">Buyer Name <span class="text-danger">*</span></label>
+                                <select asp-for="Invoice.CustomerId" class="form-control" id="buyerSelect"
+                                        disabled="@((Model.Invoice.DocTypeCode == "11" || Model.Invoice.DocTypeCode == "12" || Model.Invoice.DocTypeCode == "13" || Model.Invoice.DocTypeCode == "14") ? "disabled" : null)">
+                                    <option value="">-- Select Assigned Buyer --</option>
+                                    @if (Model.Customers != null)
+                                    {
+                                        @foreach (var buyer in Model.Customers)
+                                        {
+                                            var isPrimary = buyer.Value == Model.PrimaryCompanyId?.ToString();
+
+                                            <option value="@buyer.Value"
+                                                    selected="@(isPrimary ? "selected" : null)">
+                                                @buyer.Text
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                                <span asp-validation-for="Invoice.CustomerId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="issueDate">Issue Date <span class="text-danger">*</span></label>
+                                <input type="text" asp-for="Invoice.IssueDate" class="form-control" id="issueDate" data-provider="flatpickr" data-date-format="Y-m-d H:i" required />
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="startDate">Start Date</label>
+                                <input type="text" asp-for="Invoice.StartDate" class="form-control" id="startDate" data-provider="flatpickr" data-date-format="d M, Y" />
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="endDate">End Date</label>
+                                <input type="text" asp-for="Invoice.EndDate" class="form-control" id="endDate" data-provider="flatpickr" data-date-format="d M, Y" />
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div>
+                                <label for="invoicePeriodEnum">Frequency Billing <span class="text-danger">*</span></label>
+                                <select asp-for="Invoice.InvoicePeriod" asp-items="Model.InvoicePeriodEnum" class="form-control" required>
+                                    <option value="">Select Frequency</option> <!-- Optional default option -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <h5>Invoice Items</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Classification Code</th>
+                                <th>Item Code</th>
+                                <th>Item Description</th>
+                                <th>Quantity</th>
+                                <th>Unit Measurement</th>
+                                <th>Unit Price</th>
+                                <th>Subtotal</th>
+                                <th>Tax</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lineItems">
+                            @for (int i = 0; i < Model.Invoice.InvoiceLines.Count; i++)
+                            {
+                                <tr>
+                                    <td>
+                                        <input asp-for="Invoice.InvoiceLines[i].ClassificationCode" class="form-control" />
+                                        <span asp-validation-for="Invoice.InvoiceLines[i].ClassificationCode" class="text-danger"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control" />
+                                    </td>
+                                    <td><input asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control" /></td>
+                                    <td><input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" class="form-control" /></td>
+                                    <td>
+                                        <input asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="form-control" />
+                                        <span asp-validation-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="text-danger"></span>
+                                    </td>
+                                    <td><input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" class="form-control" /></td>
+                                    <td><span id="subtotal-@i">@Model.Invoice.InvoiceLines[i].Quantity * @Model.Invoice.InvoiceLines[i].UnitPrice</span></td>
+                                    <td>
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tax Category</th>
+                                                    <th>Tax Percentage</th>
+                                                    <th>Tax Amount</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="taxes-@i">
+                                                @for (int j = 0; j < Model.Invoice.InvoiceLines[i].Taxes.Count; j++)
+                                                {
+                                                    <tr>
+                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" class="form-control" /></td>
+                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control" /></td>
+                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxAmount" type="number" class="form-control" /></td>
+                                                        <td><button type="button" class="btn btn-danger" onclick="removeTax(this)">Remove</button></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        <button type="button" class="btn btn-secondary" onclick="addTax(@i)">Add Tax</button>
+                                    </td>
+                                    <td><button type="button" class="btn btn-danger" onclick="removeItem(this)">Remove</button></td>
+                                </tr>
+                            }
+                        </tbody>
+
+                    </table>
+                    <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@Model.Invoice.InvoiceLines.Count" />
+
+                    <button type="button" class="btn btn-secondary" id="addItemBtn">Add Item</button>
+                </div>
+
+                <!-- Totals Section -->
+                <div class="card-body">
+                    <h5>Invoice Totals</h5>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <label for="totalAmountExclTax">Total Amount (Excl. Tax)</label>
+                            <input type="number" asp-for="Invoice.TotalAmountExclTax" class="form-control bg-light border-0" id="totalAmountExclTax" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="totalTaxAmount">Total Tax Amount</label>
+                            <input type="number" asp-for="Invoice.TotalTaxAmount" class="form-control bg-light border-0" id="totalTaxAmount" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="totalAmountIncTax">Total Amount (Incl. Tax)</label>
+                            <input type="number" asp-for="Invoice.TotalAmountIncTax" class="form-control bg-light border-0" id="totalAmountIncTax" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="totalDiscountAmount">Total Discount Amount</label>
+                            <input type="number" asp-for="Invoice.TotalDiscountAmount" class="form-control bg-light border-0" id="totalDiscountAmount" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="totalPayableAmount">Total Payable Amount</label>
+                            <input type="number" asp-for="Invoice.TotalPayableAmount" class="form-control bg-light border-0" id="totalPayableAmount" />
+                        </div>
+                        <div class="col-lg-6">
+                            <label for="totalNetAmount">Total Net Amount</label>
+                            <input type="number" asp-for="Invoice.TotalNetAmount" class="form-control bg-light border-0" id="totalNetAmount" />
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="hstack justify-content-end gap-2">
+                        <input type="hidden" name="invoiceNo" value="@Model.Invoice.InvoiceNo" />
+
+                        <!-- Buttons -->
+                        <button type="submit" name="action" value="saveDraft" class="btn btn-secondary">Save as Draft</button>
+                        <button type="submit" name="action" value="submitDocuments" class="btn btn-danger" id="sa-success-submit-lhdn">
+                            <i class="ri-send-plane-fill align-bottom me-1"></i> Submit to LHDN
+                        </button>
+                        <input type="hidden" id="draftFilePath" value="@ViewData["DraftFilePath"]" />
+
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (Model.GeneratedJson != null)
+{
+    <h4>Generated JSON:</h4>
+    <pre>@Model.GeneratedJson</pre>
+}
+<p>@Model.Message</p>
+
+
+@section Scripts {
+    <script src="~/js/create-invoice-ori.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var docTypeCode = "@Model.Invoice.DocTypeCode";
+
+            if (docTypeCode === "11" || docTypeCode === "12" || docTypeCode === "13" || docTypeCode === "14") {
+                document.getElementById("buyerSelect").setAttribute("disabled", "disabled");
+            }
+        });
+    </script>
+}

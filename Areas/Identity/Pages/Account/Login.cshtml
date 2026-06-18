@@ -1,0 +1,199 @@
+﻿@page "/login"
+@model LoginModel
+@{
+    ViewData["Title"] = "Login | eInvWorld";
+    ViewData["Description"] = "Access your eInvWorld account to manage and submit LHDN-compliant e-Invoices efficiently and securely.";
+    ViewData["Keywords"] = "login einvworld, e-invoicing portal login, Malaysia LHDN e-invoice, user login";
+}
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="text-center mt-sm-5 mb-4 text-white-50">
+                <div>
+                    <a href="/" class="d-inline-block auth-logo">
+                            <img src="~/images/einvworld-logo-light.png" alt="" style="width: 100px; height: auto;" class="me-2">
+                    </a>
+                </div>
+                <p class="mt-3 fs-15 fw-medium">eInvWorld</p>
+            </div>
+        </div>
+    </div>
+    <!-- end row -->
+
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.8); z-index: 9999; text-align: center;">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div>
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-3 fw-semibold text-primary">Logging in...</div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 col-xl-5">
+            <div class="card mt-4 card-bg-fill">
+
+                <div class="card-body p-4">
+                    <div class="text-center mt-2">
+                        <h5 class="text-primary">Welcome Back !</h5>
+                        <p class="text-muted">Sign in to continue to eInvWorld.</p>
+                    </div>
+                    <div class="p-2 mt-4">
+                            <form id="account" method="post">
+                                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                @* <input type="text" class="form-control" id="username" placeholder="Enter username"> *@
+                                <input asp-for="Input.UserName" class="form-control" id="username" autocomplete="username" aria-required="true" placeholder="Enter username" />
+                                <span asp-validation-for="Input.UserName" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="float-end">
+                                <a id="forgot-password" href="/forgot-password" class="text-muted">Forgot password?</a>
+
+                                </div>
+                                <label class="form-label" for="password-input">Password</label>
+                                <div class="position-relative auth-pass-inputgroup mb-3">
+                                    <input type="password" asp-for="Input.Password" class="form-control pe-5 password-input" autocomplete="current-password" aria-required="true" placeholder="Enter password" id="password-input" />
+                                    <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon"><i class="ri-eye-fill align-middle"></i></button>
+                                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="auth-remember-check">
+                                <label class="form-check-label" for="auth-remember-check">Remember me</label>
+                            </div>
+
+                        <partial name="_TurnstilePartial" />
+
+                            <div class="mt-4">
+                                <button id="login-submit" type="submit" class="w-100 btn btn-primary btn-icon waves-effect waves-light">Login</button>
+
+                            </div>
+
+                            @* <div class="mt-4 text-center">
+                                <div class="signin-other-title">
+                                    <h5 class="fs-13 mb-4 title">Sign In with</h5>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-primary btn-icon waves-effect waves-light"><i class="ri-facebook-fill fs-16"></i></button>
+                                    <button type="button" class="btn btn-danger btn-icon waves-effect waves-light"><i class="ri-google-fill fs-16"></i></button>
+                                    <button type="button" class="btn btn-dark btn-icon waves-effect waves-light"><i class="ri-github-fill fs-16"></i></button>
+                                    <button type="button" class="btn btn-info btn-icon waves-effect waves-light"><i class="ri-twitter-fill fs-16"></i></button>
+                                </div>
+                            </div> *@
+                        </form>
+                    </div>
+                </div>
+                <!-- end card body -->
+            </div>
+            <!-- end card --> 
+
+            <div class="mt-4 text-center">
+                    <p class="mb-0">Don't have an account ? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold text-primary text-decoration-underline"> Register as a new user </a> </p>
+                    <p class="mb-0"><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="fw-semibold text-primary text-decoration-underline"> Resend email confirmation </a> </p>
+            </div>
+
+        </div>
+    </div>
+    <!-- end row -->
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const loginForm = document.getElementById("account");
+            const loginButton = document.getElementById("login-submit");
+            const overlay = document.getElementById("loadingOverlay");
+
+            if (loginForm) {
+                loginForm.addEventListener("submit", function () {
+                    overlay.style.display = "block";
+                    loginButton.disabled = true;
+
+                    // ⏱️ After 3 seconds, check if an error is shown
+                    setTimeout(() => {
+                        const errorSummary = document.querySelector('[asp-validation-summary="ModelOnly"]');
+                        const errorItems = errorSummary?.querySelectorAll("li");
+                        if (errorItems?.length > 0) {
+                            overlay.style.display = "none";
+                            loginButton.disabled = false;
+                        }
+                    }, 3000); // Give server round-trip time
+                });
+            }
+
+            
+
+            // const params = new URLSearchParams(window.location.search);
+            // const reason = params.get("logoutReason");
+
+            // if (reason === "timeout") {
+            //     Swal.fire({
+            //         icon: 'info',
+            //         title: 'Session Ended',
+            //         text: 'You were logged out due to inactivity.',
+            //         confirmButtonText: 'OK'
+            //     });
+            // } else if (reason === "manual") {t
+            //     Swal.fire({
+            //         icon: 'info',
+            //         title: 'Logged Out',
+            //         text: 'You have successfully logged out.',
+            //         confirmButtonText: 'OK'
+            //     });
+            // }
+
+            // if (reason) {
+            //     window.history.replaceState({}, document.title, window.location.pathname);
+            // }
+
+        });
+    </script>
+
+    @* @if (!string.IsNullOrEmpty(logoutReason))
+    {
+        string message = logoutReason switch
+        {
+            "timeout" => "You were logged out due to inactivity.",
+            "manual" => "You have successfully logged out.",
+            _ => null
+        };
+
+        if (message != null)
+        {
+            <script>
+                window.addEventListener("DOMContentLoaded", function () {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Session Ended',
+                        text: '@message',
+                        confirmButtonText: 'OK'
+                    });
+                });
+            </script>
+        }
+    } *@
+
+    
+
+}
+
+
+
+
+
+
+
+<style>
+    #loadingOverlay {
+        transition: opacity 0.3s ease-in-out;
+    }
+</style>
+
+
+
+

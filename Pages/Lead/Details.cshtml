@@ -1,0 +1,181 @@
+﻿@page
+@model eInvWorld.Pages.Lead.DetailsModel
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>PartyInfo</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.IndustryClassificationCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.IndustryClassificationCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.BizDescription)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.BizDescription)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.CompanyName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.CompanyName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.TIN)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.TIN)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.RegType)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.RegType!.Code)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.RegNo)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.RegNo)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.SST)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.SST)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.TTX)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.TTX)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Addr1)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Addr1)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Addr2)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Addr2)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Addr3)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Addr3)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.PostalCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.PostalCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.CityName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.CityName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.State)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.State!.Code)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Country)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Country!.Code)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Email)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Email)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.PhoneNo)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.PhoneNo)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.IsActive)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.IsActive)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.Remarks)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.Remarks)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.LogoPath)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.LogoPath)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.CreatedDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.CreatedDate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.CreatedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.CreatedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.UpdatedDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.UpdatedDate)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.UpdatedBy)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.UpdatedBy)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.InviteCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.InviteCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.IsApproved)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.IsApproved)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PartyInfo.IsAdminCreated)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PartyInfo.IsAdminCreated)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Edit" asp-route-id="@Model.PartyInfo.PartyInfoId">Edit</a> |
+    <a asp-page="./List">Back to List</a>
+</div>

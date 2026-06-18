@@ -1,0 +1,157 @@
+﻿@page
+@model eInvWorld.Pages.Profile.Enable2faModel
+@{
+    ViewData["Title"] = "Two-Factor Authentication";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+
+        <div class="text-center mb-4">
+            <h3 class="text-primary" style="color: #055332 !important;">Security Settings</h3>
+            <p class="text-muted">Manage your Two-Factor Authentication</p>
+        </div>
+
+        @if (Model.Is2faEnabled)
+        {
+            <div class="card border-0 shadow-lg card-bg-fill">
+                <div class="card-header bg-success-subtle border-bottom-0 pt-4 pb-3">
+                    <div class="text-center">
+                        <div class="avatar-md mx-auto mb-3">
+                            <div class="avatar-title bg-success rounded-circle text-white fs-24">
+                                <i class="ri-shield-check-fill"></i>
+                            </div>
+                        </div>
+                        <h5 class="text-success fw-bold">2FA is Currently Active</h5>
+                        <p class="text-muted mb-0 small">Your account is protected.</p>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    @if (Model.RecoveryCodes != null)
+                    {
+                        <div class="alert alert-warning border-0 mb-4">
+                            <h6 class="alert-heading fw-bold"><i class="ri-error-warning-line me-1"></i> Save these codes!</h6>
+                            <p class="small mb-2">If you lose your device, these codes are the only way to recover your account.</p>
+                            <div class="bg-white p-3 rounded font-monospace text-dark shadow-sm">
+                                @foreach (var code in Model.RecoveryCodes)
+                                {
+                                    <div class="d-inline-block w-50 mb-1">@code</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else if (Model.RecoveryCodesLeft == 0)
+                    {
+                        <div class="alert alert-danger">
+                            You have <strong>0</strong> recovery codes left. Please generate new ones.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                            <div>
+                                <h6 class="mb-0 text-dark">Recovery Codes</h6>
+                                <small class="text-muted">You have <strong>@Model.RecoveryCodesLeft</strong> codes remaining.</small>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="d-grid gap-3">
+                        <form method="post" asp-page-handler="GenerateCodes">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="ri-refresh-line me-1"></i> Regenerate Recovery Codes
+                            </button>
+                        </form>
+
+                        <form method="post" asp-page-handler="Disable" onsubmit="return confirm('Are you sure you want to disable 2FA? Your account will be less secure.');">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="ri-lock-unlock-line me-1"></i> Disable 2FA
+                            </button>
+                        </form>
+
+                        <a asp-page="/Profile/Index" class="btn btn-light mt-2">Back to Profile</a>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-lg card-bg-fill">
+                <div class="card-header bg-transparent text-center border-bottom-0 pt-4">
+                    <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-light rounded-circle text-primary fs-24">
+                            <i class="ri-qr-code-line" style="color: #3AA564;"></i>
+                        </div>
+                    </div>
+                    <h5 class="fs-16" style="color: #055332;">Scan & Verify</h5>
+                </div>
+
+                <div class="card-body p-4">
+                    <div class="text-center">
+                        <p class="text-muted mb-3">1. Open <strong>Google Authenticator</strong> and scan this code:</p>
+
+                        <div class="d-flex justify-content-center mb-4">
+                            <div class="p-2 bg-white rounded shadow-sm border">
+                                <div id="qrCode"></div>
+                            </div>
+                        </div>
+                        <div id="qrCodeData" data-url="@Model.AuthenticatorUri"></div>
+
+                        <a class="text-muted text-decoration-underline small cursor-pointer" data-bs-toggle="collapse" href="#manualKey" role="button" aria-expanded="false">
+                            Can't scan? Enter key manually
+                        </a>
+                        <div class="collapse mt-2" id="manualKey">
+                            <div class="alert alert-light border border-dashed text-center mb-0">
+                                <code class="fs-16 fw-bold text-dark user-select-all">@Model.SharedKey</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 border-dashed" />
+
+                    <form method="post">
+                        <div class="text-center mb-3">
+                            <p class="text-muted mb-2">2. Enter the 6-digit code from your app:</p>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input asp-for="Input.Code" class="form-control text-center fs-18 fw-bold letter-spacing-2" placeholder="000000" autocomplete="off" />
+                            <label asp-for="Input.Code" class="text-center w-100">Verification Code</label>
+                            <span asp-validation-for="Input.Code" class="text-danger d-block text-center mt-1"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" style="background-color: #3AA564; border-color: #3AA564;">
+                                Verify & Enable
+                            </button>
+                            <a asp-page="/Profile/Index" class="btn btn-light">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            var qrData = document.getElementById("qrCodeData");
+            if (qrData) {
+                var uri = qrData.getAttribute("data-url");
+                if (uri) {
+                    new QRCode(document.getElementById("qrCode"), {
+                        text: uri,
+                        width: 160,
+                        height: 160
+                    });
+                }
+            }
+        });
+    </script>
+}

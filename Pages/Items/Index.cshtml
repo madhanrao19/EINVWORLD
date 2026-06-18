@@ -1,0 +1,186 @@
+@page
+@model eInvWorld.Pages.Items.IndexModel
+@{
+    ViewData["Title"] = "Saved Items";
+
+    //Updated to include CurrentPage so sorting doesn't reset the page
+    string GetSortUrl(string column)
+    {
+        string newSortOrder = (Model.SortBy == column && Model.SortOrder == "asc") ? "desc" : "asc";
+        return Url.Page("./Index", new { SortBy = column, SortOrder = newSortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter, CurrentPage = Model.CurrentPage }) ?? "#";
+    }
+
+    Microsoft.AspNetCore.Html.IHtmlContent GetSortIcon(string column)
+    {
+        if (Model.SortBy == column)
+        {
+            return Html.Raw(Model.SortOrder == "asc" ? "<i class='ri-arrow-up-s-fill ms-1'></i>" : "<i class='ri-arrow-down-s-fill ms-1'></i>");
+        }
+        return Html.Raw("");
+    }
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">Manage Saved Items</h4>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">My Items</h5>
+
+        <div class="d-flex gap-2">
+            <a class="btn btn-secondary" asp-page="Import">
+                <i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV
+            </a>
+            <a asp-page="Create" class="btn btn-primary">
+                <i class="ri-add-line"></i> Add New Item
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <form method="get" class="mb-4">
+            <input type="hidden" name="SortBy" value="@Model.SortBy" />
+            <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search ..." />
+                </div>
+                <div class="col-md-3">
+                    <select asp-for="StatusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary"><i class="ri-search-line align-bottom me-1"></i> Filter</button>
+                    <a asp-page="./Index" class="btn btn-soft-secondary">Clear</a>
+                </div>
+            </div>
+        </form>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="@GetSortUrl("itemcode")" class="text-dark text-decoration-none">
+                                Item Code @GetSortIcon("itemcode")
+                            </a>
+                        </th>
+                        <th>
+                            <a href="@GetSortUrl("classification")" class="text-dark text-decoration-none">
+                                Classification Code @GetSortIcon("classification")
+                            </a>
+                        </th>
+                        <th>
+                            <a href="@GetSortUrl("description")" class="text-dark text-decoration-none">
+                                Description @GetSortIcon("description")
+                            </a>
+                        </th>
+                        @if (Model.IsAdmin)
+                        {
+                            <th>
+                                <a href="@GetSortUrl("company")" class="text-dark text-decoration-none">
+                                    Company Name @GetSortIcon("company")
+                                </a>
+                            </th>
+                        }
+
+                        <th>Updated By</th>
+                        <th>
+                            <a href="@GetSortUrl("updated")" class="text-dark text-decoration-none">
+                                Updated Date @GetSortIcon("updated")
+                            </a>
+                        </th>
+
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.ItemViewModels.Any())
+                    {
+                        @foreach (var wrapper in Model.ItemViewModels)
+                        {
+                            <tr>
+                                <td>@wrapper.Item.ItemCode</td>
+                                <td>@wrapper.Item.ClassificationCode</td>
+
+                                <td class="text-truncate" style="max-width: 300px;" title="@wrapper.Item.Description">
+                                    @wrapper.Item.Description
+                                </td>
+
+                                @if (Model.IsAdmin)
+                                {
+                                    <td>@wrapper.CompanyName</td>
+                                }
+
+                                <td>@(string.IsNullOrEmpty(wrapper.Item.UpdatedBy) ? "-" : wrapper.Item.UpdatedBy)</td>
+                                <td>@(wrapper.Item.UpdatedDate.HasValue? wrapper.Item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+
+                                <td>
+                                    @if (wrapper.Item.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <a asp-page="./Edit" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-soft-info">Edit</a>
+                                        <a asp-page="./Delete" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-soft-danger">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="@(Model.IsAdmin ? "8" : "7")" class="text-center">No items found matching your filter criteria.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="row mt-3 align-items-center">
+                <div class="col-sm">
+                    <div class="text-muted">
+                        Showing <span class="fw-semibold">@(((Model.CurrentPage - 1) * Model.PageSize) + 1)</span> to
+                        <span class="fw-semibold">@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalRecords)</span> of
+                        <span class="fw-semibold">@Model.TotalRecords</span> entries
+                    </div>
+                </div>
+                <div class="col-sm-auto">
+                    <ul class="pagination pagination-separated pagination-sm justify-content-center justify-content-sm-start mb-0">
+                        <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Page("./Index", new { CurrentPage = Model.CurrentPage - 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">Previous</a>
+                        </li>
+
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Page("./Index", new { CurrentPage = i, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Page("./Index", new { CurrentPage = Model.CurrentPage + 1, SortBy = Model.SortBy, SortOrder = Model.SortOrder, SearchTerm = Model.SearchTerm, StatusFilter = Model.StatusFilter })">Next</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,5 @@
+InvoiceNo,IssueDate,PoDoNo,DocTypeCode,Currency,ExchangeRate,BillingFrequency,StartDate,EndDate,BankAccountNumber,BankName,AttentionTo,PaymentTerms,CounterpartyTIN,ItemDescription,Quantity,UnitPrice,DiscountAmount,UnitOfMeasure,ClassificationCode,TaxCategory,TaxPercentage
+INV-2024-001,2026-04-8,PO-98765,01,MYR,1,,,,,,,,C1234567890,Office Chairs,5,150.00,0.00,XUN,022,01,0.00
+INV-2024-002,2026-04-8,,01,MYR,1,,,,123456789012,Maybank,John Doe,Net 30,C0987654321,Laptop Dell XPS,1,4500.00,100.00,XUN,022,06,6.00
+INV-2024-002,2026-04-8,,01,MYR,1,,,,123456789012,Maybank,John Doe,Net 30,C0987654321,Wireless Mouse,2,50.00,0.00,XUN,022,06,6.00
+SB-2024-003,2026-04-7,,11,MYR,1,Monthly,2024-04-01,2024-04-30,,,,,EI00000000010,Freelance Design Services,1,1200.00,0.00,XUN,004,E,0.00

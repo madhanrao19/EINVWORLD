@@ -1,0 +1,163 @@
+﻿@page
+@model eInvWorld.Pages.PublicCustomer.EditModel
+@{
+    ViewData["Title"] = "Edit Buyer";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex justify-content-between align-items-center">
+            <h4>Edit Buyer</h4>
+            <a asp-page="./Details" asp-route-id="@Model.PublicCustomer.PublicCustomerId"
+               class="btn btn-light">Back</a>
+        </div>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card mt-3 p-4">
+    <input type="hidden" asp-for="PublicCustomer.PublicCustomerId" />
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.CompanyName" class="form-label"></label>
+            <input asp-for="PublicCustomer.CompanyName" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.TIN" class="form-label"></label>
+            <input asp-for="PublicCustomer.TIN" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.IndustryClassificationCode" class="form-label">MSIC Code</label>
+            <select asp-for="PublicCustomer.IndustryClassificationCode"
+                    asp-items="Model.MSICOptions"
+                    class="form-select">
+                <option value="">-- Select MSIC Code --</option>
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.BizDescription" class="form-label">Business Description</label>
+            <input asp-for="PublicCustomer.BizDescription" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.RegTypeCode" class="form-label"></label>
+            <select asp-for="PublicCustomer.RegTypeCode"
+                    asp-items="Model.IdTypesOptions"
+                    class="form-select">
+                <option value="">-- Select ID Type --</option>
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.RegNo" class="form-label"></label>
+            <input asp-for="PublicCustomer.RegNo" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.OldRegNo" class="form-label"></label>
+            <input asp-for="PublicCustomer.OldRegNo" class="form-control" />
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <label asp-for="PublicCustomer.SST" class="form-label"></label>
+            <input asp-for="PublicCustomer.SST" class="form-control" />
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <label asp-for="PublicCustomer.TTX" class="form-label"></label>
+            <input asp-for="PublicCustomer.TTX" class="form-control" />
+        </div>
+
+        <div class="col-md-12 mb-3">
+            <label asp-for="PublicCustomer.Addr1" class="form-label">Full Address</label>
+            <textarea asp-for="PublicCustomer.Addr1" class="form-control" rows="5" placeholder="Enter full address..."></textarea>
+            <span asp-validation-for="PublicCustomer.Addr1" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label asp-for="PublicCustomer.PostalCode" class="form-label"></label>
+            <input asp-for="PublicCustomer.PostalCode" class="form-control" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label asp-for="PublicCustomer.CityName" class="form-label"></label>
+            <input asp-for="PublicCustomer.CityName" class="form-control" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label asp-for="PublicCustomer.StateCode" class="form-label"></label>
+            <select asp-for="PublicCustomer.StateCode"
+                    asp-items="Model.StateOptions"
+                    class="form-select">
+                <option value="">-- Select State --</option>
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.CountryCode" class="form-label"></label>
+            <select asp-for="PublicCustomer.CountryCode"
+                    asp-items="Model.CountryOptions"
+                    class="form-select">
+                <option value="">-- Select Country --</option>
+            </select>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.Email" class="form-label"></label>
+            <input asp-for="PublicCustomer.Email" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.PhoneNo" class="form-label"></label>
+            <input asp-for="PublicCustomer.PhoneNo" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.FaxNo" class="form-label"></label>
+            <input asp-for="PublicCustomer.FaxNo" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.BankName" class="form-label"></label>
+            <input asp-for="PublicCustomer.BankName" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.BankAccountNo" class="form-label"></label>
+            <input asp-for="PublicCustomer.BankAccountNo" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.Attention" class="form-label"></label>
+            <input asp-for="PublicCustomer.Attention" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label asp-for="PublicCustomer.PaymentTerms" class="form-label"></label>
+            <input asp-for="PublicCustomer.PaymentTerms" class="form-control" />
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label>Logo</label>
+            <input type="file" asp-for="LogoUpload" class="form-control" />
+        </div>
+
+        <div class="col-md-12 mb-3">
+            <label asp-for="PublicCustomer.Remarks" class="form-label"></label>
+            <textarea asp-for="PublicCustomer.Remarks" class="form-control"></textarea>
+        </div>
+    </div>
+
+    <div class="text-end">
+        <button type="submit" class="btn btn-success">
+            Save Changes
+        </button>
+    </div>
+</form>
+
+<partial name="_ValidationScriptsPartial" />

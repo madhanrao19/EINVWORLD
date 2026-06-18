@@ -1,0 +1,347 @@
+﻿@page
+@model eInvWorld.Pages.Home.IndexModel
+@{
+    ViewData["Title"] = "E-Invoicing Dashboard";
+}
+
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="mb-3">
+        <h1>E-Invoicing Dashboard</h1>
+    </div>
+
+    <!-- KPI Cards Section -->
+    <div class="row text-center">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Total Invoices</h5>
+                    <h2>1,230</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Successful Submissions</h5>
+                    <h2>1,100</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Invoices</h5>
+                    <h2>80</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Failed Submissions</h5>
+                    <h2>50</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mt-4">
+        <!-- Monthly Invoices Chart -->
+        <div class="col-lg-6 col-md-12">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5 class="card-title">Monthly Invoice Submissions</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="invoiceBarChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoices Status Chart -->
+        <div class="col-lg-6 col-md-12">
+            <div class="card border-0 shadow">
+                <div class="card-header">
+                    <h5 class="card-title">Invoice Status Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="invoiceStatusChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Invoice Submission Status Chart -->
+        <div class="row mt-4">
+            <div class="col-lg-12 col-md-12">
+                <div class="card border-0 shadow">
+                    <div class="card-header">
+                        <h5 class="card-title">Invoice Submission Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="invoiceSubmissionStatusChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Types Chart -->
+        <div class="row mt-4">
+            <div class="col-lg-12 col-md-12">
+                <div class="card border-0 shadow">
+                    <div class="card-header">
+                        <h5 class="card-title">Invoice Types Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="invoiceTypesChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Invoice Types Chart -->
+        <div class="row mt-4">
+            <div class="col-lg-12 col-md-12">
+                <div class="card border-0 shadow">
+                    <div class="card-header">
+                        <h5 class="card-title">Monthly Invoice Types Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="invoiceTypesMonthlyChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <!-- JavaScript for Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Monthly Invoices Bar Chart
+        var ctxInvoiceBar = document.getElementById('invoiceBarChart').getContext('2d');
+        var invoiceBarChart = new Chart(ctxInvoiceBar, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+                datasets: [{
+                    label: 'Invoices',
+                    data: [120, 150, 180, 220, 200, 240],
+                    backgroundColor: 'rgba(54, 162, 235, 1)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Invoices Status Donut Chart
+        var ctxInvoiceStatus = document.getElementById('invoiceStatusChart').getContext('2d');
+        var invoiceStatusChart = new Chart(ctxInvoiceStatus, {
+            type: 'doughnut',
+            data: {
+                labels: ['Successful', 'Pending', 'Failed'],
+                datasets: [{
+                    label: 'Invoice Status',
+                    data: [1100, 80, 50],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 1)',  // Successful
+                        'rgba(255, 206, 86, 1)',  // Pending
+                        'rgba(255, 99, 132, 1)'   // Failed
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        // Invoice Submission Status Bar Chart
+        var ctxSubmissionStatus = document.getElementById('invoiceSubmissionStatusChart').getContext('2d');
+        var invoiceSubmissionStatusChart = new Chart(ctxSubmissionStatus, {
+            type: 'bar',
+            data: {
+                labels: ['Submitted', 'Valid', 'Invalid', 'Cancelled'],
+                datasets: [{
+                    label: 'Submission Status',
+                    data: [1200, 1000, 200, 30], // Example data
+                    backgroundColor: [
+                        'rgba(153, 102, 255, 1)',  // Submitted
+                        'rgba(75, 192, 192, 1)',   // Valid
+                        'rgba(255, 206, 86, 1)',    // Invalid
+                        'rgba(255, 99, 132, 1)'    // Cancelled
+                    ],
+                    borderColor: [
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Invoice Types Bar Chart
+        var ctxInvoiceTypes = document.getElementById('invoiceTypesChart').getContext('2d');
+        var invoiceTypesChart = new Chart(ctxInvoiceTypes, {
+            type: 'bar',
+            data: {
+                labels: [
+                    'Invoice',
+                    'Credit Note',
+                    'Debit Note',
+                    'Refund Note',
+                    'Self-billed Invoice',
+                    'Self-billed Credit Note',
+                    'Self-billed Debit Note',
+                    'Self-billed Refund Note'
+                ],
+                datasets: [{
+                    label: 'Number of Invoices',
+                    data: [500, 200, 150, 100, 80, 60, 40, 20], // Example data for each type
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 1)',  // Invoice
+                        'rgba(255, 206, 86, 1)',  // Credit Note
+                        'rgba(75, 192, 192, 1)',   // Debit Note
+                        'rgba(255, 99, 132, 1)',   // Refund Note
+                        'rgba(153, 102, 255, 1)',  // Self-billed Invoice
+                        'rgba(255, 159, 64, 1)',   // Self-billed Credit Note
+                        'rgba(255, 205, 86, 1)',    // Self-billed Debit Note
+                        'rgba(100, 100, 100, 1)'    // Self-billed Refund Note
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(100, 100, 100, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Monthly Invoice Types Bar Chart
+        var ctxInvoiceTypesMonthly = document.getElementById('invoiceTypesMonthlyChart').getContext('2d');
+        var invoiceTypesMonthlyChart = new Chart(ctxInvoiceTypesMonthly, {
+            type: 'bar',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June'], // Months
+                datasets: [
+                    {
+                        label: 'Invoice',
+                        data: [300, 400, 350, 450, 300, 500], // Monthly counts for Invoices
+                        backgroundColor: 'rgba(54, 162, 235, 1)',
+                    },
+                    {
+                        label: 'Credit Note',
+                        data: [100, 150, 120, 160, 100, 200], // Monthly counts for Credit Notes
+                        backgroundColor: 'rgba(255, 206, 86, 1)',
+                    },
+                    {
+                        label: 'Debit Note',
+                        data: [80, 60, 50, 70, 90, 100], // Monthly counts for Debit Notes
+                        backgroundColor: 'rgba(75, 192, 192, 1)',
+                    },
+                    {
+                        label: 'Refund Note',
+                        data: [50, 30, 40, 20, 30, 60], // Monthly counts for Refund Notes
+                        backgroundColor: 'rgba(255, 99, 132, 1)',
+                    },
+                    {
+                        label: 'Self-billed Invoice',
+                        data: [40, 50, 30, 60, 70, 80], // Monthly counts for Self-billed Invoices
+                        backgroundColor: 'rgba(153, 102, 255, 1)',
+                    },
+                    {
+                        label: 'Self-billed Credit Note',
+                        data: [30, 20, 10, 15, 25, 35], // Monthly counts for Self-billed Credit Notes
+                        backgroundColor: 'rgba(255, 159, 64, 1)',
+                    },
+                    {
+                        label: 'Self-billed Debit Note',
+                        data: [20, 10, 5, 8, 10, 15], // Monthly counts for Self-billed Debit Notes
+                        backgroundColor: 'rgba(255, 205, 86, 1)',
+                    },
+                    {
+                        label: 'Self-billed Refund Note',
+                        data: [10, 5, 3, 4, 6, 8], // Monthly counts for Self-billed Refund Notes
+                        backgroundColor: 'rgba(100, 100, 100, 1)',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            }
+        });
+
+      
+            // Example: Call showToast when the page loads (or use this on specific events)
+            $(document).ready(function () {
+                // Example call
+                showToast('Welcome to the application!', 'success'); // You can change 'success' to 'error', etc.
+            });
+    
+
+    </script>
+}

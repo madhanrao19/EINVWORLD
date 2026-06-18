@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Column Functionality Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .test-table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        .test-table th, .test-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .test-table th { background-color: #f5f5f5; }
+        .hidden { display: none !important; }
+        .controls { margin: 20px 0; }
+        .controls label { margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <h1>Invoice List Column Functionality Test</h1>
+    
+    <div class="controls">
+        <h3>Column Controls:</h3>
+        <label><input type="checkbox" id="toggle-invoice-no" checked disabled> Invoice No (Always Visible)</label>
+        <label><input type="checkbox" id="toggle-uuid" checked> UUID</label>
+        <label><input type="checkbox" id="toggle-supplier" checked> Supplier</label>
+        <label><input type="checkbox" id="toggle-buyer" checked> Buyer</label>
+        <label><input type="checkbox" id="toggle-document-type" checked> Document Type</label>
+        <label><input type="checkbox" id="toggle-total-amount" checked> Total Amount</label>
+        <br><br>
+        <button onclick="testColumnToggle()">Test Column Toggle</button>
+        <button onclick="resetColumns()">Reset All Columns</button>
+    </div>
+
+    <table class="test-table">
+        <thead>
+            <tr>
+                <th class="col-invoice-no">Invoice No</th>
+                <th class="col-uuid">UUID</th>
+                <th class="col-supplier">Supplier</th>
+                <th class="col-buyer">Buyer</th>
+                <th class="col-document-type">Document Type</th>
+                <th class="col-total-amount">Total Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="col-invoice-no">INV-001</td>
+                <td class="col-uuid">12345-ABCDE-67890</td>
+                <td class="col-supplier">ABC Company</td>
+                <td class="col-buyer">XYZ Corp</td>
+                <td class="col-document-type">Standard Invoice</td>
+                <td class="col-total-amount">RM 1,500.00</td>
+            </tr>
+            <tr>
+                <td class="col-invoice-no">INV-002</td>
+                <td class="col-uuid">54321-EDCBA-09876</td>
+                <td class="col-supplier">DEF Ltd</td>
+                <td class="col-buyer">GHI Inc</td>
+                <td class="col-document-type">Credit Note</td>
+                <td class="col-total-amount">RM 2,250.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div id="test-results">
+        <h3>Test Results:</h3>
+        <div id="results-content">Click "Test Column Toggle" to run tests...</div>
+    </div>
+
+    <script>
+        function testColumnToggle() {
+            const results = [];
+            
+            // Test 1: Hide UUID column
+            toggleColumn('col-uuid', false);
+            const uuidHidden = document.querySelector('.col-uuid').style.display === 'none';
+            results.push(`✅ UUID Column Hide: ${uuidHidden ? 'PASS' : 'FAIL'}`);
+            
+            // Test 2: Show UUID column
+            toggleColumn('col-uuid', true);
+            const uuidVisible = !document.querySelector('.col-uuid').style.display || 
+                               document.querySelector('.col-uuid').style.display !== 'none';
+            results.push(`✅ UUID Column Show: ${uuidVisible ? 'PASS' : 'FAIL'}`);
+            
+            // Test 3: Hide Supplier column
+            toggleColumn('col-supplier', false);
+            const supplierHidden = document.querySelector('.col-supplier').style.display === 'none';
+            results.push(`✅ Supplier Column Hide: ${supplierHidden ? 'PASS' : 'FAIL'}`);
+            
+            // Test 4: Multiple columns hide
+            toggleColumn('col-buyer', false);
+            toggleColumn('col-document-type', false);
+            const buyerHidden = document.querySelector('.col-buyer').style.display === 'none';
+            const docTypeHidden = document.querySelector('.col-document-type').style.display === 'none';
+            results.push(`✅ Multiple Columns Hide: ${buyerHidden && docTypeHidden ? 'PASS' : 'FAIL'}`);
+            
+            // Test 5: Test checkbox synchronization
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:not([disabled])');
+            let checkboxSync = true;
+            checkboxes.forEach(cb => {
+                const columnClass = cb.id.replace('toggle-', 'col-');
+                const isVisible = !document.querySelector(`.${columnClass}`).style.display || 
+                                document.querySelector(`.${columnClass}`).style.display !== 'none';
+                if (cb.checked !== isVisible) {
+                    checkboxSync = false;
+                }
+            });
+            results.push(`✅ Checkbox Synchronization: ${checkboxSync ? 'PASS' : 'FAIL'}`);
+            
+            // Display results
+            document.getElementById('results-content').innerHTML = results.join('<br>');
+        }
+        
+        function toggleColumn(columnClass, isVisible) {
+            const columns = document.querySelectorAll(`.${columnClass}`);
+            const checkbox = document.getElementById(columnClass.replace('col-', 'toggle-'));
+            
+            columns.forEach(col => {
+                if (isVisible) {
+                    col.style.removeProperty('display');
+                } else {
+                    col.style.setProperty('display', 'none', 'important');
+                }
+            });
+            
+            if (checkbox && !checkbox.disabled) {
+                checkbox.checked = isVisible;
+            }
+        }
+        
+        function resetColumns() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:not([disabled])');
+            checkboxes.forEach(cb => {
+                const columnClass = cb.id.replace('toggle-', 'col-');
+                toggleColumn(columnClass, true);
+            });
+            document.getElementById('results-content').innerHTML = 'All columns reset to visible.';
+        }
+        
+        // Add event listeners to checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:not([disabled])');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', function() {
+                    const columnClass = this.id.replace('toggle-', 'col-');
+                    toggleColumn(columnClass, this.checked);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

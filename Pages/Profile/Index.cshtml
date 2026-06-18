@@ -1,0 +1,719 @@
+@page
+@model Profile.IndexModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<!-- Start page title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">@ViewData["Title"]</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+                    <li class="breadcrumb-item active">My Profile</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Header Card -->
+<div class="profile-foreground position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg" style="background: linear-gradient(135deg, #055332 0%, #3AA564 100%);">
+        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(5, 83, 50, 0.1); backdrop-filter: blur(1px);"></div>
+    </div>
+</div>
+<div class="pt-4 mb-4 mb-lg-3 pb-lg-4 profile-wrapper">
+    <div class="row g-4">
+        <div class="col-auto">
+            <div class="avatar-lg position-relative">
+                @if (!string.IsNullOrEmpty(Model.UserProfile.ProfilePicture))
+                {
+                    <img src="@Model.UserProfile.ProfilePicture"
+                         alt="@Model.UserProfile.FullName"
+                         class="img-thumbnail rounded-circle"
+                         style="border: 3px solid #3AA564;" />
+                }
+                else
+                {
+                    <div class="avatar-lg">
+                        <div class="avatar-title bg-light rounded-circle"
+                             style="color: #055332; font-size: 2rem; font-weight: bold; border: 3px solid #3AA564;">
+                            @(string.IsNullOrEmpty(Model.UserProfile.FullName)
+                                                    ? ""
+                                                    : Model.UserProfile.FullName.Substring(0, 1).ToUpper())
+                    </div>
+                </div>
+                }
+                <span class="position-absolute bottom-0 end-0 badge bg-success rounded-pill"
+                      style="background-color: #3AA564 !important;">
+                    <i class="ri-check-line"></i>
+                </span>
+            </div>
+
+        </div>
+        <!--end col-->
+        <div class="col">
+            <div class="p-2">
+                <h3 class="text-white mb-1">@Model.UserProfile.FullName</h3>
+                <p class="text-white text-opacity-75 mb-2">
+                    <i class="ri-mail-line me-1"></i>@Model.UserProfile.Email
+                </p>
+                <div class="hstack text-white-50 gap-3 mb-2">
+                    @if (!string.IsNullOrEmpty(Model.UserProfile.PhoneNumber))
+                    {
+                        <div><i class="ri-phone-line me-1 text-white text-opacity-75 fs-16 align-middle"></i>@Model.UserProfile.PhoneNumber</div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.UserProfile.Position))
+                    {
+                        <div><i class="ri-user-settings-line me-1 text-white text-opacity-75 fs-16 align-middle"></i>@Model.UserProfile.Position</div>
+                    }
+                </div>
+                <div class="hstack gap-2">
+                    <span class="badge bg-light text-dark px-3 py-2">
+                        <i class="ri-shield-user-line me-1"></i>@string.Join(", ", Model.Roles)
+                    </span>
+                    <span class="badge px-3 py-2" style="background-color: rgba(58, 165, 100, 0.2); color: #3AA564; border: 1px solid #3AA564;">
+                        <i class="ri-building-2-line me-1"></i>@Model.LoginMode
+                    </span>
+                </div>
+            </div>
+        </div>
+        <!--end col-->
+        <div class="col-12 col-lg-auto order-last order-lg-0">
+            <div class="row text text-white-50 text-center">
+                <div class="col-lg-6 col-6">
+                    <div class="p-2">
+                        <h4 class="text-white mb-1">@(Model.UserProfile.IsActive ? "Active" : "Inactive")</h4>
+                        <p class="fs-14 mb-0">Account Status</p>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-6">
+                    <div class="p-2">
+                        <h4 class="text-white mb-1">@(Model.UserProfile.IsApproved ? "Approved" : "Pending")</h4>
+                        <p class="fs-14 mb-0">Approval Status</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--end col-->
+    </div>
+    <!--end row-->
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div>
+            <div class="d-flex profile-wrapper">
+                <!-- Nav tabs -->
+                <ul class="nav nav-pills animation-nav profile-nav gap-2 gap-lg-3 flex-grow-1" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link fs-14 active" data-bs-toggle="tab" href="#overview-tab" role="tab">
+                            <i class="ri-user-line d-inline-block d-md-none"></i> <span class="d-none d-md-inline-block">Profile Info</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fs-14" data-bs-toggle="tab" href="#security" role="tab">
+                            <i class="ri-shield-keyhole-line d-inline-block d-md-none"></i> <span class="d-none d-md-inline-block">Security</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fs-14" data-bs-toggle="tab" href="#companies" role="tab">
+                            <i class="ri-building-line d-inline-block d-md-none"></i> <span class="d-none d-md-inline-block">Companies</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!-- Tab panes -->
+            <div class="tab-content pt-4 text-muted">
+                <!-- Profile Info Tab -->
+                <div class="tab-pane active" id="overview-tab" role="tabpanel">
+                    <div class="row">
+                        <div class="col-xxl-4">
+                            <div class="card border-0 shadow" style="border-left: 4px solid #3AA564 !important;">
+                                <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-user-settings-line me-2"></i>Personal Information
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless mb-0">
+                                            <tbody>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Full Name:</th>
+                                                    <td style="color: #777676;">@Model.UserProfile.FullName</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Email:</th>
+                                                    <td style="color: #777676;">@Model.UserProfile.Email</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Username:</th>
+                                                    <td style="color: #777676;">@Model.UserProfile.UserName</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Mobile:</th>
+                                                    <td style="color: #777676;">@(Model.UserProfile.PhoneNumber ?? "Not provided")</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Position:</th>
+                                                    <td style="color: #777676;">@(Model.UserProfile.Position ?? "Not specified")</td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">User Roles:</th>
+                                                    <td style="color: #777676;">
+                                                        @if (Model.Roles != null && Model.Roles.Any())
+                                                        {
+                                                            @string.Join(", ", Model.Roles)
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">No roles assigned</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end col-->
+                        <div class="col-xxl-4">
+                            <div class="card border-0 shadow" style="border-left: 4px solid #187447 !important;">
+                                <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-shield-check-line me-2"></i>Account Status
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless mb-0">
+                                            <tbody>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Account Active:</th>
+                                                    <td>
+                                                        @if (Model.UserProfile.IsActive)
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success px-2 py-1">
+                                                                <i class="ri-check-line me-1"></i>Active
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger-subtle text-danger px-2 py-1">
+                                                                <i class="ri-close-line me-1"></i>Inactive
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Approved:</th>
+                                                    <td>
+                                                        @if (Model.UserProfile.IsApproved)
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success px-2 py-1">
+                                                                <i class="ri-shield-check-line me-1"></i>Approved
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                                                                <i class="ri-time-line me-1"></i>Pending
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Email Confirmed:</th>
+                                                    <td>
+                                                        @if (Model.UserProfile.EmailConfirmed)
+                                                        {
+                                                            <span class="badge bg-success-subtle text-success px-2 py-1">
+                                                                <i class="ri-mail-check-line me-1"></i>Confirmed
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning-subtle text-warning px-2 py-1">
+                                                                <i class="ri-mail-line me-1"></i>Pending
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Login Mode:</th>
+                                                    <td>
+                                                        <span class="badge px-2 py-1" style="background-color: rgba(58, 165, 100, 0.2); color: #3AA564;">
+                                                            <i class="ri-building-2-line me-1"></i>@Model.LoginMode
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Role:</th>
+                                                    <td>
+                                                        @foreach (var role in Model.Roles ?? new List<string>())
+                                                        {
+                                                            <span class="badge bg-primary-subtle text-primary px-2 py-1 me-1" style="background-color: rgba(5, 83, 50, 0.1) !important; color: #055332 !important;">
+                                                                <i class="ri-user-settings-line me-1"></i>@role
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                                @if (!string.IsNullOrEmpty(Model.UserTIN))
+                                                {
+                                                    <tr>
+                                                        <th class="ps-0 fw-semibold" scope="row" style="color: #055332;">Company TIN:</th>
+                                                        <td style="color: #777676; font-family: monospace; font-weight: 600;">@Model.UserTIN</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end col-->
+                        <div class="col-xxl-4">
+                            <div class="card border-0 shadow" style="border-left: 4px solid #777676 !important;">
+                                <div class="card-header" style="background-color: rgba(119, 118, 118, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-bar-chart-line me-2"></i>Quick Stats
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <div class="p-2">
+                                                <div class="avatar-sm mx-auto mb-2">
+                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: #3AA564;">
+                                                        <i class="ri-file-list-3-line"></i>
+                                                    </div>
+                                                </div>
+                                                <h5 class="mb-1" style="color: #055332;">-</h5>
+                                                <p class="text-muted fs-13 mb-0">Total Invoices</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="p-2">
+                                                <div class="avatar-sm mx-auto mb-2">
+                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: #187447;">
+                                                        <i class="ri-calendar-check-line"></i>
+                                                    </div>
+                                                </div>
+                                                <h5 class="mb-1" style="color: #055332;">-</h5>
+                                                <p class="text-muted fs-13 mb-0">This Month</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="p-2 mt-2">
+                                                <div class="avatar-sm mx-auto mb-2">
+                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: #777676;">
+                                                        <i class="ri-time-line"></i>
+                                                    </div>
+                                                </div>
+                                                <h6 class="mb-1" style="color: #055332;">Last Login</h6>
+                                                <p class="text-muted fs-13 mb-0">-</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--end col-->
+                    </div>
+                    <!--end row-->
+                </div>
+
+                <!-- Security Tab -->
+                <div class="tab-pane fade" id="security" role="tabpanel">
+                    <div class="row">
+                        <div class="col-lg-8 mx-auto">
+
+                            <div class="card border-0 shadow mb-4">
+                                <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-shield-keyhole-line me-2"></i>Change Password
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" asp-page-handler="ChangePassword">
+                                        <div class="row">
+                                            <div class="col-lg-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold" style="color: #055332;">Current Password</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #3AA564;">
+                                                            <i class="ri-lock-line" style="color: #3AA564;"></i>
+                                                        </span>
+                                                        <input type="password" name="OldPassword" class="form-control" placeholder="Enter current" style="border-color: #3AA564;" required />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold" style="color: #055332;">New Password</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #3AA564;">
+                                                            <i class="ri-lock-password-line" style="color: #3AA564;"></i>
+                                                        </span>
+                                                        <input type="password" name="NewPassword" class="form-control" placeholder="Enter new" style="border-color: #3AA564;" required />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold" style="color: #055332;">Confirm Password</label>
+                                                    <div class="input-group">
+                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #3AA564;">
+                                                            <i class="ri-lock-password-line" style="color: #3AA564;"></i>
+                                                        </span>
+                                                        <input type="password" name="ConfirmPassword" class="form-control" placeholder="Confirm new" style="border-color: #3AA564;" required />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <button type="submit" class="btn btn-primary waves-effect waves-light" style="background-color: #3AA564; border-color: #3AA564;">
+                                                <i class="ri-save-line me-1"></i>Update Password
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="card border-0 shadow">
+                                <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-shield-check-line me-2"></i>Two-Factor Authentication (2FA)
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1" style="color: #055332;">Enhanced Security</h6>
+                                            <p class="text-muted mb-0">
+                                                Protect your account by requiring a code from your mobile app in addition to your password.
+                                            </p>
+                                        </div>
+                                        <div class="flex-shrink-0 ms-3">
+                                            <a asp-page="/Profile/Enable2fa" class="btn btn-primary" style="background-color: #3AA564; border-color: #3AA564;">
+                                                <i class="ri-shield-check-line me-1"></i> Manage 2FA Settings
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Companies Tab -->
+                <div class="tab-pane fade" id="companies" role="tabpanel">
+                    @if (Model.UserCompanies != null && Model.UserCompanies.Any())
+                    {
+                        @if (Model.PrimaryCompany != null)
+                        {
+                            <!-- Primary Company -->
+                            <div class="card border-0 shadow mb-4" style="border-left: 4px solid #3AA564 !important;">
+                                <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h5 class="card-title mb-0" style="color: #055332;">
+                                                <i class="ri-building-line me-2"></i>@Model.PrimaryCompany.CompanyName
+                                            </h5>
+                                        </div>
+                                        <span class="badge bg-success-subtle text-success px-3 py-2" style="background-color: rgba(58, 165, 100, 0.2) !important; color: #3AA564 !important;">
+                                            <i class="ri-star-line me-1"></i>Primary Company
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- Company Basic Information -->
+                                        <div class="col-md-6">
+                                            <h6 class="fw-semibold mb-3" style="color: #055332;">Company Information</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tbody>
+                                                        <tr>
+                                                            <th class="ps-0" style="color: #055332; width: 40%;">TIN:</th>
+                                                            <td style="color: #777676; font-family: monospace; font-weight: 600;">@Model.PrimaryCompany.TIN</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th class="ps-0" style="color: #055332;">Registration Type:</th>
+                                                            <td style="color: #777676;">@Model.PrimaryCompany.RegType?.Name</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th class="ps-0" style="color: #055332;">Registration No:</th>
+                                                            <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.RegNo</td>
+                                                        </tr>
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryCompany.SST) && Model.PrimaryCompany.SST != "NA")
+                                                        {
+                                                            <tr>
+                                                                <th class="ps-0" style="color: #055332;">SST Registration:</th>
+                                                                <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.SST</td>
+                                                            </tr>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryCompany.TTX) && Model.PrimaryCompany.TTX != "NA")
+                                                        {
+                                                            <tr>
+                                                                <th class="ps-0" style="color: #055332;">Tourism Tax Registration:</th>
+                                                                <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.TTX</td>
+                                                            </tr>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryCompany.IndustryClassificationCode))
+                                                        {
+                                                            <tr>
+                                                                <th class="ps-0" style="color: #055332;">MSIC Code:</th>
+                                                                <td style="color: #777676;">@Model.PrimaryCompany.IndustryClassificationCode</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <!-- Contact & Address Information -->
+                                        <div class="col-md-6">
+                                            <h6 class="fw-semibold mb-3" style="color: #055332;">Contact Information</h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tbody>
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryCompany.Email))
+                                                        {
+                                                            <tr>
+                                                                <th class="ps-0" style="color: #055332; width: 30%;">Email:</th>
+                                                                <td style="color: #777676;">
+                                                                    <a href="mailto:@Model.PrimaryCompany.Email" style="color: #3AA564;">@Model.PrimaryCompany.Email</a>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                        <tr>
+                                                            <th class="ps-0" style="color: #055332;">Phone:</th>
+                                                            <td style="color: #777676;">
+                                                                <a href="tel:@Model.PrimaryCompany.PhoneNo" style="color: #3AA564;">@Model.PrimaryCompany.PhoneNo</a>
+                                                            </td>
+                                                        </tr>
+                                                        @if (!string.IsNullOrEmpty(Model.PrimaryCompany.FaxNo))
+                                                        {
+                                                            <tr>
+                                                                <th class="ps-0" style="color: #055332;">Fax:</th>
+                                                                <td style="color: #777676;">@Model.PrimaryCompany.FaxNo</td>
+                                                            </tr>
+                                                        }
+                                                        <tr>
+                                                            <th class="ps-0" style="color: #055332; vertical-align: top;">Address:</th>
+                                                            <td style="color: #777676;">
+                                                                @Model.PrimaryCompany.Addr1<br />
+                                                                @if (!string.IsNullOrEmpty(Model.PrimaryCompany.Addr2))
+                                                                {
+                                                                    @Model.PrimaryCompany.Addr2<br />
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(Model.PrimaryCompany.Addr3))
+                                                                {
+                                                                    @Model.PrimaryCompany.Addr3<br />
+                                                                }
+                                                                @Model.PrimaryCompany.PostalCode @Model.PrimaryCompany.CityName<br />
+                                                                @Model.PrimaryCompany.State?.State, @Model.PrimaryCompany.Country?.Country
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankAccountNo) || !string.IsNullOrEmpty(Model.PrimaryCompany.PaymentTerms))
+                                    {
+                                        <hr class="my-3" />
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <h6 class="fw-semibold mb-3" style="color: #055332;">Banking & Payment Information</h6>
+                                                <div class="row">
+                                                    @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankName))
+                                                    {
+                                                        <div class="col-md-6">
+                                                            <small class="text-muted">Bank Name</small>
+                                                            <p class="mb-2" style="color: #777676;">@Model.PrimaryCompany.BankName</p>
+                                                        </div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankAccountNo))
+                                                    {
+                                                        <div class="col-md-6">
+                                                            <small class="text-muted">Account Number</small>
+                                                            <p class="mb-2" style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.BankAccountNo</p>
+                                                        </div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(Model.PrimaryCompany.PaymentTerms))
+                                                    {
+                                                        <div class="col-md-12">
+                                                            <small class="text-muted">Payment Terms</small>
+                                                            <p class="mb-2" style="color: #777676;">@Model.PrimaryCompany.PaymentTerms</p>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.UserCompanies.Count > 1)
+                        {
+                            <!-- Additional Companies -->
+                            <div class="card border-0 shadow">
+                                <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
+                                    <h5 class="card-title mb-0" style="color: #055332;">
+                                        <i class="ri-building-2-line me-2"></i>Additional Companies (@(Model.UserCompanies.Count - 1))
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        @foreach (var company in Model.UserCompanies.Where(c => c.PartyInfoId != Model.PrimaryCompany?.PartyInfoId))
+                                        {
+                                            <div class="col-lg-6 mb-3">
+                                                <div class="card border h-100" style="border-left: 3px solid #187447 !important;">
+                                                    <div class="card-body">
+                                                        <h6 class="card-title mb-2" style="color: #055332;">@company.CompanyName</h6>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <small class="text-muted d-block">TIN</small>
+                                                                <p class="mb-1" style="font-family: monospace; font-weight: 600; color: #187447;">@company.TIN</p>
+                                                                <small class="text-muted d-block">Registration</small>
+                                                                <p class="mb-1" style="color: #777676;">@company.RegType?.Name: @company.RegNo</p>
+                                                                @if (!string.IsNullOrEmpty(company.Email) || !string.IsNullOrEmpty(company.PhoneNo))
+                                                                {
+                                                                    <small class="text-muted d-block">Contact</small>
+                                                                    <div style="color: #777676;">
+                                                                        @if (!string.IsNullOrEmpty(company.Email))
+                                                                        {
+                                                                            <div class="mb-1">
+                                                                                <i class="ri-mail-line me-1" style="color: #3AA564;"></i>
+                                                                                <a href="mailto:@company.Email" style="color: #3AA564;">@company.Email</a>
+                                                                            </div>
+                                                                        }
+                                                                        @if (!string.IsNullOrEmpty(company.PhoneNo))
+                                                                        {
+                                                                            <div class="mb-1">
+                                                                                <i class="ri-phone-line me-1" style="color: #3AA564;"></i>
+                                                                                <a href="tel:@company.PhoneNo" style="color: #3AA564;">@company.PhoneNo</a>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- No Companies Assigned -->
+                        <div class="card border-0 shadow">
+                            <div class="card-header" style="background-color: rgba(119, 118, 118, 0.1);">
+                                <h5 class="card-title mb-0" style="color: #055332;">
+                                    <i class="ri-building-line me-2"></i>Company Information
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center py-5">
+                                    <div class="avatar-lg mx-auto mb-3">
+                                        <div class="avatar-title bg-light rounded-circle" style="color: #777676;">
+                                            <i class="ri-building-line" style="font-size: 2.5rem;"></i>
+                                        </div>
+                                    </div>
+                                    <h5 style="color: #055332;">No Companies Assigned</h5>
+                                    <p class="text-muted mb-0">You are not currently associated with any companies. Please contact your administrator to assign you to a company.</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <!--end tab-content-->
+        </div>
+    </div>
+    <!--end col-->
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-light p-3" style="background: linear-gradient(135deg, rgba(5, 83, 50, 0.1) 0%, rgba(58, 165, 100, 0.1) 100%) !important;">
+                <h5 class="modal-title" id="editProfileModalLabel" style="color: #055332;">
+                    <i class="ri-edit-box-line me-2"></i>Edit Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="UpdateProfile">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #055332;">Full Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #3AA564;"><i class="ri-user-line" style="color: #3AA564;"></i></span>
+                            <input asp-for="Input.FullName" class="form-control" placeholder="Enter your full name" style="border-color: #3AA564;" />
+                        </div>
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #055332;">Phone Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #3AA564;"><i class="ri-phone-line" style="color: #3AA564;"></i></span>
+                            <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" style="border-color: #3AA564;" />
+                        </div>
+                        <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light waves-effect" data-bs-dismiss="modal">
+                        <i class="ri-close-line me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary waves-effect waves-light" style="background-color: #3AA564; border-color: #3AA564;">
+                        <i class="ri-save-line me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Success!',
+                text: '@TempData["SuccessMessage"]',
+                icon: 'success',
+                confirmButtonColor: '#3AA564'
+            });
+        });
+    </script>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                title: 'Error!',
+                text: '@TempData["ErrorMessage"]',
+                icon: 'error',
+                confirmButtonColor: '#3AA564'
+            });
+        });
+    </script>
+}
+
+<partial name="_ValidationScriptsPartial" />

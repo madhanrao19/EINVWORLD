@@ -1,0 +1,81 @@
+﻿@page
+@model eInvWorld.Pages.RecurringInvoices.CreateModel
+@{
+    ViewData["Title"] = "Create Recurring Profile";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">Create Recurring Profile</h4>
+            <div class="page-title-right">
+                <a asp-page="./Index" class="btn btn-soft-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                </a>
+            </div>
+        </div>
+        <p class="text-muted">Set up automated invoice generation based on the template: <strong>@Model.BaseTemplateName</strong>.</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="post">
+                    <input type="hidden" asp-for="Input.InvoiceTemplateId" />
+                    <input type="hidden" asp-for="Input.SupplierId" />
+                    <input type="hidden" asp-for="Input.CustomerId" />
+                    <input type="hidden" asp-for="Input.PublicCustomerId" />
+
+                    <div class="mb-4">
+                        <label asp-for="Input.ProfileName" class="form-label fw-semibold">Profile Name <span class="text-danger">*</span></label>
+                        <input asp-for="Input.ProfileName" class="form-control" placeholder="e.g. Monthly Retainer - Acme Corp" required />
+                        <span asp-validation-for="Input.ProfileName" class="text-danger"></span>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Company (Locked to Template)</label>
+                            <input type="text" class="form-control bg-light" value="@Model.SupplierName" readonly />
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label class="form-label text-muted">Buyer (Locked to Template)</label>
+                            <input type="text" class="form-control bg-light" value="@Model.BuyerName" readonly />
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Frequency" class="form-label fw-semibold">Frequency <span class="text-danger">*</span></label>
+                            <select asp-for="Input.Frequency" class="form-select" required>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Monthly" selected>Monthly</option>
+                                <option value="Annually">Annually</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mt-3 mt-md-0">
+                            <label asp-for="Input.NextRunDate" class="form-label fw-semibold">Next Run Date <span class="text-danger">*</span></label>
+                            <input asp-for="Input.NextRunDate" type="date" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch form-switch-lg mb-4" dir="ltr">
+                        <input type="checkbox" class="form-check-input" id="autoSubmitSwitch" asp-for="Input.AutoSubmitToMyInvois">
+                        <label class="form-check-label fw-semibold ms-2" for="autoSubmitSwitch">Auto-submit to MyInvois after generation</label>
+                    </div>
+
+                    <div class="text-end">
+                        <a asp-page="./Index" class="btn btn-light me-2">Cancel</a>
+                        <button type="submit" class="btn btn-success">Create Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,328 @@
+﻿@page "/ourservices"
+@model eInvWorld.Pages.OurServicesModel
+@{
+    ViewData["Title"] = "e-Invoicing Services for Malaysian SMEs | eInvWorld";
+    ViewData["Description"] = "Explore eInvWorld's LHDN-compliant e-invoicing services designed for Malaysian SMEs. Streamline your invoicing process and ensure tax compliance effortlessly.";
+    ViewData["Keywords"] = "e-invoicing services, LHDN compliance, SMEs Malaysia, einvworld solutions";
+}
+
+<!-- Page Header Start -->
+
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="images/header_images/header-page-services.png" class="profile-wid-img w-100" alt="">
+
+        <!-- Overlay Content -->
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <!-- Page Title & Breadcrumb -->
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">Services</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+<!-- Service Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        <div class="text-center mx-auto mb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 600px;">
+            <p class="d-inline-block border rounded-pill py-1 px-4">Services</p>
+            <h1>E-Invoicing Software</h1>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.1s">
+                <div class="service-item bg-light rounded h-100 p-5">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-white rounded-circle mb-4" style="width: 65px; height: 65px;">
+                        <i class="las la-file-invoice-dollar ri-file-pdf-2-fill m-3 text-primary fs-4"></i>
+                    </div>
+                    <h4 class="mb-3">E-invoice</h4>
+                    <p class="mb-4">Enhance your cash flow management and simplify business processes with electronic invoicing (e-invoice), the newly approved standard by LHDN for direct invoice exchange between suppliers' and buyers' software. Effortlessly send and receive invoices swiftly and securely, regardless of the different software used by both parties. </p>
+                    <a class="btn" href=""><i class="fa fa-plus text-primary me-3"></i>Read More</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Service End -->
+<!-- Features Start -->
+<!-- Features Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        <div class="row justify-content-center g-4">
+            <h1 class="text-center mb-4">Features</h1>
+
+            <!-- Row 1 -->
+            <div class="col-lg-3 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/dashboard1.png" alt="Dashboard" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Dashboard:</h5>
+                    <p class="mb-0 text-justify">Centralised interface displaying live updates and summaries.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/invoice1.png" alt="Invoice List" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Invoice List View:</h5>
+                    <p class="mb-0 text-justify">List of all invoices with details.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/updated.png" alt="Live Updates" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Status of Invoices with Live Updates:</h5>
+                    <p class="mb-0 text-justify">Real-time updates on the status of invoices.</p>
+                </div>
+            </div>
+            <div class="col-lg-3 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/stopwatch.png" alt="72-Hour Timer" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">72-Hour Timer for Rejection:</h5>
+                    <p class="mb-0 text-justify">Automated rejection after 72 hours if no action is taken.</p>
+                </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="col-lg-4 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/notification.png" alt="Automated Notifications" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Automated Notifications:</h5>
+                    <p class="mb-0 text-justify">Alerts sent to:</p>
+                    <p class="text-justify"><i class="las la-check-circle text-primary me-3"></i>Supplier if an invoice is validated or invalidated by LHDN.</p>
+                    <p class="text-justify"><i class="las la-check-circle text-primary me-3"></i>Both Supplier and Buyer if a validated invoice is cancelled.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/resend.png" alt="Resend Function" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Resend Function:</h5>
+                    <p class="mb-0 text-justify">Allows resending invoice details using the previous ID as a template for new invoices.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 d-flex align-items-stretch">
+                <div class="h-100 bg-light rounded d-flex flex-column align-items-center text-center p-5">
+                    <img src="icons/fast-forward-button.png" alt="Forward Function" style="width: 50px; height: auto;" class="mb-3">
+                    <h5 class="mb-2">Forward Function:</h5>
+                    <p class="mb-0 text-justify">Forwarding invoices if they are repeated.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Systems Work Start -->
+<div class="container-xxl py-5">
+    <div class="container">
+        <h1 class="text-center mb-4">How Our Systems Works</h1>
+
+        <!-- Row 1: Login -> Dashboard -> Invoice Submission -->
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-sign-in-alt la-2x"></i>
+                    </div>
+                    <h5>Login</h5>
+                    <p>The client logs into the system.</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-right la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-chart-line la-2x"></i>
+                    </div>
+                    <h5>Dashboard Access</h5>
+                    <p>Access to a dashboard displaying live updates and status of all invoices.</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-right la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-file-invoice-dollar la-2x"></i>
+                    </div>
+                    <h5>Invoice Submission</h5>
+                    <p>Supplier submits an invoice for validation.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Downward Arrow Positioned Correctly Under "Invoice Submission" -->
+        <div class="row my-3">
+            <div class="col-md-4"></div> <!-- Empty column for alignment -->
+            <div class="col-md-4"></div> <!-- Empty column for balance -->
+            <div class="col-md-4 d-flex justify-content-center arrow">
+                <i class="las la-arrow-down la-3x text-primary"></i>
+            </div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-bell la-2x"></i>
+                    </div>
+                    <h5>Notification</h5>
+                    <p>The system sends relevant notifications to the Supplier and/or Buyer.</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-left la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-check-circle la-2x"></i>
+                    </div>
+                    <h5>Full Validation</h5>
+                    <p>Invoice undergoes further checks. If successful, status updates to "Valid." If issues are found, status updates to "Invalid."</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-left la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-tasks la-2x"></i>
+                    </div>
+                    <h5>Automated Checks</h5>
+                    <p>The system runs initial structure validations and updates the status to "Submitted."</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Downward Arrow Positioned Correctly Under "Notification" -->
+        <div class="row my-3">
+            <div class="col-md-4 d-flex justify-content-center arrow">
+                <i class="las la-arrow-down la-3x text-primary"></i>
+            </div>
+            <div class="col-md-4"></div> <!-- Empty column for alignment -->
+            <div class="col-md-4"></div> <!-- Empty column for balance -->
+        </div>
+
+
+
+
+        <!-- Row 3 -->
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-ban la-2x"></i>
+                    </div>
+                    <h5>Rejection Request</h5>
+                    <p>Buyer can request a rejection of the invoice within 72 hours.</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-right la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-flag-checkered la-2x"></i>
+                    </div>
+                    <h5>Completion</h5>
+                    <p>Once an invoice is either validated, rejected, or cancelled, it moves to a final state.</p>
+                </div>
+            </div>
+            <div class="col-md-1 arrow d-flex align-items-center justify-content-center">
+                <i class="las la-arrow-right la-3x text-primary"></i>
+            </div>
+            <div class="col-md-3 d-flex">
+                <div class="process-step text-center p-3 equal-box">
+                    <div class="icon mb-3">
+                        <i class="las la-cogs la-2x"></i>
+                    </div>
+                    <h5>Invoice Management</h5>
+                    <p>Options for resending, forwarding, bulk actions, and reporting are available for validated invoices.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!-- Systems Work End -->
+<!-- Custom Styling -->
+<style>
+
+    /* Process step styling */
+    .process-step {
+        border: 2px solid #003065;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+        transition: transform 0.3s;
+        padding: 20px;
+        flex-grow: 1; /* Ensures uniform height */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        text-align: center;
+        min-height: 180px; /* Minimum height for consistency */
+    }
+
+        .process-step:hover {
+            transform: scale(1.05);
+        }
+
+        .process-step .icon i {
+            color: #003065;
+        }
+
+        .process-step h5 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .process-step p {
+            font-size: 14px;
+        }
+
+    /* Ensure all boxes stretch equally */
+    .equal-box {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        text-align: center;
+        height: 100%;
+    }
+
+    /* Make sure all columns stretch */
+    .row .col-md-3 {
+        display: flex;
+        align-items: stretch;
+    }
+
+    /* Ensure row elements align properly */
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    /* Arrow styling */
+    .arrow {
+        font-size: 2rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+</style>
+

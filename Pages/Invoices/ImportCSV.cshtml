@@ -1,0 +1,205 @@
+﻿@page
+@model EINVWORLD.Pages.Invoices.ImportCSVModel
+@{
+    ViewData["Title"] = "Import Invoices";
+    var backUrl = "/Invoices/InvoiceLists";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">Bulk Invoice Import</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="@backUrl">Back to List</a></li>
+                    <li class="breadcrumb-item active">Bulk Invoice Import</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Step 1: Upload & Validate CSV File</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>CSV Format Instructions:</strong><br />
+                    Please ensure your CSV file has the exact following headers (case-sensitive). <strong>One row equals one invoice line.</strong><br />
+                    <code>InvoiceNo, IssueDate, PoDoNo, DocTypeCode, Currency, ExchangeRate, BillingFrequency, StartDate, EndDate, BankAccountNumber, BankName, AttentionTo, PaymentTerms, CounterpartyTIN, ItemDescription, Quantity, UnitPrice, DiscountAmount, UnitOfMeasure, ClassificationCode, TaxCategory, TaxPercentage</code>
+                    <br /><br />
+                    <ul>
+                        <li><strong>InvoiceNo:</strong> Your custom Invoice/Reference Number (e.g., INV-001). This groups lines together.</li>
+                        <li><strong>BillingFrequency:</strong> Optional. Can be <code>Monthly</code>, <code>Annually</code>, etc.</li>
+                        <li><strong>Dates & Codes:</strong> Format dates (IssueDate, StartDate, EndDate) as <code>yyyy-MM-dd</code>. Ensure codes like <code>DocTypeCode</code> (01, 11), <code>UnitOfMeasure</code> (XUN), and <code>TaxCategory</code> (01, 06, E) match LHDN standards.</li>
+                        <li><strong>Text Format:</strong> Please ensure every field's format is set to Text in Excel.</li>
+                        <li><em>Note:</em> If your Tax Category is 'E', the system will automatically fill in the exemption reason for you.</li>
+                    </ul>
+                </div>
+
+                <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="mt-4">
+                    <div class="row mb-3 align-items-end">
+
+                        <div class="col-12 mb-3">
+                            <a href="~/samplecsv/Invoice_sample.csv" class="btn btn-primary btn-sm me-2" download>
+                                <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Sample CSV
+                            </a>
+
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ri-file-excel-2-line align-bottom me-1"></i> Download Reference Codes
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=ClassificationCodes">Classification Codes</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=CountryCodes">Country Codes</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=CurrencyCodes">Currency Codes</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=EInvoiceTypes">E-Invoice Types</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=MSICSubCategoryCodes">MSIC Sub-Category Codes</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=PaymentMethods">Payment Methods</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=StateCodes">State Codes</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=TaxTypes">Tax Types</a></li>
+                                    <li><a class="dropdown-item" href="?handler=DownloadReference&type=UnitTypes">Unit Types</a></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mt-2">
+                            <label class="form-label">Select CSV File</label>
+                            <input type="file" asp-for="UploadFile" class="form-control" accept=".csv" required />
+                            <span asp-validation-for="UploadFile" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-info">
+                                <i class="ri-refresh-line align-bottom me-1"></i> Preview & Validate
+                            </button>
+                            <a href="@backUrl" class="btn btn-soft-secondary">Cancel</a>
+                        </div>
+                    </div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger mt-2"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.PreviewRecords != null)
+{
+    var validCount = Model.PreviewRecords.Count(r => r.IsValid);
+    var invalidCount = Model.PreviewRecords.Count(r => !r.IsValid);
+
+    <div class="row mt-3" id="previewSection">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Step 2: Validation Results (Grouped by Invoice)</h5>
+                    <div>
+                        <span class="badge bg-success fs-13 me-2">@validCount Valid</span>
+                        <span class="badge bg-danger fs-13">@invalidCount Invalid</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="max-height: 400px; overflow: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+                        <table class="table table-bordered table-striped align-middle mb-0" style="width: 100%; min-width: 800px;">
+                            <thead style="position: sticky; top: 0; z-index: 10; background-color: #f3f6f9; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="width: 15%">Your Invoice No (Ref)</th>
+                                    <th style="width: 15%">Counterparty TIN</th>
+                                    <th style="width: 10%">Type / Lines</th>
+                                    <th style="width: 15%">Total (Incl Tax)</th>
+                                    <th style="width: 10%">Status</th>
+                                    <th style="width: 35%">Details / Errors</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var record in Model.PreviewRecords)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@record.InvoiceNo</strong><br />
+                                            <small class="text-muted">@record.IssueDate.ToString("yyyy-MM-dd")</small>
+                                            @if (!string.IsNullOrEmpty(record.PoDoNo))
+                                            {
+                                                <br />
+                                    
+                                                <small class="text-info">PO: @record.PoDoNo</small>
+                                            }
+                                        </td>
+                                        <td>@record.CounterpartyTIN</td>
+                                        <td>Doc: @record.DocTypeCode<br /><small class="text-muted">@record.LineCount lines</small></td>
+                                        <td>@record.Currency @record.TotalAmount.ToString("N2")</td>
+                                        <td>
+                                            @if (record.IsValid)
+                                            {
+                                                <span class="badge bg-success"><i class="ri-check-line"></i> Valid</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger"><i class="ri-close-line"></i> Invalid</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!record.IsValid)
+                                            {
+                                                <ul class="text-danger mb-0 ps-3">
+                                                    @foreach (var error in record.Errors)
+                                                    {
+                                                        <li>@error</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Ready to import and generate JSON</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            @if (invalidCount > 0)
+                            {
+                                <p class="text-muted mb-0"><i class="ri-information-line text-info"></i> Invalid invoices will be skipped.</p>
+                            }
+                        </div>
+
+                        <form method="post" asp-page-handler="Confirm">
+                            <input type="hidden" asp-for="ValidRecordsJson" />
+                            @if (validCount > 0)
+                            {
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="ri-save-3-line align-bottom me-1"></i> Generate & Import @validCount Invoices
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-success btn-lg" disabled>
+                                    <i class="ri-save-3-line align-bottom me-1"></i> No Valid Invoices
+                                </button>
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var previewBlock = document.getElementById("previewSection");
+            if (previewBlock) {
+                previewBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    </script>
+}

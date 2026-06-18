@@ -1,0 +1,18 @@
+﻿@* @{
+    // Layout = "_Layout";
+    Layout = "_HomeLayout";
+}
+
+ *@
+
+
+@{
+    if (Context.User.Identity?.IsAuthenticated == true)
+    {
+        Layout = "_Layout";
+    }
+    else
+    {
+        Layout = "_HomeLayout";
+    }
+}

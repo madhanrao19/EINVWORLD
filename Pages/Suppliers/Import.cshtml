@@ -1,0 +1,185 @@
+﻿@page
+@model eInvWorld.Pages.Suppliers.ImportModel
+@{
+    ViewData["Title"] = "Import Data";
+    var isLead = Model.From == "lead";
+    var headerTitle = isLead ? "Import Leads" : "Import Companies";
+    var backUrl = isLead ? "/Lead/List" : "/Suppliers/Index";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+            <h4 class="mb-sm-0">@headerTitle</h4>
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="@backUrl">Back to List</a></li>
+                    <li class="breadcrumb-item active">Import CSV</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Step 1: Upload & Validate CSV File</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>CSV Format Instructions:</strong><br />
+                    Please ensure your CSV file has the following headers (case-sensitive):<br />
+                    <code>CompanyName, TIN, RegTypeCode, RegNo, OldRegNo, Email, PhoneNo, FaxNo, Address, PostalCode, CityName, StateCode, CountryCode, MSIC, BizDescription, SST, TTX, BankAccountNo, BankName, Attention, PaymentTerms, Remarks</code>
+                    <br /><br />
+                    <ul>
+                        <li><strong>Text Format:</strong> Please ensure every field's format is set to Text.</li>
+                        <li><strong>No Scientific Notation:</strong> Ensure the content is not automatically converted or folded into scientific notation (e.g., 12300000000000 should remain 12300000000000, not 1.23E+13).</li>
+                        <li><strong>RegTypeCode, StateCode, CountryCode:</strong> Must match LHDN codes (e.g., BRN, 14, MYS).</li>
+                        <li><strong>PhoneNo:</strong> (e.g., 6012345678).</li>
+                        <li><strong>SST / TTX:</strong> Enter 'NA' if not applicable.</li>
+                        <li><strong>LHDN Validation:</strong> The system will automatically verify TIN, RegTypeCode, and RegNo with the LHDN server upon upload.</li>
+                    </ul>
+                </div>
+                <div class="mt-3">
+                    <a href="~/samplecsv/ImportSample.csv" class="btn btn-primary btn-sm" download>
+                        <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Sample CSV
+                    </a>
+                </div>
+
+                <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="mt-4">
+                    <input type="hidden" asp-for="From" />
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Select CSV File</label>
+                            <input type="file" asp-for="UploadFile" class="form-control" accept=".csv" required />
+                            <span asp-validation-for="UploadFile" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-info">
+                                <i class="ri-refresh-line align-bottom me-1"></i> Preview & Validate
+                            </button>
+                            <a href="@backUrl" class="btn btn-soft-secondary">Cancel</a>
+                        </div>
+                    </div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger mt-2"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.PreviewRecords != null)
+{
+    var validCount = Model.PreviewRecords.Count(r => r.IsValid);
+    var invalidCount = Model.PreviewRecords.Count(r => !r.IsValid);
+
+    <div class="row mt-3" id="previewSection">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Step 2: Validation Results</h5>
+                    <div>
+                        <span class="badge bg-success fs-13 me-2">@validCount Valid</span>
+                        <span class="badge bg-danger fs-13">@invalidCount Invalid</span>
+                    </div>
+                </div>
+                <div class="card-body">
+
+                    <div style="max-height: 400px; overflow: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
+                        <table class="table table-bordered table-striped align-middle mb-0" style="width: 100%; min-width: 800px;">
+
+                            <thead style="position: sticky; top: 0; z-index: 10; background-color: #f3f6f9; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <th style="width: 5%">Row</th>
+                                    <th style="width: 20%">Company Name</th>
+                                    <th style="width: 15%">TIN</th>
+                                    <th style="width: 15%">Reg No</th>
+                                    <th style="width: 10%">Status</th>
+                                    <th style="width: 35%">Details / Errors</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var record in Model.PreviewRecords)
+                                {
+                                    <tr>
+                                        <td>@record.RowNumber</td>
+                                        <td>@record.CompanyName</td>
+                                        <td>@record.TIN</td>
+                                        <td>@record.RegNo</td>
+                                        <td>
+                                            @if (record.IsValid)
+                                            {
+                                                <span class="badge bg-success"><i class="ri-check-line"></i> Valid</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger"><i class="ri-close-line"></i> Invalid</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!record.IsValid)
+                                            {
+                                                <ul class="text-danger mb-0 ps-3">
+                                                    @foreach (var error in record.Errors)
+                                                    {
+                                                        <li>@error</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Ready to import</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            @if (invalidCount > 0)
+                            {
+                                <p class="text-muted mb-0"><i class="ri-information-line text-info"></i> Invalid records will be skipped.</p>
+                            }
+                        </div>
+
+                        <form method="post" asp-page-handler="Confirm">
+                            <input type="hidden" asp-for="ValidRecordsJson" />
+                            @if (validCount > 0)
+                            {
+                                <button type="submit" class="btn btn-success btn-lg">
+                                    <i class="ri-save-3-line align-bottom me-1"></i> Import @validCount Valid Records
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-success btn-lg" disabled>
+                                    <i class="ri-save-3-line align-bottom me-1"></i> No Valid Records to Import
+                                </button>
+                            }
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Auto-scroll to preview section if it exists
+        document.addEventListener("DOMContentLoaded", function () {
+            var previewBlock = document.getElementById("previewSection");
+            if (previewBlock) {
+                previewBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,42 @@
+﻿@page
+@model eInvWorld.Pages.Items.CreateModel
+@{
+    ViewData["Title"] = "Create Item";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Create New Item</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="ItemDescription.ItemCode" class="form-label">Item Code</label>
+                <input asp-for="ItemDescription.ItemCode" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ItemDescription.ClassificationCode" class="form-label">Classification Code</label>
+                <select asp-for="ItemDescription.ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select select2" required>
+                    <option value="">Select Classification Code</option>
+                </select>
+                <span asp-validation-for="ItemDescription.ClassificationCode" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ItemDescription.Description" class="form-label">Description</label>
+                <textarea asp-for="ItemDescription.Description" class="form-control" rows="3" required></textarea>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="ItemDescription.IsActive" class="form-check-input" />
+                <label class="form-check-label" asp-for="ItemDescription.IsActive">Is Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-success">Save Item</button>
+            <a asp-page="Index" class="btn btn-light">Cancel</a>
+        </form>
+    </div>
+</div>

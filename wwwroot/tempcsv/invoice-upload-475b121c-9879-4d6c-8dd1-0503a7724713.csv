@@ -1,0 +1,4 @@
+InvoiceNo,IssueDate,CustomerName,CustomerTIN,CustomerAddress,ItemDescription,Quantity,UnitPrice,TaxDetails
+INV-001,2025-07-01,ABC Sdn Bhd,12345678901,123 Jalan Ampang,Product A,2,100.0,SST:6%:12.00
+INV-001,2025-07-01,ABC Sdn Bhd,12345678901,123 Jalan Ampang,Product B,1,150.0,SST:6%:9.00|Service:8%:12.00
+INV-002,2025-07-01,XYZ Berhad,98765432109,456 Jalan Damansara,Consulting,1,500.0,

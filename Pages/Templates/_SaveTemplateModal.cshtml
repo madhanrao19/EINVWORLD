@@ -1,0 +1,79 @@
+﻿@* Pages/Templates/_SaveTemplateModal.cshtml *@
+<style>
+    /* Ensure modal appears above all other elements */
+    #saveTemplateModal {
+        z-index: 1055 !important;
+    }
+    
+    /* Modal backdrop should be below modal but above form */
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+    
+    /* Smooth modal animation */
+    #saveTemplateModal.modal.fade .modal-dialog {
+        transition: transform 0.3s ease-out;
+        transform: translate(0, -50px);
+    }
+    
+    #saveTemplateModal.modal.show .modal-dialog {
+        transform: none;
+    }
+    
+    /* Ensure modal content is properly styled */
+    #saveTemplateModal .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border-radius: 0.5rem;
+    }
+    
+    /* Prevent modal from affecting form elements */
+    #saveTemplateModal .modal-header {
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem 1.5rem;
+    }
+    
+    #saveTemplateModal .modal-body {
+        padding: 1.5rem;
+    }
+    
+    #saveTemplateModal .modal-footer {
+        border-top: 1px solid #dee2e6;
+        padding: 1rem 1.5rem;
+    }
+</style>
+
+<div class="modal fade" id="saveTemplateModal" tabindex="-1" aria-labelledby="saveTemplateModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Invoice as Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="TemplateName" class="form-label">Template Name</label>
+                    <input name="TemplateName" id="TemplateName" class="form-control" placeholder="Enter template name" required maxlength="100" />
+                    <!-- Success message -->
+                    <div id="templateNameFeedback" class="mt-2" style="display: none;">
+                        <small id="templateNameMessage" class="text-success">
+                            <i class="ri-check-line me-1"></i><span></span>
+                        </small>
+                    </div>
+                    <!-- Error message -->
+                    <div id="templateNameError" class="mt-2" style="display: none;">
+                        <small class="text-danger fw-bold">
+                            <i class="ri-error-warning-line me-1"></i><span id="templateNameErrorMessage"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" id="saveTemplateBtn">Save Template</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>

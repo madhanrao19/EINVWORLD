@@ -1,0 +1,3 @@
+CompanyName,TIN,RegTypeCode,RegNo,OldRegNo,Email,PhoneNo,FaxNo,Address,PostalCode,CityName,StateCode,CountryCode,MSIC,BizDescription,SST,TTX,BankAccountNo,BankName,Attention,PaymentTerms,Remarks
+Mega Solutions Sdn Bhd,C20231234567,BRN,1.23E+13,1345678-X,finance@megasolutions.com.my,60377112233,60377112244,"2A, Jalan Bukit Kiara 1, Bukit Kiara",59200,Kuala Lumpur,14,MYS,"""62010""",Computer programming activities,W10-1901-32000123,NA,5.14E+11,Maybank,Ms. Sarah Lee,30 Days,Key Tech Supplier
+Ali bin Ahmad,IG10567890123,NRIC,1.23E+13,NA,ali.ahmad@example.com,60123456789,,"No. 12, Jalan Harmoni 3, Damansara Heights",40150,Shah Alam,10,MYS,"""00000""",General Individual Consumer,NA,NA,NA,NA,NA,COD,Retail Customer

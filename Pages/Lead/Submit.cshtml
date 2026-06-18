@@ -1,0 +1,384 @@
+﻿@page "/customer-info/submit"
+@model eInvWorld.Pages.Lead.SubmitModel
+@using eInvWorld.Models.InputModel
+@inject IConfiguration _config
+
+@{
+    ViewData["Title"] = "Customer Info Submission | eInvWorld";
+    ViewData["Description"] = "Submit your business details to onboard eInvWorld's LHDN-compliant e-Invoicing system — fully aligned with Malaysia’s MyInvois requirements.";
+    ViewData["Keywords"] = "e-invoicing registration, customer info, einvworld submission, Malaysia LHDN onboarding";
+}
+
+<!-- Page Header Start -->
+<div class="position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg profile-setting-img">
+        <img src="~/images/header_images/header-page-services.png" class="profile-wid-img w-100" alt="">
+
+        <!-- Overlay Content -->
+        <div class="overlay-content position-absolute top-50 start-50 translate-middle text-center w-100">
+            <div class="container">
+                <h2 class="text-white fw-bold mb-2">@ViewData["Title"]</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="/" class="text-white">Home</a></li>
+                        <li class="breadcrumb-item active text-light" aria-current="page">@ViewData["Title"]</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Page Header End -->
+
+<div class="container-xxl py-3">
+    <div class="container">
+    <div class="card mt-3">
+        <div class="card-header">
+            <h4 class="card-title">Customer Info Wizard</h4>
+        </div>
+      
+        <div class="card-body">
+            @if (Model.Success)
+            {
+                <div class="alert alert-success">✅ Thank you for submitting your company details.<br />We will contact you shortly.</div>
+
+
+            }
+            else
+            {
+                <form method="post" class="form-steps">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    <input asp-for="Input.CreatedBy" type="hidden" value="CustomerInfo" />
+
+
+                    <ul class="nav nav-pills custom-nav nav-justified mb-4" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="step1-tab" data-bs-toggle="pill" data-bs-target="#step1" type="button" role="tab">General</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="step2-tab" data-bs-toggle="pill" data-bs-target="#step2" type="button" role="tab">Address</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="step3-tab" data-bs-toggle="pill" data-bs-target="#step3" type="button" role="tab">Account</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="step1" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.CompanyName" class="form-label"></label>
+                                    <input asp-for="Input.CompanyName" class="form-control" />
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                        <label asp-for="Input.TIN" class="form-label">Tax Identification Number (TIN)</label>
+                                    <input asp-for="Input.TIN" class="form-control" placeholder="eg: C123456789" />
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.OldRegNo" class="form-label">Business Registration Number (Old)</label>
+                                    <input asp-for="Input.OldRegNo" class="form-control" placeholder="eg: 123456-X" />
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.RegNo" class="form-label">Business Registration Number (New)</label>
+                                    <input asp-for="Input.RegNo" class="form-control" placeholder="eg: 199901019999" />
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.RegTypeCode" class="control-label">Registration Type Code</label>
+                                    <select asp-for="Input.RegTypeCode" class="form-control select2" asp-items="Model.IdTypesOptions">
+                                        <option value="">-- Select an ID Type --</option> <!-- Prevent null values -->
+                                    </select>
+                                    <span asp-validation-for="Input.RegTypeCode" class="text-danger"></span>
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.SST" class="form-label"> Sales & Services Tax Number (SST)</label>
+                                    <input asp-for="Input.SST" class="form-control" placeholder="eg: W10-1808-99999999 (if not registered, fill in NA)" />
+                                </div>
+                                
+                            </div>
+                           
+
+                            <div class="row mt-3">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.IndustryClassificationCode" class="control-label">MSIC Code</label>
+                                    <select asp-for="Input.IndustryClassificationCode" class="form-control select2" id="msicSelect">
+                                        <option value="">-- Select MSIC Code --</option>
+                                        @foreach (var msic in Model.MSICOptions)
+                                        {
+                                            <option value="@msic.Value" data-description="@msic.Text">
+                                                @msic.Text
+                                            </option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="Input.IndustryClassificationCode" class="text-danger"></span>
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                     <label asp-for="Input.TTX" class="control-label">Tourism Tax Registration Number (TTX)</label>
+                                    <input asp-for="Input.TTX" class="form-control" />
+                                    <span asp-validation-for="Input.TTX" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <!-- BizDesciption Field (Read-only) -->
+                                <div class="col-md-12" id="bizDescriptionContainer">
+                                    <label class="control-label">Business Description (Auto-filled from MSIC)</label>
+                                    <div class="form-control-plaintext border bg-light p-2" style="white-space: pre-wrap; min-height: 40px;" id="bizDescPreview">
+                                        <!-- preview auto-filled here -->
+                                    </div>
+                                    <input type="hidden" asp-for="Input.BizDescription" id="PartyInfo_BizDescription" />
+                                    <span asp-validation-for="Input.BizDescription" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-4">
+                                <button class="btn btn-primary" type="button" onclick="nextTab('step2-tab')">Next</button>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="step2" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.Email" class="form-label"></label>
+                                    <input asp-for="Input.Email" class="form-control" />
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.PhoneNo" class="form-label">Contact Number</label>
+                                    <input asp-for="Input.PhoneNo" class="form-control" placeholder="(eg: +60376602222)" />
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.Addr1" class="form-label"></label>
+                                    <input asp-for="Input.Addr1" class="form-control" />
+                                </div>
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.Addr2" class="form-label"></label>
+                                    <input asp-for="Input.Addr2" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label asp-for="Input.PostalCode" class="form-label"></label>
+                                    <input asp-for="Input.PostalCode" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Input.CityName" class="form-label"></label>
+                                    <input asp-for="Input.CityName" class="form-control" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="Input.StateCode" class="form-label"></label>
+                                    <select asp-for="Input.StateCode" class="form-select select2" required>
+                                        <option value="">-- Select State --</option>
+                                        @if (Model.StateOptions != null && Model.StateOptions.Any())
+                                        {
+                                            @foreach (var state in Model.StateOptions)
+                                            {
+                                                <option value="@state.Value">@state.Text</option>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <option disabled>No State Codes Available</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="Input.StateCode" class="text-danger"></span>
+                                </div>
+
+
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12 col-md-6 mb-3">
+                                    <label asp-for="Input.CountryCode" class="form-label"></label>
+                                    <select asp-for="Input.CountryCode" class="form-select select2" required>
+                                        <option value="">-- Select Country --</option>
+                                        @if (Model.CountryOptions != null && Model.CountryOptions.Any())
+                                        {
+                                            @foreach (var country in Model.CountryOptions)
+                                            {
+                                                <option value="@country.Value">@country.Text</option>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <option disabled>No Country Codes Available</option>
+                                        }
+                                    </select>
+                                    <span asp-validation-for="Input.CountryCode" class="text-danger"></span>
+                                </div>
+
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button class="btn btn-light" type="button" onclick="prevTab('step1-tab')">Back</button>
+                                <button class="btn btn-primary" type="button" onclick="nextTab('step3-tab')">Next</button>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="step3" role="tabpanel">
+                            <div class="form-check mb-3">
+                                <input type="checkbox" id="createAccountCheck" name="createAccount" class="form-check-input" />
+                                <label for="createAccountCheck" class="form-check-label">I would like to create a user account</label>
+                            </div>
+                            <div id="accountFields" style="display:none">
+                                @* <div class="mb-3">
+                                    <label for="AccountFullName">Full Name</label>
+                                    <input asp-for="AccountFullName" class="form-control" />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="AccountEmail">Email Address</label>
+                                    <input asp-for="AccountEmail" type="email" class="form-control" />
+                                </div> *@
+                                
+                                <div class="mb-4">
+                                        <p class="mb-0 fs-12 text-muted fst-italic">By registering you agree to the eInvWorld <a href="/term-and-condition" class="text-primary text-decoration-underline fst-normal fw-medium">Terms of Use</a></p>
+                                </div>
+                               
+                            </div>
+
+
+                                <!-- ✅ Include Honeypot & Turnstile -->
+                                <partial name="_TurnstilePartial" />
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <button class="btn btn-light" type="button" onclick="prevTab('step2-tab')">Back</button>
+                                <button type="submit" class="btn btn-success">Submit</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+</div>
+
+
+
+@* @section Scripts {
+   
+    <script>
+        // $('.select2').select2
+
+
+        document.getElementById('password-addon')?.addEventListener('click', function () {
+            const pwd = document.querySelector('[asp-for="AccountPassword"]');
+            const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwd.setAttribute('type', type);
+            this.querySelector('i')?.classList.toggle('ri-eye-fill');
+            this.querySelector('i')?.classList.toggle('ri-eye-off-fill');
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const invalid = document.querySelector('.input-validation-error');
+            if (invalid && invalid.offsetParent !== null) invalid.focus();
+        });
+
+        
+
+        // ✅ MSIC dropdown autofill
+        const msicSelect = document.getElementById("msicSelect");
+        const bizDescriptionInput = document.getElementById("PartyInfo_BizDescription");
+        const bizDescPreview = document.getElementById("bizDescPreview");
+
+        function updateBizDescription() {
+            const selectedOption = msicSelect.options[msicSelect.selectedIndex];
+            if (selectedOption) {
+                let description = selectedOption.getAttribute("data-description");
+                if (description && description.includes(" - ")) {
+                    description = description.split(" - ")[1];
+                }
+                bizDescriptionInput.value = description || "";
+                bizDescPreview.textContent = description || "—";
+            }
+        }
+
+        msicSelect.addEventListener("change", updateBizDescription);
+        window.onload = updateBizDescription;
+    </script>
+
+    <script>
+        function nextTab(tabId) {
+            document.querySelector(`#${tabId}`).click();
+        }
+
+        function prevTab(tabId) {
+            document.querySelector(`#${tabId}`).click();
+        }
+
+        document.getElementById('createAccountCheck')?.addEventListener('change', function () {
+            document.getElementById('accountFields').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
+    <script>
+        $(function () {
+            console.log("✅ Select2 initialized");
+            $('.select2').select2({
+                placeholder: "-- Select an option --",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial" />
+} *@
+
+@section Scripts {
+    <script>
+        $(function () {
+            console.log("✅ Select2 initializing...");
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                placeholder: "-- Select an option --",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+
+        document.getElementById('password-addon')?.addEventListener('click', function () {
+            const pwd = document.querySelector('[asp-for="AccountPassword"]');
+            const type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwd.setAttribute('type', type);
+            this.querySelector('i')?.classList.toggle('ri-eye-fill');
+            this.querySelector('i')?.classList.toggle('ri-eye-off-fill');
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const invalid = document.querySelector('.input-validation-error');
+            if (invalid && invalid.offsetParent !== null) invalid.focus();
+        });
+
+        // ✅ Update BizDescription based on selected MSIC
+        $('#msicSelect').on('change', function () {
+            const selectedOption = $(this).find('option:selected');
+            let description = selectedOption.data('description');
+
+            if (description && description.includes(" - ")) {
+                description = description.split(" - ")[1];
+            }
+
+            $('#PartyInfo_BizDescription').val(description || "");
+            $('#bizDescPreview').text(description || "—");
+        });
+
+        // Trigger once on load if needed
+        $('#msicSelect').trigger('change');
+
+        function nextTab(tabId) {
+            document.querySelector(`#${tabId}`)?.click();
+        }
+
+        function prevTab(tabId) {
+            document.querySelector(`#${tabId}`)?.click();
+        }
+
+        document.getElementById('createAccountCheck')?.addEventListener('change', function () {
+            document.getElementById('accountFields').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
+
+    <partial name="_ValidationScriptsPartial" />
+}

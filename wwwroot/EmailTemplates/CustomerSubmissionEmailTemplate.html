@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Contact Form Submission</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f5f7;
+            color: #495057;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #a5c8b7;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+            .header img {
+                width: 100px;
+                margin-bottom: 10px;
+            }
+
+            .header h2 {
+                font-size: 22px;
+                color: #055332;
+                margin: 0;
+            }
+
+        .content {
+            font-size: 15px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .details {
+            background: #eef7f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 15px;
+            color: #055332;
+            border-left: 4px solid #055332;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            border-top: 2px solid #a5c8b7;
+            padding-top: 15px;
+            margin-top: 20px;
+        }
+
+            .footer a {
+                color: #055332;
+                text-decoration: none;
+                font-weight: bold;
+            }
+
+            .footer span {
+                color: red;
+            }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+            .details-table th {
+                background-color: #007bff;
+                color: #ffffff;
+                padding: 10px;
+                text-align: center;
+                border-radius: 5px;
+            }
+
+            .details-table td {
+                background-color: #f9f9f9;
+                padding: 10px;
+                border-bottom: 1px solid #ddd;
+            }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="{{LogoUrl}}" alt="eInvWorld Logo">
+            <h2>New Customer Info Submission</h2>
+        </div>
+
+        <!-- Email Content -->
+        <div class="content">
+            <p><strong>Dear Finance Team,</strong></p>
+            <p>A new customer has submitted their company information for e-Invoicing registration. Please find the details below:</p>
+
+            <!-- Company Info -->
+            <table>
+                <thead>
+                    <tr><th colspan="2">🏢 Company Information</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><b>Company Name:</b></td><td>{{CompanyName}}</td></tr>
+                    <tr><td><b>Tax Identification Number (TIN):</b></td><td>{{TIN}}</td></tr>
+                    <tr><td><b>Business Registration Number (Old):</b></td><td>{{BRNOld}}</td></tr>
+                    <tr><td><b>Business Registration Number (New):</b></td><td>{{BRNNew}}</td></tr>
+                    <tr><td><b>SST Number:</b></td><td>{{SSTNumber}}</td></tr>
+                    <tr><td><b>Tourism Tax Number:</b></td><td>{{TourismTax}}</td></tr>
+                    <tr><td><b>Registration Type:</b></td><td>{{RegistrationType}}</td></tr>
+                    <tr><td><b>MSIC Code:</b></td><td>{{MSICCode}}</td></tr>
+                    <tr><td><b>Business Description:</b></td><td>{{BusinessDescription}}</td></tr>
+                </tbody>
+            </table>
+
+            <!-- Address Info -->
+            <table>
+                <thead>
+                    <tr><th colspan="2">📍 Address Information</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><b>Email:</b></td><td>{{Email}}</td></tr>
+                    <tr><td><b>Phone:</b></td><td>{{Phone}}</td></tr>
+                    <tr><td><b>Address Line 1:</b></td><td>{{Address1}}</td></tr>
+                    <tr><td><b>Address Line 2:</b></td><td>{{Address2}}</td></tr>
+                    <tr><td><b>City:</b></td><td>{{City}}</td></tr>
+                    <tr><td><b>State:</b></td><td>{{State}}</td></tr>
+                    <tr><td><b>Postcode:</b></td><td>{{Postcode}}</td></tr>
+                    <tr><td><b>Country:</b></td><td>{{Country}}</td></tr>
+                </tbody>
+            </table>
+
+            <p style="text-align: center; font-size: 13px;">
+                Please follow up with the user promptly.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><span>*** This is an automatically generated message, please do not reply ***</span></p>
+            <p>Message Generated on {{Timestamp}}</p>
+            <p>© {{Year}} <strong>eInvWorld</strong>. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

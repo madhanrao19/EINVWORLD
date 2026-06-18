@@ -1,0 +1,4 @@
+﻿<!-- ✅ Shared Turnstile Partial View: Pages/Shared/_TurnstilePartial.cshtml-->
+@inject IConfiguration _config
+<input type="text" name="Website" style="display:none;" /> <!-- Honeypot -->
+<div class="cf-turnstile mt-3" data-sitekey="@_config["Turnstile:SiteKey"]"></div>
