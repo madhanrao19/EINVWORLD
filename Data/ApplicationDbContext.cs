@@ -102,13 +102,22 @@ namespace eInvWorld.Data
                 b.Property(t => t.Name).HasMaxLength(128);
             });
 
-            // ✅ Fix Decimal Precision: Automatically sets 18,2 for all decimal fields
+            // Default money precision: 18,2 for all decimal columns…
             foreach (var property in modelBuilder.Model.GetEntityTypes()
                         .SelectMany(t => t.GetProperties())
                         .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
             {
                 property.SetColumnType("decimal(18, 2)");
             }
+
+            // …but rate/quantity/unit-price fields need more decimal places than money totals.
+            // Truncating these to 2dp corrupts foreign-currency invoices and fractional quantities.
+            modelBuilder.Entity<InvoiceHeader>()
+                .Property(h => h.ExchangeRate).HasColumnType("decimal(18, 6)");
+            modelBuilder.Entity<InvoiceLine>()
+                .Property(l => l.Quantity).HasColumnType("decimal(18, 6)");
+            modelBuilder.Entity<InvoiceLine>()
+                .Property(l => l.UnitPrice).HasColumnType("decimal(18, 4)");
 
             // Existing Configurations
             modelBuilder.Entity<LHDNToken>().HasKey(t => t.Id);
