@@ -12,10 +12,12 @@ namespace EINVWORLD.Controllers
     public class ResourcesApiController : ControllerBase
     {
         private readonly FilePathConfig _filePathConfig;
+        private readonly ILogger<ResourcesApiController> _logger;
 
-        public ResourcesApiController(IOptions<FilePathConfig> filePathConfig)
+        public ResourcesApiController(IOptions<FilePathConfig> filePathConfig, ILogger<ResourcesApiController> logger)
         {
             _filePathConfig = filePathConfig.Value;
+            _logger = logger;
         }
 
         [HttpGet("resources/images/{category}/{size}/{fileName}")]
@@ -50,7 +52,8 @@ namespace EINVWORLD.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error serving image: {ex.Message}");
+                _logger.LogError(ex, "Error serving resource image {Category}/{Size}/{FileName}", category, size, fileName);
+                return StatusCode(500, "Error serving image.");
             }
         }
 
@@ -80,7 +83,8 @@ namespace EINVWORLD.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error serving editor image: {ex.Message}");
+                _logger.LogError(ex, "Error serving editor image {FileName}", fileName);
+                return StatusCode(500, "Error serving editor image.");
             }
         }
 
@@ -110,7 +114,8 @@ namespace EINVWORLD.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error serving company logo: {ex.Message}");
+                _logger.LogError(ex, "Error serving company logo {FileName}", fileName);
+                return StatusCode(500, "Error serving company logo.");
             }
         }
 

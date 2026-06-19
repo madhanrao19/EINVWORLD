@@ -78,12 +78,12 @@ namespace eInvWorld.Controllers
             catch (HttpRequestException httpEx)
             {
                 _logger.LogError(httpEx, "HTTP request error while validating taxpayer with TIN: {TIN}.", tin);
-                return StatusCode(500, $"HTTP request error: {httpEx.Message}");
+                return StatusCode(500, "Error validating taxpayer.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error validating taxpayer with TIN: {TIN}.", tin);
-                return StatusCode(500, $"Error validating taxpayer: {ex.Message}");
+                return StatusCode(500, "Error validating taxpayer.");
             }
         }
 
@@ -142,12 +142,12 @@ namespace eInvWorld.Controllers
             catch (HttpRequestException httpEx)
             {
                 _logger.LogError(httpEx, "HTTP request error while submitting documents.");
-                return StatusCode(500, $"HTTP request error: {httpEx.Message}");
+                return StatusCode(500, "Error submitting documents.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error submitting documents.");
-                return StatusCode(500, $"Error submitting documents: {ex.Message}");
+                return StatusCode(500, "Error submitting documents.");
             }
         }
     }
