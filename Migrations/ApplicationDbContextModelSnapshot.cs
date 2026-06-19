@@ -829,7 +829,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal?>("ExchangeRate")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("decimal(18, 6)");
 
                     b.Property<string>("ForeignCurrency")
                         .HasColumnType("nvarchar(max)");
@@ -1012,7 +1012,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Quantity")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("decimal(18, 6)");
 
                     b.Property<decimal?>("Subtotal")
                         .HasColumnType("decimal(18, 2)");
@@ -1022,7 +1022,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("UnitPrice")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("decimal(18, 4)");
 
                     b.HasKey("InvoiceLineId");
 

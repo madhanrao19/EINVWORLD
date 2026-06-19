@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EINVWORLD", "EINVWORLD.csproj", "{88C67DFF-0E58-43F0-929D-A6A88B4C8C87}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EINVWORLD.Tests", "..\EINVWORLD.Tests\EINVWORLD.Tests.csproj", "{38D36483-2B89-4673-B051-43F8761A9D03}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EINVWORLD.Tests", "EINVWORLD.Tests\EINVWORLD.Tests.csproj", "{38D36483-2B89-4673-B051-43F8761A9D03}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
