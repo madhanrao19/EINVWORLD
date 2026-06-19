@@ -177,5 +177,25 @@ namespace EINVWORLD.Helpers
                 || (party.P != null && userTins.Contains(party.P));
         }
 
+        /// <summary>
+        /// Returns true if the user may submit/act AS <paramref name="tin"/>: admins always may;
+        /// otherwise the TIN must be one of the user's assigned company TINs (UserCompanies).
+        /// CanAccessInvoiceAsync only checks read access (owns supplier OR customer TIN), so this is the
+        /// stronger gate needed before submitting under a specific issuer TIN — it stops a counterparty
+        /// who only owns the other party's TIN from submitting as the invoice issuer.
+        /// </summary>
+        public static async Task<bool> OwnsTinAsync(this ClaimsPrincipal user, ApplicationDbContext db, string? tin)
+        {
+            if (string.IsNullOrWhiteSpace(tin)) return false;
+            if (user.IsAdmin(db)) return true;
+
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return false;
+
+            return await db.UserCompanies
+                .Where(uc => uc.UserId == userId)
+                .AnyAsync(uc => uc.PartyInfo.TIN == tin);
+        }
+
     }
 }
