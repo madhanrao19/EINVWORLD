@@ -400,8 +400,6 @@ else
 }
 
 // Security response headers — applied to ALL responses (placed before static files).
-// NOTE: a Content-Security-Policy is intentionally NOT set here because the app loads scripts from
-// CDNs (toastr, Google Analytics) and uses inline scripts; add a tested CSP as a follow-up.
 app.Use(async (context, next) =>
 {
     var headers = context.Response.Headers;
@@ -409,6 +407,26 @@ app.Use(async (context, next) =>
     headers["X-Frame-Options"] = "SAMEORIGIN";
     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     headers["X-Permitted-Cross-Domain-Policies"] = "none";
+
+    // Content-Security-Policy is shipped in REPORT-ONLY mode first: it never blocks, only reports
+    // violations, so it cannot break the (CDN-heavy, inline-script) UI. It documents the current
+    // allowed sources and gives a baseline to tighten — once the CDN assets are localized and inline
+    // scripts removed, drop the CDN hosts / 'unsafe-*' tokens and promote this to the enforcing
+    // "Content-Security-Policy" header.
+    headers["Content-Security-Policy-Report-Only"] = string.Join("; ", new[]
+    {
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.datatables.net https://cdn.tiny.cloud https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com",
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com",
+        "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://www.google-analytics.com https://cdn.tiny.cloud",
+        "frame-src https://challenges.cloudflare.com",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "frame-ancestors 'self'"
+    });
+
     await next();
 });
 
