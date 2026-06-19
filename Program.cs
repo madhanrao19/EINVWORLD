@@ -38,8 +38,8 @@ builder.Configuration.AddEnvironmentVariables();
 // 🧩 Load the native wkhtmltox library ONLY when the DinkToPdf engine is selected (the default).
 // With the Puppeteer engine the native DLL is not needed and may be absent, so loading it
 // unconditionally would crash startup. Done after configuration is available so the engine is known.
-var pdfEngine = builder.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf";
-if (string.Equals(pdfEngine, "DinkToPdf", StringComparison.OrdinalIgnoreCase))
+var pdfEngineForNativeLoad = builder.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf";
+if (string.Equals(pdfEngineForNativeLoad, "DinkToPdf", StringComparison.OrdinalIgnoreCase))
 {
     var loadContext = new CustomAssemblyLoadContext();
     var wkhtmlPath = Path.Combine(Directory.GetCurrentDirectory(), "wkhtmltox", "libwkhtmltox.dll");
