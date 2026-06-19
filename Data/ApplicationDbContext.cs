@@ -196,6 +196,25 @@ namespace eInvWorld.Data
                 .HasForeignKey(i => i.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Indexes for hot lookup/filter columns (status sync, search, detail pages).
+            // RefDocumentNo and InvoiceDirection are nvarchar(max) today, which SQL Server cannot
+            // index, so they are given a bounded length first (generous vs the actual value formats).
+            // UUID is already MaxLength(100) and InvoiceHistory.InvoiceNo already MaxLength(50).
+            modelBuilder.Entity<InvoiceHeader>(b =>
+            {
+                b.Property(i => i.RefDocumentNo).HasMaxLength(200);
+                b.Property(i => i.InvoiceDirection).HasMaxLength(50);
+                b.HasIndex(i => i.UUID);
+                b.HasIndex(i => i.RefDocumentNo);
+                b.HasIndex(i => i.InvoiceDirection);
+                b.HasIndex(i => i.CreatedDate);
+            });
+
+            modelBuilder.Entity<InvoiceHistory>(b =>
+            {
+                b.HasIndex(h => h.InvoiceNo);
+            });
+
             modelBuilder.Entity<PartyInfo>()
                     .HasIndex(p => p.TIN)
                     .IsUnique()

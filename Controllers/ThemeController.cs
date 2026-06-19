@@ -91,7 +91,7 @@ namespace eInvWorld.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception occurred while saving global theme");
-                return StatusCode(500, new { message = $"Error saving theme settings: {ex.Message}", success = false });
+                return StatusCode(500, new { message = "Error saving theme settings.", success = false });
             }
         }
 
