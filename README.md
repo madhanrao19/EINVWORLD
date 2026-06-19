@@ -76,9 +76,16 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SyncRetentionDays`. |
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. |
 | `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot (default `true`). |
-| `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer`. |
+| `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
 | `AIAssistant` | Optional local-LLM assistant (OFF by default). |
 | `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. |
+
+> **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
+> upstream, but it is kept as the default because it renders fully **offline** — the right choice for an
+> on-prem / air-gapped server. The alternative `Puppeteer` engine is actively maintained but downloads a
+> Chromium build **at runtime on first use**, which needs outbound network access (or a pre-staged
+> Chromium). To switch, set `PDFGenerationSettings:Engine` to `Puppeteer`; on an air-gapped host,
+> pre-download Chromium and point PuppeteerSharp at it so there is no runtime fetch.
 
 **Secrets are never committed.** See **[SECRETS-SETUP.md](SECRETS-SETUP.md)** for the full list and how to
 set them in dev (user-secrets) and on the server (environment variables).
