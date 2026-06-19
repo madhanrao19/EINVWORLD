@@ -114,9 +114,9 @@ namespace eInvWorld.Data
             // Truncating these to 2dp corrupts foreign-currency invoices and fractional quantities.
             modelBuilder.Entity<InvoiceHeader>()
                 .Property(h => h.ExchangeRate).HasColumnType("decimal(18, 6)");
-            modelBuilder.Entity<InvoiceLine>()
+            modelBuilder.Entity<Models.InputModel.InvoiceLine>()
                 .Property(l => l.Quantity).HasColumnType("decimal(18, 6)");
-            modelBuilder.Entity<InvoiceLine>()
+            modelBuilder.Entity<Models.InputModel.InvoiceLine>()
                 .Property(l => l.UnitPrice).HasColumnType("decimal(18, 4)");
 
             // Existing Configurations
