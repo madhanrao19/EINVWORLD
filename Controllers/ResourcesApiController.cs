@@ -28,8 +28,11 @@ namespace EINVWORLD.Controllers
                     return BadRequest("Invalid size parameter. Use 'full' or 'thumb'.");
                 }
 
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.ResourceImagesFolder, category, size, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied segments
+                if (!TryResolveSafePath(_filePathConfig.ResourceImagesFolder, out var filePath, category, size, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -55,8 +58,11 @@ namespace EINVWORLD.Controllers
         {
             try
             {
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.EditorUploadsFolder, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied file name
+                if (!TryResolveSafePath(_filePathConfig.EditorUploadsFolder, out var filePath, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -82,8 +88,11 @@ namespace EINVWORLD.Controllers
         {
             try
             {
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.CompanyLogosFolder, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied file name
+                if (!TryResolveSafePath(_filePathConfig.CompanyLogosFolder, out var filePath, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -102,6 +111,44 @@ namespace EINVWORLD.Controllers
             {
                 return StatusCode(500, $"Error serving company logo: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Combines <paramref name="baseFolder"/> with the user-supplied <paramref name="segments"/> and
+        /// guarantees the resolved path stays inside the base folder. Rejects empty segments and any segment
+        /// containing directory separators or traversal sequences (e.g. "..", "..%2f"), defeating path-traversal.
+        /// </summary>
+        private static bool TryResolveSafePath(string baseFolder, out string fullPath, params string[] segments)
+        {
+            fullPath = string.Empty;
+
+            foreach (var segment in segments)
+            {
+                if (string.IsNullOrWhiteSpace(segment) ||
+                    segment.Contains("..", StringComparison.Ordinal) ||
+                    segment.IndexOf('/') >= 0 ||
+                    segment.IndexOf('\\') >= 0 ||
+                    segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                {
+                    return false;
+                }
+            }
+
+            var baseFull = Path.GetFullPath(baseFolder);
+            var basePrefix = baseFull.EndsWith(Path.DirectorySeparatorChar)
+                ? baseFull
+                : baseFull + Path.DirectorySeparatorChar;
+
+            var combined = Path.GetFullPath(Path.Combine(new[] { baseFolder }.Concat(segments).ToArray()));
+
+            // Final canonical check: the resolved path must live under the base folder.
+            if (!combined.StartsWith(basePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            fullPath = combined;
+            return true;
         }
 
         private static string GetContentType(string extension)
