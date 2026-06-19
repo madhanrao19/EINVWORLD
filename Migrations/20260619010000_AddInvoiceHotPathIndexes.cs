@@ -13,6 +13,19 @@ namespace eInvWorld.Migrations
             // RefDocumentNo and InvoiceDirection are nvarchar(max), which SQL Server cannot use as an
             // index key. Bound them first (generous vs the actual value formats), then index the hot
             // lookup/filter columns used by the status sync, search, and invoice-detail pages.
+            //
+            // Preflight: the old columns were nvarchar(max) and the import/form paths did not enforce a
+            // length, so a pre-existing value longer than the new bound would make the ALTER COLUMN fail
+            // and block startup (AutoMigrateOnStartup). Truncate any such over-length values first.
+            // DATALENGTH (bytes; nvarchar = 2/char) is used so trailing spaces can't slip past the guard.
+            // Real reference numbers / directions are far shorter, so only malformed rows are affected.
+            migrationBuilder.Sql(
+                "UPDATE [InvoiceHeaders] SET [RefDocumentNo] = LEFT([RefDocumentNo], 200) " +
+                "WHERE [RefDocumentNo] IS NOT NULL AND DATALENGTH([RefDocumentNo]) > 400;");
+            migrationBuilder.Sql(
+                "UPDATE [InvoiceHeaders] SET [InvoiceDirection] = LEFT([InvoiceDirection], 50) " +
+                "WHERE [InvoiceDirection] IS NOT NULL AND DATALENGTH([InvoiceDirection]) > 100;");
+
             migrationBuilder.AlterColumn<string>(
                 name: "RefDocumentNo",
                 table: "InvoiceHeaders",
