@@ -21,12 +21,6 @@ using Microsoft.EntityFrameworkCore;
 using NToastNotify;
 using Serilog;
 
-// 🧩 Load wkhtmltox DLL for DinkToPdf
-var loadContext = new CustomAssemblyLoadContext(); // ✅ renamed
-var wkhtmlPath = Path.Combine(Directory.GetCurrentDirectory(), "wkhtmltox", "libwkhtmltox.dll");
-loadContext.LoadUnmanagedLibrary(wkhtmlPath);
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 // NOTE: WebApplication.CreateBuilder already loads, in this precedence order (later wins):
@@ -40,6 +34,17 @@ if (builder.Environment.IsDevelopment())
     builder.Configuration.AddUserSecrets(System.Reflection.Assembly.GetExecutingAssembly(), optional: true);
 }
 builder.Configuration.AddEnvironmentVariables();
+
+// 🧩 Load the native wkhtmltox library ONLY when the DinkToPdf engine is selected (the default).
+// With the Puppeteer engine the native DLL is not needed and may be absent, so loading it
+// unconditionally would crash startup. Done after configuration is available so the engine is known.
+var pdfEngine = builder.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf";
+if (string.Equals(pdfEngine, "DinkToPdf", StringComparison.OrdinalIgnoreCase))
+{
+    var loadContext = new CustomAssemblyLoadContext();
+    var wkhtmlPath = Path.Combine(Directory.GetCurrentDirectory(), "wkhtmltox", "libwkhtmltox.dll");
+    loadContext.LoadUnmanagedLibrary(wkhtmlPath);
+}
 
 
 // Configure Serilog to read from appsettings.json
