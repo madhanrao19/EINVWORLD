@@ -303,6 +303,8 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("InvoiceNo");
+
                     b.ToTable("InvoiceHistories");
                 });
 
@@ -843,7 +845,8 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("InvoiceDirection")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int?>("InvoicePeriod")
                         .HasColumnType("int");
@@ -899,7 +902,8 @@ namespace eInvWorld.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("RefDocumentNo")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("RefUUID")
                         .HasMaxLength(100)
@@ -969,6 +973,14 @@ namespace eInvWorld.Migrations
                     b.HasIndex("PublicCustomerId");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("InvoiceDirection");
+
+                    b.HasIndex("RefDocumentNo");
+
+                    b.HasIndex("UUID");
 
                     b.ToTable("InvoiceHeaders");
                 });
