@@ -9,6 +9,11 @@ IF NOT EXISTS (
     WHERE [MigrationId] = N'20260619010000_AddInvoiceHotPathIndexes'
 )
 BEGIN
+    -- Preflight: truncate any pre-existing over-length values so the ALTER COLUMN cannot fail
+    -- (the old columns were nvarchar(max) with no enforced length). DATALENGTH is bytes (nvarchar = 2/char).
+    UPDATE [InvoiceHeaders] SET [RefDocumentNo]    = LEFT([RefDocumentNo], 200)   WHERE [RefDocumentNo]    IS NOT NULL AND DATALENGTH([RefDocumentNo])    > 400;
+    UPDATE [InvoiceHeaders] SET [InvoiceDirection] = LEFT([InvoiceDirection], 50) WHERE [InvoiceDirection] IS NOT NULL AND DATALENGTH([InvoiceDirection]) > 100;
+
     ALTER TABLE [InvoiceHeaders] ALTER COLUMN [RefDocumentNo]    nvarchar(200) NULL;
     ALTER TABLE [InvoiceHeaders] ALTER COLUMN [InvoiceDirection] nvarchar(50)  NULL;
 
