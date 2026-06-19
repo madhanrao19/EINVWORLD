@@ -1227,6 +1227,17 @@ namespace EINVWORLD.Pages.Invoices
                 _logger.LogInformation($"🔑 Using TIN for submission - InvoiceNo: {invoiceNo}, DocType: {fullInvoice.DocTypeCode}, TIN: {tin}");
                 _logger.LogInformation($"📊 Debug TIN Info - SupplierTIN: {fullInvoice.Supplier?.TIN ?? "NULL"}, CustomerTIN: {fullInvoice.Customer?.TIN ?? "NULL"}");
 
+                // The submitting TIN is the invoice issuer (supplier, or customer for self-billed). Read
+                // access (CanAccessInvoiceAsync) is granted to either party, so explicitly require the user
+                // to OWN this issuer TIN before submitting under it — otherwise a counterparty who only owns
+                // the other party's TIN could submit as the issuer.
+                if (!await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, tin))
+                {
+                    _logger.LogWarning("🚫 User not authorized to submit InvoiceNo {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, tin);
+                    var msg = "You are not authorized to submit this invoice.";
+                    return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
+                }
+
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
 
                 // Pass the resolved TIN so submission uses the per-TIN token and adds the onbehalfof
