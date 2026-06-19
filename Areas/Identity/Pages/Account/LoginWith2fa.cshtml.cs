@@ -4,13 +4,17 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization; // 👈 Required for [AllowAnonymous]
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using eInvWorld.Models;
+using eInvWorld.Data;
+using eInvWorld.Services;
 
 namespace eInvWorld.Areas.Identity.Pages.Account
 {
@@ -21,15 +25,21 @@ namespace eInvWorld.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginWith2faModel> _logger;
+        private readonly ApplicationDbContext _context;
+        private readonly ITokenService _tokenService;
 
         public LoginWith2faModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            ILogger<LoginWith2faModel> logger)
+            ILogger<LoginWith2faModel> logger,
+            ApplicationDbContext context,
+            ITokenService tokenService)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
+            _context = context;
+            _tokenService = tokenService;
         }
 
         [BindProperty]
@@ -91,6 +101,10 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 _logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", user.Id);
+                // Populate the same session state as the normal Login handler. Without this, a 2FA
+                // login leaves session "UserTIN"/"AccessToken" unset, so subsequent submissions fail
+                // with "TIN not found in session" until the user logs in again without 2FA.
+                await PopulateUserSessionAsync(user);
                 return LocalRedirect(returnUrl);
             }
             else if (result.IsLockedOut)
@@ -103,6 +117,47 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 _logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", user.Id);
                 ModelState.AddModelError(string.Empty, "Invalid authenticator code.");
                 return Page();
+            }
+        }
+
+        // Mirrors LoginModel: stores the user's assigned TIN (and a system access token) in session so
+        // that session-based token resolution works after a 2FA login. Token-fetch failure is logged but
+        // non-fatal — the user is already authenticated, and submit paths that pass an explicit TIN do
+        // not depend on the session token.
+        private async Task PopulateUserSessionAsync(ApplicationUser user)
+        {
+            bool isAdmin = user.UserName != null &&
+                user.UserName.Equals("admin@einvworld.com", StringComparison.OrdinalIgnoreCase);
+
+            if (isAdmin)
+            {
+                HttpContext.Session.SetString("UserTIN", "ADMIN");
+                HttpContext.Session.SetString("AccessToken", "ADMIN-TOKEN");
+                return;
+            }
+
+            var userTin = await _context.UserCompanies
+                .Where(uc => uc.UserId == user.Id)
+                .Select(uc => uc.PartyInfo.TIN)
+                .FirstOrDefaultAsync();
+
+            if (string.IsNullOrEmpty(userTin))
+            {
+                _logger.LogError("No TIN found for user {UserId} after 2FA login.", user.Id);
+                return;
+            }
+
+            _logger.LogInformation("User {UserName} is assigned to TIN: {TIN}", user.UserName, userTin);
+            HttpContext.Session.SetString("UserTIN", userTin);
+
+            try
+            {
+                var accessToken = await _tokenService.GetAccessToken();
+                HttpContext.Session.SetString("AccessToken", accessToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve access token for user {UserId} after 2FA login.", user.Id);
             }
         }
     }

@@ -1229,7 +1229,9 @@ namespace EINVWORLD.Pages.Invoices
 
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
 
-                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
+                // Pass the resolved TIN so submission uses the per-TIN token and adds the onbehalfof
+                // header, instead of relying on session state (which is empty right after a 2FA login).
+                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, tin);
                 _logger.LogInformation("[Debug] LHDN API raw response: " + apiResponseJson);
 
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
