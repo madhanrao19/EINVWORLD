@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using eInvWorld.Models;
+using EINVWORLD.Helpers;
 
 namespace EINVWORLD.Controllers
 {
@@ -28,8 +29,11 @@ namespace EINVWORLD.Controllers
                     return BadRequest("Invalid size parameter. Use 'full' or 'thumb'.");
                 }
 
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.ResourceImagesFolder, category, size, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied segments
+                if (!SafePath.TryResolve(_filePathConfig.ResourceImagesFolder, out var filePath, category, size, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -55,8 +59,11 @@ namespace EINVWORLD.Controllers
         {
             try
             {
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.EditorUploadsFolder, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied file name
+                if (!SafePath.TryResolve(_filePathConfig.EditorUploadsFolder, out var filePath, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
@@ -82,8 +89,11 @@ namespace EINVWORLD.Controllers
         {
             try
             {
-                // Build the file path
-                var filePath = Path.Combine(_filePathConfig.CompanyLogosFolder, fileName);
+                // Build the file path, rejecting any path-traversal in the user-supplied file name
+                if (!SafePath.TryResolve(_filePathConfig.CompanyLogosFolder, out var filePath, fileName))
+                {
+                    return BadRequest("Invalid path.");
+                }
 
                 if (!System.IO.File.Exists(filePath))
                 {
