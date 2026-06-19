@@ -383,7 +383,9 @@ public class LHDNApiService : ILHDNApiService
         if (string.IsNullOrWhiteSpace(documentId) || string.IsNullOrWhiteSpace(cancellationReason))
             throw new ArgumentException("Document ID and cancellation reason are required.");
 
-        var accessToken = await _tokenService.GetAccessToken();
+        // ✅ Explicit token by TIN (was GetAccessToken(), which relied on session state and
+        // ignored the passed-in tin — breaking intermediary / on-behalf-of cancellations).
+        var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
         var requestUri = $"api/v1.0/documents/state/{documentId}/state";
 
         var requestBody = new { status = "cancelled", reason = cancellationReason };
@@ -392,6 +394,9 @@ public class LHDNApiService : ILHDNApiService
         var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Content = jsonContent;
+
+        // Add the required intermediary 'onbehalfof' header (mirrors Reject/Search).
+        AddOnBehalfOfHeader(request, tin);
 
         var response = await _httpClient.SendAsync(request);
         var responseContent = await response.Content.ReadAsStringAsync();

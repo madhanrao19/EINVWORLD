@@ -122,7 +122,7 @@ namespace EINVWORLD.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during resource migration");
-                return StatusCode(500, new { error = $"Migration failed: {ex.Message}" });
+                return StatusCode(500, new { error = "Migration failed." });
             }
         }
 
@@ -236,7 +236,7 @@ namespace EINVWORLD.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during company logo migration");
-                return StatusCode(500, new { error = $"Logo migration failed: {ex.Message}" });
+                return StatusCode(500, new { error = "Logo migration failed." });
             }
         }
 
@@ -302,7 +302,7 @@ namespace EINVWORLD.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during cleanup");
-                return StatusCode(500, new { error = $"Cleanup failed: {ex.Message}" });
+                return StatusCode(500, new { error = "Cleanup failed." });
             }
         }
 
@@ -331,7 +331,7 @@ namespace EINVWORLD.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during company logos cleanup");
-                return StatusCode(500, new { error = $"Company logos cleanup failed: {ex.Message}" });
+                return StatusCode(500, new { error = "Company logos cleanup failed." });
             }
         }
     }
