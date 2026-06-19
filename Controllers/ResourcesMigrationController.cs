@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ namespace EINVWORLD.Controllers
 {
     [Route("api/resources-migration")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class ResourcesMigrationController : ControllerBase
     {
         private readonly FilePathConfig _filePathConfig;

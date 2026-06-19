@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="EINVWORLD.Tests\**" />
     <Compile Remove="csharp Helpers\**" />
     <Compile Remove="Documents\**" />
     <Compile Remove="Models\JsonModels1\**" />
@@ -19,6 +20,7 @@
     <Compile Remove="publish\**" />
     <Compile Remove="wwwroot\js\pages\**" />
     <Compile Remove="wwwroot\lib\**" />
+    <Content Remove="EINVWORLD.Tests\**" />
     <Content Remove="csharp Helpers\**" />
     <Content Remove="Documents\**" />
     <Content Remove="Models\JsonModels1\**" />
@@ -29,6 +31,7 @@
     <Content Remove="publish\**" />
     <Content Remove="wwwroot\js\pages\**" />
     <Content Remove="wwwroot\lib\**" />
+    <EmbeddedResource Remove="EINVWORLD.Tests\**" />
     <EmbeddedResource Remove="csharp Helpers\**" />
     <EmbeddedResource Remove="Documents\**" />
     <EmbeddedResource Remove="Models\JsonModels1\**" />
@@ -39,6 +42,7 @@
     <EmbeddedResource Remove="publish\**" />
     <EmbeddedResource Remove="wwwroot\js\pages\**" />
     <EmbeddedResource Remove="wwwroot\lib\**" />
+    <None Remove="EINVWORLD.Tests\**" />
     <None Remove="csharp Helpers\**" />
     <None Remove="Documents\**" />
     <None Remove="Models\JsonModels1\**" />

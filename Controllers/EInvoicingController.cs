@@ -2,6 +2,7 @@
 using eInvWorld.Models;
 using eInvWorld.Models.JsonModels;
 using eInvWorld.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,7 @@ namespace eInvWorld.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "Admin,Supplier")]
     public class EInvoicingController : ControllerBase
     {
         private readonly ILHDNApiService _lhdnApiService;

@@ -45,10 +45,7 @@ namespace eInvWorld.Services.Background
                     _logger.LogError(ex, "❌ A fatal error occurred during the recurring invoice generation cycle.");
                 }
 
-                //Correct one
-                //await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
-                //Temporary Testing
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
         }
 
