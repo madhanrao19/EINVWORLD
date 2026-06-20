@@ -259,7 +259,7 @@ namespace eInvWorld.Services.Background
                         historyLog.RunStatus = "Success_Draft";
                     }
 
-                    profile.NextRunDate = CalculateNextRunDate(profile.NextRunDate, profile.Frequency);
+                    profile.NextRunDate = CalculateNextRunDate(profile.NextRunDate, profile.Frequency, today);
 
                     context.RecurringRunHistories.Add(historyLog);
                     await context.SaveChangesAsync();
@@ -286,7 +286,7 @@ namespace eInvWorld.Services.Background
 
                     context.RecurringRunHistories.Add(historyLog);
 
-                    profile.NextRunDate = CalculateNextRunDate(profile.NextRunDate, profile.Frequency);
+                    profile.NextRunDate = CalculateNextRunDate(profile.NextRunDate, profile.Frequency, today);
                     context.RecurringProfiles.Update(profile);
 
                     await context.SaveChangesAsync();
@@ -318,16 +318,31 @@ namespace eInvWorld.Services.Background
             return $"EINV{nextSequence:D5}";
         }
 
-        private DateTime CalculateNextRunDate(DateTime currentRunDate, string frequency)
+        private DateTime CalculateNextRunDate(DateTime currentRunDate, string frequency, DateTime today)
         {
-            return frequency switch
+            var next = AdvanceOnce(currentRunDate, frequency);
+
+            // If the profile is behind (e.g. the worker was stopped for a while, or the app was down),
+            // advance to the next occurrence STRICTLY AFTER today instead of stepping a single period
+            // per worker run. Without this, an hourly worker generates one backlog invoice every hour
+            // until it catches up — a "storm" of same-dated invoices. This guarantees at most one
+            // generated invoice per profile per day/week/month/year.
+            int guard = 0;
+            while (next.Date <= today && guard++ < 4000)
             {
-                "Daily" => currentRunDate.AddDays(1),
-                "Weekly" => currentRunDate.AddDays(7),
-                "Monthly" => currentRunDate.AddMonths(1),
-                "Annually" => currentRunDate.AddYears(1),
-                _ => currentRunDate.AddMonths(1)
-            };
+                next = AdvanceOnce(next, frequency);
+            }
+
+            return next;
         }
+
+        private static DateTime AdvanceOnce(DateTime date, string frequency) => frequency switch
+        {
+            "Daily" => date.AddDays(1),
+            "Weekly" => date.AddDays(7),
+            "Monthly" => date.AddMonths(1),
+            "Annually" => date.AddYears(1),
+            _ => date.AddMonths(1)
+        };
     }
 }
