@@ -1,11 +1,19 @@
 ﻿@page
 @model EnableAuthenticatorModel
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 @{
     ViewData["Title"] = "Configure authenticator app";
     ViewData["ActivePage"] = ManageNavPages.TwoFactorAuthentication;
 }
 
 <partial name="_StatusMessage" for="StatusMessage" />
+@if (HttpContextAccessor.HttpContext?.Request.Query["mfaRequired"].ToString() == "true")
+{
+    <div class="alert alert-warning">
+        <strong>Two-factor authentication is required for administrator accounts.</strong>
+        Set up an authenticator app below to continue using the admin area.
+    </div>
+}
 <h3>@ViewData["Title"]</h3>
 <div>
     <p>To use an authenticator app go through the following steps:</p>

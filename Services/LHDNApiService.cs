@@ -164,8 +164,22 @@ public class LHDNApiService : ILHDNApiService
         string responseContent = string.Empty;
         var statusCode = System.Net.HttpStatusCode.InternalServerError;
 
+        // Local idempotency: hash the (pre-signing) payload so an identical resubmission within the
+        // dedup window replays the prior response instead of creating a duplicate at LHDN. Computed
+        // BEFORE signing because a XAdES signature embeds a timestamp and would change every time.
+        string payloadHash = ComputeSubmissionPayloadHash(documents);
+
         try
         {
+            var priorResponse = await TryGetRecentSubmissionResponseAsync(tin, payloadHash);
+            if (priorResponse is not null)
+            {
+                _logger.LogWarning(
+                    "♻️ Duplicate submission detected (same payload within {Minutes} min) for TIN {Tin} — " +
+                    "returning the previous response instead of resubmitting.", SubmissionDedupWindowMinutes, tin ?? "(session)");
+                return priorResponse;
+            }
+
             // FIX 1: Fetch the token using the explicit TIN if provided (Background Worker)
             // Otherwise, fallback to the generic token method (Manual UI Submissions)
             string accessToken;
@@ -233,6 +247,7 @@ public class LHDNApiService : ILHDNApiService
                 if (accepted?.HasValues == true)
                 {
                     _logger.LogInformation("✅ Accepted document(s): {Accepted}", accepted.ToString());
+                    await RecordSubmissionAsync(tin, payloadHash, documents.Count, responseContent);
                     return responseContent;
                 }
 
@@ -459,6 +474,64 @@ public class LHDNApiService : ILHDNApiService
             var hex = new StringBuilder();
             foreach (var b in hashBytes) hex.Append(b.ToString("x2"));
             return hex.ToString();
+        }
+    }
+
+    // ── Submission idempotency helpers ──────────────────────────────────────────────────────
+    // Mirrors MyInvois' own 422 DuplicateSubmission detection (identical payload within ~10 min).
+    private const int SubmissionDedupWindowMinutes = 10;
+
+    /// <summary>Order-independent SHA-256 of the (pre-signing) documents in a submission batch.</summary>
+    private string ComputeSubmissionPayloadHash(List<eInvWorld.Models.JsonModels.Documents> documents)
+    {
+        var canonical = string.Join("\n",
+            documents
+                .OrderBy(d => d.CodeNumber, StringComparer.Ordinal)
+                .Select(d => $"{d.CodeNumber}|{d.Format}|{d.Document}"));
+        return ComputeSHA256Hash(canonical);
+    }
+
+    /// <summary>Returns the response from a matching successful submission inside the dedup window, else null.</summary>
+    private async Task<string?> TryGetRecentSubmissionResponseAsync(string? tin, string payloadHash)
+    {
+        try
+        {
+            var cutoff = DateTime.UtcNow.AddMinutes(-SubmissionDedupWindowMinutes);
+            var record = await _context.SubmissionRecords
+                .Where(s => s.PayloadHash == payloadHash
+                            && s.Tin == tin
+                            && s.SubmittedAtUtc >= cutoff
+                            && s.ResponseContent != null)
+                .OrderByDescending(s => s.SubmittedAtUtc)
+                .FirstOrDefaultAsync();
+            return record?.ResponseContent;
+        }
+        catch (Exception ex)
+        {
+            // Idempotency is a best-effort safety net — never let it block a real submission.
+            _logger.LogWarning(ex, "Submission idempotency lookup failed; proceeding without it.");
+            return null;
+        }
+    }
+
+    /// <summary>Records a successful submission so an identical retry within the window is short-circuited.</summary>
+    private async Task RecordSubmissionAsync(string? tin, string payloadHash, int documentCount, string responseContent)
+    {
+        try
+        {
+            _context.SubmissionRecords.Add(new eInvWorld.Models.Background.SubmissionRecord
+            {
+                Tin = tin,
+                PayloadHash = payloadHash,
+                DocumentCount = documentCount,
+                SubmittedAtUtc = DateTime.UtcNow,
+                ResponseContent = responseContent
+            });
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record submission idempotency row (non-fatal).");
         }
     }
 
