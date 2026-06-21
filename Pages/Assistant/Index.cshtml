@@ -28,18 +28,32 @@
 <div class="row">
     <div class="col-md-6">
         <div class="card mb-3">
-            <div class="card-header">💬 Ask a question</div>
+            <div class="card-header">💬 Ask a question <small class="text-muted">(keeps context)</small></div>
             <div class="card-body">
+                @if (Model.Conversation.Count > 0)
+                {
+                    <div class="mb-2" style="max-height:320px; overflow-y:auto;">
+                        @foreach (var turn in Model.Conversation)
+                        {
+                            var isUser = turn.Role == "user";
+                            <div class="mb-2">
+                                <span class="badge @(isUser ? "bg-primary" : "bg-secondary")">@(isUser ? "You" : "Assistant")</span>
+                                <div class="border rounded p-2 mt-1 @(isUser ? "bg-white" : "bg-light")" style="white-space:pre-wrap;">@turn.Content</div>
+                            </div>
+                        }
+                    </div>
+                    <hr />
+                }
                 <form method="post" asp-page-handler="Ask">
+                    <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
                     <textarea name="Question" class="form-control mb-2" rows="3"
                               placeholder="e.g. When should I use a Credit Note vs a Refund Note?">@Model.Question</textarea>
                     <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Ask</button>
+                    @if (Model.Conversation.Count > 0)
+                    {
+                        <button type="submit" asp-page-handler="NewChat" class="btn btn-outline-secondary">New chat</button>
+                    }
                 </form>
-                @if (!string.IsNullOrEmpty(Model.AnswerText))
-                {
-                    <hr />
-                    <div class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.AnswerText</div>
-                }
             </div>
         </div>
     </div>
@@ -49,6 +63,7 @@
             <div class="card-header">🧾 Suggest an invoice</div>
             <div class="card-body">
                 <form method="post" asp-page-handler="Suggest">
+                    <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
                     <textarea name="Description" class="form-control mb-2" rows="3"
                               placeholder="e.g. Sold 3 laptops to Acme Sdn Bhd in Penang at RM4500 each, 8% SST.">@Model.Description</textarea>
                     <button type="submit" class="btn btn-success" disabled="@(!Model.Enabled)">Suggest invoice</button>
@@ -81,6 +96,28 @@
                     <p class="text-muted mb-1"><small>Review the suggestion below. "Use in Create Invoice form" pre-fills the real form — you still pick the supplier/customer and confirm everything before saving. Nothing is submitted automatically.</small></p>
                     <pre id="suggestionJson" class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.SuggestionJson</pre>
                     <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm" disabled="@(Model.Review?.HasErrors ?? false)">✏️ Use in Create Invoice form</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-3">
+            <div class="card-header">🩹 Explain an LHDN rejection</div>
+            <div class="card-body">
+                <p class="text-muted mb-2"><small>Paste the rejection / validation error from MyInvois (or from the invoice's status) and get a plain-English explanation plus how to fix it.</small></p>
+                <form method="post" asp-page-handler="ExplainRejection">
+                    <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
+                    <textarea name="RejectionText" class="form-control mb-2" rows="4"
+                              placeholder="e.g. CF321 - The TIN does not match the registered taxpayer for the supplied registration number.">@Model.RejectionText</textarea>
+                    <button type="submit" class="btn btn-warning" disabled="@(!Model.Enabled)">Explain &amp; suggest fix</button>
+                </form>
+                @if (!string.IsNullOrEmpty(Model.RejectionExplanation))
+                {
+                    <hr />
+                    <div class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.RejectionExplanation</div>
                 }
             </div>
         </div>

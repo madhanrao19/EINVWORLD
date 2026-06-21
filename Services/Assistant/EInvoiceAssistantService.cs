@@ -24,6 +24,9 @@ namespace EINVWORLD.Services.Assistant
         public int TimeoutSeconds { get; set; } = 120;
     }
 
+    /// <summary>One turn of a conversation. <c>Role</c> is "user" or "assistant".</summary>
+    public sealed record ChatTurn(string Role, string Content);
+
     public sealed class AssistantResult
     {
         public bool Ok { get; init; }
@@ -40,6 +43,18 @@ namespace EINVWORLD.Services.Assistant
 
         /// <summary>Answers a free-text question about Malaysian e-invoicing / LHDN MyInvois.</summary>
         Task<AssistantResult> AskAsync(string question, CancellationToken ct = default);
+
+        /// <summary>
+        /// Multi-turn version of <see cref="AskAsync(string,CancellationToken)"/>: continues a conversation
+        /// given the prior turns plus the new question, so the assistant keeps context.
+        /// </summary>
+        Task<AssistantResult> AskAsync(IReadOnlyList<ChatTurn> history, string question, CancellationToken ct = default);
+
+        /// <summary>
+        /// Explains an LHDN MyInvois rejection / validation error in plain English and lists concrete
+        /// steps to fix it. Advisory only — it never resubmits anything.
+        /// </summary>
+        Task<AssistantResult> ExplainRejectionAsync(string rejectionDetails, CancellationToken ct = default);
 
         /// <summary>
         /// Turns a plain-English transaction description into a structured invoice suggestion (JSON)
@@ -94,6 +109,15 @@ namespace EINVWORLD.Services.Assistant
             "Never claim to submit, cancel or change any document — you only advise. " +
             "If you are unsure about a specific LHDN rule, say so rather than guessing.";
 
+        private const string RejectionSystemPrompt =
+            "You help a user of a Malaysian e-invoicing middleware understand an LHDN MyInvois rejection or " +
+            "validation error. Given the raw error details, explain in plain, non-technical English: " +
+            "(1) what each error means, (2) the exact field or value that is wrong, and (3) concrete steps to " +
+            "correct it and resubmit. When you recognise an LHDN error code (e.g. CF321 invalid TIN, " +
+            "CF364/CF366 classification or tax issues, DS302 duplicate submission), give the friendly meaning. " +
+            "If the details are unclear, say what additional information is needed. " +
+            "You only advise — never claim to fix, cancel or resubmit anything yourself.";
+
         private const string SuggestSystemPromptBase =
             "You are an assistant that converts a plain-English sales/purchase description into a suggested " +
             "Malaysian LHDN e-invoice. Respond with ONLY a JSON object, no prose, using this shape: " +
@@ -123,6 +147,32 @@ namespace EINVWORLD.Services.Assistant
 
         public Task<AssistantResult> AskAsync(string question, CancellationToken ct = default)
             => ChatAsync(QaSystemPrompt, question, jsonMode: false, ct);
+
+        public Task<AssistantResult> AskAsync(IReadOnlyList<ChatTurn> history, string question, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(question))
+                return Task.FromResult(AssistantResult.Fail("Please enter a question."));
+
+            var messages = new List<OllamaMessage> { new() { Role = "system", Content = QaSystemPrompt } };
+
+            // Carry a bounded slice of prior turns so the model has context without an unbounded prompt.
+            if (history is { Count: > 0 })
+            {
+                foreach (var turn in history.TakeLast(12))
+                {
+                    if (string.IsNullOrWhiteSpace(turn.Content)) continue;
+                    var role = turn.Role == "assistant" ? "assistant" : "user";
+                    var text = turn.Content.Length > 4000 ? turn.Content[..4000] : turn.Content;
+                    messages.Add(new OllamaMessage { Role = role, Content = text });
+                }
+            }
+
+            messages.Add(new OllamaMessage { Role = "user", Content = question });
+            return ChatMessagesAsync(messages, jsonMode: false, ct);
+        }
+
+        public Task<AssistantResult> ExplainRejectionAsync(string rejectionDetails, CancellationToken ct = default)
+            => ChatAsync(RejectionSystemPrompt, rejectionDetails, jsonMode: false, ct);
 
         public Task<AssistantResult> SuggestInvoiceAsync(
             string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default)
@@ -229,24 +279,30 @@ namespace EINVWORLD.Services.Assistant
             }
         }
 
-        private async Task<AssistantResult> ChatAsync(string systemPrompt, string userInput, bool jsonMode, CancellationToken ct)
+        private Task<AssistantResult> ChatAsync(string systemPrompt, string userInput, bool jsonMode, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(userInput))
+                return Task.FromResult(AssistantResult.Fail("Please enter a question or description."));
+
+            var messages = new List<OllamaMessage>
+            {
+                new() { Role = "system", Content = systemPrompt },
+                new() { Role = "user", Content = userInput }
+            };
+            return ChatMessagesAsync(messages, jsonMode, ct);
+        }
+
+        private async Task<AssistantResult> ChatMessagesAsync(List<OllamaMessage> messages, bool jsonMode, CancellationToken ct)
         {
             if (!_options.Enabled)
                 return AssistantResult.Fail("The AI assistant is disabled. Set AIAssistant:Enabled=true and run a local Ollama model to enable it.");
-
-            if (string.IsNullOrWhiteSpace(userInput))
-                return AssistantResult.Fail("Please enter a question or description.");
 
             var payload = new OllamaChatRequest
             {
                 Model = _options.Model,
                 Stream = false,
                 Format = jsonMode ? "json" : null,
-                Messages = new()
-                {
-                    new OllamaMessage { Role = "system", Content = systemPrompt },
-                    new OllamaMessage { Role = "user", Content = userInput }
-                }
+                Messages = messages
             };
 
             try
