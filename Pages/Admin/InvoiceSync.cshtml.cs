@@ -42,28 +42,13 @@ namespace eInvWorld.Pages.Admin
         {
             string userName = User?.Identity?.Name ?? "System";
 
+            // Enqueue a durable job row; the DurableSyncJobWorker claims and runs it (and retries on
+            // failure / survives an app-pool recycle). No in-memory closure to lose.
             var jobId = await _jobTracker.CreateAsync("admin-sync", SyncJobType.StatusSync, userName);
 
-            await _taskQueue.EnqueueAsync("admin-sync", async token =>
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var tracker = scope.ServiceProvider.GetRequiredService<ISyncJobTracker>();
-                await tracker.MarkRunningAsync(jobId);
-                try
-                {
-                    var syncHelper = scope.ServiceProvider.GetRequiredService<InvoiceSyncHelper>();
-                    var updateResult = await syncHelper.RunInvoiceUpdateAsync(userName);
-                    var finalizeResult = await syncHelper.RunFinalizerAsync(userName);
-                    await tracker.MarkCompletedAsync(jobId, $"{updateResult} | {finalizeResult}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[StatusSync] background job {JobId} failed", jobId);
-                    await tracker.MarkFailedAsync(jobId, ex.Message);
-                }
-            });
-
-            TempData["Message"] = "✅ Invoice sync started in the background. Watch progress on the Sync Jobs page.";
+            TempData["Message"] = jobId > 0
+                ? "✅ Invoice sync queued in the background. Watch progress on the Sync Jobs page."
+                : "⚠️ Could not queue the sync job — the background job table is unavailable. Check the system logs.";
             return RedirectToPage();
         }
 
@@ -90,29 +75,11 @@ namespace eInvWorld.Pages.Admin
             // (a) Admin full import uses the configured LHDN retention window (default 60 days).
             int lookbackDays = _configuration.GetValue<int?>("LHDNApiConfig:SyncRetentionDays") ?? 60;
 
+            var payload = EINVWORLD.Services.Background.SyncJobPayload.Create(lookbackDays);
             foreach (var tin in userTins)
             {
-                var capturedTin = tin; // avoid closure capture of the loop variable
-                var jobId = await _jobTracker.CreateAsync(capturedTin, SyncJobType.FullImport, userName);
-
-                await _taskQueue.EnqueueAsync(capturedTin, async token =>
-                {
-                    using var scope = _scopeFactory.CreateScope();
-                    var tracker = scope.ServiceProvider.GetRequiredService<ISyncJobTracker>();
-                    await tracker.MarkRunningAsync(jobId);
-                    try
-                    {
-                        var syncHelper = scope.ServiceProvider.GetRequiredService<InvoiceSyncHelper>();
-                        var result = await syncHelper.RunFullImportFromLhdnAsync(capturedTin, userName, lookbackDays);
-                        _logger.LogInformation("[ImportAll] TIN {Tin}: {Result}", capturedTin, result);
-                        await tracker.MarkCompletedAsync(jobId, result);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "[ImportAll] TIN {Tin} job {JobId} failed", capturedTin, jobId);
-                        await tracker.MarkFailedAsync(jobId, ex.Message);
-                    }
-                });
+                // One durable job row per TIN; the worker runs them (paced by LhdnRateLimitHandler).
+                await _jobTracker.CreateAsync(tin, SyncJobType.FullImport, userName, payload);
             }
 
             var skippedGeneralTins = allUserTins.Where(GeneralTINHelper.IsGeneralTIN).ToList();

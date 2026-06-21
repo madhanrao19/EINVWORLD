@@ -7,8 +7,10 @@ namespace EINVWORLD.Services.Background
 {
     public interface ISyncJobTracker
     {
-        /// <summary>Creates a job row in the Queued state and returns its id.</summary>
-        Task<int> CreateAsync(string tin, string jobType, string? triggeredBy);
+        /// <summary>Creates a job row in the Queued state and returns its id. The row is the durable
+        /// work item the background worker picks up; <paramref name="payloadJson"/> carries any
+        /// parameters the handler needs (e.g. lookback days).</summary>
+        Task<int> CreateAsync(string tin, string jobType, string? triggeredBy, string? payloadJson = null);
         Task MarkRunningAsync(int jobId);
         Task MarkCompletedAsync(int jobId, string? message, int importedCount = 0, int errorCount = 0);
         Task MarkFailedAsync(int jobId, string? message);
@@ -34,7 +36,7 @@ namespace EINVWORLD.Services.Background
             _log = log;
         }
 
-        public async Task<int> CreateAsync(string tin, string jobType, string? triggeredBy)
+        public async Task<int> CreateAsync(string tin, string jobType, string? triggeredBy, string? payloadJson = null)
         {
             if (_tableMissing) return 0; // tracking disabled until the SyncJobs table exists
             try
@@ -45,7 +47,8 @@ namespace EINVWORLD.Services.Background
                     JobType = jobType,
                     Status = SyncJobStatus.Queued,
                     QueuedAtUtc = DateTime.UtcNow,
-                    TriggeredBy = triggeredBy
+                    TriggeredBy = triggeredBy,
+                    PayloadJson = payloadJson
                 };
                 _db.Set<SyncJob>().Add(job);
                 await _db.SaveChangesAsync();
