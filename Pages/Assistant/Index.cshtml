@@ -1,4 +1,5 @@
 @page
+@using EINVWORLD.Services.Assistant
 @model eInvWorld.Pages.Assistant.IndexModel
 @{
     ViewData["Title"] = "E-Invoice Assistant";
@@ -55,9 +56,31 @@
                 @if (!string.IsNullOrEmpty(Model.SuggestionJson))
                 {
                     <hr />
+                    @if (Model.Review is not null)
+                    {
+                        <div class="mb-2">
+                            <strong>Readiness check</strong>
+                            <ul class="list-unstyled mb-1 mt-1">
+                                @foreach (var item in Model.Review.Items)
+                                {
+                                    var (icon, css) = item.Severity switch
+                                    {
+                                        CheckSeverity.Error => ("❌", "text-danger"),
+                                        CheckSeverity.Warning => ("⚠️", "text-warning"),
+                                        _ => ("✅", "text-success")
+                                    };
+                                    <li class="@css"><span>@icon</span> @item.Message</li>
+                                }
+                            </ul>
+                            @if (Model.Review.HasErrors)
+                            {
+                                <div class="alert alert-danger py-1 px-2 mb-0"><small>This suggestion has blocking issues — fix the description and regenerate before using it.</small></div>
+                            }
+                        </div>
+                    }
                     <p class="text-muted mb-1"><small>Review the suggestion below. "Use in Create Invoice form" pre-fills the real form — you still pick the supplier/customer and confirm everything before saving. Nothing is submitted automatically.</small></p>
                     <pre id="suggestionJson" class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.SuggestionJson</pre>
-                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm">✏️ Use in Create Invoice form</button>
+                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm" disabled="@(Model.Review?.HasErrors ?? false)">✏️ Use in Create Invoice form</button>
                 }
             </div>
         </div>
