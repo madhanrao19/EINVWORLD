@@ -1634,7 +1634,6 @@ namespace EINVWORLD.Pages.Invoices
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc), malaysiaTimeZone);
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetLoadPartyDetailsAsync(int partyId, string partyType)
         {
             try
@@ -1704,7 +1703,6 @@ namespace EINVWORLD.Pages.Invoices
         }
 
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetFilterSuppliersAsync(string docTypeCode = "")
         {
             try
@@ -1747,7 +1745,6 @@ namespace EINVWORLD.Pages.Invoices
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetLoadCustomersAsync(int supplierId, string docTypeCode = "")
         {
             try
@@ -1794,7 +1791,6 @@ namespace EINVWORLD.Pages.Invoices
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetCheckTemplateNameAsync(string templateName)
         {
             try
@@ -1835,7 +1831,6 @@ namespace EINVWORLD.Pages.Invoices
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetGetInvoicesForReferenceAsync(int supplierId)
         {
             try

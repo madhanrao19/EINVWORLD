@@ -71,7 +71,7 @@
    @*  <!-- App favicon -->
     <link rel="shortcut icon" href="~/assets/images/favicon.ico"> *@
 
-    @Html.Partial("_Favicons")
+    @await Html.PartialAsync("_Favicons")
 
 
     <!-- Core CSS -->
@@ -106,7 +106,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-    @Html.Partial("_GoogleAnalytics")
+    @await Html.PartialAsync("_GoogleAnalytics")
 
 </head>
 <body data-logout-reason="@logoutReason">

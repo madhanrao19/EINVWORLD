@@ -181,7 +181,6 @@ namespace EINVWORLD.Pages.Admin.Resources
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnPostUploadImageAsync(IFormFile image)
         {
             if (image == null || image.Length == 0)

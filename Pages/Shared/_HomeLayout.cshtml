@@ -22,7 +22,7 @@
 
 
 
-    @Html.Partial("_Favicons")
+    @await Html.PartialAsync("_Favicons")
 
   @*   <!-- Favicon -->
     <link href="~/img/favicon.ico" rel="icon">
@@ -51,7 +51,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="~/assets/libs/swiper/swiper-bundle.min.css" rel="stylesheet" type="text/css" />
 
-    @Html.Partial("_GoogleAnalytics")
+    @await Html.PartialAsync("_GoogleAnalytics")
 
 </head>
 

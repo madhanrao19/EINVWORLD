@@ -12,7 +12,7 @@
 
     <!-- App favicon -->
     @* <link rel="shortcut icon" href="~/assets/images/favicon.ico"> *@
-    @Html.Partial("_Favicons")
+    @await Html.PartialAsync("_Favicons")
 
     <!-- JavaScript Config -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -55,7 +55,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css" />
 
 
-    @Html.Partial("_GoogleAnalytics")
+    @await Html.PartialAsync("_GoogleAnalytics")
 
     <!-- ✅ Load jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

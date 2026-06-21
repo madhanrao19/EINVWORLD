@@ -1553,7 +1553,6 @@ namespace eInvWorld.Pages.Invoices
             var malaysiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur");
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc), malaysiaTimeZone);
         }
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetLoadPartyDetailsAsync(int partyId, string partyType)
         {
             try
@@ -1613,7 +1612,6 @@ namespace eInvWorld.Pages.Invoices
 
 
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetFilterSuppliersAsync(string docTypeCode = "")
         {
             try
@@ -1656,7 +1654,6 @@ namespace eInvWorld.Pages.Invoices
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetLoadCustomersAsync(int supplierId, string docTypeCode = "")
         {
             try
@@ -1783,7 +1780,6 @@ namespace eInvWorld.Pages.Invoices
             }
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnGetCheckTemplateNameAsync(string templateName)
         {
             try
