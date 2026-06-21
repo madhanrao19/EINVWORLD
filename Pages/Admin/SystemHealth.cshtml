@@ -1,0 +1,74 @@
+@page
+@model eInvWorld.Pages.Admin.SystemHealthModel
+@{
+    ViewData["Title"] = "System Health";
+}
+
+<h3 class="mb-3">🩺 System Health</h3>
+<p class="text-muted">A snapshot for on-prem operators. Times/ages are UTC.</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Application</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">Version</dt><dd class="col-6">@Model.Version</dd>
+                    <dt class="col-6">Environment</dt><dd class="col-6">@Model.Environment</dd>
+                    <dt class="col-6">Runtime</dt><dd class="col-6">@Model.Runtime</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Background jobs</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">Queued</dt><dd class="col-6">@Model.QueuedJobs</dd>
+                    <dt class="col-6">Running</dt><dd class="col-6">@Model.RunningJobs</dd>
+                    <dt class="col-6">Failed</dt>
+                    <dd class="col-6">
+                        <span class="@(Model.FailedJobs > 0 ? "text-danger fw-semibold" : "")">@Model.FailedJobs</span>
+                        @if (Model.FailedJobs > 0)
+                        {
+                            <a asp-page="/Admin/SyncJobs" class="ms-2 small">review</a>
+                        }
+                    </dd>
+                    <dt class="col-6">Oldest queued</dt><dd class="col-6">@Model.OldestQueuedAge</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Data stores</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">Audit rows</dt>
+                    <dd class="col-6">@(Model.AuditRows < 0 ? "unavailable" : Model.AuditRows.ToString("N0"))</dd>
+                    <dt class="col-6">Submission records</dt>
+                    <dd class="col-6">@(Model.SubmissionRecords < 0 ? "unavailable" : Model.SubmissionRecords.ToString("N0"))</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Infrastructure</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5">DataProtection keys</dt><dd class="col-7"><small>@Model.KeyRingStatus</small></dd>
+                    <dt class="col-5">Documents disk</dt><dd class="col-7"><small>@Model.DocumentsDisk</small></dd>
+                    <dt class="col-5">Signing cert</dt>
+                    <dd class="col-7">
+                        <small class="@(Model.SigningCert.Contains("EXPIRED") || Model.SigningCert.Contains("expiring") ? "text-danger fw-semibold" : "")">@Model.SigningCert</small>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
