@@ -297,6 +297,9 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
+    <!-- Pin to a fixed version: a transitive dependency otherwise pulls in the vulnerable
+         System.Security.Cryptography.Xml 4.5.0 (NU1902 / GHSA-vh55-786g-wjwj). -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.0" />
     <!-- SixLabors.ImageSharp removed: v4.0+ requires a paid commercial license, and the 3.x split-license
          is also restrictive for commercial use. Image resize/WebP now done with Magick.NET (Apache-2.0, already referenced). -->
     <PackageReference Include="SkiaSharp" Version="3.119.4" />

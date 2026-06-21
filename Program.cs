@@ -447,7 +447,10 @@ app.Use(async (context, next) =>
         "frame-src https://challenges.cloudflare.com",
         "object-src 'none'",
         "base-uri 'self'",
-        "frame-ancestors 'self'"
+        "frame-ancestors 'self'",
+        // Browsers POST violation reports here so the policy can be tightened from real data before
+        // it is promoted from Report-Only to enforcing. See CspReportController.
+        "report-uri /csp-report"
     });
 
     await next();
