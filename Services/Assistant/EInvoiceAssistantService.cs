@@ -46,6 +46,13 @@ namespace EINVWORLD.Services.Assistant
         /// the user can review before creating a draft. The model never submits anything itself.
         /// </summary>
         Task<AssistantResult> SuggestInvoiceAsync(string description, CancellationToken ct = default);
+
+        /// <summary>
+        /// Validates a suggestion JSON against the real LHDN reference data + basic rules and returns a
+        /// readiness checklist. Catches model hallucinations (bad codes, missing fields) before the
+        /// suggestion is loaded into the form.
+        /// </summary>
+        SuggestionReview ReviewSuggestion(string suggestionJson);
     }
 
     /// <summary>
@@ -61,10 +68,19 @@ namespace EINVWORLD.Services.Assistant
         private readonly IConfiguration _config;
         private readonly ILogger<EInvoiceAssistantService> _log;
 
-        // Classification-code reference (e.g. "001=Breastfeeding equipment; ...") is loaded once and
-        // injected into the suggestion prompt so the model can only choose a real LHDN code.
-        private static volatile string? _cachedClassificationRef;
-        private static readonly object _classificationLock = new();
+        // Reference data (classification + tax codes) is loaded once from the wwwroot JSON files. We keep
+        // both a compact "code=description" string (injected into the prompt so the model can only choose
+        // real codes) and a HashSet of the codes (used to validate the model's output server-side).
+        private static volatile ReferenceData? _cachedReference;
+        private static readonly object _referenceLock = new();
+
+        private sealed class ReferenceData
+        {
+            public string ClassificationRef { get; init; } = string.Empty;
+            public HashSet<string> ClassificationCodes { get; init; } = new();
+            public string TaxRef { get; init; } = string.Empty;
+            public HashSet<string> TaxCodes { get; init; } = new();
+        }
 
         private const string QaSystemPrompt =
             "You are an assistant for a Malaysian e-invoicing middleware that integrates with LHDN MyInvois. " +
@@ -107,58 +123,87 @@ namespace EINVWORLD.Services.Assistant
         public Task<AssistantResult> SuggestInvoiceAsync(string description, CancellationToken ct = default)
             => ChatAsync(BuildSuggestSystemPrompt(), description, jsonMode: true, ct);
 
-        private string BuildSuggestSystemPrompt()
+        public SuggestionReview ReviewSuggestion(string suggestionJson)
         {
-            var codes = GetClassificationReference();
-            if (string.IsNullOrEmpty(codes)) return SuggestSystemPromptBase;
-
-            return SuggestSystemPromptBase +
-                " The \"classificationCode\" MUST be exactly one of the codes from this LHDN classification list " +
-                "(use only the 3-digit code on the left of '='); choose the single closest match, and if nothing " +
-                "fits well use \"022\" (Others). List: " + codes;
+            var reference = GetReference();
+            var suggestion = InvoiceSuggestionValidator.TryParse(suggestionJson);
+            return InvoiceSuggestionValidator.Review(suggestion, reference.ClassificationCodes, reference.TaxCodes);
         }
 
-        /// <summary>Loads the LHDN classification codes once and caches a compact "code=description" reference.</summary>
-        private string GetClassificationReference()
+        private string BuildSuggestSystemPrompt()
         {
-            if (_cachedClassificationRef != null) return _cachedClassificationRef;
-            lock (_classificationLock)
+            var reference = GetReference();
+            var prompt = SuggestSystemPromptBase;
+
+            if (!string.IsNullOrEmpty(reference.ClassificationRef))
+                prompt += " The \"classificationCode\" MUST be exactly one of the codes from this LHDN classification list " +
+                          "(use only the 3-digit code on the left of '='); choose the single closest match, and if nothing " +
+                          "fits well use \"022\" (Others). List: " + reference.ClassificationRef;
+
+            if (!string.IsNullOrEmpty(reference.TaxRef))
+                prompt += " The \"taxType\" MUST be one of these LHDN tax codes (use only the code on the left of '='): "
+                          + reference.TaxRef;
+
+            return prompt;
+        }
+
+        /// <summary>Loads the LHDN classification + tax codes once and caches compact references and code sets.</summary>
+        private ReferenceData GetReference()
+        {
+            if (_cachedReference != null) return _cachedReference;
+            lock (_referenceLock)
             {
-                if (_cachedClassificationRef != null) return _cachedClassificationRef;
-                try
-                {
-                    var rel = _config["CodeFilePaths:ClassificationCodes"] ?? "codes/ClassificationCodes.json";
-                    rel = rel.Replace('/', Path.DirectorySeparatorChar);
-                    var webRoot = string.IsNullOrEmpty(_env.WebRootPath)
-                        ? Path.Combine(_env.ContentRootPath, "wwwroot")
-                        : _env.WebRootPath;
-                    var path = Path.Combine(webRoot, rel);
+                if (_cachedReference != null) return _cachedReference;
 
-                    if (!File.Exists(path))
-                    {
-                        _log.LogWarning("Assistant: classification codes file not found at {Path}", path);
-                        _cachedClassificationRef = string.Empty;
-                        return _cachedClassificationRef;
-                    }
+                var (classRef, classCodes) = LoadCodes("CodeFilePaths:ClassificationCodes", "codes/ClassificationCodes.json");
+                var (taxRef, taxCodes) = LoadCodes("CodeFilePaths:TaxTypes", "codes/TaxTypes.json");
 
-                    var json = File.ReadAllText(path);
-                    var codes = JsonSerializer.Deserialize<List<ClassificationCodeDto>>(json) ?? new();
-                    var sb = new StringBuilder();
-                    foreach (var c in codes)
-                    {
-                        if (string.IsNullOrWhiteSpace(c.Code)) continue;
-                        var desc = (c.Description ?? string.Empty).Trim();
-                        if (desc.Length > 90) desc = desc.Substring(0, 90);
-                        sb.Append(c.Code.Trim()).Append('=').Append(desc).Append("; ");
-                    }
-                    _cachedClassificationRef = sb.ToString().TrimEnd();
-                }
-                catch (Exception ex)
+                _cachedReference = new ReferenceData
                 {
-                    _log.LogWarning(ex, "Assistant: failed to load classification codes; suggestions will omit the code list.");
-                    _cachedClassificationRef = string.Empty;
+                    ClassificationRef = classRef,
+                    ClassificationCodes = classCodes,
+                    TaxRef = taxRef,
+                    TaxCodes = taxCodes
+                };
+                return _cachedReference;
+            }
+        }
+
+        /// <summary>Reads a {Code,Description} JSON code file into a compact "code=desc; ..." string and a code set.</summary>
+        private (string Reference, HashSet<string> Codes) LoadCodes(string configKey, string defaultRelPath)
+        {
+            var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var rel = (_config[configKey] ?? defaultRelPath).Replace('/', Path.DirectorySeparatorChar);
+                var webRoot = string.IsNullOrEmpty(_env.WebRootPath)
+                    ? Path.Combine(_env.ContentRootPath, "wwwroot")
+                    : _env.WebRootPath;
+                var path = Path.Combine(webRoot, rel);
+
+                if (!File.Exists(path))
+                {
+                    _log.LogWarning("Assistant: code file not found at {Path}", path);
+                    return (string.Empty, codes);
                 }
-                return _cachedClassificationRef;
+
+                var list = JsonSerializer.Deserialize<List<ClassificationCodeDto>>(File.ReadAllText(path)) ?? new();
+                var sb = new StringBuilder();
+                foreach (var c in list)
+                {
+                    if (string.IsNullOrWhiteSpace(c.Code)) continue;
+                    var code = c.Code.Trim();
+                    codes.Add(code);
+                    var desc = (c.Description ?? string.Empty).Trim();
+                    if (desc.Length > 90) desc = desc.Substring(0, 90);
+                    sb.Append(code).Append('=').Append(desc).Append("; ");
+                }
+                return (sb.ToString().TrimEnd(), codes);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Assistant: failed to load code file {Key}; that grounding/validation will be skipped.", configKey);
+                return (string.Empty, codes);
             }
         }
 
