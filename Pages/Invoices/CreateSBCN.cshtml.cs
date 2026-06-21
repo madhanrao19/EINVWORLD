@@ -620,10 +620,31 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 // ✅ Fetch invoice from database
-                var existingInvoice = _context.InvoiceHeaders.FirstOrDefault(i => i.InvoiceNo == invoiceNo);
+                var existingInvoice = _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .FirstOrDefault(i => i.InvoiceNo == invoiceNo);
                 if (existingInvoice == null)
                 {
                     ModelState.AddModelError(string.Empty, "Credit Note not found.");
+                    return Page();
+                }
+
+                // Double-submit guard: a document that already has a MyInvois UUID was submitted —
+                // resubmitting would create a duplicate e-invoice at LHDN.
+                if (!string.IsNullOrWhiteSpace(existingInvoice.UUID))
+                {
+                    ModelState.AddModelError(string.Empty, $"Document {invoiceNo} has already been submitted to LHDN (UUID {existingInvoice.UUID}); it cannot be submitted again.");
+                    return Page();
+                }
+
+                // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
+                // ownership check (consistent with Create Invoice); falls back to the session token if null.
+                var submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(existingInvoice);
+                if (!string.IsNullOrWhiteSpace(submitterTin)
+                    && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
+                {
+                    ModelState.AddModelError(string.Empty, "You are not authorized to submit this document.");
                     return Page();
                 }
 
@@ -657,8 +678,17 @@ namespace EINVWORLD.Pages.Invoices
                     return Page();
                 }
 
+                // Atomic double-submit guard: only one concurrent request wins this claim; others are
+                // blocked here so the document can't be posted to LHDN twice.
+                if (!await EINVWORLD.Helpers.InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
+                {
+                    _logger.LogWarning("[Guard] Concurrent submit blocked for {InvoiceNo}.", invoiceNo);
+                    ModelState.AddModelError(string.Empty, $"Document {invoiceNo} is already being submitted. Please wait a moment and try again.");
+                    return Page();
+                }
+
                 // ✅ Submit the invoice to LHDN API
-                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
+                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, submitterTin);
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
 
                 if (apiResponse.acceptedDocuments.Any())
@@ -706,6 +736,7 @@ namespace EINVWORLD.Pages.Invoices
             }
             catch (Exception ex)
             {
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError(ex, "Exception during submission of Invoice {InvoiceNo}", invoiceNo);
                 SubmissionResult = $"Error submitting Invoice {invoiceNo}.";
                 return Page();
