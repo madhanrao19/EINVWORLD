@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using eInvWorld.Data;
+using eInvWorld.Helpers;
 using EINVWORLD.Services.Assistant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,13 @@ namespace eInvWorld.Pages.Assistant
 
         private readonly IEInvoiceAssistantService _assistant;
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(IEInvoiceAssistantService assistant, ApplicationDbContext context)
+        public IndexModel(IEInvoiceAssistantService assistant, ApplicationDbContext context, ILogger<IndexModel> logger)
         {
             _assistant = assistant;
             _context = context;
+            _logger = logger;
         }
 
         public bool Enabled => _assistant.IsEnabled;
@@ -94,6 +97,19 @@ namespace eInvWorld.Pages.Assistant
                 SuggestionJson = result.Content;
                 // Validate the model's output against real LHDN codes + the user's customers before they act on it.
                 Review = _assistant.ReviewSuggestion(result.Content, knownBuyers.Select(b => b.Tin).ToList());
+
+                // Audit that the AI assistant was used to draft an invoice (best-effort; never blocks the feature).
+                try
+                {
+                    var summary = (Description ?? string.Empty).Trim();
+                    if (summary.Length > 500) summary = summary[..500];
+                    await UserActivityLogger.LogAsync(_context, HttpContext,
+                        action: "AI invoice suggestion generated", module: "AI Assistant", data: summary);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to write AI-assistant activity log (non-fatal).");
+                }
             }
             else
             {
