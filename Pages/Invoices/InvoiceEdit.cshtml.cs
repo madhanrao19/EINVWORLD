@@ -1233,6 +1233,15 @@ namespace eInvWorld.Pages.Invoices
                     return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
                 }
 
+                // Double-submit guard: an invoice that already has a MyInvois UUID was submitted —
+                // resubmitting would create a duplicate e-invoice at LHDN.
+                if (!string.IsNullOrWhiteSpace(existingInvoice.UUID))
+                {
+                    var msg = $"Invoice {invoiceNo} has already been submitted to LHDN (UUID {existingInvoice.UUID}); it cannot be submitted again.";
+                    _logger.LogWarning("[Guard] Double-submit blocked for {InvoiceNo} (UUID {UUID}).", invoiceNo, existingInvoice.UUID);
+                    return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
+                }
+
                 var issueDate = existingInvoice.IssueDate;
                 var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 if ((now - issueDate)?.TotalDays > 3)

@@ -753,6 +753,14 @@ namespace EINVWORLD.Pages.Invoices
                     return Page();
                 }
 
+                // Double-submit guard: a document that already has a MyInvois UUID was submitted —
+                // resubmitting would create a duplicate e-invoice at LHDN.
+                if (!string.IsNullOrWhiteSpace(existingInvoice.UUID))
+                {
+                    ModelState.AddModelError(string.Empty, $"Document {invoiceNo} has already been submitted to LHDN (UUID {existingInvoice.UUID}); it cannot be submitted again.");
+                    return Page();
+                }
+
                 // ✅ Construct the draft file path
                 var draftFilePath = Path.Combine(_filePathConfig.DraftFolder, $"{invoiceNo}.json");
 
