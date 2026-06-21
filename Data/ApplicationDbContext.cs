@@ -70,6 +70,9 @@ namespace eInvWorld.Data
         // --- Submission idempotency (local duplicate-submission guard) ---
         public DbSet<eInvWorld.Models.Background.SubmissionRecord> SubmissionRecords { get; set; }
 
+        // --- Tamper-evident audit trail (hash-chained, append-only) ---
+        public DbSet<eInvWorld.Models.Audit.AuditLog> AuditLogs { get; set; }
+
         //for dashboard
         public DbSet<InvoiceTopProduct> InvoiceTopProducts { get; set; }
         public DbSet<InvoiceKpiSummary> InvoiceKpiSummaries { get; set; }
@@ -222,6 +225,12 @@ namespace eInvWorld.Data
             modelBuilder.Entity<eInvWorld.Models.Background.SubmissionRecord>(b =>
             {
                 b.HasIndex(s => new { s.PayloadHash, s.SubmittedAtUtc });
+            });
+
+            modelBuilder.Entity<eInvWorld.Models.Audit.AuditLog>(b =>
+            {
+                b.HasIndex(a => a.CreatedAtUtc);
+                b.HasIndex(a => a.Action);
             });
 
             modelBuilder.Entity<PartyInfo>()
