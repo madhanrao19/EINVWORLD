@@ -7,7 +7,7 @@
 }
 
 <partial name="_StatusMessage" for="StatusMessage" />
-@if (HttpContextAccessor.HttpContext?.Request.Query["mfaRequired"] == "true")
+@if (HttpContextAccessor.HttpContext?.Request.Query["mfaRequired"].ToString() == "true")
 {
     <div class="alert alert-warning">
         <strong>Two-factor authentication is required for administrator accounts.</strong>
