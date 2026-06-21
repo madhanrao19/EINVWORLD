@@ -10,6 +10,7 @@
         SyncJobStatus.Running => "bg-primary",
         SyncJobStatus.Queued => "bg-secondary",
         SyncJobStatus.Failed => "bg-danger",
+        SyncJobStatus.Cancelled => "bg-warning text-dark",
         _ => "bg-light text-dark"
     };
 
@@ -39,6 +40,11 @@
     </div>
 </div>
 
+@if (TempData["Message"] is string msg)
+{
+    <div class="alert alert-info py-2">@msg</div>
+}
+
 <p class="text-muted">Showing the latest 100 jobs. Times are UTC.</p>
 
 <div class="table-responsive">
@@ -53,12 +59,13 @@
                 <th>Duration</th>
                 <th>Result</th>
                 <th>By</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             @if (!Model.Jobs.Any())
             {
-                <tr><td colspan="8" class="text-center text-muted">No sync jobs yet.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted">No sync jobs yet.</td></tr>
             }
             @foreach (var j in Model.Jobs)
             {
@@ -66,11 +73,32 @@
                     <td>@j.Id</td>
                     <td>@j.JobType</td>
                     <td>@j.Tin</td>
-                    <td><span class="badge @BadgeClass(j.Status)">@j.Status</span></td>
+                    <td><span class="badge @BadgeClass(j.Status)">@j.Status</span>
+                        @if (j.AttemptCount > 1)
+                        {
+                            <span class="text-muted ms-1" title="Attempts">×@j.AttemptCount</span>
+                        }
+                    </td>
                     <td>@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
                     <td>@Dur(j)</td>
                     <td style="max-width:480px;"><small>@j.Message</small></td>
                     <td><small>@j.TriggeredBy</small></td>
+                    <td>
+                        @if (j.Status == SyncJobStatus.Failed)
+                        {
+                            <form method="post" asp-page-handler="Retry" class="d-inline">
+                                <input type="hidden" name="id" value="@j.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-primary py-0">Retry</button>
+                            </form>
+                        }
+                        else if (j.Status == SyncJobStatus.Queued)
+                        {
+                            <form method="post" asp-page-handler="Cancel" class="d-inline">
+                                <input type="hidden" name="id" value="@j.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0">Cancel</button>
+                            </form>
+                        }
+                    </td>
                 </tr>
             }
         </tbody>
