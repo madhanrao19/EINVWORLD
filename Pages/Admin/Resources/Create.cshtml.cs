@@ -146,7 +146,6 @@ namespace EINVWORLD.Pages.Admin.Resources
             return RedirectToPage("/Admin/Resources/Manage");
         }
 
-        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> OnPostUploadImageAsync(IFormFile image)
         {
             if (image == null || image.Length == 0)
