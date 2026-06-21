@@ -37,7 +37,6 @@ namespace eInvWorld.Pages
             ViewData["TurnstileSiteKey"] = _configuration["Turnstile:SiteKey"];
         }
 
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostAsync()
         {
             var turnstileResponse = Request.Form["cf-turnstile-response"].FirstOrDefault();
