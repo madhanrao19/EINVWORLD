@@ -29,6 +29,7 @@ public class LHDNApiService : ILHDNApiService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
     private readonly eInvWorld.Services.IDocumentSigningService _signingService;
+    private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
     public LHDNApiService(
         HttpClient httpClient,
@@ -38,7 +39,8 @@ public class LHDNApiService : ILHDNApiService
         IHttpContextAccessor httpContextAccessor,
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
-        eInvWorld.Services.IDocumentSigningService signingService)
+        eInvWorld.Services.IDocumentSigningService signingService,
+        EINVWORLD.Services.Audit.IAuditService audit)
     {
         _httpClient = httpClient;
         _tokenService = tokenService;
@@ -47,6 +49,7 @@ public class LHDNApiService : ILHDNApiService
         _userManager = userManager;
         _context = context;
         _signingService = signingService;
+        _audit = audit;
 
         var lhdnApiConfig = configuration.GetSection("LHDNApiConfig");
         _httpClient.BaseAddress = new Uri(lhdnApiConfig["BaseUrl"] ?? throw new InvalidOperationException("Missing configuration: LHDNApiConfig:BaseUrl"));
@@ -248,6 +251,12 @@ public class LHDNApiService : ILHDNApiService
                 {
                     _logger.LogInformation("✅ Accepted document(s): {Accepted}", accepted.ToString());
                     await RecordSubmissionAsync(tin, payloadHash, documents.Count, responseContent);
+                    await _audit.WriteAsync("InvoiceSubmitted", new EINVWORLD.Services.Audit.AuditEntry
+                    {
+                        Tin = tin,
+                        InvoiceNo = string.Join(",", documents.Select(d => d.CodeNumber)),
+                        NewValueJson = accepted.ToString()
+                    });
                     return responseContent;
                 }
 
@@ -389,6 +398,13 @@ public class LHDNApiService : ILHDNApiService
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException($"❌ Reject failed: {response.StatusCode} - {responseContent}");
 
+        await _audit.WriteAsync("DocumentRejected", new EINVWORLD.Services.Audit.AuditEntry
+        {
+            Tin = tin,
+            Uuid = documentId,
+            NewValueJson = JsonConvert.SerializeObject(new { reason = rejectionReason })
+        });
+
         return responseContent;
     }
 
@@ -418,6 +434,13 @@ public class LHDNApiService : ILHDNApiService
 
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException($"Cancel failed: {response.StatusCode} - {responseContent}");
+
+        await _audit.WriteAsync("DocumentCancelled", new EINVWORLD.Services.Audit.AuditEntry
+        {
+            Tin = tin,
+            Uuid = documentId,
+            NewValueJson = JsonConvert.SerializeObject(new { reason = cancellationReason })
+        });
 
         return responseContent;
     }

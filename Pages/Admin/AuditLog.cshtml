@@ -1,0 +1,62 @@
+@page
+@model eInvWorld.Pages.Admin.AuditLogModel
+@{
+    ViewData["Title"] = "Audit Trail";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>🔐 Audit Trail</h3>
+    <form method="post" asp-page-handler="Verify">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Verify chain integrity</button>
+    </form>
+</div>
+
+@if (Model.Verification is not null)
+{
+    <div class="alert @(Model.Verification.Ok ? "alert-success" : "alert-danger")">
+        @(Model.Verification.Ok ? "✅ " : "⚠️ ")@Model.Verification.Message
+        @if (!Model.Verification.Ok && Model.Verification.FirstBrokenId is long brokenId)
+        {
+            <text> (first broken row: #@brokenId)</text>
+        }
+    </div>
+}
+
+<p class="text-muted">
+    Append-only, hash-chained. Each row's hash is computed over its contents plus the previous row's hash,
+    so any insert, delete, or edit breaks the chain. Showing the latest 100 entries. Times are UTC.
+</p>
+
+<div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>When (UTC)</th>
+                <th>Action</th>
+                <th>User</th>
+                <th>TIN</th>
+                <th>Invoice / UUID</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Entries.Any())
+            {
+                <tr><td colspan="7" class="text-center text-muted">No audit entries yet.</td></tr>
+            }
+            @foreach (var e in Model.Entries)
+            {
+                <tr>
+                    <td>@e.Id</td>
+                    <td>@e.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td><span class="badge bg-secondary">@e.Action</span></td>
+                    <td><small>@e.UserName</small></td>
+                    <td><small>@e.Tin</small></td>
+                    <td><small>@(e.InvoiceNo ?? e.Uuid)</small></td>
+                    <td><small>@e.IpAddress</small></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

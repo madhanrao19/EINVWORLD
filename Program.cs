@@ -101,6 +101,9 @@ builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWO
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SupplierRefreshJobHandler>();
 builder.Services.AddHostedService<EINVWORLD.Services.Background.DurableSyncJobWorker>();
 
+// Tamper-evident, hash-chained audit trail.
+builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();
+
 
 // 🔐 Data Protection (Persist Keys)
 // IMPORTANT: keep the key ring OUTSIDE the deployable App folder, otherwise a redeploy that clears
