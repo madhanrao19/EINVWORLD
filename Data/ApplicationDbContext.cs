@@ -67,6 +67,9 @@ namespace eInvWorld.Data
         // --- Background sync/import job tracking ---
         public DbSet<eInvWorld.Models.Background.SyncJob> SyncJobs { get; set; }
 
+        // --- Submission idempotency (local duplicate-submission guard) ---
+        public DbSet<eInvWorld.Models.Background.SubmissionRecord> SubmissionRecords { get; set; }
+
         //for dashboard
         public DbSet<InvoiceTopProduct> InvoiceTopProducts { get; set; }
         public DbSet<InvoiceKpiSummary> InvoiceKpiSummaries { get; set; }
@@ -213,6 +216,12 @@ namespace eInvWorld.Data
             modelBuilder.Entity<InvoiceHistory>(b =>
             {
                 b.HasIndex(h => h.InvoiceNo);
+            });
+
+            // Idempotency lookup: WHERE (Tin,) PayloadHash = ... AND SubmittedAtUtc >= window.
+            modelBuilder.Entity<eInvWorld.Models.Background.SubmissionRecord>(b =>
+            {
+                b.HasIndex(s => new { s.PayloadHash, s.SubmittedAtUtc });
             });
 
             modelBuilder.Entity<PartyInfo>()

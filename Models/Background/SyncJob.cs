@@ -38,6 +38,30 @@ namespace eInvWorld.Models.Background
 
         [MaxLength(256)]
         public string? TriggeredBy { get; set; }
+
+        // ── Durable-queue fields ──────────────────────────────────────────────────────────
+        // The row IS the work item: a durable worker polls Queued rows, claims one (LockedBy/
+        // LockedUntilUtc), runs it, and retries with backoff (AttemptCount/MaxAttempts/NextRunAtUtc)
+        // so a job survives an IIS app-pool recycle / server reboot instead of vanishing.
+
+        /// <summary>Number of times execution has been attempted (incremented on each claim).</summary>
+        public int AttemptCount { get; set; }
+
+        /// <summary>Give up and mark Failed after this many attempts.</summary>
+        public int MaxAttempts { get; set; } = 3;
+
+        /// <summary>Earliest time the job may run. NULL = run as soon as possible (used for retry backoff).</summary>
+        public DateTime? NextRunAtUtc { get; set; }
+
+        /// <summary>Worker instance that currently holds the job (machine:pid). NULL when not running.</summary>
+        [MaxLength(100)]
+        public string? LockedBy { get; set; }
+
+        /// <summary>Lock expiry; a Running job past this (or any Running job after a restart) is recovered.</summary>
+        public DateTime? LockedUntilUtc { get; set; }
+
+        /// <summary>Optional JSON parameters the handler needs (e.g. {"lookbackDays":60}).</summary>
+        public string? PayloadJson { get; set; }
     }
 
     public static class SyncJobStatus
@@ -46,6 +70,7 @@ namespace eInvWorld.Models.Background
         public const string Running = "Running";
         public const string Completed = "Completed";
         public const string Failed = "Failed";
+        public const string Cancelled = "Cancelled";
     }
 
     public static class SyncJobType
