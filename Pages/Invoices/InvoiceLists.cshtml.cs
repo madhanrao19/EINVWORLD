@@ -376,31 +376,12 @@ namespace eInvWorld.Pages.Invoices
 
                     string refreshUserName = User?.Identity?.Name ?? "System";
 
-                    // 3. Enqueue one paced background import per TIN; the request returns right away.
+                    // 3. Enqueue one durable background import per TIN; the request returns right away.
+                    //    Supplier-initiated refresh is capped to a short 7-day lookback window.
+                    var refreshPayload = EINVWORLD.Services.Background.SyncJobPayload.Create(7);
                     foreach (var tin in refreshTins)
                     {
-                        var capturedTin = tin; // avoid closure capture of the loop variable
-                        var jobId = await _jobTracker.CreateAsync(capturedTin, SyncJobType.SupplierRefresh, refreshUserName);
-
-                        await _taskQueue.EnqueueAsync(capturedTin, async token =>
-                        {
-                            using var scope = _serviceScopeFactory.CreateScope();
-                            var tracker = scope.ServiceProvider.GetRequiredService<ISyncJobTracker>();
-                            await tracker.MarkRunningAsync(jobId);
-                            try
-                            {
-                                var syncHelper = scope.ServiceProvider.GetRequiredService<InvoiceSyncHelper>();
-                                // Supplier-initiated refresh is capped to a short 7-day lookback window.
-                                var result = await syncHelper.RunFullImportFromLhdnAsync(capturedTin, refreshUserName, lookbackDays: 7);
-                                _logger.LogInformation("[Refresh] TIN {Tin}: {Result}", capturedTin, result);
-                                await tracker.MarkCompletedAsync(jobId, result);
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "[Refresh] TIN {Tin} job {JobId} failed", capturedTin, jobId);
-                                await tracker.MarkFailedAsync(jobId, ex.Message);
-                            }
-                        });
+                        await _jobTracker.CreateAsync(tin, SyncJobType.SupplierRefresh, refreshUserName, refreshPayload);
                     }
 
                     TempData["Message"] = $"✅ Refresh started for {refreshTins.Count} company(ies). It runs in the background — reload this list in a moment to see the latest invoices.";

@@ -411,6 +411,39 @@ namespace eInvWorld.Migrations
                     b.ToTable("LHDNTokens");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.Background.SubmissionRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DocumentCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ResponseContent")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Tin")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayloadHash", "SubmittedAtUtc");
+
+                    b.ToTable("SubmissionRecords");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.Background.SyncJob", b =>
                 {
                     b.Property<int>("Id")
@@ -418,6 +451,9 @@ namespace eInvWorld.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
 
                     b.Property<int>("ErrorCount")
                         .HasColumnType("int");
@@ -433,9 +469,25 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<string>("LockedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
                     b.Property<string>("Message")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("NextRunAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PayloadJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("QueuedAtUtc")
                         .HasColumnType("datetime2");
@@ -458,6 +510,8 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextRunAtUtc");
 
                     b.ToTable("SyncJobs");
                 });
