@@ -128,7 +128,11 @@ namespace eInvWorld.Pages.Assistant
             return Page();
         }
 
-        /// <summary>The customers the current user is allowed to invoice (PartyInfos linked via SupplierBuyers).</summary>
+        /// <summary>
+        /// The customers the current user is allowed to invoice — both registered buyers (PartyInfo) and
+        /// public customers (PublicCustomer), linked via SupplierBuyers. Matches the buyer set the Create
+        /// Invoice form offers, so the assistant grounds/validates against the same customers.
+        /// </summary>
         private async Task<List<KnownBuyer>> LoadKnownBuyersAsync(CancellationToken ct)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -140,16 +144,33 @@ namespace eInvWorld.Pages.Assistant
                 .ToListAsync(ct);
             if (companyIds.Count == 0) return new();
 
-            var rows = await _context.PartyInfos
+            // Registered buyers (PartyInfo) linked to the user's companies.
+            var partyRows = await _context.PartyInfos
                 .Where(p => _context.SupplierBuyers.Any(sb => companyIds.Contains(sb.SupplierId) && sb.BuyerId == p.PartyInfoId))
                 .Select(p => new { p.CompanyName, p.TIN })
                 .Take(200)
                 .ToListAsync(ct);
 
-            return rows
-                .Where(r => !string.IsNullOrWhiteSpace(r.TIN))
-                .Select(r => new KnownBuyer(r.CompanyName ?? string.Empty, r.TIN!))
-                .ToList();
+            // Public customers linked to the user's companies (otherwise valid buyers would be unmatched).
+            var publicRows = await _context.PublicCustomers
+                .Where(pc => _context.SupplierBuyers.Any(sb => companyIds.Contains(sb.SupplierId) && sb.PublicCustomerId == pc.PublicCustomerId))
+                .Select(pc => new { pc.CompanyName, pc.TIN })
+                .Take(200)
+                .ToListAsync(ct);
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var buyers = new List<KnownBuyer>();
+
+            void Add(string? name, string? tin)
+            {
+                if (string.IsNullOrWhiteSpace(tin) || !seen.Add(tin)) return;
+                buyers.Add(new KnownBuyer(name ?? string.Empty, tin));
+            }
+
+            foreach (var r in partyRows) Add(r.CompanyName, r.TIN);
+            foreach (var r in publicRows) Add(r.CompanyName, r.TIN);
+
+            return buyers;
         }
 
         private static List<ChatTurn> ParseHistory(string? json)
