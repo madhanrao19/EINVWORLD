@@ -101,6 +101,9 @@ builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWO
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SupplierRefreshJobHandler>();
 builder.Services.AddHostedService<EINVWORLD.Services.Background.DurableSyncJobWorker>();
 
+// Tamper-evident, hash-chained audit trail.
+builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();
+
 
 // 🔐 Data Protection (Persist Keys)
 // IMPORTANT: keep the key ring OUTSIDE the deployable App folder, otherwise a redeploy that clears
@@ -444,7 +447,10 @@ app.Use(async (context, next) =>
         "frame-src https://challenges.cloudflare.com",
         "object-src 'none'",
         "base-uri 'self'",
-        "frame-ancestors 'self'"
+        "frame-ancestors 'self'",
+        // Browsers POST violation reports here so the policy can be tightened from real data before
+        // it is promoted from Report-Only to enforcing. See CspReportController.
+        "report-uri /csp-report"
     });
 
     await next();
