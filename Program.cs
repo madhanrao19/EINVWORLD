@@ -145,9 +145,11 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // Add API Controllers support
 builder.Services.AddMemoryCache(); // Backs the LHDN token cache (TokenService)
 
-// Health checks (DB connectivity) — exposed at /health for uptime monitoring on the in-house server.
+// Health checks — split into liveness (process alive) and readiness (can do real work).
+// "ready"-tagged checks gate /health/ready; /health/live has none (just confirms the process responds).
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ApplicationDbContext>(name: "database");
+    .AddDbContextCheck<ApplicationDbContext>(name: "database", tags: new[] { "ready" })
+    .AddCheck<EINVWORLD.Helpers.HealthChecks.WritableFoldersHealthCheck>("writable-folders", tags: new[] { "ready" });
 builder.Services.AddScoped<IStatusMappingService, StatusMappingService>();
 builder.Services.AddScoped<GlobalThemeService>();
 builder.Services.AddHostedService<InvoiceStatusUpdater>();
@@ -469,7 +471,18 @@ app.UseMiddleware<eInvWorld.Services.Middleware.UserContextMiddleware>();
 // Map API Controllers (for ThemeController and other API endpoints)
 app.MapControllers();
 
-// Liveness/DB health endpoint for uptime monitoring (anonymous).
+// Health endpoints for uptime monitoring (anonymous).
+//   /health/live  — process is up (no dependency checks); use for IIS App Initialization / liveness probes.
+//   /health/ready — DB reachable + required folders writable; use to gate "is it safe to send traffic".
+//   /health       — kept for backward compatibility (runs all checks).
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // no checks — liveness only
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
 app.MapHealthChecks("/health").AllowAnonymous();
 
 app.MapRazorPages();
