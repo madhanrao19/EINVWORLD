@@ -476,6 +476,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<eInvWorld.Services.Middleware.UserContextMiddleware>();
 
+// Enforce 2FA for the Admin role (block-until-enrolled). Placed after auth so User/roles are populated.
+app.UseMiddleware<eInvWorld.Services.Middleware.AdminMfaEnforcementMiddleware>();
+
 // Map API Controllers (for ThemeController and other API endpoints)
 app.MapControllers();
 
