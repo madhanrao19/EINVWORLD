@@ -44,15 +44,19 @@ namespace EINVWORLD.Services.Assistant
         /// <summary>
         /// Turns a plain-English transaction description into a structured invoice suggestion (JSON)
         /// the user can review before creating a draft. The model never submits anything itself.
+        /// When <paramref name="knownBuyers"/> is supplied, the model is told to pick the buyer from that
+        /// list (the user's real customers) and use its exact TIN, rather than inventing one.
         /// </summary>
-        Task<AssistantResult> SuggestInvoiceAsync(string description, CancellationToken ct = default);
+        Task<AssistantResult> SuggestInvoiceAsync(
+            string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default);
 
         /// <summary>
         /// Validates a suggestion JSON against the real LHDN reference data + basic rules and returns a
         /// readiness checklist. Catches model hallucinations (bad codes, missing fields) before the
-        /// suggestion is loaded into the form.
+        /// suggestion is loaded into the form. When <paramref name="knownBuyerTins"/> is supplied, the
+        /// buyer TIN is checked against the user's real customers.
         /// </summary>
-        SuggestionReview ReviewSuggestion(string suggestionJson);
+        SuggestionReview ReviewSuggestion(string suggestionJson, IReadOnlyCollection<string>? knownBuyerTins = null);
     }
 
     /// <summary>
@@ -120,17 +124,21 @@ namespace EINVWORLD.Services.Assistant
         public Task<AssistantResult> AskAsync(string question, CancellationToken ct = default)
             => ChatAsync(QaSystemPrompt, question, jsonMode: false, ct);
 
-        public Task<AssistantResult> SuggestInvoiceAsync(string description, CancellationToken ct = default)
-            => ChatAsync(BuildSuggestSystemPrompt(), description, jsonMode: true, ct);
+        public Task<AssistantResult> SuggestInvoiceAsync(
+            string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default)
+            => ChatAsync(BuildSuggestSystemPrompt(knownBuyers), description, jsonMode: true, ct);
 
-        public SuggestionReview ReviewSuggestion(string suggestionJson)
+        public SuggestionReview ReviewSuggestion(string suggestionJson, IReadOnlyCollection<string>? knownBuyerTins = null)
         {
             var reference = GetReference();
             var suggestion = InvoiceSuggestionValidator.TryParse(suggestionJson);
-            return InvoiceSuggestionValidator.Review(suggestion, reference.ClassificationCodes, reference.TaxCodes);
+            var buyerSet = knownBuyerTins is { Count: > 0 }
+                ? new HashSet<string>(knownBuyerTins, StringComparer.OrdinalIgnoreCase)
+                : null;
+            return InvoiceSuggestionValidator.Review(suggestion, reference.ClassificationCodes, reference.TaxCodes, buyerSet);
         }
 
-        private string BuildSuggestSystemPrompt()
+        private string BuildSuggestSystemPrompt(IReadOnlyList<KnownBuyer>? knownBuyers)
         {
             var reference = GetReference();
             var prompt = SuggestSystemPromptBase;
@@ -143,6 +151,20 @@ namespace EINVWORLD.Services.Assistant
             if (!string.IsNullOrEmpty(reference.TaxRef))
                 prompt += " The \"taxType\" MUST be one of these LHDN tax codes (use only the code on the left of '='): "
                           + reference.TaxRef;
+
+            if (knownBuyers is { Count: > 0 })
+            {
+                var list = string.Join("; ", knownBuyers
+                    .Where(b => !string.IsNullOrWhiteSpace(b.Tin) && !string.IsNullOrWhiteSpace(b.Name))
+                    .Take(100)
+                    .Select(b => $"{b.Name.Trim()}={b.Tin.Trim()}"));
+
+                if (list.Length > 0)
+                    prompt += " The buyer MUST be chosen from this list of the user's known customers (format Name=TIN): " +
+                              "set \"buyerName\" and \"buyerTin\" to the single best-matching entry, copying its TIN exactly. " +
+                              "If none clearly match, leave \"buyerName\" and \"buyerTin\" blank and explain in \"notes\". " +
+                              "Never invent a TIN. List: " + list;
+            }
 
             return prompt;
         }
