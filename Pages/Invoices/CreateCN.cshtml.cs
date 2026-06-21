@@ -791,6 +791,15 @@ namespace EINVWORLD.Pages.Invoices
                     return Page();
                 }
 
+                // Atomic double-submit guard: only one concurrent request wins this claim; others are
+                // blocked here so the document can't be posted to LHDN twice.
+                if (!await EINVWORLD.Helpers.InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
+                {
+                    _logger.LogWarning("[Guard] Concurrent submit blocked for {InvoiceNo}.", invoiceNo);
+                    ModelState.AddModelError(string.Empty, $"Document {invoiceNo} is already being submitted. Please wait a moment and try again.");
+                    return Page();
+                }
+
                 // ✅ Submit the invoice to LHDN API
                 var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
@@ -840,6 +849,7 @@ namespace EINVWORLD.Pages.Invoices
             }
             catch (Exception ex)
             {
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError($"[Error] Exception during submission of Invoice {invoiceNo}: {ex.Message}");
                 SubmissionResult = $"Error submitting Invoice {invoiceNo}.";
                 return Page();
