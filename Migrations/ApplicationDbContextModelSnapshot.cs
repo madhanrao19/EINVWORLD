@@ -801,6 +801,9 @@ namespace eInvWorld.Migrations
                     b.Property<DateTime?>("CancelDateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("SubmissionClaimedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
