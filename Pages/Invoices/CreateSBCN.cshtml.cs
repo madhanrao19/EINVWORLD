@@ -620,7 +620,10 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 // ✅ Fetch invoice from database
-                var existingInvoice = _context.InvoiceHeaders.FirstOrDefault(i => i.InvoiceNo == invoiceNo);
+                var existingInvoice = _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .FirstOrDefault(i => i.InvoiceNo == invoiceNo);
                 if (existingInvoice == null)
                 {
                     ModelState.AddModelError(string.Empty, "Credit Note not found.");
@@ -632,6 +635,16 @@ namespace EINVWORLD.Pages.Invoices
                 if (!string.IsNullOrWhiteSpace(existingInvoice.UUID))
                 {
                     ModelState.AddModelError(string.Empty, $"Document {invoiceNo} has already been submitted to LHDN (UUID {existingInvoice.UUID}); it cannot be submitted again.");
+                    return Page();
+                }
+
+                // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
+                // ownership check (consistent with Create Invoice); falls back to the session token if null.
+                var submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(existingInvoice);
+                if (!string.IsNullOrWhiteSpace(submitterTin)
+                    && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
+                {
+                    ModelState.AddModelError(string.Empty, "You are not authorized to submit this document.");
                     return Page();
                 }
 
@@ -675,7 +688,7 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 // ✅ Submit the invoice to LHDN API
-                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
+                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, submitterTin);
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
 
                 if (apiResponse.acceptedDocuments.Any())
