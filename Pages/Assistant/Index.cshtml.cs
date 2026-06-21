@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using eInvWorld.Data;
 using EINVWORLD.Services.Assistant;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +12,8 @@ namespace eInvWorld.Pages.Assistant
     [Authorize(Roles = "Admin,Supplier")]
     public class IndexModel : PageModel
     {
+        private const int MaxHistoryTurns = 24;
+
         private readonly IEInvoiceAssistantService _assistant;
         private readonly ApplicationDbContext _context;
 
@@ -28,23 +31,59 @@ namespace eInvWorld.Pages.Assistant
         [BindProperty]
         public string? Description { get; set; }
 
-        public string? AnswerText { get; private set; }
+        [BindProperty]
+        public string? RejectionText { get; set; }
+
+        /// <summary>Carries the running conversation across posts so the Q&amp;A keeps context.</summary>
+        [BindProperty]
+        public string? ChatHistoryJson { get; set; }
+
+        public List<ChatTurn> Conversation { get; private set; } = new();
         public string? SuggestionJson { get; private set; }
         public SuggestionReview? Review { get; private set; }
+        public string? RejectionExplanation { get; private set; }
         public string? ErrorText { get; private set; }
 
         public void OnGet() { }
 
         public async Task<IActionResult> OnPostAskAsync(CancellationToken ct)
         {
-            var result = await _assistant.AskAsync(Question ?? string.Empty, ct);
-            if (result.Ok) AnswerText = result.Content;
-            else ErrorText = result.Error;
+            var history = ParseHistory(ChatHistoryJson);
+            var question = (Question ?? string.Empty).Trim();
+
+            var result = await _assistant.AskAsync(history, question, ct);
+            if (result.Ok)
+            {
+                history.Add(new ChatTurn("user", question));
+                history.Add(new ChatTurn("assistant", result.Content));
+                if (history.Count > MaxHistoryTurns)
+                    history = history.Skip(history.Count - MaxHistoryTurns).ToList();
+                Question = null; // clear the input box after a successful ask
+            }
+            else
+            {
+                ErrorText = result.Error;
+            }
+
+            Conversation = history;
+            ChatHistoryJson = Serialize(history);
+            return Page();
+        }
+
+        public IActionResult OnPostNewChat()
+        {
+            // Start a fresh conversation.
+            Conversation = new();
+            ChatHistoryJson = null;
+            Question = null;
             return Page();
         }
 
         public async Task<IActionResult> OnPostSuggestAsync(CancellationToken ct)
         {
+            // Preserve any ongoing conversation across this post.
+            Conversation = ParseHistory(ChatHistoryJson);
+
             // Ground the suggestion on the current user's real customers so the model picks an existing
             // buyer + exact TIN instead of inventing one.
             var knownBuyers = await LoadKnownBuyersAsync(ct);
@@ -60,6 +99,16 @@ namespace eInvWorld.Pages.Assistant
             {
                 ErrorText = result.Error;
             }
+            return Page();
+        }
+
+        public async Task<IActionResult> OnPostExplainRejectionAsync(CancellationToken ct)
+        {
+            Conversation = ParseHistory(ChatHistoryJson);
+
+            var result = await _assistant.ExplainRejectionAsync(RejectionText ?? string.Empty, ct);
+            if (result.Ok) RejectionExplanation = result.Content;
+            else ErrorText = result.Error;
             return Page();
         }
 
@@ -86,5 +135,14 @@ namespace eInvWorld.Pages.Assistant
                 .Select(r => new KnownBuyer(r.CompanyName ?? string.Empty, r.TIN!))
                 .ToList();
         }
+
+        private static List<ChatTurn> ParseHistory(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return new();
+            try { return JsonSerializer.Deserialize<List<ChatTurn>>(json) ?? new(); }
+            catch (JsonException) { return new(); }
+        }
+
+        private static string Serialize(List<ChatTurn> history) => JsonSerializer.Serialize(history);
     }
 }
