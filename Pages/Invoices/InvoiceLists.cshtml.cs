@@ -1454,6 +1454,18 @@ namespace eInvWorld.Pages.Invoices
                     return RedirectToPage();
                 }
 
+                // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
+                // ownership check (consistent with Create Invoice); falls back to the session token below
+                // if it can't be resolved.
+                var submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(invoice);
+                if (!string.IsNullOrWhiteSpace(submitterTin)
+                    && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
+                {
+                    _logger.LogWarning("🚫 User not authorized to submit {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, submitterTin);
+                    TempData["ErrorMessage"] = "You are not authorized to submit this invoice.";
+                    return RedirectToPage();
+                }
+
                 var jsonPath = _jsonFileService.GetExistingFilePath(invoiceNo);
                 if (string.IsNullOrEmpty(jsonPath) || !System.IO.File.Exists(jsonPath))
                 {
@@ -1483,7 +1495,16 @@ namespace eInvWorld.Pages.Invoices
                     return RedirectToPage();
                 }
 
-                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
+                // Atomic double-submit guard: only one concurrent request wins this claim; others are
+                // blocked so the document can't be posted to LHDN twice (the Draft-status check is not atomic).
+                if (!await EINVWORLD.Helpers.InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
+                {
+                    _logger.LogWarning("[Guard] Concurrent submit blocked for {InvoiceNo}.", invoiceNo);
+                    TempData["ErrorMessage"] = $"Invoice {invoiceNo} is already being submitted. Please wait a moment and refresh.";
+                    return RedirectToPage();
+                }
+
+                var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, submitterTin);
                 _logger.LogInformation($"[LHDN API Raw Response] {apiResponseJson}");
 
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
@@ -1556,6 +1577,7 @@ namespace eInvWorld.Pages.Invoices
             }
             catch (Exception ex)
             {
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError(ex, $"❌ Error submitting invoice {invoiceNo} from list.");
 
                 var failedInvoice = await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);

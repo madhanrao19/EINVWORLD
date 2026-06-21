@@ -1167,6 +1167,15 @@ namespace EINVWORLD.Pages.Invoices
                     return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
                 }
 
+                // Double-submit guard: a document that already has a MyInvois UUID has been submitted —
+                // resubmitting would create a duplicate e-invoice at LHDN. Block it.
+                if (!string.IsNullOrWhiteSpace(existingInvoice.UUID))
+                {
+                    var msg = $"Invoice {invoiceNo} has already been submitted to LHDN (UUID {existingInvoice.UUID}); it cannot be submitted again.";
+                    _logger.LogWarning("[Guard] Double-submit blocked for {InvoiceNo} (UUID {UUID}).", invoiceNo, existingInvoice.UUID);
+                    return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
+                }
+
                 var issueDate = existingInvoice.IssueDate;
                 var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 if ((now - issueDate)?.TotalDays > 3)
@@ -1239,6 +1248,16 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
+
+                // Atomic double-submit guard: exactly one concurrent request wins this claim; any other
+                // in-flight request for the same invoice is blocked here, so the document can't be posted
+                // to LHDN twice (the earlier UUID check only stops sequential re-submits).
+                if (!await EINVWORLD.Helpers.InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
+                {
+                    _logger.LogWarning("[Guard] Concurrent submit blocked for {InvoiceNo}.", invoiceNo);
+                    var busyMsg = $"Invoice {invoiceNo} is already being submitted. Please wait a moment and refresh.";
+                    return isAjax ? new JsonResult(new { success = false, message = busyMsg }) : Page();
+                }
 
                 // Pass the resolved TIN so submission uses the per-TIN token and adds the onbehalfof
                 // header, instead of relying on session state (which is empty right after a 2FA login).
@@ -1326,6 +1345,9 @@ namespace EINVWORLD.Pages.Invoices
             }
             catch (Exception ex)
             {
+                // Release the claim so the user can retry. LHDN's own duplicate detection (DS302) backstops
+                // the rare "accepted but then errored" case if a retry actually reaches LHDN twice.
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError(ex, $"[Error] Exception during submission of Invoice: {invoiceNo}");
                 return new JsonResult(new
                 {

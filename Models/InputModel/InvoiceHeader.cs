@@ -119,6 +119,11 @@ namespace eInvWorld.Models.InputModel
         public DateTime? DateTimeValidated { get; set; }  // ✅ Timestamp when document became valid
         public DateTime? CancelDateTime { get; set; }
 
+        // Concurrency claim for submission: set atomically just before a submit to LHDN so two
+        // simultaneous requests cannot both post the same document. Cleared on failure; a claim older
+        // than a few minutes is treated as stale (e.g. a crashed submit) and may be reclaimed.
+        public DateTime? SubmissionClaimedAtUtc { get; set; }
+
 		public bool IsValidationEmailSent { get; set; } = false;
         [MaxLength(500)]
         public string? ValidationEmailSentTo { get; set; }
