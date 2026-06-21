@@ -27,6 +27,9 @@ namespace EINVWORLD.Services.Assistant
         public string? ClassificationCode { get; set; }
     }
 
+    /// <summary>A customer the current user is allowed to invoice (used to ground + validate the buyer).</summary>
+    public sealed record KnownBuyer(string Name, string Tin);
+
     public enum CheckSeverity { Ok, Warning, Error }
 
     public sealed record CheckItem(CheckSeverity Severity, string Message);
@@ -80,7 +83,8 @@ namespace EINVWORLD.Services.Assistant
         public static SuggestionReview Review(
             InvoiceSuggestion? suggestion,
             ISet<string>? classificationCodes,
-            ISet<string>? taxCodes)
+            ISet<string>? taxCodes,
+            ISet<string>? knownBuyerTins = null)
         {
             if (suggestion is null)
             {
@@ -101,7 +105,16 @@ namespace EINVWORLD.Services.Assistant
             if (string.IsNullOrWhiteSpace(suggestion.BuyerName))
                 r.Warn("Buyer name is missing — pick the customer in the Create Invoice form.");
             if (string.IsNullOrWhiteSpace(suggestion.BuyerTin))
+            {
                 r.Warn("Buyer TIN is missing — it must be filled and validated before submitting to LHDN.");
+            }
+            else if (knownBuyerTins is { Count: > 0 })
+            {
+                if (knownBuyerTins.Contains(suggestion.BuyerTin.Trim()))
+                    r.Ok($"Buyer matched a saved customer (TIN {suggestion.BuyerTin}).");
+                else
+                    r.Warn($"Buyer TIN '{suggestion.BuyerTin}' is not one of your saved customers — confirm/select the customer before submitting.");
+            }
 
             // Lines
             if (suggestion.LineItems is null || suggestion.LineItems.Count == 0)
