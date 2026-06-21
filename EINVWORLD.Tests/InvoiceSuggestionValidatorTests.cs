@@ -114,6 +114,34 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void Review_BuyerTinInSavedCustomers_NoBuyerWarning()
+        {
+            var s = ValidSuggestion();
+            s.BuyerTin = "C1234567890";
+            var known = new HashSet<string> { "C1234567890" };
+
+            var review = InvoiceSuggestionValidator.Review(s, Classification, Tax, known);
+
+            Assert.False(review.HasErrors);
+            Assert.DoesNotContain(review.Items, i =>
+                i.Severity == CheckSeverity.Warning && i.Message.Contains("not one of your saved customers"));
+        }
+
+        [Fact]
+        public void Review_BuyerTinNotInSavedCustomers_Warns()
+        {
+            var s = ValidSuggestion();
+            s.BuyerTin = "C9999999999";
+            var known = new HashSet<string> { "C1234567890" };
+
+            var review = InvoiceSuggestionValidator.Review(s, Classification, Tax, known);
+
+            Assert.False(review.HasErrors); // a buyer mismatch is a warning, not blocking
+            Assert.Contains(review.Items, i =>
+                i.Severity == CheckSeverity.Warning && i.Message.Contains("not one of your saved customers"));
+        }
+
+        [Fact]
         public void TryParse_GoodJson_RoundTrips()
         {
             const string json = """
