@@ -22,6 +22,7 @@ namespace eInvWorld.Pages.Assistant
 
         public string? AnswerText { get; private set; }
         public string? SuggestionJson { get; private set; }
+        public SuggestionReview? Review { get; private set; }
         public string? ErrorText { get; private set; }
 
         public void OnGet() { }
@@ -37,8 +38,16 @@ namespace eInvWorld.Pages.Assistant
         public async Task<IActionResult> OnPostSuggestAsync(CancellationToken ct)
         {
             var result = await _assistant.SuggestInvoiceAsync(Description ?? string.Empty, ct);
-            if (result.Ok) SuggestionJson = result.Content;
-            else ErrorText = result.Error;
+            if (result.Ok)
+            {
+                SuggestionJson = result.Content;
+                // Validate the model's output against real LHDN codes + basic rules before the user acts on it.
+                Review = _assistant.ReviewSuggestion(result.Content);
+            }
+            else
+            {
+                ErrorText = result.Error;
+            }
             return Page();
         }
     }
