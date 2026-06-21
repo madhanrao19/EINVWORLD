@@ -96,8 +96,9 @@ namespace eInvWorld.Pages.Admin
             {
                 if (!Directory.Exists(path)) { KeyRingStatus = "MISSING: " + path; return; }
                 var probe = Path.Combine(path, $".health-{Guid.NewGuid():N}.tmp");
-                File.WriteAllText(probe, "ok");
-                File.Delete(probe);
+                // Fully qualified: PageModel exposes a File(...) method that shadows System.IO.File.
+                System.IO.File.WriteAllText(probe, "ok");
+                System.IO.File.Delete(probe);
                 var keys = Directory.GetFiles(path, "*.xml").Length;
                 KeyRingStatus = $"OK ({keys} key file(s)) — {path}";
             }
