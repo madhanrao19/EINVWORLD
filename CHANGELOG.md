@@ -1,5 +1,25 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-22 — v1.3.1 (Resilience · Cleanup)
+
+### Added
+- **Inbound rate limiting** — a generous per-IP backstop (`RateLimiting` config; health probes exempt)
+  against runaway/abusive traffic. Login brute force is already capped by Identity lockout.
+- **Outbound resilience on token acquisition** — `AddStandardResilienceHandler` (retry + timeouts) on the
+  OAuth token client only, so transient LHDN/network blips don't fail a sync cycle. Deliberately NOT
+  applied to the document-submission client (a retried POST could create a duplicate).
+
+### Changed
+- **Legacy "Extract Invoice" OCR URL is now configurable** (`ExtractInvoice:ServiceUrl`) instead of a
+  hardcoded `http://127.0.0.1:8000`. (Overlaps the newer AI Document Capture; retire it once Capture
+  covers the need.)
+
+### Removed (earlier in this cycle, PR #10)
+- The dead in-memory background queue (replaced by the durable SQL worker), an unused model, a large
+  commented block, and `DEBUG` text in user-facing messages; added logging to silent catch blocks.
+
+---
+
 ## 📅 2026-06-22 — v1.3 (Durable ops · Security · Audit · Ingestion)
 
 > Build clean on .NET 10 (CI: restore + build + tests green on windows-latest). Production-hardening

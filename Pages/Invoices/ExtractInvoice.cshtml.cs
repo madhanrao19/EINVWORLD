@@ -18,13 +18,17 @@ namespace EINVWORLD.Pages.Invoices
     public class OcrUploadModel : SupplierBasePage
     {
 
+        private const string DefaultOcrServiceUrl = "http://127.0.0.1:8000/extract-invoice";
+
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<OcrUploadModel> _logger;
+        private readonly string _ocrServiceUrl;
 
-        public OcrUploadModel(IHttpClientFactory httpClientFactory, ApplicationDbContext context, ILogger<OcrUploadModel> logger) : base(context)
+        public OcrUploadModel(IHttpClientFactory httpClientFactory, ApplicationDbContext context, ILogger<OcrUploadModel> logger, IConfiguration configuration) : base(context)
         {
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _ocrServiceUrl = configuration["ExtractInvoice:ServiceUrl"] ?? DefaultOcrServiceUrl;
         }
 
         [BindProperty]
@@ -73,7 +77,7 @@ namespace EINVWORLD.Pages.Invoices
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(UploadedPdf.ContentType);
                 formContent.Add(streamContent, "file", UploadedPdf.FileName);
 
-                var response = await client.PostAsync("http://127.0.0.1:8000/extract-invoice", formContent);
+                var response = await client.PostAsync(_ocrServiceUrl, formContent);
 
                 if (response.IsSuccessStatusCode)
                 {
