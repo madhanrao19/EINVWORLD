@@ -319,6 +319,9 @@ var docCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.Docu
 builder.Services.AddSingleton(docCaptureOptions);
 builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtractor, EINVWORLD.Services.DocumentCapture.PdfDocumentTextExtractor>();
 
+// Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
+builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
+
 // Add HttpClient services to the DI container
 builder.Services.AddHttpClient();
 
