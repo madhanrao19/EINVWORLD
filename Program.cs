@@ -288,6 +288,16 @@ builder.Services.AddHttpClient<ITokenService, TokenService>()
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+    })
+    // Resilience is applied ONLY to token acquisition (an idempotent OAuth client-credentials call),
+    // so transient LHDN/network blips don't fail a whole sync cycle. It is deliberately NOT applied to
+    // the document-submission client: a retry after a timed-out POST could create a duplicate document.
+    // (Low on-prem traffic keeps the circuit breaker's min-throughput threshold from tripping.)
+    .AddStandardResilienceHandler(options =>
+    {
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(120);
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60); // must be >= 2x AttemptTimeout
     });
 
 builder.Services.Configure<TaxpayerValidationSettings>(builder.Configuration.GetSection("TaxpayerValidationSettings"));
@@ -355,6 +365,31 @@ builder.Services.ConfigureApplicationCookie(options =>
 //    options.LowercaseQueryStrings = false; // optional: leave query strings as-is
 //});
 
+
+// Inbound rate limiting — a per-IP backstop against runaway/abusive traffic (the limit is generous so
+// normal multi-user office NAT traffic is never throttled). Health probes are exempt. Tune or disable
+// via the "RateLimiting" config section. (Login brute force is already capped by Identity lockout.)
+var rateLimitEnabled = builder.Configuration.GetValue("RateLimiting:Enabled", true);
+var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 1200);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    {
+        if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health"))
+            return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("exempt");
+
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(ip,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = permitsPerMinute <= 0 ? 1200 : permitsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
+});
 
 var app = builder.Build();
 
@@ -476,6 +511,7 @@ app.Use(async (context, next) =>
 app.UseHttpsRedirection();
 app.UseStaticFiles(); // Serves static files from wwwroot
 app.UseRouting();
+app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     // no-store on dynamic pages (sensitive financial data). Skip the health endpoint so monitors
