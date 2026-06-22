@@ -50,8 +50,10 @@ Set on the server via environment variables or user-secrets — see `SECRETS-SET
 - `LHDNApiConfig__ClientSecret`, `LHDNApiConfig__ClientSecret2`, `LHDNApiConfig__CertPass` (if signing)
 - `EmailConfiguration__Default__SmtpPassword`
 - `Turnstile__SecretKey`
-- `DataProtection__KeyRingPath` — **must point OUTSIDE the App folder** (e.g. `D:\EINVWORLD\Keys`) so a
-  redeploy that clears `App\` doesn't wipe the keys (which would log everyone out and break 2FA/antiforgery).
+- `Api__Key` — **optional**; set only to enable the import REST API (`POST /api/import/validate`).
+- `DataProtection__KeyRingPath` — **must point OUTSIDE the App folder** (preset to `E:\EINVWORLD\Keys`
+  in `appsettings.Production.json`) so a redeploy that clears `App\` doesn't wipe the keys (which would
+  log everyone out and break 2FA/antiforgery). **Required in Production — the app won't start if blank.**
 
 Startup runs `ProductionConfigValidator`, which **fails fast with one clear message** if a critical
 setting is blank/wrong (connection string, key ring, signing cert, localhost URLs in Production, etc.).
@@ -88,6 +90,20 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 
+## 5b. Optional ingestion features (all OFF by default)
+
+Draft-safe — they validate/suggest only; none creates or submits invoices automatically.
+
+- **AI Document Capture** (`/Invoices/CreateFromFile`) — set `DocumentCapture:Enabled=true` **and**
+  `AIAssistant:Enabled=true` (needs Ollama; see IIS guide PART O). Digital (text-layer) PDFs only;
+  scanned images report "needs OCR".
+- **Bulk Import** (`/Invoices/BulkImport`) — always available to Admin/Supplier; download the template,
+  upload CSV/XLSX, get a per-row validation report. No config needed.
+- **Watched-folder importer** — set `WatchedFolderImport:Enabled=true` and `InboxPath`
+  (e.g. `E:\EINVWORLD\Inbox`); grant the app-pool **Modify**. Files are validated and moved to
+  `Processed/` / `Rejected/` with a `.report.json`.
+- **REST validate API** — set `Api:Key`; callers POST to `/api/import/validate` with header `X-Api-Key`.
+
 ## 6. PDF engine
 
 `PDFGenerationSettings:Engine` is `DinkToPdf` (default; loads `wkhtmltox\libwkhtmltox.dll` natively) or
@@ -100,6 +116,9 @@ only loaded for the `DinkToPdf` engine.
 - Use **encrypted backups** — and back up the encryption certificate/key separately (without it the
   backup can't be restored).
 - Runtime login: least privilege (`db_datareader` + `db_datawriter` + execute), **not** `sa`/`db_owner`.
+  Exception: with **auto-migrate on**, the runtime login also needs `db_ddladmin` (to create/alter
+  schema on boot). For strict least-privilege, set `AutoMigrateOnStartup=false` and run the
+  `Apply_*.sql` scripts with a separate DDL login instead.
 
 ## 8. Rollback
 

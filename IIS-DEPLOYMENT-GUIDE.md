@@ -409,6 +409,25 @@ that the model name matches.
 
 ---
 
+## PART P — (Optional) Invoice Ingestion Features
+
+All OFF by default and **draft-safe** — they validate or suggest only; none creates or submits an
+invoice automatically. Skip this part unless you want them.
+
+| Feature | How to enable | Where |
+|---|---|---|
+| **AI Document Capture** (PDF → suggestion) | env vars `DocumentCapture__Enabled=true` **and** the Ollama assistant from PART O | menu: *AI Document Capture* (`/Invoices/CreateFromFile`) |
+| **Bulk Import** (CSV/XLSX validation) | nothing — always available to Admin/Supplier | menu: *Bulk Import* (`/Invoices/BulkImport`) |
+| **Watched-folder importer** | env vars `WatchedFolderImport__Enabled=true`, `WatchedFolderImport__InboxPath=E:\EINVWORLD\Inbox` (create the folder, grant the app-pool **Modify**) | drop CSV/XLSX into the Inbox; results move to `Processed\` / `Rejected\` with a `.report.json` |
+| **REST validate API** | env var `Api__Key=<a-long-random-key>` | `POST https://einvworld.com/api/import/validate` with header `X-Api-Key` |
+
+> Document Capture handles **digital PDFs (with a text layer)**. Scanned images report "needs OCR" — image
+> OCR is a later phase.
+
+After adding any of these env vars, **restart IIS** (PART J).
+
+---
+
 ## PART N — Troubleshooting
 
 **Website Not Opening** — Check: Is the IIS site started?

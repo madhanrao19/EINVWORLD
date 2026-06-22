@@ -1,5 +1,97 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-22 — v1.3 (Durable ops · Security · Audit · Ingestion)
+
+> Build clean on .NET 10 (CI: restore + build + tests green on windows-latest). Production-hardening
+> release: makes background work durable, adds tamper-evident auditing and admin MFA, and introduces a
+> draft-safe invoice-ingestion suite (document capture, bulk import, watched folder, REST validate API).
+> All new features are **OFF/safe by default** and add **no destructive migrations** (existing data is
+> preserved). New DB objects are applied automatically on startup (auto-migrate) or via the idempotent
+> `Apply_*.sql` scripts.
+
+### Added — durability & operations
+
+- **Durable SQL-backed background queue.** Manual sync/import/refresh no longer ride an in-memory queue
+  of closures that vanished on an app-pool recycle/reboot. The `SyncJobs` row **is** the work item:
+  `DurableSyncJobWorker` polls Queued rows, atomically claims one (`UPDLOCK`/`READPAST`), dispatches it
+  by `JobType` to a handler that rebuilds the work from data, retries with exponential backoff up to
+  `MaxAttempts`, and on startup recovers any job left `Running` by a killed process. New durability
+  columns on `SyncJobs` (migration `AddSyncJobDurability`).
+- **Sync Jobs Retry/Cancel** controls on `/Admin/SyncJobs`.
+- **Liveness/readiness health split** — `/health/live` (process up, for IIS App Initialization) and
+  `/health/ready` (DB + a writable-folders check for Documents/GeneratedPdf/DataProtection key ring).
+  `/health` retained.
+- **Admin → System Health** dashboard — queue depth / failed / oldest-queued job, audit + submission
+  row counts, DataProtection key-ring writability, Documents-drive free space, and signing-cert expiry.
+
+### Added — security & compliance
+
+- **Admin two-factor authentication enforced (block-until-enrolled).** An authenticated Admin without
+  2FA is redirected to the authenticator-setup page until enrolled; the `/Identity` area, health, and
+  static assets stay reachable, so there is no hard lockout. Gated by `Security:EnforceAdminMfa`
+  (default `true`) as an emergency escape hatch.
+- **Tamper-evident, hash-chained audit trail.** New append-only `AuditLogs` table where each row stores
+  the previous row's hash plus a SHA-256 of its own contents chained onto it — recomputing the chain
+  detects any insert/delete/edit. `AuditService` (serialised appends, isolated DbContext, never throws
+  to the caller) is wired into the LHDN mutations (InvoiceSubmitted / DocumentCancelled /
+  DocumentRejected). **Admin → Audit Trail** lists entries and runs one-click chain verification.
+  Migration `AddAuditLog`.
+- **Local duplicate-submission idempotency.** At the single submission chokepoint, the (pre-signing)
+  payload is hashed and an identical resubmission within a 10-minute window replays the prior response
+  instead of creating a duplicate at LHDN (mirrors MyInvois' 422 DuplicateSubmission). New
+  `SubmissionRecords` table (migration `AddSubmissionRecords`). Complements the atomic
+  `SubmissionClaimedAtUtc` claim.
+- **Fail-fast production config validation** (`ProductionConfigValidator`) at startup: blank connection
+  string, missing `DataProtection:KeyRingPath`, signing enabled without a cert, localhost PDF/email
+  URLs in Production, preprod LHDN host in Production, or AI assistant enabled without URL/model now
+  stop boot with one clear message instead of failing vaguely at runtime.
+- **CSP violation reporting** — the existing Report-Only policy now points `report-uri` at a new
+  anonymous `/csp-report` endpoint that logs violations, so the policy can be tightened from real data
+  before being promoted to enforcing.
+
+### Added — invoice ingestion (all draft-safe: validate/suggest only, never auto-create or submit)
+
+- **AI Document Capture (Phase 1)** at `/Invoices/CreateFromFile` — upload a digital invoice PDF,
+  extract its text (**PdfPig**, MIT) and turn it into a reviewed invoice suggestion via the local
+  Ollama LLM, reusing the assistant's `SuggestInvoiceAsync` + `ReviewSuggestion` + known-buyer
+  grounding. Scanned images (no text layer) are reported as "needs OCR" (a later phase). Config
+  `DocumentCapture` (OFF; requires `AIAssistant:Enabled`).
+- **Bulk import (validate-only)** at `/Invoices/BulkImport` — upload CSV/XLSX (one row per invoice
+  line) for a per-row validation report against the real LHDN reference codes (classification, tax,
+  currency, unit) plus required/numeric/doc-type rules; downloadable `.xlsx` template.
+- **Watched-folder importer (validate-only)** — `WatchedFolderImportWorker` validates CSV/XLSX dropped
+  into an Inbox, writes a `.report.json`, and sorts files into `Processed/`/`Rejected/`. OFF by default
+  (`WatchedFolderImport`).
+- **REST validate API** — `POST /api/import/validate` for an external ERP, authenticated with a static
+  `X-Api-Key` (constant-time compare) against `Api:Key`; disabled until the key is configured.
+
+### Changed
+
+- **Hardened `ImageController`** — replaced the hardcoded `E:\…\Logos` path with
+  `FilePathConfig.CompanyLogosFolder`, swapped the weak `StartsWith` traversal check for the canonical
+  `SafePath.TryResolve` guard, and added an image extension allow-list.
+- **`appsettings.Production.json`** now ships with `DatabaseSettings:AutoMigrateOnStartup = true` and a
+  preset `DataProtection:KeyRingPath` (`E:\EINVWORLD\Keys`). New-version migrations are additive, so
+  auto-migrate preserves existing data — **take a full DB backup first** and ensure the runtime SQL
+  login has DDL rights. The manual `Apply_*.sql` path remains available (`AutoMigrateOnStartup = false`).
+- **`CancelDocumentAsync`** now uses `GetAccessTokenForTIN(tin)` + the `onbehalfof` header (was relying
+  on session state), matching `RejectDocumentAsync` — fixes intermediary/on-behalf-of cancellations.
+
+### Migrations (additive — no `Up()` drops data)
+
+`AddInvoiceSubmissionClaim`, `AddSyncJobDurability`, `AddSubmissionRecords`, `AddAuditLog` (plus the
+earlier `SyncModelAfterNet10Upgrade`, `AddSyncJobTable`, `DecoupleSystemLogsFromEf`,
+`FixInvoiceDecimalPrecision`, `AddInvoiceHotPathIndexes`). Each has an idempotent
+`Migrations/Apply_*.sql`. See `DEPLOY-NOTES.md` for the order.
+
+### Docs
+
+- Refreshed `README.md`, `SECRETS-SETUP.md`, `DEPLOY-NOTES.md`, and `IIS-DEPLOYMENT-GUIDE.md` for the
+  above: DataProtection key-ring requirement, auto-migration + backup-first, admin-2FA enrolment, System
+  Health, the `Api:Key` secret, and the optional ingestion features.
+
+---
+
 ## 📅 2026-06-19 — v1.2 (Background jobs · Job visibility · AI assistant · Docs)
 
 > Build clean (0 errors) with **58 passing unit tests** on .NET 10. Follow-up to the v1.1 modernization: moves the heavy manual LHDN operations onto a paced background queue, adds job visibility, an optional on-prem AI assistant, and refreshes the documentation.

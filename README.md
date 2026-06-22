@@ -25,8 +25,20 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 - Submit to MyInvois (UBL 2.1 JSON), poll validation status, capture **LongId** (QR code), cancel/reject.
 - **Centralised LHDN rate limiting** (`LhdnRateLimitHandler`) — evenly paced per endpoint so the system
   stays under MyInvois limits and avoids `429` storms.
-- **Background job queue** — manual sync/import/refresh run on a paced background queue (per-TIN), so the
-  UI returns immediately. Progress is visible on the **Sync Jobs** admin page (`/Admin/SyncJobs`).
+- **Durable background jobs** — manual sync/import/refresh run as **SQL-backed** jobs that survive an
+  IIS app-pool recycle / reboot: a worker claims each job, retries with backoff, and recovers orphaned
+  jobs on startup. Progress + **Retry/Cancel** on the **Sync Jobs** admin page (`/Admin/SyncJobs`).
+- **Tamper-evident audit trail** — append-only, hash-chained `AuditLogs` (LHDN submit/cancel/reject),
+  with one-click chain verification on **Admin → Audit Trail**.
+- **Admin 2FA enforced** (block-until-enrolled; `Security:EnforceAdminMfa`, default on) and
+  **duplicate-submission idempotency** (replays an identical submission within 10 min instead of
+  duplicating at LHDN).
+- **Health + ops** — `/health/live` and `/health/ready` probes, an **Admin → System Health** dashboard,
+  fail-fast startup config validation, and CSP violation reporting (`/csp-report`).
+- **Invoice ingestion** (draft-safe — validate/suggest only, never auto-create or submit): **AI Document
+  Capture** (PDF → reviewed suggestion), **Bulk Import** (CSV/XLSX validation + template), a
+  **watched-folder** importer, and a **REST validate API** (`POST /api/import/validate`). All OFF by
+  default.
 - **AI E-Invoice Assistant** (optional, OFF by default) — a local, on-prem [Ollama](https://ollama.com)
   LLM that answers e-invoicing questions and turns a plain-English description into a suggested invoice
   that pre-fills the Create Invoice form. **No invoice data leaves the server**; it only suggests, never
@@ -74,10 +86,14 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 |---|---|
 | `ConnectionStrings` | Database connections (**secret** — left blank, supplied via user-secrets / env vars). |
 | `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SyncRetentionDays`. |
-| `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. |
-| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot (default `true`). |
+| `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
+| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` in `appsettings.Production.json` — migrations are additive (data preserved), but **back up first**. Set `false` to apply `Apply_*.sql` manually. |
+| `Security:EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`; no lockout — they self-enrol). |
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
 | `AIAssistant` | Optional local-LLM assistant (OFF by default). |
+| `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AIAssistant:Enabled`). |
+| `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
+| `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
 | `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. |
 
 > **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
@@ -96,7 +112,9 @@ set them in dev (user-secrets) and on the server (environment variables).
 
 - **[SECRETS-SETUP.md](SECRETS-SETUP.md)** — all secrets and how to configure them.
 - **[IIS-DEPLOYMENT-GUIDE.md](IIS-DEPLOYMENT-GUIDE.md)** — step-by-step production deployment to IIS
-  (including optional Ollama setup for the AI assistant).
+  (DataProtection keys, backup + auto-migration, admin 2FA, optional Ollama setup).
+- **[DEPLOY-NOTES.md](DEPLOY-NOTES.md)** — concise on-prem operator checklist (migration order,
+  app-pool settings, health endpoints, backups, rollback).
 - **[CHANGELOG.md](CHANGELOG.md)** — release history and notable fixes.
 
 ---
