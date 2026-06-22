@@ -322,6 +322,12 @@ builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtra
 // Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
 builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
 
+// Watched-folder importer: validates CSV/XLSX dropped into an Inbox and sorts them. OFF by default.
+var watchedFolderOptions = builder.Configuration.GetSection(EINVWORLD.Services.Import.WatchedFolderOptions.SectionName)
+    .Get<EINVWORLD.Services.Import.WatchedFolderOptions>() ?? new EINVWORLD.Services.Import.WatchedFolderOptions();
+builder.Services.AddSingleton(watchedFolderOptions);
+builder.Services.AddHostedService<EINVWORLD.Services.Import.WatchedFolderImportWorker>();
+
 // Add HttpClient services to the DI container
 builder.Services.AddHttpClient();
 

@@ -48,6 +48,9 @@ namespace EINVWORLD.Services.Import
 
         /// <summary>Parses + validates an uploaded CSV/XLSX. <paramref name="isCsv"/> selects the parser.</summary>
         Task<ImportPreview> ParseAndValidateAsync(Stream file, bool isCsv, CancellationToken ct = default);
+
+        /// <summary>Validates already-parsed rows (header-keyed). Used by the REST API. Never persists.</summary>
+        Task<ImportPreview> ValidateRowsAsync(IReadOnlyList<Dictionary<string, string>> rows, CancellationToken ct = default);
     }
 
     public sealed class BulkInvoiceImportService : IBulkInvoiceImportService
@@ -96,8 +99,6 @@ namespace EINVWORLD.Services.Import
 
         public async Task<ImportPreview> ParseAndValidateAsync(Stream file, bool isCsv, CancellationToken ct = default)
         {
-            var preview = new ImportPreview();
-
             List<Dictionary<string, string>> rows;
             try
             {
@@ -105,11 +106,16 @@ namespace EINVWORLD.Services.Import
             }
             catch (Exception ex)
             {
-                preview.ParseError = "Could not read the file: " + ex.Message;
-                return preview;
+                return new ImportPreview { ParseError = "Could not read the file: " + ex.Message };
             }
+            return await ValidateRowsAsync(rows, ct);
+        }
 
-            if (rows.Count == 0)
+        public async Task<ImportPreview> ValidateRowsAsync(IReadOnlyList<Dictionary<string, string>> rows, CancellationToken ct = default)
+        {
+            var preview = new ImportPreview();
+
+            if (rows is null || rows.Count == 0)
             {
                 preview.ParseError = "No data rows found. Use the template and keep the header row.";
                 return preview;
