@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Linq;
+﻿using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using eInvWorld.Data;
@@ -9,7 +8,6 @@ using eInvWorld.Models.Audit;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Pages.Invoices;
 using eInvWorld.Services;
-using EINVWORLD.Services.Background; // <-- add
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -27,13 +25,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly QRCodeGeneratorService _qrCodeService;
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly UserManager<ApplicationUser> _userManager;
-
-        // NEW: background queue + LHDNApiService (we won't edit the service itself)
-        private readonly IBackgroundTaskQueue _taskQueue;
         private readonly ILHDNApiService _lhdnApiService;
-
-        // Simple in-memory job store; swap to DB if you need persistence
-        private static readonly ConcurrentDictionary<string, (bool done, bool success, string? message)> _jobs = new();
 
         public InvoiceHeader? InvoiceDetail { get; set; }
         public List<InvoiceLine> InvoiceLines { get; set; } = new();
@@ -53,8 +45,7 @@ namespace EINVWORLD.Pages.Invoices
             DropdownHelper dropdownHelper,
             IPdfGeneratorService pdfGeneratorService,
             UserManager<ApplicationUser> userManager,
-            IBackgroundTaskQueue taskQueue,          // <-- add
-            ILHDNApiService lhdnApiService            // <-- add
+            ILHDNApiService lhdnApiService
         )
         {
             _context = context;
@@ -63,8 +54,7 @@ namespace EINVWORLD.Pages.Invoices
             DropdownHelper = dropdownHelper;
             _pdfGeneratorService = pdfGeneratorService;
             _userManager = userManager;
-            _taskQueue = taskQueue;                  // <-- add
-            _lhdnApiService = lhdnApiService;        // <-- add
+            _lhdnApiService = lhdnApiService;
         }
 
         public async Task<IActionResult> OnGetAsync(string uuid, bool fromEmail = false)
