@@ -26,8 +26,13 @@ E:\EINVWORLD
  ├── App
  ├── Documents
  ├── Logs
+ ├── Keys      ← DataProtection encryption keys (MUST be outside App)
  └── Cert
 ```
+
+> **Why `Keys` is separate:** ASP.NET Core stores the keys that protect login cookies, 2FA, and
+> antiforgery tokens here. If they lived under `App\`, every redeploy would wipe them and log everyone
+> out. Keeping them in `E:\EINVWORLD\Keys` makes them survive redeploys.
 
 ---
 
@@ -261,6 +266,43 @@ E:\EINVWORLD\App\Cert\DATAMATION_TECHNOLOGY_(M)_SDN._BHD..p12
 
 ---
 
+## PART I2 — Database Backup & Auto-Migration
+
+> ⚠️ **Do this BEFORE the first start of a new version.** On startup the app applies any pending
+> database schema changes automatically (`DatabaseSettings:AutoMigrateOnStartup` is `true` in
+> `appsettings.Production.json`).
+
+### Step I2.1 — Take a full backup (mandatory)
+
+In **SQL Server Management Studio**: right-click the `EINVWORLD` database → **Tasks → Back Up…** →
+**Full** → choose a destination → **OK**. This is your rollback if anything goes wrong.
+
+### Step I2.2 — Confirm the app's SQL login can change schema
+
+Auto-migration must `CREATE`/`ALTER` tables, so `einvworldusr` needs DDL rights. In SSMS:
+**Security → Logins → einvworldusr → User Mapping →** tick `db_ddladmin` (or `db_owner`) on `EINVWORLD`.
+
+### Step I2.3 — What auto-migration does
+
+- It applies **only the migrations not yet recorded** in the `__EFMigrationsHistory` table.
+- The new-version migrations are **additive** — they add tables (`SyncJobs`, `SubmissionRecords`,
+  `AuditLogs`), columns, and indexes. **No existing data is dropped or rewritten.**
+- The **first** startup after upgrading is **slower** (schema changes run then) and briefly locks the
+  affected tables — deploy in a **low-traffic window**.
+- The app pool must run a **single worker process** (the default — do not enable a Web Garden), so two
+  worker processes don't run migrations at the same time.
+
+> If you ever prefer to apply schema changes manually instead, set `AutoMigrateOnStartup` to `false`
+> and run the `Migrations\Apply_*.sql` scripts yourself (see `DEPLOY-NOTES.md` for the order).
+
+### Step I2.4 — Create the DataProtection keys folder
+
+Confirm `E:\EINVWORLD\Keys` exists (from PART A) and the app-pool identity has **Modify** on it
+(covered by PART F). The path is already set in `appsettings.Production.json`
+(`DataProtection:KeyRingPath`). **The app will not start in Production if this is missing.**
+
+---
+
 ## PART J — Restart IIS
 
 Open **Command Prompt as Administrator** and run:
@@ -289,7 +331,19 @@ https://einvworld.com
 
 Login with the admin account.
 
-**Expected:** Dashboard Opens.
+**Expected (first login on the new version):** Administrator accounts must use two-factor
+authentication, so you are redirected to a **"Set up authenticator app"** page. Scan the QR code with
+Google Authenticator (or similar), enter the 6-digit code, and **save your recovery codes**. After
+that, the Dashboard opens and subsequent logins ask for the 6-digit code.
+
+> This is controlled by `Security:EnforceAdminMfa` (default `true`). To disable it, add
+> `"Security": { "EnforceAdminMfa": false }` to `appsettings.Production.json` and restart IIS. There is
+> no lockout — you always reach the enrolment page, and recovery codes are your backup.
+
+### Quick health check
+
+Open **Admin → System Health** to confirm the database, background jobs, DataProtection keys, disk, and
+(if enabled) signing-cert expiry are all OK. `/health/ready` returns 200 when the app can serve traffic.
 
 ---
 
@@ -355,6 +409,25 @@ that the model name matches.
 
 ---
 
+## PART P — (Optional) Invoice Ingestion Features
+
+All OFF by default and **draft-safe** — they validate or suggest only; none creates or submits an
+invoice automatically. Skip this part unless you want them.
+
+| Feature | How to enable | Where |
+|---|---|---|
+| **AI Document Capture** (PDF → suggestion) | env vars `DocumentCapture__Enabled=true` **and** the Ollama assistant from PART O | menu: *AI Document Capture* (`/Invoices/CreateFromFile`) |
+| **Bulk Import** (CSV/XLSX validation) | nothing — always available to Admin/Supplier | menu: *Bulk Import* (`/Invoices/BulkImport`) |
+| **Watched-folder importer** | env vars `WatchedFolderImport__Enabled=true`, `WatchedFolderImport__InboxPath=E:\EINVWORLD\Inbox` (create the folder, grant the app-pool **Modify**) | drop CSV/XLSX into the Inbox; results move to `Processed\` / `Rejected\` with a `.report.json` |
+| **REST validate API** | env var `Api__Key=<a-long-random-key>` | `POST https://einvworld.com/api/import/validate` with header `X-Api-Key` |
+
+> Document Capture handles **digital PDFs (with a text layer)**. Scanned images report "needs OCR" — image
+> OCR is a later phase.
+
+After adding any of these env vars, **restart IIS** (PART J).
+
+---
+
 ## PART N — Troubleshooting
 
 **Website Not Opening** — Check: Is the IIS site started?
@@ -375,15 +448,18 @@ that the model name matches.
 
 - [ ] .NET 10 Hosting Bundle Installed
 - [ ] Application Files Copied
-- [ ] Application Pool Created
+- [ ] Application Pool Created (single worker process)
 - [ ] Website Created
 - [ ] SSL Certificate Assigned
-- [ ] Folder Permissions Set
-- [ ] Environment Variables Added
+- [ ] Folder Permissions Set (incl. `E:\EINVWORLD\Keys` = Modify)
+- [ ] **DataProtection `Keys` folder exists** (app will not start without `KeyRingPath`)
+- [ ] Environment Variables Added (secrets — NOT in appsettings)
 - [ ] P12 Certificate Copied
+- [ ] **Database backed up (full)** — before first start
+- [ ] **`einvworldusr` has DDL rights** (for auto-migration)
 - [ ] IIS Restarted
-- [ ] Login Tested
+- [ ] Login Tested (admin **2FA enrolled**)
+- [ ] **Admin → System Health checked**
 - [ ] LHDN Tested
 - [ ] Email Tested
-- [ ] Backup Taken
 - [ ] Go Live Approved

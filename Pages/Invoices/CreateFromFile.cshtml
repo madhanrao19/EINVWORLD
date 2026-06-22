@@ -1,0 +1,110 @@
+@page
+@using EINVWORLD.Services.Assistant
+@model eInvWorld.Pages.Invoices.CreateFromFileModel
+@{
+    ViewData["Title"] = "Create Invoice from File";
+}
+
+<h3>📄 AI Document Capture <small class="text-muted">(beta)</small></h3>
+<p class="text-muted">
+    Upload a digital invoice PDF. The text is extracted and turned into a suggested invoice you can review,
+    then load into the Create Invoice form. Runs on the local on-prem model — the file never leaves this server.
+    It only suggests; it never submits, and it creates a draft only after you confirm.
+</p>
+
+@if (!Model.Enabled)
+{
+    <div class="alert alert-warning">
+        ⚙️ AI Document Capture is <strong>disabled</strong>. Set <code>DocumentCapture:Enabled = true</code> and
+        enable the local AI assistant (<code>AIAssistant:Enabled = true</code> with Ollama running) in configuration.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorText))
+{
+    <div class="alert alert-danger">@Model.ErrorText</div>
+}
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Upload</h5>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="file" name="Upload" accept="application/pdf,.pdf" class="form-control mb-2" />
+                    <div class="text-muted mb-2"><small>Digital (text-based) PDF, up to @Model.MaxFileSizeMb MB. Scanned-image OCR is a later phase.</small></div>
+                    <button type="submit" class="btn btn-success" disabled="@(!Model.Enabled)">Extract &amp; suggest</button>
+                </form>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ExtractedText))
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#extractedText">
+                        Show extracted text (@Model.FileName)
+                    </button>
+                </div>
+                <div id="extractedText" class="collapse">
+                    <pre class="p-2 mb-0" style="white-space:pre-wrap; max-height:300px; overflow:auto;">@Model.ExtractedText</pre>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-md-7">
+        @if (!string.IsNullOrEmpty(Model.SuggestionJson))
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Suggested invoice — review before using</h5>
+
+                    @if (Model.Review is not null)
+                    {
+                        <ul class="list-unstyled mb-2">
+                            @foreach (var item in Model.Review.Items)
+                            {
+                                var (icon, css) = item.Severity switch
+                                {
+                                    CheckSeverity.Error => ("❌", "text-danger"),
+                                    CheckSeverity.Warning => ("⚠️", "text-warning"),
+                                    _ => ("✅", "text-success")
+                                };
+                                <li class="@css">@icon @item.Message</li>
+                            }
+                        </ul>
+                        @if (Model.Review.HasErrors)
+                        {
+                            <div class="alert alert-danger py-2 mb-2"><small>Fix the errors above before loading this into the form.</small></div>
+                        }
+                    }
+
+                    <p class="text-muted mb-1"><small>"Use in Create Invoice form" pre-fills the real form — you still pick the supplier/customer and confirm everything before saving. Nothing is submitted automatically.</small></p>
+                    <pre id="suggestionJson" class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.SuggestionJson</pre>
+                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm" disabled="@(Model.Review?.HasErrors ?? false)">✏️ Use in Create Invoice form</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var btn = document.getElementById('useSuggestionBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                try {
+                    var pre = document.getElementById('suggestionJson');
+                    if (!pre) return;
+                    var parsed = JSON.parse(pre.textContent.trim());
+                    sessionStorage.setItem('einv_prefill', JSON.stringify(parsed));
+                    window.location.href = '/Invoices/CreateInvoice?prefill=1';
+                } catch (e) {
+                    alert('The suggestion is not valid JSON, so it cannot be loaded into the form. Try regenerating it.');
+                }
+            });
+        })();
+    </script>
+}

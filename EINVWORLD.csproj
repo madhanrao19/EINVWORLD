@@ -265,6 +265,8 @@
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="PdfPig" Version="0.1.14" />
+
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <!-- EPPlus removed: v5+ requires a commercial/Polyform license (was being used under NonCommercial,

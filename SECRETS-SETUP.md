@@ -24,13 +24,18 @@ ASP.NET Core configuration precedence means these sources **override** the blank
 | `LHDNApiConfig:CertPass` | `LHDNApiConfig__CertPass` | Password for the `.p12` signing certificate. **Only needed when v1.1 signing is enabled** (`SigningEnabled=true`). |
 | `Turnstile:SecretKey` | `Turnstile__SecretKey` | Cloudflare Turnstile (CAPTCHA) secret key. |
 | `EmailConfiguration:Default:SmtpPassword` | `EmailConfiguration__Default__SmtpPassword` | SMTP password for outbound email. |
+| `Api:Key` | `Api__Key` | Static API key for the import REST endpoint (`POST /api/import/validate`, header `X-Api-Key`). **Optional** — leave blank to keep the API disabled. |
 
 ### Environment-specific (not a secret, but must be set on the server)
 
 | Config key | Env-var name | Notes |
 |---|---|---|
-| `DataProtection:KeyRingPath` | `DataProtection__KeyRingPath` | Folder for the encryption key ring. **Point it OUTSIDE `App\`** (e.g. `D:\EINVWORLD\Keys`) so a redeploy doesn't wipe the keys (which would log everyone out). See `IIS-DEPLOYMENT-GUIDE.md`. |
+| `DataProtection:KeyRingPath` | `DataProtection__KeyRingPath` | Folder for the encryption key ring. **Required in Production — the app will not start if blank.** Point it OUTSIDE `App\` (preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`) so a redeploy doesn't wipe the keys (which would log everyone out / break 2FA). Create the folder and grant the app-pool **Modify**. |
+| `DatabaseSettings:AutoMigrateOnStartup` | `DatabaseSettings__AutoMigrateOnStartup` | `true` in `appsettings.Production.json`: applies additive migrations on boot (data preserved). **Back up the DB first** and ensure the SQL login has DDL rights. Set `false` to apply `Apply_*.sql` manually. |
+| `Security:EnforceAdminMfa` | `Security__EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`). Set `false` only as an emergency escape hatch. Not a secret. |
 | `AIAssistant:Enabled` etc. | `AIAssistant__Enabled` | Optional AI assistant (local Ollama). Not a secret. See deployment guide PART O. |
+| `DocumentCapture:Enabled` | `DocumentCapture__Enabled` | Optional AI Document Capture (needs `AIAssistant:Enabled`). Not a secret. |
+| `WatchedFolderImport:Enabled` / `:InboxPath` | `WatchedFolderImport__Enabled` / `WatchedFolderImport__InboxPath` | Optional folder validator. Not a secret. |
 
 ---
 
@@ -57,6 +62,9 @@ dotnet user-secrets set "EmailConfiguration:Default:SmtpPassword" "your-smtp-pas
 
 # Only if you enable v1.1 signing in dev:
 dotnet user-secrets set "LHDNApiConfig:CertPass" "your-p12-password"
+
+# Only if you enable the import REST API in dev:
+dotnet user-secrets set "Api:Key" "a-long-random-key"
 ```
 
 List what you've set:
@@ -83,8 +91,12 @@ Example (PowerShell, machine-level — adjust scope to your policy):
 [Environment]::SetEnvironmentVariable("LHDNApiConfig__ClientSecret2", "prod-secret-2", "Machine")
 [Environment]::SetEnvironmentVariable("Turnstile__SecretKey", "turnstile-secret", "Machine")
 [Environment]::SetEnvironmentVariable("EmailConfiguration__Default__SmtpPassword", "smtp-password", "Machine")
-[Environment]::SetEnvironmentVariable("DataProtection__KeyRingPath", "D:\EINVWORLD\Keys", "Machine")
+# Optional — only if you enable the import REST API:
+[Environment]::SetEnvironmentVariable("Api__Key", "a-long-random-key", "Machine")
 ```
+
+> `DataProtection__KeyRingPath` is preset in `appsettings.Production.json` (`E:\EINVWORLD\Keys`); set the
+> env var only if your server uses a different path.
 
 Then **restart IIS** (`iisreset`) so the new values are picked up.
 
