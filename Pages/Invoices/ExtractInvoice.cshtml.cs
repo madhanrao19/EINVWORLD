@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -18,10 +19,12 @@ namespace EINVWORLD.Pages.Invoices
     {
 
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<OcrUploadModel> _logger;
 
-        public OcrUploadModel(IHttpClientFactory httpClientFactory, ApplicationDbContext context) : base(context)
+        public OcrUploadModel(IHttpClientFactory httpClientFactory, ApplicationDbContext context, ILogger<OcrUploadModel> logger) : base(context)
         {
             _httpClientFactory = httpClientFactory;
+            _logger = logger;
         }
 
         [BindProperty]
@@ -83,8 +86,9 @@ namespace EINVWORLD.Pages.Invoices
                     TempData["ErrorMessage"] = $"Extraction failed. API returned: {response.StatusCode}";
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Invoice extraction request to the OCR service failed.");
                 TempData["ErrorMessage"] = "An error occurred while connecting to the extraction service.";
             }
 

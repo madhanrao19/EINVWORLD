@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.DependencyInjection;
 using eInvWorld.Services;
 using EINVWORLD.Helpers;
 using EINVWORLD.Services.Background;
@@ -14,26 +13,17 @@ namespace eInvWorld.Pages.Admin
     public class InvoiceSyncModel : PageModel
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly IBackgroundTaskQueue _taskQueue;
-        private readonly IServiceScopeFactory _scopeFactory;
         private readonly ISyncJobTracker _jobTracker;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<InvoiceSyncModel> _logger;
 
         public InvoiceSyncModel(
             ApplicationDbContext dbContext,
-            IBackgroundTaskQueue taskQueue,
-            IServiceScopeFactory scopeFactory,
             ISyncJobTracker jobTracker,
-            IConfiguration configuration,
-            ILogger<InvoiceSyncModel> logger)
+            IConfiguration configuration)
         {
             _dbContext = dbContext;
-            _taskQueue = taskQueue;
-            _scopeFactory = scopeFactory;
             _jobTracker = jobTracker;
             _configuration = configuration;
-            _logger = logger;
         }
 
         // "Run Invoice Sync Now" — enqueue the status sync + finalizer to run in the background

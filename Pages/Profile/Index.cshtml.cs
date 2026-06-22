@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using eInvWorld.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
@@ -20,13 +21,15 @@ namespace eInvWorld.Pages.Profile
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(UserManager<ApplicationUser> userManager, IConfiguration configuration, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context)
+        public IndexModel(UserManager<ApplicationUser> userManager, IConfiguration configuration, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, ILogger<IndexModel> logger)
         {
             _userManager = userManager;
             _configuration = configuration;
             _signInManager = signInManager;
             _context = context;
+            _logger = logger;
         }
 
         public ApplicationUser UserProfile { get; set; } = null!;
@@ -165,8 +168,9 @@ namespace eInvWorld.Pages.Profile
                     TempData["ErrorMessage"] = "Failed to update profile: " + string.Join(", ", result.Errors.Select(e => e.Description));
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating profile for the current user.");
                 TempData["ErrorMessage"] = "An error occurred while updating your profile.";
             }
 
@@ -213,8 +217,9 @@ namespace eInvWorld.Pages.Profile
                     TempData["ErrorMessage"] = "Failed to change password: " + errors;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error changing password for the current user.");
                 TempData["ErrorMessage"] = "An error occurred while changing your password.";
             }
 

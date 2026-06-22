@@ -191,12 +191,12 @@ namespace eInvWorld.Pages.PublicCustomer
 
                 if (userCompany == null)
                 {
-                    TempData["ErrorMessage"] = $"DEBUG FAIL: userCompany is NULL. Your UserID is {userId}.";
+                    TempData["ErrorMessage"] = "Your account is not linked to a company.";
                     return RedirectToPage();
                 }
                 if (entity.CreatedByCompanyId != userCompany.PartyInfoId)
                 {
-                    TempData["ErrorMessage"] = $"DEBUG FAIL: ID Mismatch! Buyer was created by Company ID '{entity.CreatedByCompanyId}', but your active Company ID is '{userCompany.PartyInfoId}'.";
+                    TempData["ErrorMessage"] = "You do not have permission to manage this buyer.";
                     return RedirectToPage();
                 }
 
