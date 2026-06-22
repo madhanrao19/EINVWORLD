@@ -76,7 +76,9 @@ namespace eInvWorld.Services
                 if (!string.IsNullOrEmpty(dbLogoString) && dbLogoString.StartsWith("data:image"))
                 {
                     string safeTin = viewModel.InvoiceDetail?.Supplier?.TIN ?? "UnknownTIN";
-                    var base64Data = dbLogoString.Substring(dbLogoString.IndexOf(",") + 1);
+                    // Data URI is "data:image/...;base64,<data>" — split on the first comma; if absent, treat the whole string as the payload.
+                    var commaParts = dbLogoString.Split(',', 2);
+                    var base64Data = commaParts.Length > 1 ? commaParts[1] : commaParts[0];
 
                     // 3. Create a unique fingerprint based on the image size
                     int length = base64Data.Length;
