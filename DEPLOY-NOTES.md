@@ -1,14 +1,24 @@
 # EINVWORLD — On-Prem Deployment Notes (IIS / Windows Server / SQL Server)
 
 Practical checklist for deploying to a self-hosted Windows + IIS + SQL Server box.
-Production runs with `DatabaseSettings:AutoMigrateOnStartup = false`, so **schema changes are a
-manual, controlled step** using the idempotent `Apply_*.sql` scripts below.
 
-## 1. Database migrations (run in this order)
+## 1. Database migrations
 
-Each script is idempotent (guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID`) and safe to
-re-run. Run against **staging first**, verify, then production. Use a migration-only SQL login
-(`db_ddladmin`), not the app's runtime login.
+**Default: automatic.** `appsettings.Production.json` ships with
+`DatabaseSettings:AutoMigrateOnStartup = true`, so on the first start of a new version the app applies
+any pending EF migrations itself. The migrations are **additive** (new tables/columns/indexes — no
+`Up()` drops data), so existing data is preserved. Before that first start you MUST:
+
+1. **Take a full DB backup** (your rollback).
+2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`).
+3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
+   affected tables) and keep the app pool at a **single worker process**.
+
+### Manual alternative (optional)
+
+If you prefer to control schema changes yourself, set `AutoMigrateOnStartup = false` and run the
+idempotent `Apply_*.sql` scripts below in order (staging first, then production) with a migration login
+(`db_ddladmin`). Each guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID` and is safe to re-run.
 
 ```bat
 set DB=-S <sql-host> -d <database> -E -b
@@ -40,8 +50,10 @@ Set on the server via environment variables or user-secrets — see `SECRETS-SET
 - `LHDNApiConfig__ClientSecret`, `LHDNApiConfig__ClientSecret2`, `LHDNApiConfig__CertPass` (if signing)
 - `EmailConfiguration__Default__SmtpPassword`
 - `Turnstile__SecretKey`
-- `DataProtection__KeyRingPath` — **must point OUTSIDE the App folder** (e.g. `D:\EINVWORLD\Keys`) so a
-  redeploy that clears `App\` doesn't wipe the keys (which would log everyone out and break 2FA/antiforgery).
+- `Api__Key` — **optional**; set only to enable the import REST API (`POST /api/import/validate`).
+- `DataProtection__KeyRingPath` — **must point OUTSIDE the App folder** (preset to `E:\EINVWORLD\Keys`
+  in `appsettings.Production.json`) so a redeploy that clears `App\` doesn't wipe the keys (which would
+  log everyone out and break 2FA/antiforgery). **Required in Production — the app won't start if blank.**
 
 Startup runs `ProductionConfigValidator`, which **fails fast with one clear message** if a critical
 setting is blank/wrong (connection string, key ring, signing cert, localhost URLs in Production, etc.).
@@ -78,6 +90,20 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 
+## 5b. Optional ingestion features (all OFF by default)
+
+Draft-safe — they validate/suggest only; none creates or submits invoices automatically.
+
+- **AI Document Capture** (`/Invoices/CreateFromFile`) — set `DocumentCapture:Enabled=true` **and**
+  `AIAssistant:Enabled=true` (needs Ollama; see IIS guide PART O). Digital (text-layer) PDFs only;
+  scanned images report "needs OCR".
+- **Bulk Import** (`/Invoices/BulkImport`) — always available to Admin/Supplier; download the template,
+  upload CSV/XLSX, get a per-row validation report. No config needed.
+- **Watched-folder importer** — set `WatchedFolderImport:Enabled=true` and `InboxPath`
+  (e.g. `E:\EINVWORLD\Inbox`); grant the app-pool **Modify**. Files are validated and moved to
+  `Processed/` / `Rejected/` with a `.report.json`.
+- **REST validate API** — set `Api:Key`; callers POST to `/api/import/validate` with header `X-Api-Key`.
+
 ## 6. PDF engine
 
 `PDFGenerationSettings:Engine` is `DinkToPdf` (default; loads `wkhtmltox\libwkhtmltox.dll` natively) or
@@ -90,6 +116,9 @@ only loaded for the `DinkToPdf` engine.
 - Use **encrypted backups** — and back up the encryption certificate/key separately (without it the
   backup can't be restored).
 - Runtime login: least privilege (`db_datareader` + `db_datawriter` + execute), **not** `sa`/`db_owner`.
+  Exception: with **auto-migrate on**, the runtime login also needs `db_ddladmin` (to create/alter
+  schema on boot). For strict least-privilege, set `AutoMigrateOnStartup=false` and run the
+  `Apply_*.sql` scripts with a separate DDL login instead.
 
 ## 8. Rollback
 
