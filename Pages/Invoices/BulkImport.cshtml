@@ -1,0 +1,91 @@
+@page
+@using EINVWORLD.Services.Import
+@model eInvWorld.Pages.Invoices.BulkImportModel
+@{
+    ViewData["Title"] = "Bulk Invoice Import (validate)";
+}
+
+<h3>📥 Bulk Invoice Import <small class="text-muted">(validate-only)</small></h3>
+<p class="text-muted">
+    Upload a CSV or Excel file (one row per invoice line) to validate it against the real LHDN codes before
+    keying invoices in. This checks the data only — it does not create anything yet.
+</p>
+
+@if (!string.IsNullOrEmpty(Model.ErrorText))
+{
+    <div class="alert alert-danger">@Model.ErrorText</div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <a asp-page-handler="Template" class="btn btn-outline-secondary btn-sm mb-3">⬇️ Download template (.xlsx)</a>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="Upload" accept=".csv,.xlsx" class="form-control mb-2" />
+            <div class="text-muted mb-2"><small>Columns: @string.Join(", ", Model.Columns)</small></div>
+            <button type="submit" class="btn btn-primary">Validate</button>
+        </form>
+    </div>
+</div>
+
+@if (Model.Preview is not null)
+{
+    var p = Model.Preview;
+    if (!string.IsNullOrEmpty(p.ParseError))
+    {
+        <div class="alert alert-danger">@p.ParseError</div>
+    }
+    else
+    {
+        <div class="alert @(p.ErrorRows == 0 ? "alert-success" : "alert-warning")">
+            <strong>@Model.FileName</strong> — @p.TotalRows row(s): @p.OkRows OK, @p.ErrorRows with errors.
+            @if (p.ErrorRows == 0) { <text>All rows passed validation.</text> }
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle">
+                <thead>
+                    <tr>
+                        <th>Row</th>
+                        <th>Status</th>
+                        <th>Invoice</th>
+                        <th>Line</th>
+                        <th>Issues</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in p.Rows)
+                    {
+                        var invNo = row.Values.TryGetValue("InvoiceNo", out var iv) ? iv : "";
+                        var lineNo = row.Values.TryGetValue("LineNumber", out var ln) ? ln : "";
+                        <tr class="@(row.HasError ? "table-danger" : "")">
+                            <td>@row.RowNumber</td>
+                            <td>
+                                @if (row.HasError) { <span class="badge bg-danger">Error</span> }
+                                else if (row.Issues.Count > 0) { <span class="badge bg-warning text-dark">Warning</span> }
+                                else { <span class="badge bg-success">OK</span> }
+                            </td>
+                            <td><small>@invNo</small></td>
+                            <td><small>@lineNo</small></td>
+                            <td>
+                                @if (row.Issues.Count == 0)
+                                {
+                                    <small class="text-muted">—</small>
+                                }
+                                else
+                                {
+                                    <ul class="mb-0 ps-3">
+                                        @foreach (var issue in row.Issues)
+                                        {
+                                            var css = issue.Severity == ImportSeverity.Error ? "text-danger" : "text-warning";
+                                            <li class="@css"><small>[@issue.Column] @issue.Message</small></li>
+                                        }
+                                    </ul>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}

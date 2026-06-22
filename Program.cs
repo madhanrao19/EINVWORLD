@@ -312,6 +312,22 @@ builder.Services.AddHttpClient<EINVWORLD.Services.Assistant.IEInvoiceAssistantSe
     client.Timeout = TimeSpan.FromSeconds(aiOptions.TimeoutSeconds <= 0 ? 120 : aiOptions.TimeoutSeconds);
 });
 
+// AI Document Capture (upload PDF → extract text → reuse the assistant to suggest a reviewed invoice).
+// OFF by default; also requires the AI assistant to be enabled.
+var docCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.DocumentCapture.DocumentCaptureOptions.SectionName)
+    .Get<EINVWORLD.Services.DocumentCapture.DocumentCaptureOptions>() ?? new EINVWORLD.Services.DocumentCapture.DocumentCaptureOptions();
+builder.Services.AddSingleton(docCaptureOptions);
+builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtractor, EINVWORLD.Services.DocumentCapture.PdfDocumentTextExtractor>();
+
+// Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
+builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
+
+// Watched-folder importer: validates CSV/XLSX dropped into an Inbox and sorts them. OFF by default.
+var watchedFolderOptions = builder.Configuration.GetSection(EINVWORLD.Services.Import.WatchedFolderOptions.SectionName)
+    .Get<EINVWORLD.Services.Import.WatchedFolderOptions>() ?? new EINVWORLD.Services.Import.WatchedFolderOptions();
+builder.Services.AddSingleton(watchedFolderOptions);
+builder.Services.AddHostedService<EINVWORLD.Services.Import.WatchedFolderImportWorker>();
+
 // Add HttpClient services to the DI container
 builder.Services.AddHttpClient();
 
