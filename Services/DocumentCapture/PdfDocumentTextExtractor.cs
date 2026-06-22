@@ -1,8 +1,7 @@
 using System;
 using System.Text;
-using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.parser;
 using Microsoft.Extensions.Logging;
+using UglyToad.PdfPig;
 
 namespace EINVWORLD.Services.DocumentCapture
 {
@@ -18,9 +17,9 @@ namespace EINVWORLD.Services.DocumentCapture
     }
 
     /// <summary>
-    /// PDF text-layer extractor built on the already-referenced iTextSharp.LGPLv2.Core. Pure/managed —
-    /// no native OCR engine. Digital supplier invoices (PDFs with a real text layer) extract cleanly;
-    /// scanned images return empty and are reported to the user as "needs OCR".
+    /// PDF text-layer extractor built on PdfPig (UglyToad.PdfPig — MIT, pure managed, fits the FOSS-only
+    /// policy). No native OCR engine: digital supplier invoices (PDFs with a real text layer) extract
+    /// cleanly; scanned images return empty and are reported to the user as "needs OCR".
     /// </summary>
     public sealed class PdfDocumentTextExtractor : IDocumentTextExtractor
     {
@@ -32,15 +31,14 @@ namespace EINVWORLD.Services.DocumentCapture
         {
             if (pdfBytes is null || pdfBytes.Length == 0) return string.Empty;
 
-            PdfReader? reader = null;
             try
             {
-                reader = new PdfReader(pdfBytes);
-                var pages = Math.Min(reader.NumberOfPages, Math.Max(1, maxPages));
+                using var doc = PdfDocument.Open(pdfBytes);
+                var pages = Math.Min(doc.NumberOfPages, Math.Max(1, maxPages));
                 var sb = new StringBuilder();
-                for (var page = 1; page <= pages; page++)
+                for (var i = 1; i <= pages; i++)
                 {
-                    var text = PdfTextExtractor.GetTextFromPage(reader, page);
+                    var text = doc.GetPage(i).Text;
                     if (!string.IsNullOrWhiteSpace(text))
                         sb.AppendLine(text);
                 }
@@ -50,10 +48,6 @@ namespace EINVWORLD.Services.DocumentCapture
             {
                 _log.LogWarning(ex, "Failed to extract text from uploaded PDF.");
                 return string.Empty;
-            }
-            finally
-            {
-                reader?.Close();
             }
         }
     }
