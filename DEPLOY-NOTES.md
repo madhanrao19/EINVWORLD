@@ -1,14 +1,24 @@
 # EINVWORLD — On-Prem Deployment Notes (IIS / Windows Server / SQL Server)
 
 Practical checklist for deploying to a self-hosted Windows + IIS + SQL Server box.
-Production runs with `DatabaseSettings:AutoMigrateOnStartup = false`, so **schema changes are a
-manual, controlled step** using the idempotent `Apply_*.sql` scripts below.
 
-## 1. Database migrations (run in this order)
+## 1. Database migrations
 
-Each script is idempotent (guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID`) and safe to
-re-run. Run against **staging first**, verify, then production. Use a migration-only SQL login
-(`db_ddladmin`), not the app's runtime login.
+**Default: automatic.** `appsettings.Production.json` ships with
+`DatabaseSettings:AutoMigrateOnStartup = true`, so on the first start of a new version the app applies
+any pending EF migrations itself. The migrations are **additive** (new tables/columns/indexes — no
+`Up()` drops data), so existing data is preserved. Before that first start you MUST:
+
+1. **Take a full DB backup** (your rollback).
+2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`).
+3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
+   affected tables) and keep the app pool at a **single worker process**.
+
+### Manual alternative (optional)
+
+If you prefer to control schema changes yourself, set `AutoMigrateOnStartup = false` and run the
+idempotent `Apply_*.sql` scripts below in order (staging first, then production) with a migration login
+(`db_ddladmin`). Each guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID` and is safe to re-run.
 
 ```bat
 set DB=-S <sql-host> -d <database> -E -b
