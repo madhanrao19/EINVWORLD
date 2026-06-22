@@ -373,7 +373,7 @@ var rateLimitEnabled = builder.Configuration.GetValue("RateLimiting:Enabled", tr
 var permitsPerMinute = builder.Configuration.GetValue("RateLimiting:PermitsPerMinute", 1200);
 builder.Services.AddRateLimiter(options =>
 {
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.RejectionStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
         if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health"))
