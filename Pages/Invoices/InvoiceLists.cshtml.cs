@@ -47,14 +47,12 @@ namespace eInvWorld.Pages.Invoices
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEInvoiceNotificationService _eInvoiceEmailService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly IJsonFileService _jsonFileService;
         private readonly InvoiceHistoryService _invoiceHistoryService;
         private readonly ITokenService _tokenService;
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly InvoiceSyncHelper _invoiceSyncHelper;
-        private readonly IBackgroundTaskQueue _taskQueue;
         private readonly ISyncJobTracker _jobTracker;
 
         public List<InvoiceHeader> DraftInvoices { get; set; } = new List<InvoiceHeader>();
@@ -88,14 +86,12 @@ namespace eInvWorld.Pages.Invoices
                                  ILogger<InvoiceListsModel> logger,
                                  UserManager<ApplicationUser> userManager,
                                  IEInvoiceNotificationService eInvoiceEmailService,
-                                 IServiceScopeFactory serviceScopeFactory,
                                  InvoiceHistoryService invoiceHistoryService,
                                  IJsonFileService jsonFileService,
                                  ITokenService tokenService,
                                  IPdfGeneratorService pdfGeneratorService,
                                  IHttpClientFactory httpClientFactory,
                                  InvoiceSyncHelper invoiceSyncHelper,
-                                 IBackgroundTaskQueue taskQueue,
                                  ISyncJobTracker jobTracker)
         {
             _context = context;
@@ -104,14 +100,12 @@ namespace eInvWorld.Pages.Invoices
             _logger = logger;
             _userManager = userManager;
             _eInvoiceEmailService = eInvoiceEmailService;
-            _serviceScopeFactory = serviceScopeFactory;
             _invoiceHistoryService = invoiceHistoryService;
             _jsonFileService = jsonFileService;
             _tokenService = tokenService;
             _pdfGeneratorService = pdfGeneratorService;
             _httpClientFactory = httpClientFactory;
             _invoiceSyncHelper = invoiceSyncHelper;
-            _taskQueue = taskQueue;
             _jobTracker = jobTracker;
         }
         public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)

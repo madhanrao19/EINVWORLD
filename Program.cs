@@ -89,10 +89,6 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
        .AddRoles<IdentityRole>()  // Adding roles
        .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// Legacy in-memory queue — retained only because a few page models still inject IBackgroundTaskQueue.
-// Background sync/import work no longer flows through it; it has been replaced by the durable,
-// SQL-backed DurableSyncJobWorker below so jobs survive an IIS app-pool recycle / server reboot.
-builder.Services.AddSingleton<EINVWORLD.Services.Background.IBackgroundTaskQueue, EINVWORLD.Services.Background.BackgroundTaskQueue>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobTracker, EINVWORLD.Services.Background.SyncJobTracker>();
 
 // Durable background-job processing: handlers (scoped, resolved per job) + the polling worker.
