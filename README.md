@@ -110,6 +110,7 @@ set them in dev (user-secrets) and on the server (environment variables).
 
 ## Documentation
 
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** — complete system & architecture reference.
 - **[SECRETS-SETUP.md](SECRETS-SETUP.md)** — all secrets and how to configure them.
 - **[IIS-DEPLOYMENT-GUIDE.md](IIS-DEPLOYMENT-GUIDE.md)** — step-by-step production deployment to IIS
   (DataProtection keys, backup + auto-migration, admin 2FA, optional Ollama setup).
