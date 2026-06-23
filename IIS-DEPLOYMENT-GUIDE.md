@@ -1,465 +1,517 @@
 # EINVWORLD — IIS Deployment Guide
 
-**Beginner / Intern Friendly Guide**
+**A complete, click-by-click guide. Written so a junior IT / intern can deploy EINVWORLD to a
+Windows Server (IIS + SQL Server) with no prior knowledge of the app.**
 
-This guide assumes:
+Follow the parts **in order**. Each step says exactly what to click and **what you should see** when it
+works. If a step's result is different, stop and check the Troubleshooting section (Part 16) before
+continuing.
 
-- Windows Server with IIS installed
-- SQL Server already installed
-- You have received:
-  - `EINVWORLD_release_v1.1.zip`
-  - SQL database backup (`.bak`)
-  - SSL Certificate
-  - LHDN credentials
-  - Domain name already points to the server
+> ⏱️ **Time needed:** ~1–2 hours the first time.
+> 🧰 **You will deploy to one server** — the steps are identical for **Production** and **Staging**; the
+> only differences (database name, LHDN URL, domain) are called out in **Part 2**.
 
 ---
 
-## PART A — Preparation
+## Contents
 
-### Step A1 — Create Folders
+1. [What you need before you start](#part-1--what-you-need-before-you-start)
+2. [Production vs Staging — what changes](#part-2--production-vs-staging)
+3. [Create the folders](#part-3--create-the-folders)
+4. [Install .NET 10 Hosting Bundle](#part-4--install-net-10-hosting-bundle)
+5. [Prepare the SQL Server databases](#part-5--prepare-the-sql-server-databases)
+6. [Copy the application files](#part-6--copy-the-application-files)
+7. [Create the IIS Application Pool](#part-7--create-the-iis-application-pool)
+8. [Create the IIS Website](#part-8--create-the-iis-website)
+9. [Set folder permissions](#part-9--set-folder-permissions)
+10. [Set environment variables (secrets)](#part-10--set-environment-variables-secrets)
+11. [Install the signing certificate (optional)](#part-11--install-the-signing-certificate-optional)
+12. [Back up the database (before first run)](#part-12--back-up-the-database-before-first-run)
+13. [Start the site & first run](#part-13--start-the-site--first-run)
+14. [First login + enrol Admin 2FA](#part-14--first-login--enrol-admin-2fa)
+15. [Smoke test (verify everything works)](#part-15--smoke-test)
+16. [Troubleshooting](#part-16--troubleshooting)
+17. [Optional features](#part-17--optional-features)
+18. [Updating to a new version later](#part-18--updating-to-a-new-version)
+19. [Final checklist](#part-19--final-checklist)
 
-Open **File Explorer** and create:
+---
+
+## Part 1 — What you need before you start
+
+Collect all of these **before** you begin. Ask the project lead if anything is missing.
+
+| Item | Example / where it comes from |
+|---|---|
+| ☐ Windows Server with **Administrator** access | Remote Desktop login |
+| ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
+| ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.3.zip` |
+| ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
+| ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
+| ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
+| ☐ **SQL login** username + password | e.g. `einvworldusr` / a strong password |
+| ☐ **LHDN MyInvois** credentials | `ClientId`, `ClientSecret`, `ClientSecret2` |
+| ☐ **SMTP** password (for outgoing email) | from the mail admin |
+| ☐ **Cloudflare Turnstile** secret key | from the project lead |
+| ☐ (optional) **Signing certificate** `.p12` + password | only if you will enable LHDN digital signing |
+
+> 🔐 **Golden rule:** **never type passwords into `appsettings.json`.** All secrets go into **IIS
+> environment variables** (Part 10). This guide assumes that.
+
+---
+
+## Part 2 — Production vs Staging
+
+Do the **same steps** for both. Only these values differ — write down which set you are using:
+
+| Setting | Production | Staging |
+|---|---|---|
+| Domain | `einvworld.com` | `staging.einvworld.com` (or a port like `:8443`) |
+| Database name | `EINVWORLD` | `EINVWORLD_STAGING` (a separate DB!) |
+| `ASPNETCORE_ENVIRONMENT` | `Production` | `Production` (still Production — just different DB/URL) |
+| LHDN `BaseUrl` | `https://api.myinvois.hasil.gov.my/` | `https://preprod-api.myinvois.hasil.gov.my/` (sandbox) |
+| LHDN `ValidationBaseUrl` | `https://myinvois.hasil.gov.my/` | `https://preprod.myinvois.hasil.gov.my/` |
+
+> Staging points at the **LHDN PREPROD sandbox** so test invoices don't go to the real tax authority.
+> If you set the preprod URL while `ASPNETCORE_ENVIRONMENT=Production`, the app logs a harmless
+> **warning** at startup (reminding you it's the sandbox) — that's expected on staging.
+>
+> The LHDN `BaseUrl`/`ValidationBaseUrl` live in `appsettings.json` (not a secret). For staging, edit
+> those two values in the staging server's `appsettings.json` to the preprod URLs.
+
+---
+
+## Part 3 — Create the folders
+
+Open **File Explorer** and create this exact structure (here on the `E:` drive — use another drive if
+`E:` doesn't exist, but keep the same sub-folders):
 
 ```
 E:\EINVWORLD
- ├── App
- ├── Documents
- ├── Logs
- ├── Keys      ← DataProtection encryption keys (MUST be outside App)
- └── Cert
+ ├── App         ← the application files go here
+ ├── Documents   ← generated invoices, PDFs, drafts (the app writes here)
+ ├── Logs        ← log files
+ ├── Keys        ← encryption keys (MUST be separate from App)
+ └── Cert        ← the LHDN signing certificate (only if you use signing)
 ```
 
-> **Why `Keys` is separate:** ASP.NET Core stores the keys that protect login cookies, 2FA, and
-> antiforgery tokens here. If they lived under `App\`, every redeploy would wipe them and log everyone
-> out. Keeping them in `E:\EINVWORLD\Keys` makes them survive redeploys.
+**Why `Keys` is separate:** Windows stores the keys that protect login cookies, 2-factor, and form
+security here. If they lived inside `App\`, every time you re-deploy a new version they'd be wiped and
+**everyone would be logged out**. Keeping them in `E:\EINVWORLD\Keys` makes them survive upgrades.
+
+> ✅ **You should see:** five folders under `E:\EINVWORLD`.
 
 ---
 
-## PART B — Install .NET 10
+## Part 4 — Install .NET 10 Hosting Bundle
 
-### Step B1
+The app runs on .NET 10. IIS needs the **Hosting Bundle** (runtime + the IIS module).
 
-Open a browser and download the **ASP.NET Core Runtime Hosting Bundle (.NET 10)** from Microsoft.
+1. On the server, open a browser → search **".NET 10 Hosting Bundle download"** → go to the official
+   **dotnet.microsoft.com** page.
+2. Download **ASP.NET Core Runtime → Hosting Bundle** (Windows).
+3. Right-click the installer → **Run as administrator** → **Install** → **Finish**.
+4. **Restart IIS** so it picks up the new module: open **Command Prompt as Administrator** and run:
+   ```
+   iisreset
+   ```
 
-### Step B2
-
-Run the installer **as Administrator** → **Next** → **Install** → **Finish**.
-
-### Step B3 — Verify Installation
-
-Open **Command Prompt** and run:
-
+**Verify it installed:** in the same Command Prompt run:
 ```
 dotnet --list-runtimes
 ```
-
-You should see:
-
+✅ **You should see** lines containing:
 ```
-Microsoft.AspNetCore.App 10.x.x
-Microsoft.NETCore.App 10.x.x
+Microsoft.AspNetCore.App 10.x.x ...
+Microsoft.NETCore.App 10.x.x ...
 ```
+If you don't see `10.x`, the Hosting Bundle didn't install — re-run the installer.
 
 ---
 
-## PART C — Deploy Application
+## Part 5 — Prepare the SQL Server databases
 
-### Step C1
+The app uses **two** databases on the same SQL Server:
+- **`EINVWORLD`** — the main application database.
+- **`EINVWORLDWEBSITE`** — the public website/marketing data.
 
-Extract `EINVWORLD_release_v1.1.zip`.
+### Step 5.1 — Create (or restore) the databases
 
-### Step C2
+Open **SSMS** and connect to the SQL Server.
 
-Copy **all** extracted files into:
+- **Brand-new install:** right-click **Databases → New Database…** → create `EINVWORLD`, then again for
+  `EINVWORLDWEBSITE`. (The app creates the tables itself on first run — Part 13.)
+- **Migrating an existing DB:** right-click **Databases → Restore Database…** → **Device** → pick the
+  `.bak` → restore it as `EINVWORLD`.
 
-```
-E:\EINVWORLD\App
-```
+### Step 5.2 — Create the SQL login the app will use
 
-You should see:
+1. In SSMS: **Security → Logins → right-click → New Login…**
+2. **Login name:** `einvworldusr`
+3. Select **SQL Server authentication**, set a **strong password**, untick "Enforce password policy" if
+   it blocks you, click the **User Mapping** page.
+4. Tick **both** `EINVWORLD` and `EINVWORLDWEBSITE`. For each, in the **role membership** list below tick:
+   - **`db_datareader`**, **`db_datawriter`**, and **`db_ddladmin`**.
+5. Click **OK**.
 
+> 🔎 **Why `db_ddladmin`?** On first run (and on each upgrade) the app **creates/updates its own
+> tables automatically**. That needs schema permission. If your security policy forbids this, see the
+> "manual migrations" note in **Part 13**.
+
+✅ **You should see:** `einvworldusr` under **Security → Logins**, mapped to both databases.
+
+---
+
+## Part 6 — Copy the application files
+
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.3.zip`) onto the server.
+2. Right-click → **Extract All…**
+3. Copy **everything** from inside the extracted folder into:
+   ```
+   E:\EINVWORLD\App
+   ```
+
+✅ **You should see**, directly inside `E:\EINVWORLD\App`:
 ```
 EINVWORLD.exe
 EINVWORLD.dll
 web.config
 appsettings.json
 appsettings.Production.json
+wwwroot\           (folder)
+…and many .dll files
 ```
 
-…and many DLL files.
+> ⚠️ **`web.config` must be present** at the root of `App\`. Without it IIS can accidentally expose
+> internal files. If it's missing, the package is incomplete — get a correct build.
 
 ---
 
-## PART D — Create IIS Application Pool
+## Part 7 — Create the IIS Application Pool
 
-Open **Start → IIS Manager** → **Application Pools** → right-click → **Add Application Pool**.
+The "Application Pool" is the Windows process that runs the app.
 
-| Field | Value |
+1. Open **Start → IIS Manager** (Internet Information Services Manager).
+2. In the left tree, click **Application Pools**.
+3. Right-click → **Add Application Pool…**
+   - **Name:** `EINVWORLD`
+   - **.NET CLR version:** **No Managed Code**  *(important — the app brings its own .NET)*
+   - **Managed pipeline mode:** **Integrated**
+   - Click **OK**.
+4. Select the new **EINVWORLD** pool → on the right click **Advanced Settings…** and set:
+
+   | Setting | Value | Why |
+   |---|---|---|
+   | **Start Mode** | `AlwaysRunning` | keeps background workers (sync, tokens, recurring) alive |
+   | **Idle Time-out (minutes)** | `0` | don't shut down when idle |
+   | **Maximum Worker Processes** | `1` | a single process (don't use a "web garden") |
+   | **Load User Profile** | `True` | needed for some libraries / temp files |
+   | **Regular Time Interval (recycle, minutes)** | `0` | or schedule a recycle at night, not during work hours |
+
+   Click **OK**.
+
+✅ **You should see:** an Application Pool named **EINVWORLD**, Started, "No Managed Code".
+
+---
+
+## Part 8 — Create the IIS Website
+
+1. In **IIS Manager**, right-click **Sites → Add Website…**
+2. Fill in:
+   - **Site name:** `EINVWORLD`
+   - **Application pool:** click **Select…** → choose **EINVWORLD**
+   - **Physical path:** `E:\EINVWORLD\App`
+   - **Binding → Type:** `https`
+   - **Port:** `443` (Production) — for staging you may use `443` on the staging host name, or a port
+     like `8443`
+   - **Host name:** your domain, e.g. `einvworld.com` (or `staging.einvworld.com`)
+   - **SSL certificate:** pick your installed certificate from the dropdown
+3. Click **OK**.
+
+> If your certificate isn't in the dropdown, install it first: **IIS Manager → Server name → Server
+> Certificates → Import…** (`.pfx`), then come back.
+
+✅ **You should see:** a Site named **EINVWORLD**, Started, bound to `https` on your domain.
+
+---
+
+## Part 9 — Set folder permissions
+
+The app pool must be allowed to write to its working folders.
+
+1. In **File Explorer**, right-click **`E:\EINVWORLD`** → **Properties → Security → Edit… → Add…**
+2. In the box type exactly:
+   ```
+   IIS AppPool\EINVWORLD
+   ```
+   (this is the pool's identity — `EINVWORLD` must match the pool name from Part 7)
+3. Click **Check Names** → it should resolve/underline → **OK**.
+4. With that identity selected, tick **Allow** for **Modify**, **Read & execute**, **List**, **Read**,
+   **Write**.
+5. Click **Apply → OK**. (This applies to all sub-folders including `Documents`, `Logs`, `Keys`, `Cert`.)
+
+✅ **You should see:** `IIS AppPool\EINVWORLD` listed with **Modify** permission on `E:\EINVWORLD`.
+
+---
+
+## Part 10 — Set environment variables (secrets)
+
+This is where the passwords go — **not** in `appsettings.json`.
+
+1. In **IIS Manager**, click the **EINVWORLD** *site* (left tree).
+2. Double-click **Configuration Editor** (under "Management").
+3. In the **Section** dropdown at the top, choose:
+   ```
+   system.webServer/aspNetCore
+   ```
+4. Find the **`environmentVariables`** row → click it → click the **`…`** button on the right.
+5. A grid opens. Click **Add** for each row below and fill **Name** and **Value**:
+
+   | Name | Value (example) |
+   |---|---|
+   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ConnectionStrings__DefaultConnection` | `Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;TrustServerCertificate=True;MultipleActiveResultSets=true` |
+   | `ConnectionStrings__WebsiteDb` | `Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;TrustServerCertificate=True;MultipleActiveResultSets=true` |
+   | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
+   | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
+   | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |
+   | `Turnstile__SecretKey` | `YOUR_TURNSTILE_SECRET` |
+
+   **Add these only if you use the feature:**
+
+   | Name | When |
+   |---|---|
+   | `LHDNApiConfig__CertPass` | only if you enable LHDN **digital signing** (Part 11) |
+   | `Api__Key` | only if an external ERP will call the validation API (`POST /api/import/validate`) |
+
+   > ℹ️ The double underscore `__` replaces the `:` in a config key. So `ConnectionStrings:DefaultConnection`
+   > becomes `ConnectionStrings__DefaultConnection`.
+
+6. Click **OK** (close the grid) → on the right click **Apply**.
+
+> 📝 **`DataProtection:KeyRingPath` is already set** to `E:\EINVWORLD\Keys` inside
+> `appsettings.Production.json`. You just made that folder in Part 3 and gave it Modify rights in Part 9,
+> so there's nothing more to do here. **(The app will refuse to start in Production if this folder/path
+> is missing — that's a safety feature.)**
+
+✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production`).
+
+---
+
+## Part 11 — Install the signing certificate (optional)
+
+**Skip this** unless the project lead told you to enable **LHDN v1.1 digital signing**.
+
+1. Copy the certificate file (e.g. `DATAMATION_TECHNOLOGY_(M)_SDN._BHD..p12`) into:
+   ```
+   E:\EINVWORLD\Cert
+   ```
+2. In the app's environment variables (Part 10) also add:
+   | Name | Value |
+   |---|---|
+   | `LHDNApiConfig__SigningEnabled` | `true` |
+   | `LHDNApiConfig__DocVersion` | `1.1` |
+   | `LHDNApiConfig__CertPath` | `Cert\DATAMATION_TECHNOLOGY_(M)_SDN._BHD..p12` |
+   | `LHDNApiConfig__CertPass` | the certificate password |
+3. **Validate against the LHDN PREPROD sandbox first** before doing this in Production.
+
+> If signing is **on** but the cert path or password is wrong, the app **won't start** (a safety check)
+> and the log will tell you exactly what's missing.
+
+---
+
+## Part 12 — Back up the database (before first run)
+
+⚠️ **Do this before you start the site the first time.** On first run the app **creates/updates its
+tables automatically**. A backup is your safety net.
+
+1. In **SSMS**: right-click the **`EINVWORLD`** database → **Tasks → Back Up…**
+2. **Backup type:** `Full` → choose a destination folder → **OK**.
+
+✅ **You should see:** "The backup of database 'EINVWORLD' completed successfully."
+
+> The app's schema changes are **additive** (it adds tables/columns/indexes — it never deletes your
+> data), but always keep this backup until you've confirmed the new version works.
+
+---
+
+## Part 13 — Start the site & first run
+
+1. In **IIS Manager**, click the **EINVWORLD** site → on the right, under **Manage Website**, click
+   **Restart** (or run `iisreset` in an Admin Command Prompt).
+2. Wait ~30–60 seconds — on the **first** start the app creates/updates the database tables (this makes
+   the first start slower than usual). That's normal.
+3. Open a browser and go to your domain:
+   ```
+   https://einvworld.com
+   ```
+   (or your staging URL)
+
+✅ **You should see:** the **EINVWORLD login page**.
+
+**Quick health check** — open these URLs:
+- `https://einvworld.com/health/live` → should say **Healthy** (the app is running).
+- `https://einvworld.com/health/ready` → should say **Healthy** (database + folders are OK).
+
+❌ If you get **HTTP 500** or a blank page, go to **Part 16 — Troubleshooting** (check the
+`E:\EINVWORLD\App\logs\stdout` files — the error usually says exactly what's wrong, e.g. a missing
+environment variable).
+
+> **Prefer to apply database changes by hand?** (strict DBs that don't allow `db_ddladmin`.) Set the env
+> var `DatabaseSettings__AutoMigrateOnStartup` to `false`, and ask the developer for the
+> `Migrations\Apply_*.sql` scripts; run them in SSMS in the documented order **before** starting the
+> site. See `DEPLOY-NOTES.md`.
+
+---
+
+## Part 14 — First login + enrol Admin 2FA
+
+The app **requires two-factor authentication for administrator accounts**.
+
+1. On the login page, sign in with the **admin** account given to you.
+2. **First time:** you'll be redirected to a **"Configure authenticator app"** page (this is expected,
+   not an error).
+3. On your phone install **Google Authenticator** (or Microsoft Authenticator).
+4. **Scan the QR code** shown on screen, then type the **6-digit code** from the app and submit.
+5. **Save the recovery codes** it shows you somewhere safe — they're your backup if you lose the phone.
+6. You'll land on the **Dashboard**. From now on, admin logins ask for the 6-digit code.
+
+✅ **You should see:** the Dashboard after entering the code.
+
+> Want 2FA off? (not recommended) Add the env var `Security__EnforceAdminMfa` = `false` and restart IIS.
+> There is **no lockout** either way — you always reach the enrolment page and have recovery codes.
+
+---
+
+## Part 15 — Smoke test
+
+Confirm the core things work:
+
+1. **Health:** open **Admin → System Health** (left menu). Everything should look OK — database,
+   background jobs, DataProtection keys, disk space, signing cert (if enabled).
+2. **Login/roles:** the menu shows the admin options.
+3. **Create a test invoice** and **submit it to LHDN**.
+   - Production: it goes to the real MyInvois — use a genuine test invoice your team agreed on.
+   - Staging: it goes to the **PREPROD sandbox**.
+   ✅ Expected: status moves to **Submitted → Valid** and a **QR code** appears.
+4. **Email:** trigger an action that sends mail (e.g. validated-invoice notification) and confirm it
+   arrives. (If not, check the SMTP password env var.)
+5. **PDF:** open an invoice and download its PDF.
+
+✅ If all five pass, the deployment is good.
+
+---
+
+## Part 16 — Troubleshooting
+
+**First place to look:** `E:\EINVWORLD\App\logs\` — open the newest `stdout_*.log`. The error message
+there almost always names the exact problem. (Also **Admin → System Logs** once the app is up.)
+
+| Symptom | Likely cause → fix |
 |---|---|
-| Name | `EINVWORLD` |
-| .NET CLR Version | **No Managed Code** |
-| Managed Pipeline | **Integrated** |
+| **Website won't open** | Is the IIS **site started**? Is the **app pool started**? Is the **binding/port** correct? |
+| **HTTP 500.30 / app won't start** | A required **environment variable** is missing/wrong (most often a connection string), **or** `E:\EINVWORLD\Keys` is missing/not writable, **or** signing is on with a bad cert. The `stdout` log says which. |
+| **Database / login errors** | Check `ConnectionStrings__DefaultConnection`. Confirm `einvworldusr` password and that it's mapped to the DB with `db_datareader/writer/ddladmin`. |
+| **First start is very slow then OK** | Normal — it's creating/updating tables. Only the first start. |
+| **Logged out after every deploy** | `E:\EINVWORLD\Keys` wasn't used/persisted — confirm Part 3 + Part 9 (the folder exists and the app pool has Modify). |
+| **LHDN submit fails** | Check `LHDNApiConfig__ClientSecret` / `ClientSecret2`. On staging confirm the **preprod** URLs. |
+| **Email not sending** | Check `EmailConfiguration__Default__SmtpPassword`. |
+| **Too many "429 Too Many Requests"** | If many users share one office IP, raise `RateLimiting__PermitsPerMinute` (e.g. `3000`) or set `RateLimiting__Enabled` = `false`. |
+| **Page styles/images missing** | Confirm `wwwroot\` was copied into `App\`. |
 
-Click **OK**.
-
-### Step D2 — Configure Pool
-
-Select **EINVWORLD** → **Advanced Settings**:
-
-| Setting | Value |
-|---|---|
-| Start Mode | **AlwaysRunning** |
-| Idle Time-out | **0** |
-| Load User Profile | **True** |
-
-Click **OK**.
-
-> These settings keep the background workers (token renewal, status sync, recurring invoices) alive — without them, IIS recycles the app when idle and the workers stop.
+After changing any environment variable, **always run `iisreset`** so it takes effect.
 
 ---
 
-## PART E — Create Website
+## Part 17 — Optional features
 
-Click **Sites** → right-click → **Add Website**.
+All are **OFF by default**. Enable only if asked.
 
-| Field | Value |
-|---|---|
-| Site Name | `EINVWORLD` |
-| Physical Path | `E:\EINVWORLD\App` |
-| Application Pool | `EINVWORLD` |
-| Binding Type | `https` |
-| Port | `443` |
-| Host Name | `einvworld.com` |
-| SSL Certificate | *(choose your certificate)* |
+### 17a — AI E-Invoice Assistant & AI Document Capture (local, private)
 
-Click **OK**.
+Runs a **local, free** AI model (Ollama) on the server. **No invoice data leaves the server.**
 
----
+1. Download & install **Ollama for Windows** from `https://ollama.com/download`. It runs as a service on
+   `http://localhost:11434`.
+2. Open Command Prompt and pull a model:
+   ```
+   ollama pull llama3.1
+   ```
+   Test it: `ollama run llama3.1 "Say hello"`.
+3. Add these environment variables (Part 10) and `iisreset`:
+   | Name | Value |
+   |---|---|
+   | `AIAssistant__Enabled` | `true` |
+   | `AIAssistant__Model` | `llama3.1` (must match what you pulled) |
+   | `DocumentCapture__Enabled` | `true` (enables PDF → suggestion) |
 
-## PART F — Folder Permissions
+✅ The **E-Invoice Assistant** and **AI Document Capture** menus now work. They only *suggest* drafts —
+they never submit. Always review every field before saving.
 
-Open `E:\EINVWORLD` → right-click → **Properties → Security → Edit → Add**.
+### 17b — Watched-folder import (drop files to validate)
 
-Enter:
+1. Create a folder, e.g. `E:\EINVWORLD\Inbox`, and give the app pool **Modify** rights on it (Part 9).
+2. Add env vars and `iisreset`:
+   | Name | Value |
+   |---|---|
+   | `WatchedFolderImport__Enabled` | `true` |
+   | `WatchedFolderImport__InboxPath` | `E:\EINVWORLD\Inbox` |
+3. Drop a `.csv`/`.xlsx` invoice file into the Inbox. The app validates it and moves it to
+   `Processed\` or `Rejected\` with a `.report.json` result. (It validates only — it doesn't create invoices.)
 
-```
-IIS AppPool\EINVWORLD
-```
+### 17c — Import REST API (for an external ERP)
 
-Click **Check Names → OK**, then tick **Modify**, **Read**, **Write** and **Apply**.
-
----
-
-## PART G — Configure Environment Variables
-
-> **IMPORTANT:** Do **NOT** put passwords inside `appsettings.json`. Store them in IIS environment variables.
-
-### Step G1
-
-Open **IIS Manager** → select the **EINVWORLD** website → **Configuration Editor**.
-
-Top dropdown → `system.webServer/aspNetCore`.
-
-Locate **environmentVariables** → click the **…** button.
+1. Add env var `Api__Key` = a long random string, then `iisreset`.
+2. The ERP calls `POST https://einvworld.com/api/import/validate` with header `X-Api-Key: <that key>` and
+   a JSON array of invoice rows; it returns a per-row validation report.
 
 ---
 
-## PART H — Add Variables
+## Part 18 — Updating to a new version
 
-Click **Add** for each row below.
+1. **Back up the database** (Part 12).
+2. In **IIS Manager**, **Stop** the EINVWORLD site (so files aren't locked).
+3. Keep `Documents\`, `Logs\`, `Keys\`, `Cert\` — **never delete these.** Replace only the contents of
+   `App\` with the new build (tip: deploy to `App_New`, then swap, keeping the old folder as `App_Old`
+   for quick rollback).
+4. Re-check `web.config` and `appsettings.Production.json` are present in the new `App\`.
+5. **Start** the site. The first start applies any new DB changes automatically (additive — your data is
+   safe).
+6. Check `/health/ready` and **Admin → System Health**, then do a quick smoke test (Part 15).
 
-**1. Production Mode**
-
-```
-Name:  ASPNETCORE_ENVIRONMENT
-Value: Production
-```
-
-**2. Main Database**
-
-```
-Name:  ConnectionStrings__DefaultConnection
-Value: Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=False
-```
-
-**3. Website Database**
-
-```
-Name:  ConnectionStrings__WebsiteDb
-Value: Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_SQL_PASSWORD;Encrypt=True;TrustServerCertificate=False
-```
-
-**4. LHDN Secret**
-
-```
-Name:  LHDNApiConfig__ClientSecret
-Value: YOUR_LHDN_CLIENT_SECRET
-```
-
-**5. LHDN Secret 2**
-
-```
-Name:  LHDNApiConfig__ClientSecret2
-Value: YOUR_LHDN_CLIENT_SECRET2
-```
-
-**6. SMTP Password**
-
-```
-Name:  EmailConfiguration__Default__SmtpPassword
-Value: YOUR_SMTP_PASSWORD
-```
-
-**7. Turnstile Secret**
-
-```
-Name:  Turnstile__SecretKey
-Value: YOUR_TURNSTILE_SECRET
-```
-
-**8. Certificate Password**
-
-```
-Name:  LHDNApiConfig__CertPass
-Value: YOUR_CERT_PASSWORD
-```
-
-When completed you should have:
-
-```
-ASPNETCORE_ENVIRONMENT
-ConnectionStrings__DefaultConnection
-ConnectionStrings__WebsiteDb
-LHDNApiConfig__ClientSecret
-LHDNApiConfig__ClientSecret2
-EmailConfiguration__Default__SmtpPassword
-Turnstile__SecretKey
-LHDNApiConfig__CertPass
-```
-
-Click **OK → Apply**.
+**Rollback:** if something's wrong, Stop the site, swap `App_Old` back to `App`, Start. If the DB was
+changed, restore the backup from step 1.
 
 ---
 
-## PART I — Install Certificate File
+## Part 19 — Final checklist
 
-Copy:
+Tick each before declaring "done":
 
-```
-DATAMATION_TECHNOLOGY_(M)_SDN._BHD..p12
-```
-
-into:
-
-```
-E:\EINVWORLD\App\Cert
-```
-
-Final location:
-
-```
-E:\EINVWORLD\App\Cert\DATAMATION_TECHNOLOGY_(M)_SDN._BHD..p12
-```
-
-> **Note:** Enable v1.1 digital signing only after the signing certificate is in place — set `LHDNApiConfig__SigningEnabled = true` and `LHDNApiConfig__DocVersion = 1.1` as environment variables, and validate against the LHDN PREPROD sandbox first.
-
----
-
-## PART I2 — Database Backup & Auto-Migration
-
-> ⚠️ **Do this BEFORE the first start of a new version.** On startup the app applies any pending
-> database schema changes automatically (`DatabaseSettings:AutoMigrateOnStartup` is `true` in
-> `appsettings.Production.json`).
-
-### Step I2.1 — Take a full backup (mandatory)
-
-In **SQL Server Management Studio**: right-click the `EINVWORLD` database → **Tasks → Back Up…** →
-**Full** → choose a destination → **OK**. This is your rollback if anything goes wrong.
-
-### Step I2.2 — Confirm the app's SQL login can change schema
-
-Auto-migration must `CREATE`/`ALTER` tables, so `einvworldusr` needs DDL rights. In SSMS:
-**Security → Logins → einvworldusr → User Mapping →** tick `db_ddladmin` (or `db_owner`) on `EINVWORLD`.
-
-### Step I2.3 — What auto-migration does
-
-- It applies **only the migrations not yet recorded** in the `__EFMigrationsHistory` table.
-- The new-version migrations are **additive** — they add tables (`SyncJobs`, `SubmissionRecords`,
-  `AuditLogs`), columns, and indexes. **No existing data is dropped or rewritten.**
-- The **first** startup after upgrading is **slower** (schema changes run then) and briefly locks the
-  affected tables — deploy in a **low-traffic window**.
-- The app pool must run a **single worker process** (the default — do not enable a Web Garden), so two
-  worker processes don't run migrations at the same time.
-
-> If you ever prefer to apply schema changes manually instead, set `AutoMigrateOnStartup` to `false`
-> and run the `Migrations\Apply_*.sql` scripts yourself (see `DEPLOY-NOTES.md` for the order).
-
-### Step I2.4 — Create the DataProtection keys folder
-
-Confirm `E:\EINVWORLD\Keys` exists (from PART A) and the app-pool identity has **Modify** on it
-(covered by PART F). The path is already set in `appsettings.Production.json`
-(`DataProtection:KeyRingPath`). **The app will not start in Production if this is missing.**
+- [ ] .NET 10 **Hosting Bundle** installed (`dotnet --list-runtimes` shows 10.x)
+- [ ] Folders created: `App`, `Documents`, `Logs`, **`Keys`**, `Cert`
+- [ ] Databases `EINVWORLD` (+ `EINVWORLDWEBSITE`) exist; login `einvworldusr` mapped with
+      `db_datareader/writer/ddladmin`
+- [ ] App files copied to `App\` (incl. **`web.config`**, `wwwroot\`)
+- [ ] App Pool `EINVWORLD`: **No Managed Code**, **AlwaysRunning**, Idle **0**, **1** worker process
+- [ ] Website bound to **https** + correct host + SSL certificate
+- [ ] `IIS AppPool\EINVWORLD` has **Modify** on `E:\EINVWORLD`
+- [ ] Environment variables set (**`ASPNETCORE_ENVIRONMENT`**, connection strings, LHDN secrets, SMTP,
+      Turnstile); **secrets are NOT in appsettings.json**
+- [ ] (if signing) `.p12` in `Cert\` + signing env vars set
+- [ ] **Database backed up** before first start
+- [ ] Site starts; `/health/ready` = **Healthy**
+- [ ] Admin login works; **2FA enrolled**; recovery codes saved
+- [ ] **Admin → System Health** all OK
+- [ ] Test invoice **submitted to LHDN** (PREPROD on staging) → Valid + QR
+- [ ] Test email received; test PDF downloads
+- [ ] Go-live approved
 
 ---
 
-## PART J — Restart IIS
-
-Open **Command Prompt as Administrator** and run:
-
-```
-iisreset
-```
-
-Wait until **"Internet services successfully restarted"** appears.
-
----
-
-## PART K — Test Website
-
-Open a browser:
-
-```
-https://einvworld.com
-```
-
-**Expected:** Login Page Appears.
-
----
-
-## PART L — Test Login
-
-Login with the admin account.
-
-**Expected (first login on the new version):** Administrator accounts must use two-factor
-authentication, so you are redirected to a **"Set up authenticator app"** page. Scan the QR code with
-Google Authenticator (or similar), enter the 6-digit code, and **save your recovery codes**. After
-that, the Dashboard opens and subsequent logins ask for the 6-digit code.
-
-> This is controlled by `Security:EnforceAdminMfa` (default `true`). To disable it, add
-> `"Security": { "EnforceAdminMfa": false }` to `appsettings.Production.json` and restart IIS. There is
-> no lockout — you always reach the enrolment page, and recovery codes are your backup.
-
-### Quick health check
-
-Open **Admin → System Health** to confirm the database, background jobs, DataProtection keys, disk, and
-(if enabled) signing-cert expiry are all OK. `/health/ready` returns 200 when the app can serve traffic.
-
----
-
-## PART M — Test LHDN
-
-Create one test invoice and submit to **LHDN PREPROD**.
-
-**Expected:** Submitted Successfully.
-
----
-
-## PART O — (Optional) AI E-Invoice Assistant
-
-The system includes an optional **AI E-Invoice Assistant** (menu: *E-Invoice Assistant*). It answers
-e-invoicing questions and turns a plain-English description into a suggested invoice that pre-fills the
-Create Invoice form. It is **OFF by default** and the site runs perfectly fine without it.
-
-It runs on a **local, free, open-source** model engine called **Ollama**, installed on the same server.
-**No invoice data ever leaves your server** — nothing is sent to any external/cloud AI service.
-
-> ⚠️ Skip this part unless you actually want the assistant. A reasonably modern CPU works; a GPU is faster.
-> Allow ~5–10 GB disk for the model.
-
-### Step 1 — Install Ollama
-
-1. Download the Windows installer from **https://ollama.com/download** and run it.
-2. After install, Ollama runs as a local service listening on **http://localhost:11434**.
-
-### Step 2 — Download a model
-
-Open a Command Prompt / PowerShell on the server and run **one** of:
-
-```
-ollama pull llama3.1
-```
-
-(or a smaller/faster option such as `ollama pull qwen2.5` or `ollama pull mistral`).
-
-Test it works:
-
-```
-ollama run llama3.1 "Say hello"
-```
-
-### Step 3 — Turn the assistant on
-
-In the IIS **environment variables** (same place as PART G/H), add:
-
-| Name | Value |
-|------|-------|
-| `AIAssistant__Enabled` | `true` |
-| `AIAssistant__Model` | `llama3.1` *(must match the model you pulled)* |
-| `AIAssistant__BaseUrl` | `http://localhost:11434` *(only if Ollama is not on the default port)* |
-
-Then **restart IIS** (PART J).
-
-**Expected:** Open *E-Invoice Assistant* from the menu, type a question, and get an answer. If it says
-the assistant is disabled or unreachable, re-check `AIAssistant__Enabled`, that Ollama is running, and
-that the model name matches.
-
-> The assistant only **suggests** — it never submits, cancels, or changes any document. Always review
-> every field (especially supplier/customer, tax and classification) before saving a prefilled invoice.
-
----
-
-## PART P — (Optional) Invoice Ingestion Features
-
-All OFF by default and **draft-safe** — they validate or suggest only; none creates or submits an
-invoice automatically. Skip this part unless you want them.
-
-| Feature | How to enable | Where |
-|---|---|---|
-| **AI Document Capture** (PDF → suggestion) | env vars `DocumentCapture__Enabled=true` **and** the Ollama assistant from PART O | menu: *AI Document Capture* (`/Invoices/CreateFromFile`) |
-| **Bulk Import** (CSV/XLSX validation) | nothing — always available to Admin/Supplier | menu: *Bulk Import* (`/Invoices/BulkImport`) |
-| **Watched-folder importer** | env vars `WatchedFolderImport__Enabled=true`, `WatchedFolderImport__InboxPath=E:\EINVWORLD\Inbox` (create the folder, grant the app-pool **Modify**) | drop CSV/XLSX into the Inbox; results move to `Processed\` / `Rejected\` with a `.report.json` |
-| **REST validate API** | env var `Api__Key=<a-long-random-key>` | `POST https://einvworld.com/api/import/validate` with header `X-Api-Key` |
-
-> Document Capture handles **digital PDFs (with a text layer)**. Scanned images report "needs OCR" — image
-> OCR is a later phase.
-
-After adding any of these env vars, **restart IIS** (PART J).
-
----
-
-## PART N — Troubleshooting
-
-**Website Not Opening** — Check: Is the IIS site started?
-
-**HTTP Error 500** — Check `E:\EINVWORLD\App\logs` for `stdout*.log`; open the latest file. The error usually tells you exactly what is missing.
-
-**Database Error** — Check `ConnectionStrings__DefaultConnection` in the IIS environment variables.
-
-**LHDN Error** — Check `LHDNApiConfig__ClientSecret` and `LHDNApiConfig__ClientSecret2` in the IIS environment variables.
-
-**Email Not Sending** — Check `EmailConfiguration__Default__SmtpPassword` in the IIS environment variables.
-
-**AI Assistant says "disabled" or "could not reach"** — Confirm `AIAssistant__Enabled=true`, that Ollama is installed and running (open `http://localhost:11434` on the server — it should say "Ollama is running"), and that `AIAssistant__Model` exactly matches a model you pulled (`ollama list`).
-
----
-
-## Deployment Checklist
-
-- [ ] .NET 10 Hosting Bundle Installed
-- [ ] Application Files Copied
-- [ ] Application Pool Created (single worker process)
-- [ ] Website Created
-- [ ] SSL Certificate Assigned
-- [ ] Folder Permissions Set (incl. `E:\EINVWORLD\Keys` = Modify)
-- [ ] **DataProtection `Keys` folder exists** (app will not start without `KeyRingPath`)
-- [ ] Environment Variables Added (secrets — NOT in appsettings)
-- [ ] P12 Certificate Copied
-- [ ] **Database backed up (full)** — before first start
-- [ ] **`einvworldusr` has DDL rights** (for auto-migration)
-- [ ] IIS Restarted
-- [ ] Login Tested (admin **2FA enrolled**)
-- [ ] **Admin → System Health checked**
-- [ ] LHDN Tested
-- [ ] Email Tested
-- [ ] Go Live Approved
+### Related documents
+- **`README.md`** — what the system is and does.
+- **`DOCUMENTATION.md`** — full architecture/technical reference.
+- **`DEPLOY-NOTES.md`** — concise operator checklist + manual migration order.
+- **`SECRETS-SETUP.md`** — every secret and its environment-variable name.
