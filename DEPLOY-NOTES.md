@@ -120,7 +120,19 @@ only loaded for the `DinkToPdf` engine.
   schema on boot). For strict least-privilege, set `AutoMigrateOnStartup=false` and run the
   `Apply_*.sql` scripts with a separate DDL login instead.
 
-## 8. Rollback
+## 8. Log retention (`SystemLogs` table)
+
+`LogCleanupService` prunes `SystemLogs` rows older than `LogCleanupSettings:RetentionDays` (default 30)
+every 4 hours. It deletes in **batches** of `LogCleanupSettings:BatchSize` (default 5000) so it never
+holds a table lock or hits the command timeout on a large table.
+
+- If you upgrade onto a server with a **large pre-existing `SystemLogs` backlog**, the first few cleanup
+  cycles will drain it gradually (5000 rows per batch, looping until caught up) — this is expected; the
+  table shrinks over the following runs, not instantly.
+- To prune faster on a one-off basis, raise `BatchSize` (e.g. 50000); to keep more history, raise
+  `RetentionDays`. Both live under `LogCleanupSettings` in `appsettings.Production.json`.
+
+## 9. Rollback
 
 Deploy to `App_New`, smoke-test, then swap to `App` (keep `App_Old`). Never delete `Documents\`,
 `Logs\`, `Cert\`, or `Keys\` during a deploy. DB changes are additive/idempotent; keep a pre-deploy

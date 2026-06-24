@@ -231,7 +231,7 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
 | **`RecurringInvoiceWorker`** | Generates invoices from `RecurringProfile`s on schedule (roll-forward, no catch-up storms). |
 | **`TokenRenewalService`** | Keeps per-TIN LHDN tokens fresh. |
-| **`LogCleanupService`** | Prunes old log rows per `LogCleanupSettings:RetentionDays`. |
+| **`LogCleanupService`** | Prunes old `SystemLogs` rows (older than `LogCleanupSettings:RetentionDays`, default 30) every 4 h. Deletes in batches of `LogCleanupSettings:BatchSize` (default 5000) so a large backlog never holds a table lock or hits the command timeout — a large pre-existing backlog drains over several runs. |
 | **`WatchedFolderImportWorker`** | (Optional) validates CSV/XLSX dropped into an Inbox folder. |
 
 The durable queue (`SyncJob` + `ISyncJobTracker` + handlers) replaced an older in-memory queue so jobs
@@ -350,7 +350,7 @@ blank in files and supplied via env vars / user-secrets.
 | `Serilog` / `Logging` | File + `SystemLogs` sink config. |
 | `InvoiceStatusUpdaterSettings` | Status-sync polling cadence & UI cooldowns. |
 | `SessionSettings` / `IdentityLockout` | Session timeout/cookie; lockout policy. |
-| `LogCleanupSettings` | Log retention days. |
+| `LogCleanupSettings` | `RetentionDays` (default 30) and `BatchSize` (default 5000) for the batched `SystemLogs` prune. |
 | `InvoiceSettings` | e.g. `BackdateSeconds`. |
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
 | `AIAssistant` | Ollama assistant: `Enabled`, `BaseUrl`, `Model`, `TimeoutSeconds`. |
