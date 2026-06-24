@@ -13,6 +13,15 @@
 - **HTTPS redirect port** — set explicitly via `Security:HttpsRedirectPort` (default `443`) so IIS
   deployments no longer log "Failed to determine the https port for redirect". `0` leaves it auto/off.
 
+### Added
+- **Reverse-proxy / Cloudflare Tunnel support** — new `ForwardedHeaders` section (on by default). When TLS
+  is terminated upstream and the app is reached over plain HTTP (e.g. a Cloudflare Tunnel to
+  `http://localhost`), the app now honours `X-Forwarded-Proto` (original scheme = https → correct Secure
+  cookies, HSTS, no redirect loop) and `X-Forwarded-For` (real client IP → correct per-IP rate limiting and
+  audit/log IPs instead of `127.0.0.1`). Only headers from a trusted proxy (loopback by default) are
+  honoured. `Security:HttpsRedirectPort=0` disables in-app HTTPS redirects for tunnel/edge-TLS setups.
+  New IIS guide **Part 8b** documents the full Cloudflare Tunnel deployment.
+
 ### Changed
 - **Default AI model is now `llama3.2:3b`** (was `llama3.1`). The smaller ~2 GB model fits a modest
   server's RAM; the larger 8B model could fail to allocate memory and time out (`TaskCanceledException`).

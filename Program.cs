@@ -16,6 +16,7 @@ using EINVWORLD.Services.Background;
 using EINVWORLD.Services.Mappers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NToastNotify;
@@ -159,6 +160,40 @@ var httpsRedirectPort = builder.Configuration.GetValue<int?>("Security:HttpsRedi
 if (httpsRedirectPort > 0)
 {
     builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsRedirectPort);
+}
+
+// Reverse-proxy / tunnel support (e.g. Cloudflare Tunnel). When TLS is terminated upstream and the app
+// is reached over plain HTTP on a local port, the app must honour the forwarded headers the proxy sends:
+//   • X-Forwarded-Proto — so the app knows the original request was HTTPS (correct redirect/no-loop,
+//     Secure cookies, HSTS) instead of treating it as http.
+//   • X-Forwarded-For   — so the app sees the REAL client IP instead of 127.0.0.1, which the per-IP rate
+//     limiter and the audit/log IP enrichment depend on.
+// Only headers from a trusted proxy (KnownProxies/KnownNetworks) are honoured, so this is safe to leave
+// on. Defaults: enabled, trusting loopback (cloudflared runs on the same host). Add more proxies or tune
+// the hop limit via the ForwardedHeaders config section. Disable with ForwardedHeaders:Enabled=false.
+var forwardedHeadersEnabled = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled", true);
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
+
+        // Trust only the immediate proxy. cloudflared connects over loopback by default.
+        options.KnownProxies.Clear();
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Add(System.Net.IPAddress.Loopback);     // 127.0.0.1
+        options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback); // ::1
+
+        // Extra proxy IPs (e.g. if cloudflared runs on a different host/container).
+        foreach (var ip in builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? Array.Empty<string>())
+        {
+            if (System.Net.IPAddress.TryParse(ip, out var parsed))
+                options.KnownProxies.Add(parsed);
+        }
+
+        // How many forwarded hops to walk back. Default 1 = the single cloudflared hop.
+        options.ForwardLimit = builder.Configuration.GetValue<int?>("ForwardedHeaders:ForwardLimit") ?? 1;
+    });
 }
 
 // Health checks — split into liveness (process alive) and readiness (can do real work).
@@ -467,6 +502,15 @@ using (var scope = app.Services.CreateScope())
 
 
 // Configure the HTTP request pipeline.
+
+// MUST run first: rewrite the request scheme (X-Forwarded-Proto) and client IP (X-Forwarded-For) from the
+// reverse proxy / Cloudflare Tunnel BEFORE any other middleware reads them — HTTPS redirect, Secure
+// cookies, HSTS, the rate limiter and audit/log IP enrichment all depend on seeing the original values.
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
