@@ -341,7 +341,8 @@ blank in files and supplied via env vars / user-secrets.
 | `DatabaseSettings:AutoMigrateOnStartup` | Apply EF migrations on boot. `true` in Production (additive — back up first). |
 | `DataProtection:KeyRingPath` | Encryption key-ring folder. **Required in Production**; outside `App\`. |
 | `Security:EnforceAdminMfa` | Require Admin 2FA enrolment (default `true`). |
-| `Security:HttpsRedirectPort` | Public HTTPS port for the redirect middleware (default `443`). Behind IIS the port can't be auto-discovered; set explicitly to avoid the "Failed to determine the https port" warning. Set `0` to leave it auto/disabled. |
+| `Security:HttpsRedirectPort` | Public HTTPS port for the redirect middleware (default `443`). Behind IIS the port can't be auto-discovered; set explicitly to avoid the "Failed to determine the https port" warning. Set `0` to disable in-app redirects (do this behind a TLS-terminating proxy / Cloudflare Tunnel). |
+| `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support. `Enabled` (default `true`) makes the app honour `X-Forwarded-Proto` (original scheme = https → correct Secure cookies, HSTS, no redirect loop) and `X-Forwarded-For` (real client IP → correct per-IP rate limiting + audit/log IPs). `KnownProxies` (extra trusted proxy IPs beyond loopback) and `ForwardLimit` (hops, default 1). Only headers from a known proxy are trusted. |
 | `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200). |
 | `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SyncRetentionDays`. |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |
