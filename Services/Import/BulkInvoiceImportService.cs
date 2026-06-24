@@ -65,6 +65,11 @@ namespace EINVWORLD.Services.Import
         private static readonly HashSet<string> DocTypes =
             new(StringComparer.OrdinalIgnoreCase) { "01", "02", "03", "04", "11", "12", "13", "14" };
 
+        // Hard cap on data rows per import. The 10 MB file-size limit alone doesn't bound row count, so a
+        // crafted spreadsheet could otherwise parse millions of rows into memory (DoS). One row per invoice
+        // line, so 20k lines is far above any realistic bulk import.
+        private const int MaxRows = 20_000;
+
         private readonly ApplicationDbContext _db;
 
         public BulkInvoiceImportService(ApplicationDbContext db) => _db = db;
@@ -118,6 +123,12 @@ namespace EINVWORLD.Services.Import
             if (rows is null || rows.Count == 0)
             {
                 preview.ParseError = "No data rows found. Use the template and keep the header row.";
+                return preview;
+            }
+
+            if (rows.Count > MaxRows)
+            {
+                preview.ParseError = $"Too many rows ({rows.Count:N0}). The maximum is {MaxRows:N0} data rows per import — split the file and try again.";
                 return preview;
             }
 

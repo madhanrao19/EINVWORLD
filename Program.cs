@@ -196,6 +196,22 @@ if (forwardedHeadersEnabled)
     });
 }
 
+// Bound request/upload sizes. Largest legitimate upload is ~10 MB (bulk import / AI document capture);
+// a 32 MB ceiling leaves headroom while rejecting oversized bodies early (memory-exhaustion DoS defence).
+const long MaxRequestBytes = 32L * 1024 * 1024;
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = MaxRequestBytes;
+});
+builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(o =>
+{
+    o.Limits.MaxRequestBodySize = MaxRequestBytes;
+});
+builder.Services.Configure<Microsoft.AspNetCore.Builder.IISServerOptions>(o =>
+{
+    o.MaxRequestBodySize = MaxRequestBytes; // IIS in-process hosting
+});
+
 // Health checks — split into liveness (process alive) and readiness (can do real work).
 // "ready"-tagged checks gate /health/ready; /health/live has none (just confirms the process responds).
 builder.Services.AddHealthChecks()
@@ -392,6 +408,9 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
     options.Cookie.Name = sessionSettings.CookieName;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // Lax (not Strict): blocks cross-site cookie sends (CSRF defence-in-depth) while still allowing
+    // top-level navigations back into the app (e.g. links from email). Strict would break those.
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // Add authentication cookie
@@ -401,6 +420,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/Identity/Account/Logout"; // Specify the logout page
     options.ExpireTimeSpan = TimeSpan.FromMinutes(sessionSettings.IdleTimeoutMinutes);
     options.SlidingExpiration = true; // Resets expiration on activity
+    // CSRF defence-in-depth for the auth cookie. Lax allows top-level navigations back into the app.
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 //builder.Services.Configure<RouteOptions>(options =>
