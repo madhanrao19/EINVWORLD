@@ -436,14 +436,19 @@ Runs a **local, free** AI model (Ollama) on the server. **No invoice data leaves
    `http://localhost:11434`.
 2. Open Command Prompt and pull a model:
    ```
-   ollama pull llama3.1
+   ollama pull llama3.2:3b
    ```
-   Test it: `ollama run llama3.1 "Say hello"`.
+   Test it: `ollama run llama3.2:3b "Say hello"`.
+
+   > **Pick a model your server's RAM can hold.** `llama3.2:3b` (~2 GB) is recommended and fits a modest
+   > server. Bigger models (e.g. `llama3.1` 8B ~5 GB, or 70B) can fail with
+   > *"failed to allocate buffer …"* in the Ollama log, which makes the assistant time out
+   > (`TaskCanceledException` in the app log). Only move up if you have the RAM/VRAM to spare.
 3. Add these environment variables (Part 10) and `iisreset`:
    | Name | Value |
    |---|---|
    | `AIAssistant__Enabled` | `true` |
-   | `AIAssistant__Model` | `llama3.1` (must match what you pulled) |
+   | `AIAssistant__Model` | `llama3.2:3b` (must match what you pulled) |
    | `DocumentCapture__Enabled` | `true` (enables PDF → suggestion) |
 
 ✅ The **E-Invoice Assistant** and **AI Document Capture** menus now work. They only *suggest* drafts —
@@ -457,6 +462,10 @@ they never submit. Always review every field before saving.
    |---|---|
    | `WatchedFolderImport__Enabled` | `true` |
    | `WatchedFolderImport__InboxPath` | `E:\EINVWORLD\Inbox` |
+
+   > **Set `InboxPath` whenever you set `Enabled=true`.** If the feature is enabled but the path is blank,
+   > the worker stays idle and logs *"WatchedFolderImport enabled but InboxPath is empty — worker idle."*
+   > once at startup. If you don't want the feature, leave `WatchedFolderImport__Enabled=false` instead.
 3. Drop a `.csv`/`.xlsx` invoice file into the Inbox. The app validates it and moves it to
    `Processed\` or `Rejected\` with a `.report.json` result. (It validates only — it doesn't create invoices.)
 
