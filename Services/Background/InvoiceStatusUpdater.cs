@@ -181,9 +181,12 @@ public class InvoiceStatusUpdater : BackgroundService
             {
                 string? tin = TinHelper.ResolveSubmitterTin(invoice);
 
-                // 1. Skip ONLY if TIN is missing
+                // 1. Skip ONLY if TIN is missing or general — but log it, so an invoice that silently
+                //    stops syncing because its TIN can't be resolved is visible to operators.
                 if (string.IsNullOrWhiteSpace(tin) || GeneralTINHelper.IsGeneralTIN(tin))
                 {
+                    _logger.LogWarning("Skipping status sync for invoice {InvoiceNo}: submitter TIN unresolved or general ({Tin}).",
+                        invoice.InvoiceNo, string.IsNullOrWhiteSpace(tin) ? "none" : tin);
                     continue;
                 }
 
