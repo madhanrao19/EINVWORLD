@@ -1,5 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.3.4 (Data-integrity — review Batch B)
+
+### Fixed
+- **Idempotency vs signing toggle** — the submission dedup hash now folds in `SigningEnabled`, so flipping
+  signing on/off can never replay a cached response from the other signing state (`LHDNApiService`).
+- **Backoff overflow guard** — `DurableSyncJobWorker` clamps the retry exponent before `Math.Pow`, so a
+  large `MaxAttempts` can't produce `Infinity/NaN` backoff.
+- **Token cleanup robustness** — `TokenRenewalService` uses `GeneralTINHelper.IsGeneralTIN` (exact match,
+  all 4 general TINs) instead of a fragile substring check, and the revoked-token delete is wrapped so a
+  failed delete logs instead of looping forever.
+- **Sync visibility** — `InvoiceStatusUpdater` logs (instead of silently skipping) when an invoice's
+  submitter TIN can't be resolved.
+
+### Added
+- **Status-sync hot-path index** — migration `AddInvoiceStatusSyncIndexes` adds a composite index on
+  `InvoiceHeaders (LHDNStatusId, LastUpdated)` for the background poller (additive/idempotent; apply via
+  AutoMigrate or `Apply_AddInvoiceStatusSyncIndexes.sql`).
+
+### Deferred (examined, intentionally not changed)
+- Explicit transactions on invoice save (header+lines already save in one atomic `SaveChanges`);
+  a unique constraint on `SubmissionRecords` (wrong fix for a time-windowed cache; concurrent double-submit
+  already guarded by `InvoiceSubmissionGuard`); a global `InvoiceHeader` `RowVersion` (20+ unguarded
+  `SaveChanges` sites — needs its own dedicated change). See review notes.
+
 ## 📅 2026-06-24 — v1.3.3 (Security hardening — review Batch A)
 
 ### Security

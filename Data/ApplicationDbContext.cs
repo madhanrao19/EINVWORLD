@@ -214,6 +214,9 @@ namespace eInvWorld.Data
                 b.HasIndex(i => i.RefDocumentNo);
                 b.HasIndex(i => i.InvoiceDirection);
                 b.HasIndex(i => i.CreatedDate);
+                // Status-sync hot path: InvoiceStatusUpdater filters on LHDNStatusId and orders by LastUpdated.
+                // (LongId is nvarchar(max), so it can't be a key column — the single LHDNStatusId index covers it.)
+                b.HasIndex(i => new { i.LHDNStatusId, i.LastUpdated });
             });
 
             modelBuilder.Entity<InvoiceHistory>(b =>
