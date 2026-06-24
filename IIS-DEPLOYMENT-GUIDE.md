@@ -234,6 +234,54 @@ The "Application Pool" is the Windows process that runs the app.
 
 ✅ **You should see:** a Site named **EINVWORLD**, Started, bound to `https` on your domain.
 
+> **Using a Cloudflare Tunnel instead of a public IP + SSL certificate?** Skip the `https`/443 binding
+> above — bind the site to **`http`** on **port 80** (host name your domain or blank) and let Cloudflare
+> terminate TLS. See **Part 8b**.
+
+---
+
+## Part 8b — Alternative: expose the site with a Cloudflare Tunnel (no public IP, no cert on IIS)
+
+Use this **instead of** a public HTTPS binding when the server has **no fixed public IP** and you want
+**Cloudflare to provide the SSL certificate**. Cloudflare terminates HTTPS at its edge and `cloudflared`
+forwards plain **HTTP to your server on localhost**, so the IIS site itself only needs an HTTP binding.
+
+1. **Bind the IIS site to HTTP**, not HTTPS:
+   - In Part 8, set **Binding → Type:** `http`, **Port:** `80`, **Host name:** your domain (or leave blank).
+   - No SSL certificate is needed on IIS — Cloudflare supplies it.
+2. **Install cloudflared** on the server (from `https://github.com/cloudflare/cloudflared/releases`, or
+   `winget install --id Cloudflare.cloudflared`).
+3. **Create the tunnel** (one-time), logging in to your Cloudflare account:
+   ```
+   cloudflared tunnel login
+   cloudflared tunnel create einvworld
+   ```
+4. **Point the tunnel at the local site.** In the tunnel config (`%USERPROFILE%\.cloudflared\config.yml`):
+   ```yaml
+   tunnel: einvworld
+   credentials-file: C:\Users\<you>\.cloudflared\<tunnel-id>.json
+   ingress:
+     - hostname: einvworld.com
+       service: http://localhost:80
+     - service: http_status:404
+   ```
+5. **Route DNS and run it as a service:**
+   ```
+   cloudflared tunnel route dns einvworld einvworld.com
+   cloudflared service install
+   ```
+6. In the **Cloudflare dashboard** turn on **SSL/TLS → Edge Certificates → Always Use HTTPS** so visitors
+   are forced to HTTPS at the edge.
+7. **Tell the app it's behind a tunnel** (Part 10 environment variables, then `iisreset`):
+   | Name | Value | Why |
+   |---|---|---|
+   | `ForwardedHeaders__Enabled` | `true` (this is the default) | App trusts `X-Forwarded-Proto`/`X-Forwarded-For` from cloudflared so it sees the original **HTTPS** scheme (correct Secure cookies / no redirect loop) and the **real client IP** (correct rate limiting + audit logs) instead of `127.0.0.1`. |
+   | `Security__HttpsRedirectPort` | `0` | Disables the app's own HTTP→HTTPS redirect; Cloudflare's **Always Use HTTPS** does it at the edge. Prevents any redirect loop. |
+
+✅ **You should see:** browsing `https://einvworld.com` loads the site over Cloudflare's certificate; the
+app's **Admin → System Logs** show real visitor IPs (not `127.0.0.1`), and there is no
+*"Failed to determine the https port"* warning.
+
 ---
 
 ## Part 9 — Set folder permissions
