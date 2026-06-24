@@ -443,15 +443,10 @@ namespace eInvWorld.Pages.Invoices
                     );
                 }
 
-                //  Apply additional filters
-                if (!string.IsNullOrEmpty(status) || !string.IsNullOrEmpty(documentType) ||
-                    !string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(lhdnStatus) ||
-                    !string.IsNullOrEmpty(internalStatus) || submissionDateFrom.HasValue || submissionDateTo.HasValue
-                    || !string.IsNullOrEmpty(sortBy) || !string.IsNullOrEmpty(sortOrder))
-                {
-                    query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
-                        lhdnStatus, internalStatus, sortBy, sortOrder);
-                }
+                //  Apply additional filters. Always call this — besides filtering, ApplyFilters applies a
+                //  deterministic OrderBy that pagination (Skip/Take below) requires.
+                query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
+                    lhdnStatus, internalStatus, sortBy, sortOrder);
 
                 int totalInvoices = await query.CountAsync();
 
@@ -527,8 +522,9 @@ namespace eInvWorld.Pages.Invoices
                                                         );
             }
 
-            // Apply sorting
-            if (!string.IsNullOrEmpty(sortBy))
+            // Apply sorting. Always order before pagination — a Skip/Take without a stable OrderBy
+            // produces non-deterministic paging and an EF Core warning. When no sortBy is supplied we
+            // fall through the switch to the default (InvoiceNo) ordering.
             {
                 bool isDescending = !string.IsNullOrEmpty(sortOrder) && sortOrder.ToLower() == "desc";
 
