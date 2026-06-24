@@ -501,7 +501,7 @@
                                         @if (invoice.Supplier?.CompanyName != "General Public" && invoice.Supplier?.CompanyName != "Foreign Supplier")
                                         {
                                             <div class="supplier-subline">
-                                                @Html.Raw(invoice.Supplier?.Addr1)<br />
+                                                @(invoice.Supplier?.Addr1)<br />
                                                 @{
                                                     var suppCountry = invoice.Supplier?.Country?.Country ?? "";
                                                     var suppCountryTitle = string.IsNullOrEmpty(suppCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(suppCountry.ToLower());
@@ -554,7 +554,7 @@
                                             <p>@buyerName</p>
                                             @if (buyerName != "General Public" && buyerName != "Foreign Buyer / Shipping Recipient" && buyerName != "Government and Related Entities")
                                             {
-                                                <p>@Html.Raw(buyerAddr1?.Replace("\n", "<br/>")?.Replace("\r", ""))</p>
+                                                <p>@Html.Raw(System.Net.WebUtility.HtmlEncode(buyerAddr1 ?? "").Replace("\n", "<br/>").Replace("\r", ""))</p>
                                                 <p>@buyerPostalCode @buyerCity@(!string.IsNullOrEmpty(buyerState) || !string.IsNullOrEmpty(buyerCountryTitle) ? "," : "")</p>
                                                 @if (!string.IsNullOrEmpty(buyerState) || !string.IsNullOrEmpty(buyerCountryTitle))
                                                 {
@@ -635,7 +635,7 @@
                                         <tr>
                                             <td class="col-itemno" style="text-align:center; font-weight:bold;">@(i + 1)</td>
                                             <td class="col-desc" style="white-space:pre-wrap; text-align:left;">
-                                                @Html.Raw(item.ItemDescription?.Replace("\n", "<br/>"))
+                                                @Html.Raw(System.Net.WebUtility.HtmlEncode(item.ItemDescription ?? "").Replace("\n", "<br/>"))
                                             </td>
                                             <td class="col-qty" style="text-align:center;">@item.Quantity</td>
                                             <td class="col-unit" style="text-align:right;">@item.UnitPrice?.ToString("N2")</td>

@@ -100,7 +100,7 @@
                 <div>
                     @if (!string.IsNullOrEmpty(Model.PublicCustomer.Addr1))
                     {
-                        @Html.Raw(Model.PublicCustomer.Addr1.Trim().Replace("\n", "<br/>").Replace("\r", ""))
+                        @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.PublicCustomer.Addr1.Trim()).Replace("\n", "<br/>").Replace("\r", ""))
 
                         <br />
                     }
