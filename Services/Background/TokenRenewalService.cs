@@ -55,8 +55,9 @@ namespace eInvWorld.Services.Background
                     {
                         try
                         {
-                            // Skip and Delete garbage TINs like "NA" or empty strings immediately
-                            if (string.IsNullOrWhiteSpace(token.TIN) || token.TIN == "NA" || token.TIN.Contains("EI00000000010"))
+                            // Skip and Delete garbage TINs like "NA"/empty, or any of the general TINs
+                            // (exact match via the helper — not a fragile substring Contains).
+                            if (string.IsNullOrWhiteSpace(token.TIN) || token.TIN == "NA" || GeneralTINHelper.IsGeneralTIN(token.TIN))
                             {
                                 _logger.LogInformation("🗑️ Cleaning up invalid/general TIN '{TIN}' from LHDNTokens table.", token.TIN);
                                 dbContext.LHDNTokens.Remove(token);
@@ -78,7 +79,16 @@ namespace eInvWorld.Services.Background
                         {
                             _logger.LogWarning("🗑️ LHDN revoked intermediary access for {TIN}. Removing from database to stop auto-renewal.", token.TIN);
                             dbContext.LHDNTokens.Remove(token);
-                            await dbContext.SaveChangesAsync(stoppingToken);
+                            try
+                            {
+                                await dbContext.SaveChangesAsync(stoppingToken);
+                            }
+                            catch (Exception saveEx)
+                            {
+                                // If the delete itself fails, log it — otherwise the same revoked token would
+                                // be retried (and re-throw the same rejection) on every cycle, forever.
+                                _logger.LogError(saveEx, "❌ Failed to delete revoked token for TIN {TIN}; it may be retried next cycle.", token.TIN);
+                            }
                         }
                         catch (Exception ex)
                         {

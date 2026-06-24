@@ -1112,6 +1112,8 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("UUID");
 
+                    b.HasIndex("LHDNStatusId", "LastUpdated");
+
                     b.ToTable("InvoiceHeaders");
                 });
 

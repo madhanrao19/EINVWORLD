@@ -172,7 +172,7 @@ public class LHDNApiService : ILHDNApiService
         // Local idempotency: hash the (pre-signing) payload so an identical resubmission within the
         // dedup window replays the prior response instead of creating a duplicate at LHDN. Computed
         // BEFORE signing because a XAdES signature embeds a timestamp and would change every time.
-        string payloadHash = ComputeSubmissionPayloadHash(documents);
+        string payloadHash = ComputeSubmissionPayloadHash(documents, _signingService.Enabled);
 
         try
         {
@@ -507,12 +507,17 @@ public class LHDNApiService : ILHDNApiService
     private const int SubmissionDedupWindowMinutes = 10;
 
     /// <summary>Order-independent SHA-256 of the (pre-signing) documents in a submission batch.</summary>
-    private string ComputeSubmissionPayloadHash(List<eInvWorld.Models.JsonModels.Documents> documents)
+    /// <param name="signingEnabled">
+    /// Folded into the hash so a signed and an unsigned submission of the same payload never collide —
+    /// otherwise toggling SigningEnabled could replay a cached UNSIGNED response for a now-signed submit.
+    /// </param>
+    private string ComputeSubmissionPayloadHash(List<eInvWorld.Models.JsonModels.Documents> documents, bool signingEnabled)
     {
         var canonical = string.Join("\n",
             documents
                 .OrderBy(d => d.CodeNumber, StringComparer.Ordinal)
                 .Select(d => $"{d.CodeNumber}|{d.Format}|{d.Document}"));
+        canonical = $"signed={signingEnabled}\n{canonical}";
         return ComputeSHA256Hash(canonical);
     }
 

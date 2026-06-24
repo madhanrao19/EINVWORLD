@@ -185,8 +185,9 @@ namespace EINVWORLD.Services.Background
                 var now2 = DateTime.UtcNow;
                 if (job.AttemptCount < job.MaxAttempts)
                 {
-                    // Exponential backoff: 2, 4, 8, 16 … capped at 30 minutes.
-                    var backoffMinutes = Math.Min(30, Math.Pow(2, job.AttemptCount));
+                    // Exponential backoff: 2, 4, 8, 16 … capped at 30 minutes. Clamp the exponent first so
+                    // a large MaxAttempts can't make Math.Pow overflow to Infinity/NaN before the Min cap.
+                    var backoffMinutes = Math.Min(30, Math.Pow(2, Math.Min(job.AttemptCount, 16)));
                     job.Status = SyncJobStatus.Queued;
                     job.NextRunAtUtc = now2.AddMinutes(backoffMinutes);
                     job.Message = Truncate($"Attempt {job.AttemptCount} failed, retrying: {ex.Message}", 2000);
