@@ -33,25 +33,45 @@ namespace eInvWorld.Services.Background
                     int retentionDays = _configuration.GetValue<int>("LogCleanupSettings:RetentionDays", 30);
                     var connectionString = _configuration.GetConnectionString("DefaultConnection");
 
+                    // Delete in bounded batches so a large backlog never holds a long lock or hits the
+                    // command timeout. A single unbounded DELETE on a big SystemLogs table escalates to a
+                    // table lock and times out (the cause of the "Execution Timeout Expired" errors); a
+                    // batched loop keeps each statement small and lets other writers through between batches.
+                    int batchSize = _configuration.GetValue<int>("LogCleanupSettings:BatchSize", 5000);
+                    if (batchSize < 1) batchSize = 5000;
+
                     using (var connection = new SqlConnection(connectionString))
                     {
                         await connection.OpenAsync(stoppingToken);
 
-                        // 2. Define the cleanup command using a Parameter
-                        // We use -@RetentionDays to subtract the days from the current date
-                        var sql = "DELETE FROM SystemLogs WHERE TimeStamp < DATEADD(day, -@RetentionDays, GETDATE())";
+                        // We use -@RetentionDays to subtract the days from the current date.
+                        // DELETE TOP (@BatchSize) caps each statement; loop until a batch deletes nothing.
+                        var sql = "DELETE TOP (@BatchSize) FROM SystemLogs WHERE TimeStamp < DATEADD(day, -@RetentionDays, GETDATE())";
 
-                        using (var command = new SqlCommand(sql, connection))
+                        long totalDeleted = 0;
+                        int rowsAffected;
+                        do
                         {
-                            // Pass the value safely as a parameter
-                            command.Parameters.AddWithValue("@RetentionDays", retentionDays);
-
-                            var rowsAffected = await command.ExecuteNonQueryAsync(stoppingToken);
-
-                            if (rowsAffected > 0)
+                            using (var command = new SqlCommand(sql, connection))
                             {
-                                _logger.LogInformation($"🧹 Cleanup Complete: Deleted {rowsAffected} logs older than {retentionDays} days from the Database.");
+                                // Pass values safely as parameters
+                                command.Parameters.AddWithValue("@RetentionDays", retentionDays);
+                                command.Parameters.AddWithValue("@BatchSize", batchSize);
+                                command.CommandTimeout = 120; // generous; each batch is small so this is just a safety net
+
+                                rowsAffected = await command.ExecuteNonQueryAsync(stoppingToken);
+                                totalDeleted += rowsAffected;
                             }
+
+                            // Brief yield between batches so we don't monopolise the table on a big backlog.
+                            if (rowsAffected == batchSize)
+                                await Task.Delay(TimeSpan.FromMilliseconds(200), stoppingToken);
+                        }
+                        while (rowsAffected == batchSize && !stoppingToken.IsCancellationRequested);
+
+                        if (totalDeleted > 0)
+                        {
+                            _logger.LogInformation($"🧹 Cleanup Complete: Deleted {totalDeleted} logs older than {retentionDays} days from the Database.");
                         }
                     }
                 }
