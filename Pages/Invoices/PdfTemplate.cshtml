@@ -284,7 +284,7 @@
                 <tr>
                     <td>@(i + 1)</td>
                     <td>@item.ClassificationCode</td>
-                    <td class="formatted-description">@Html.Raw(item.ItemDescription?.Replace("\n", "<br/>"))</td>
+                    <td class="formatted-description">@Html.Raw(System.Net.WebUtility.HtmlEncode(item.ItemDescription ?? "").Replace("\n", "<br/>"))</td>
                     <td class="right">@(item.UnitPrice?.ToString("N2"))</td>
                     <td class="right">@item.Quantity</td>
                     <td class="right">@((item.Quantity * item.UnitPrice)?.ToString("N2"))</td>

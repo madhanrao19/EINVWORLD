@@ -198,6 +198,9 @@ namespace eInvWorld.Pages.Lead
                 string bcc = _config["EmailConfiguration:Default:GlobalBccEmail"] ?? "";
                 string subjectTemplate = _config["EmailConfiguration:CustomerSubmission:Subject"] ?? "📩 New Customer Registration Submitted | {{CompanyName}}";
                 string companyName = string.IsNullOrWhiteSpace(Input.CompanyName) ? "Unknown Company" : Input.CompanyName;
+                // Strip CR/LF (and collapse whitespace) before putting user input into the mail subject —
+                // a newline in the subject would allow email header injection (extra Bcc/To headers).
+                companyName = System.Text.RegularExpressions.Regex.Replace(companyName, @"\s+", " ").Trim();
                 string subject = subjectTemplate.Replace("{{CompanyName}}", companyName);
                 string body = GenerateCustomerSummaryHtml(Input);
 
