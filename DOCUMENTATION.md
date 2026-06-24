@@ -341,6 +341,7 @@ blank in files and supplied via env vars / user-secrets.
 | `DatabaseSettings:AutoMigrateOnStartup` | Apply EF migrations on boot. `true` in Production (additive — back up first). |
 | `DataProtection:KeyRingPath` | Encryption key-ring folder. **Required in Production**; outside `App\`. |
 | `Security:EnforceAdminMfa` | Require Admin 2FA enrolment (default `true`). |
+| `Security:HttpsRedirectPort` | Public HTTPS port for the redirect middleware (default `443`). Behind IIS the port can't be auto-discovered; set explicitly to avoid the "Failed to determine the https port" warning. Set `0` to leave it auto/disabled. |
 | `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200). |
 | `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SyncRetentionDays`. |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |

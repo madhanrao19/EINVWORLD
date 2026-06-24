@@ -1,5 +1,25 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-24 — v1.3.2 (Staging-log fixes)
+
+### Fixed
+- **`SystemLogs` cleanup timeout** — `LogCleanupService` ran a single unbounded `DELETE`, which escalated
+  to a table lock and hit the command timeout on a large table (`Execution Timeout Expired`, deleting
+  nothing each cycle). Now deletes in batches of `LogCleanupSettings:BatchSize` (default 5000) with a
+  120 s `CommandTimeout`; a large backlog drains gradually over a few runs.
+- **Invoice list pagination order** — `InvoiceLists` ran `Skip/Take` with no guaranteed `OrderBy` on a
+  plain page load (no filter/sort), causing the EF "Skip/Take without OrderBy" warning and
+  non-deterministic paging. A deterministic order (default `InvoiceNo`) is now always applied.
+- **HTTPS redirect port** — set explicitly via `Security:HttpsRedirectPort` (default `443`) so IIS
+  deployments no longer log "Failed to determine the https port for redirect". `0` leaves it auto/off.
+
+### Changed
+- **Default AI model is now `llama3.2:3b`** (was `llama3.1`). The smaller ~2 GB model fits a modest
+  server's RAM; the larger 8B model could fail to allocate memory and time out (`TaskCanceledException`).
+  Docs updated to recommend sizing the model to available RAM.
+
+---
+
 ## 📅 2026-06-22 — v1.3.1 (Resilience · Cleanup)
 
 ### Added
