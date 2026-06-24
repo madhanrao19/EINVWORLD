@@ -152,6 +152,15 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // Add API Controllers support
 builder.Services.AddMemoryCache(); // Backs the LHDN token cache (TokenService)
 
+// HTTPS redirect port. Behind IIS the middleware can't auto-discover the public HTTPS port and logs
+// "Failed to determine the https port for redirect" on every request that needs redirecting. Set it
+// explicitly (default 443; override with Security:HttpsRedirectPort, or 0 to leave it auto/disabled).
+var httpsRedirectPort = builder.Configuration.GetValue<int?>("Security:HttpsRedirectPort") ?? 443;
+if (httpsRedirectPort > 0)
+{
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsRedirectPort);
+}
+
 // Health checks — split into liveness (process alive) and readiness (can do real work).
 // "ready"-tagged checks gate /health/ready; /health/live has none (just confirms the process responds).
 builder.Services.AddHealthChecks()
