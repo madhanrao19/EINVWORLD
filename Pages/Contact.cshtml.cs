@@ -17,13 +17,15 @@ namespace eInvWorld.Pages
         private readonly EmailConfiguration _emailConfig;
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _dbContext;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public ContactModel(EmailService emailService, IOptions<EmailConfiguration> emailConfig, IConfiguration configuration, ApplicationDbContext dbContext)
+        public ContactModel(EmailService emailService, IOptions<EmailConfiguration> emailConfig, IConfiguration configuration, ApplicationDbContext dbContext, IHttpClientFactory httpClientFactory)
         {
             _emailService = emailService;
             _emailConfig = emailConfig.Value;
             _configuration = configuration;
             _dbContext = dbContext;
+            _httpClientFactory = httpClientFactory;
         }
 
         [BindProperty]
@@ -127,7 +129,9 @@ namespace eInvWorld.Pages
             var secretKey = _configuration["Turnstile:SecretKey"];
             var verifyUrl = _configuration["Turnstile:VerifyUrl"];
 
-            using var client = new HttpClient();
+            // Use the pooled IHttpClientFactory client, not `new HttpClient()` — a new client per request
+            // leaks sockets under load (socket exhaustion). Mirrors SecureFormPageModel.IsTurnstileValidAsync.
+            var client = _httpClientFactory.CreateClient();
 
             var postData = new FormUrlEncodedContent(new[]
             {

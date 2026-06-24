@@ -113,7 +113,8 @@ public class LHDNApiService : ILHDNApiService
                 throw new Exception("User's TIN is missing.");
             }
 
-            _logger.LogInformation($"User {user.Email} is assigned to company TIN: {userTin}");
+            // Log the user id, not the email (PII), and never the email at Information level.
+            _logger.LogInformation("User {UserId} is assigned to company TIN: {UserTin}", user.Id, userTin);
 
             // ✅ Step 2: Determine whether user is an intermediary
             bool isIntermediary = userTin != _onBehalfOf;
@@ -128,7 +129,8 @@ public class LHDNApiService : ILHDNApiService
 
             var requestUri = $"api/v1.0/taxpayer/validate/{tin}?idType={idType}&idValue={idValue}";
             var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-            _logger.LogDebug("Outgoing LHDN request: {Request}", request);
+            // Log only the method + URI, never the HttpRequestMessage itself (avoids leaking headers/token).
+            _logger.LogDebug("Outgoing LHDN request: {Method} {Uri}", request.Method, request.RequestUri);
 
             request.Headers.Add("Authorization", $"Bearer {accessToken}");
 

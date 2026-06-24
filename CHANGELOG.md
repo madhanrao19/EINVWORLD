@@ -1,5 +1,25 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-24 — v1.3.3 (Security hardening — review Batch A)
+
+### Security
+- **No default demo users in Production** — `admin@/supplier@/buyer@einvworld.com` seeding is now gated
+  behind `Seeding:SeedDefaultUsers` (base `true` for dev, forced **`false`** in `appsettings.Production.json`).
+  Seed passwords are overridable via `Seeding:Default*Password`. Existing installs are unaffected; admins
+  are still forced to enrol 2FA on first login.
+- **`SameSite=Lax`** added to the session and Identity auth cookies (CSRF defence-in-depth; HttpOnly + Secure
+  already set).
+- **No PII / token in logs** — `LHDNApiService` logs the user id (not email) and only the request method+URI
+  (never the `HttpRequestMessage`).
+- **Email header-injection guard** — CR/LF stripped from `CompanyName` before it goes into a mail subject
+  (`Pages/Lead/Submit`).
+- **Stored-XSS hardening** — user-supplied address and item-description fields are HTML-encoded before being
+  rendered (`InvoiceDetails2`, `PdfTemplate`, `PublicCustomer/Details`) instead of raw output.
+- **Upload/DoS limits** — bulk import capped at 20k rows; request body / multipart size bounded to 32 MB
+  (Kestrel + IIS + `FormOptions`).
+- **Socket-exhaustion fix** — Cloudflare Turnstile verification uses `IHttpClientFactory` instead of
+  `new HttpClient()` per request (`Pages/Contact`).
+
 ## 📅 2026-06-24 — v1.3.2 (Staging-log fixes)
 
 ### Fixed
