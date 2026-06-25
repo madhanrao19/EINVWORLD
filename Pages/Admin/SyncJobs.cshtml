@@ -36,6 +36,10 @@
         {
             <span class="text-muted">No active jobs</span>
         }
+        @if (Model.FailedCount > 0)
+        {
+            <a asp-page="/Admin/SyncJobs" asp-route-status="Failed" class="badge bg-danger text-decoration-none ms-1" title="View failed jobs">@Model.FailedCount failed</a>
+        }
         <a asp-page="/Admin/InvoiceSync" class="btn btn-sm btn-outline-primary ms-2">← Sync controls</a>
     </div>
 </div>
@@ -45,7 +49,24 @@
     <div class="alert alert-info py-2">@msg</div>
 }
 
-<p class="text-muted">Showing the latest 100 jobs. Times are UTC.</p>
+@if (Model.FailedOnly)
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-danger fw-semibold">Dead-letter view — showing failed jobs only (@Model.FailedCount).</span>
+        <span>
+            @if (Model.FailedCount > 0)
+            {
+                <form method="post" asp-page-handler="RetryAllFailed" class="d-inline"
+                      onsubmit="return confirm('Re-queue all @Model.FailedCount failed job(s)?');">
+                    <button type="submit" class="btn btn-sm btn-outline-primary py-0">Retry all failed</button>
+                </form>
+            }
+            <a asp-page="/Admin/SyncJobs" class="btn btn-sm btn-outline-secondary py-0 ms-1">Show all</a>
+        </span>
+    </div>
+}
+
+<p class="text-muted">@(Model.FailedOnly ? "Showing failed jobs (up to 500)." : "Showing the latest 100 jobs.") Times are UTC.</p>
 
 <div class="table-responsive">
     <table class="table table-sm table-striped align-middle">
