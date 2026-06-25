@@ -177,6 +177,8 @@ public class InvoiceStatusUpdater : BackgroundService
         {
             if (stoppingToken.IsCancellationRequested) break;
 
+            // Correlate all logs for this invoice's sync attempt under one id.
+            using var _corr = Serilog.Context.LogContext.PushProperty("CorrelationId", $"statussync-{invoice.InvoiceNo}");
             try
             {
                 string? tin = TinHelper.ResolveSubmitterTin(invoice);
