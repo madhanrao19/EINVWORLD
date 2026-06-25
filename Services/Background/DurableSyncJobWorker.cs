@@ -158,6 +158,8 @@ namespace EINVWORLD.Services.Background
 
             // ── Run the job in its OWN scope so the heavy work (and any DbContext state it leaves
             // behind) can never corrupt the bookkeeping context we use to record the outcome. ──
+            // Correlate every log line for this job (handler work + outcome) under one id.
+            using var _corr = Serilog.Context.LogContext.PushProperty("CorrelationId", $"syncjob-{job.Id}");
             try
             {
                 string result;
