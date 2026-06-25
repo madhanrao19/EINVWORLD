@@ -792,7 +792,7 @@ namespace eInvWorld.Services.Mappers
                 },
                 Amount = new List<JsonModels.Amount>
                 {
-                    new JsonModels.Amount { _ = 0.0m, currencyID = line.InvoiceHeader.Currency ?? "MYR" }
+                    new JsonModels.Amount { _ = 0.0m, currencyID = line.InvoiceHeader?.Currency ?? "MYR" }
                 }
             }
             };

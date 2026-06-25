@@ -1,0 +1,153 @@
+using System;
+using System.Text.Json;
+using eInvWorld.Models.InputModel;
+using eInvWorld.Services.Mappers;
+using Xunit;
+
+namespace EINVWORLD.Tests
+{
+    /// <summary>
+    /// Exercises the UBL/JSON mapper end-to-end from an in-memory InvoiceHeader (no DB/HTTP). Guards the
+    /// financial-correctness output (legal monetary totals + rounding), the doc-type BillingReference
+    /// dispatch, party-identification filtering, and party validation.
+    /// </summary>
+    public class InvoiceMapperTests
+    {
+        // A PartyInfo with every field ValidatePartyInfo + MapSupplier require.
+        private static PartyInfo ValidParty(string tin, string company) => new()
+        {
+            IndustryClassificationCode = "01111",
+            BizDescription = "Growing of maize",
+            CompanyName = company,
+            TIN = tin,
+            RegTypeCode = "BRN",
+            RegNo = "201901234567",
+            Addr1 = "Lot 1, Jalan Test",
+            CityName = "Kuala Lumpur",
+            StateCode = "14",
+            PostalCode = "50000",
+            CountryCode = "MYS",
+            PhoneNo = "+60312345678",
+            SST = "NA",   // "NA" must be filtered out of PartyIdentification
+            TTX = "NA",
+        };
+
+        private static InvoiceLine LineWithTax(decimal qty, decimal price, decimal taxPercent)
+        {
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = qty,
+                UnitPrice = price,
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = taxPercent });
+            line.CalculateAmounts(); // pre-compute TaxAmount so totals are deterministic
+            return line;
+        }
+
+        private static InvoiceHeader Header(string docType, params InvoiceLine[] lines)
+        {
+            var header = new InvoiceHeader
+            {
+                InvoiceNo = "INV-1",
+                DocTypeCode = docType,
+                Currency = "MYR",
+                IssueDate = new DateTime(2026, 6, 24, 1, 2, 3, DateTimeKind.Utc),
+                Supplier = ValidParty("C1111111111", "Supplier Sdn Bhd"),
+                Customer = ValidParty("C2222222222", "Buyer Sdn Bhd"),
+                RefDocumentNo = "INV-ORIG-1",
+            };
+            foreach (var l in lines)
+            {
+                l.InvoiceHeader = header; // EF/production always set this back-reference; the mapper reads it.
+                header.InvoiceLines.Add(l);
+            }
+            return header;
+        }
+
+        private static decimal Amount(JsonElement legalTotal, string field) =>
+            legalTotal.GetProperty(field)[0].GetProperty("_").GetDecimal();
+
+        // ── Totals & rounding ─────────────────────────────────────────────────────────────────
+        [Fact]
+        public void Map_StandardInvoice_ComputesLegalMonetaryTotals()
+        {
+            // Qty 10 × 100 = 1000 excl; 10% tax = 100; tax-inclusive = payable = 1100.
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(10, 100, 10)));
+
+            using var doc = JsonDocument.Parse(json);
+            var invoice = doc.RootElement.GetProperty("Invoice")[0];
+            Assert.Equal("01", invoice.GetProperty("InvoiceTypeCode")[0].GetProperty("_").GetString());
+            Assert.Equal("MYR", invoice.GetProperty("DocumentCurrencyCode")[0].GetProperty("_").GetString());
+
+            var lmt = invoice.GetProperty("LegalMonetaryTotal")[0];
+            Assert.Equal(1000m, Amount(lmt, "LineExtensionAmount"));
+            Assert.Equal(1000m, Amount(lmt, "TaxExclusiveAmount"));
+            Assert.Equal(1100m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(1100m, Amount(lmt, "PayableAmount"));
+        }
+
+        [Fact]
+        public void Map_MultiLine_TotalsAreSummed()
+        {
+            // Line A: 3 × 33.33 = 99.99 excl, 6% = 5.9994 tax. Line B: 1 × 100 = 100 excl, 10% = 10 tax.
+            var json = new InvoiceMapper().MapToJsonModel(
+                Header("01", LineWithTax(3, 33.33m, 6), LineWithTax(1, 100, 10)));
+
+            using var doc = JsonDocument.Parse(json);
+            var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
+            Assert.Equal(199.99m, Amount(lmt, "LineExtensionAmount"));     // 99.99 + 100
+            // tax-inclusive = round(199.99 + (5.9994 + 10), 2) = round(215.9894, 2) = 215.99
+            Assert.Equal(215.99m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(215.99m, Amount(lmt, "PayableAmount"));
+        }
+
+        // ── BillingReference doc-type dispatch ────────────────────────────────────────────────
+        [Fact]
+        public void Map_DocType01_HasAdditionalRefOnly()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var br = doc.RootElement.GetProperty("Invoice")[0].GetProperty("BillingReference")[0];
+            Assert.True(br.TryGetProperty("AdditionalDocumentReference", out _));
+            Assert.False(br.TryGetProperty("InvoiceDocumentReference", out _));
+        }
+
+        [Fact]
+        public void Map_CreditNote02_HasInvoiceDocumentReference()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("02", LineWithTax(1, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var br = doc.RootElement.GetProperty("Invoice")[0].GetProperty("BillingReference")[0];
+            Assert.True(br.TryGetProperty("InvoiceDocumentReference", out var idr));
+            Assert.Equal("INV-ORIG-1", idr[0].GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.False(br.TryGetProperty("AdditionalDocumentReference", out _));
+        }
+
+        // ── Party identification filtering ────────────────────────────────────────────────────
+        [Fact]
+        public void Map_FiltersNaSstAndKeepsTin()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 10, 0)));
+
+            Assert.Contains("C1111111111", json); // supplier TIN present
+            Assert.DoesNotContain("SST", json);   // "NA" SST/TTX filtered out entirely
+        }
+
+        // ── Party validation ──────────────────────────────────────────────────────────────────
+        [Fact]
+        public void Map_MissingSupplierTin_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Supplier.TIN = ""; // required field
+
+            Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+        }
+    }
+}
