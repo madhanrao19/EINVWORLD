@@ -1,29 +1,35 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
 using eInvWorld.Services;
 using EINVWORLD.Helpers;
 using EINVWORLD.Services.Background;
+using EINVWORLD.Services.Audit;
 using eInvWorld.Data; // Make sure namespace matches where InvoiceSyncHelper is
 using eInvWorld.Models.Background;
 
 namespace eInvWorld.Pages.Admin
 {
     [Authorize(Roles = "Admin")] // 🔐 Protect this page
+    [EnableRateLimiting("admin-sync")] // 🚦 Stricter per-user limit — each post enqueues background work
     public class InvoiceSyncModel : PageModel
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly ISyncJobTracker _jobTracker;
         private readonly IConfiguration _configuration;
+        private readonly IAuditService _audit;
 
         public InvoiceSyncModel(
             ApplicationDbContext dbContext,
             ISyncJobTracker jobTracker,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IAuditService audit)
         {
             _dbContext = dbContext;
             _jobTracker = jobTracker;
             _configuration = configuration;
+            _audit = audit;
         }
 
         // "Run Invoice Sync Now" — enqueue the status sync + finalizer to run in the background
@@ -35,6 +41,8 @@ namespace eInvWorld.Pages.Admin
             // Enqueue a durable job row; the DurableSyncJobWorker claims and runs it (and retries on
             // failure / survives an app-pool recycle). No in-memory closure to lose.
             var jobId = await _jobTracker.CreateAsync("admin-sync", SyncJobType.StatusSync, userName);
+
+            await _audit.WriteAsync("SyncStatusTriggered", new AuditEntry { NewValueJson = $"{{\"jobId\":{jobId}}}" });
 
             TempData["Message"] = jobId > 0
                 ? "✅ Invoice sync queued in the background. Watch progress on the Sync Jobs page."
@@ -71,6 +79,11 @@ namespace eInvWorld.Pages.Admin
                 // One durable job row per TIN; the worker runs them (paced by LhdnRateLimitHandler).
                 await _jobTracker.CreateAsync(tin, SyncJobType.FullImport, userName, payload);
             }
+
+            await _audit.WriteAsync("FullImportTriggered", new AuditEntry
+            {
+                NewValueJson = $"{{\"tins\":{userTins.Count},\"lookbackDays\":{lookbackDays}}}"
+            });
 
             var skippedGeneralTins = allUserTins.Where(GeneralTINHelper.IsGeneralTIN).ToList();
             var msg = $"✅ LHDN full import queued for {userTins.Count} company(ies) (last {lookbackDays} days); it runs in the background (rate-limited). Watch progress on the Sync Jobs page.";
