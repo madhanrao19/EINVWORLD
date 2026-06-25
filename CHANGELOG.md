@@ -1,5 +1,27 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.3.8 (Optional hardening — safe set)
+
+### Added
+- **Stricter `/Admin/InvoiceSync` rate limit** — a per-user `admin-sync` policy (default 10/min,
+  `RateLimiting:AdminSyncPerMinute`) so one admin can't flood the durable job queue; the global per-IP
+  limiter is unchanged.
+- **Decimal precision validation** — new `[MaxDecimalPlaces]` attribute applied to invoice line
+  Quantity (6), Unit Price (4), Discount (2) and Tax % (4, plus `[Range(0,100)]`), so over-precise input
+  is rejected instead of silently rounded to the column scale.
+- **Wider audit coverage** — admin sync triggers (`SyncStatusTriggered`, `FullImportTriggered`) and Sync
+  Jobs actions (`SyncJobRetried`, `SyncJobCancelled`, `SyncJobsBulkRetried`) now write to the audit chain.
+- **Proactive failure-alert email** — optional `SyncFailureAlertService` emails an admin when failed sync
+  jobs cross a threshold (off by default; `SyncFailureAlerts` config; throttled so it never spams).
+- **PDF render timeout** — DinkToPdf renders run with a configurable timeout
+  (`PDFGenerationSettings:TimeoutSeconds`, default 60) so a hung wkhtmltopdf render can't block the request.
+- **Docs** — README/DOCUMENTATION note the single-instance (per-process) LHDN rate-limiter assumption.
+
+### Deferred (high-risk; intentionally not in this set)
+- Global `InvoiceHeader` `RowVersion` optimistic concurrency (20+ unguarded SaveChanges sites — needs its
+  own concurrency-tested change); splitting the 1,263-line `InvoiceMapper` (critical money path);
+  OpenTelemetry (no metrics backend on a single on-prem node).
+
 ## 📅 2026-06-25 — v1.3.7 (Dead-letter visibility — review Batch C round 3)
 
 ### Added

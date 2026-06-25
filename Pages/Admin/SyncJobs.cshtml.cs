@@ -1,5 +1,6 @@
 using eInvWorld.Data;
 using eInvWorld.Models.Background;
+using EINVWORLD.Services.Audit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -11,8 +12,13 @@ namespace eInvWorld.Pages.Admin
     public class SyncJobsModel : PageModel
     {
         private readonly ApplicationDbContext _db;
+        private readonly IAuditService _audit;
 
-        public SyncJobsModel(ApplicationDbContext db) => _db = db;
+        public SyncJobsModel(ApplicationDbContext db, IAuditService audit)
+        {
+            _db = db;
+            _audit = audit;
+        }
 
         public List<SyncJob> Jobs { get; private set; } = new();
         public int RunningCount { get; private set; }
@@ -54,7 +60,11 @@ namespace eInvWorld.Pages.Admin
                 job.LockedUntilUtc = null;
                 job.Message = "Bulk re-queued by admin.";
             }
-            if (failed.Count > 0) await _db.SaveChangesAsync();
+            if (failed.Count > 0)
+            {
+                await _db.SaveChangesAsync();
+                await _audit.WriteAsync("SyncJobsBulkRetried", new AuditEntry { NewValueJson = $"{{\"count\":{failed.Count}}}" });
+            }
             TempData["Message"] = failed.Count == 0 ? "No failed jobs to retry." : $"✅ Re-queued {failed.Count} failed job(s).";
             return RedirectToPage(new { status = "Failed" });
         }
@@ -82,6 +92,7 @@ namespace eInvWorld.Pages.Admin
                 job.LockedUntilUtc = null;
                 job.Message = "Manually retried.";
                 await _db.SaveChangesAsync();
+                await _audit.WriteAsync("SyncJobRetried", new AuditEntry { Tin = job.Tin, NewValueJson = $"{{\"jobId\":{id}}}" });
                 TempData["Message"] = $"✅ Job #{id} re-queued.";
             }
             return RedirectToPage();
@@ -105,6 +116,7 @@ namespace eInvWorld.Pages.Admin
                 job.FinishedAtUtc = DateTime.UtcNow;
                 job.Message = "Cancelled by admin.";
                 await _db.SaveChangesAsync();
+                await _audit.WriteAsync("SyncJobCancelled", new AuditEntry { Tin = job.Tin, NewValueJson = $"{{\"jobId\":{id}}}" });
                 TempData["Message"] = $"🛑 Job #{id} cancelled.";
             }
             return RedirectToPage();

@@ -1,17 +1,22 @@
-﻿namespace eInvWorld.Models.ViewModels
+﻿using EINVWORLD.Helpers.Validation;
+
+namespace eInvWorld.Models.ViewModels
 {
     // Individual line items in the invoice
     public class InvoiceLineView
     {
         public int LineNumber { get; set; }
+        [MaxDecimalPlaces(6, ErrorMessage = "Quantity allows at most 6 decimal places.")]
         public decimal? Quantity { get; set; }
         public string? ItemCode { get; set; }
         public string ItemDescription { get; set; } = null!;
         public string UnitOfMeasure { get; set; } = null!;
+        [MaxDecimalPlaces(4, ErrorMessage = "Unit price allows at most 4 decimal places.")]
         public decimal? UnitPrice { get; set; }
         public decimal? Subtotal { get; set; }
         public decimal? AmountInclTax { get; set; }
         public decimal? AmountExclTax { get; set; }
+        [MaxDecimalPlaces(2, ErrorMessage = "Discount allows at most 2 decimal places.")]
         public decimal? DiscountAmount { get; set; }
         public string ClassificationCode { get; set; } = null!; // MSIC Code
 

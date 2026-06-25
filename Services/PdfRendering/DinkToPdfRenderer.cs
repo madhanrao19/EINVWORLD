@@ -1,5 +1,6 @@
 using DinkToPdf;
 using DinkToPdf.Contracts;
+using Microsoft.Extensions.Configuration;
 
 namespace eInvWorld.Services.PdfRendering
 {
@@ -10,13 +11,16 @@ namespace eInvWorld.Services.PdfRendering
     public class DinkToPdfRenderer : IPdfRenderer
     {
         private readonly IConverter _converter;
+        private readonly int _timeoutSeconds;
 
-        public DinkToPdfRenderer(IConverter converter)
+        public DinkToPdfRenderer(IConverter converter, IConfiguration configuration)
         {
             _converter = converter;
+            _timeoutSeconds = configuration.GetValue("PDFGenerationSettings:TimeoutSeconds", 60);
+            if (_timeoutSeconds <= 0) _timeoutSeconds = 60;
         }
 
-        public Task<byte[]> RenderHtmlToPdfAsync(string htmlContent)
+        public async Task<byte[]> RenderHtmlToPdfAsync(string htmlContent)
         {
             var doc = new HtmlToPdfDocument
             {
@@ -51,8 +55,18 @@ namespace eInvWorld.Services.PdfRendering
                 }
             };
 
-            // DinkToPdf's Convert returns the PDF bytes when no Out path is set.
-            return Task.FromResult(_converter.Convert(doc));
+            // DinkToPdf's Convert is a synchronous native call (wkhtmltopdf) that can hang on malformed HTML
+            // or an unreachable resource. Run it off the request thread with a timeout so a stuck render
+            // returns a clear error instead of blocking the request indefinitely.
+            // NOTE: the SynchronizedConverter serialises conversions on its own thread, so on timeout the
+            // native work may keep running — this bounds the CALLER's wait, not the native process.
+            var convertTask = Task.Run(() => _converter.Convert(doc));
+            var finished = await Task.WhenAny(convertTask, Task.Delay(TimeSpan.FromSeconds(_timeoutSeconds)));
+            if (finished != convertTask)
+                throw new TimeoutException(
+                    $"PDF generation exceeded {_timeoutSeconds}s and was abandoned. The HTML may be malformed or reference an unreachable resource.");
+
+            return await convertTask; // observe the result (and surface any conversion exception)
         }
     }
 }
