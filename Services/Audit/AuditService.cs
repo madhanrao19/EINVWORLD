@@ -44,7 +44,9 @@ namespace EINVWORLD.Services.Audit
                 {
                     CreatedAtUtc = DateTime.UtcNow,
                     Action = Trunc(action, 80) ?? string.Empty,
-                    CorrelationId = Trunc(entry.CorrelationId, 64),
+                    // Fall back to the request's correlation id (set by CorrelationIdMiddleware) so an audit
+                    // row can be tied to the request's log lines even when the caller didn't pass one.
+                    CorrelationId = Trunc(entry.CorrelationId ?? ctx?.TraceIdentifier, 64),
                     Tin = Trunc(entry.Tin, 50),
                     InvoiceNo = Trunc(entry.InvoiceNo, 100),
                     Uuid = Trunc(entry.Uuid, 100),

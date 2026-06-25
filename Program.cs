@@ -534,6 +534,9 @@ if (forwardedHeadersEnabled)
     app.UseForwardedHeaders();
 }
 
+// Assign a correlation id to every request (early, so all of its logs + audit entries share it).
+app.UseMiddleware<eInvWorld.Services.Middleware.CorrelationIdMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
