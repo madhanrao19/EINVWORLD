@@ -129,12 +129,98 @@ namespace EINVWORLD.Pages.Invoices
             return File(bytes, "text/csv", $"{type}.csv");
         }
 
+        // --- Parsing: accept CSV or XLSX, both mapped to the same InvoiceCsvDto column names ---
+        private static List<InvoiceCsvDto> ParseUploadedRecords(IFormFile file)
+        {
+            var name = file.FileName ?? string.Empty;
+            if (name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                return ParseXlsxRecords(file);
+
+            // CSV (default). Lenient: trims, ignores missing/extra columns.
+            using var reader = new StreamReader(file.OpenReadStream());
+            using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                TrimOptions = TrimOptions.Trim,
+                HeaderValidated = null,
+                MissingFieldFound = null
+            });
+            return csv.GetRecords<InvoiceCsvDto>().ToList();
+        }
+
+        // Map an .xlsx (first worksheet, header row) onto InvoiceCsvDto by matching header text to property
+        // name (case-insensitive) — so the Excel and CSV formats share one column schema.
+        private static List<InvoiceCsvDto> ParseXlsxRecords(IFormFile file)
+        {
+            using var stream = file.OpenReadStream();
+            using var wb = new ClosedXML.Excel.XLWorkbook(stream);
+            var ws = wb.Worksheets.First();
+            var rows = ws.RangeUsed()?.RowsUsed().ToList();
+            if (rows == null || rows.Count < 2) return new List<InvoiceCsvDto>();
+
+            var header = rows[0];
+            var colByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int c = 1; c <= header.CellCount(); c++)
+            {
+                var h = header.Cell(c).GetString().Trim();
+                if (!string.IsNullOrEmpty(h) && !colByName.ContainsKey(h)) colByName[h] = c;
+            }
+
+            var props = typeof(InvoiceCsvDto).GetProperties();
+            var records = new List<InvoiceCsvDto>();
+            foreach (var row in rows.Skip(1))
+            {
+                var dto = new InvoiceCsvDto();
+                var anyValue = false;
+                foreach (var p in props)
+                {
+                    if (!colByName.TryGetValue(p.Name, out var c)) continue;
+                    var raw = row.Cell(c).GetString().Trim();
+                    if (string.IsNullOrEmpty(raw)) continue;
+                    anyValue = true;
+                    var t = Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
+                    if (t == typeof(string)) p.SetValue(dto, raw);
+                    else if (t == typeof(decimal) &&
+                             decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var dval))
+                        p.SetValue(dto, dval);
+                }
+                if (anyValue) records.Add(dto);
+            }
+            return records;
+        }
+
+        // Downloadable XLSX template whose headers match the importer's columns (one example row).
+        public IActionResult OnGetTemplate()
+        {
+            var props = typeof(InvoiceCsvDto).GetProperties();
+            using var wb = new ClosedXML.Excel.XLWorkbook();
+            var ws = wb.Worksheets.Add("Invoices");
+            for (int i = 0; i < props.Length; i++)
+            {
+                ws.Cell(1, i + 1).Value = props[i].Name;
+                ws.Cell(1, i + 1).Style.Font.Bold = true;
+            }
+            ws.Columns().AdjustToContents();
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+            return File(ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "bulk-invoice-import-template.xlsx");
+        }
+
         // --- STEP 1: UPLOAD AND VALIDATE ---
         public async Task<IActionResult> OnPostUploadAsync()
         {
             if (UploadFile == null || UploadFile.Length == 0)
             {
-                ModelState.AddModelError("", "Please select a CSV file.");
+                ModelState.AddModelError("", "Please select a CSV or Excel (.xlsx) file.");
+                return Page();
+            }
+
+            var uploadName = UploadFile.FileName ?? string.Empty;
+            if (!uploadName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase)
+                && !uploadName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError("", "Only .csv and .xlsx files are supported.");
                 return Page();
             }
 
@@ -166,16 +252,18 @@ namespace EINVWORLD.Pages.Invoices
             PreviewRecords = new List<PreviewInvoiceModel>();
             var validLinesToKeep = new List<InvoiceCsvDto>();
 
-            using (var reader = new StreamReader(UploadFile.OpenReadStream()))
-            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+            List<InvoiceCsvDto> rawRecords;
+            try
             {
-                TrimOptions = TrimOptions.Trim,
-                HeaderValidated = null,
-                MissingFieldFound = null
-            }))
+                rawRecords = ParseUploadedRecords(UploadFile);
+            }
+            catch (Exception ex)
             {
-                var rawRecords = csv.GetRecords<InvoiceCsvDto>().ToList();
+                ModelState.AddModelError("", "Could not read the file: " + ex.Message);
+                return Page();
+            }
 
+            {
                 var groupedInvoices = rawRecords.GroupBy(r => r.InvoiceNo).ToList();
 
                 foreach (var group in groupedInvoices)
