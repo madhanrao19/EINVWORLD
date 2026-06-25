@@ -183,6 +183,10 @@ Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed 
 
 **Rate limiting** — `LhdnRateLimitHandler` is attached to **every** LHDN client (incl. the token
 client) and paces each endpoint below MyInvois' per-minute limits to avoid `429` storms.
+> **Single-instance assumption:** these rate-limit buckets are **per process** (in-memory). The app is
+> designed to run as a **single instance**. If you ever scale to multiple instances behind a load
+> balancer, the per-instance buckets would multiply the effective LHDN call rate — move to a shared
+> (e.g. Redis-backed) limiter first.
 
 **Resilience** — the **token client** additionally uses `AddStandardResilienceHandler` (retry +
 timeouts) since token acquisition is idempotent. The **submission client does not retry** (a retried
@@ -343,7 +347,9 @@ blank in files and supplied via env vars / user-secrets.
 | `Security:EnforceAdminMfa` | Require Admin 2FA enrolment (default `true`). |
 | `Security:HttpsRedirectPort` | Public HTTPS port for the redirect middleware (default `443`). Behind IIS the port can't be auto-discovered; set explicitly to avoid the "Failed to determine the https port" warning. Set `0` to disable in-app redirects (do this behind a TLS-terminating proxy / Cloudflare Tunnel). |
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support. `Enabled` (default `true`) makes the app honour `X-Forwarded-Proto` (original scheme = https → correct Secure cookies, HSTS, no redirect loop) and `X-Forwarded-For` (real client IP → correct per-IP rate limiting + audit/log IPs). `KnownProxies` (extra trusted proxy IPs beyond loopback) and `ForwardLimit` (hops, default 1). Only headers from a known proxy are trusted. |
-| `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200). |
+| `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200), `AdminSyncPerMinute` (default 10 — stricter per-user cap on `/Admin/InvoiceSync`). |
+| `SyncFailureAlerts` | Optional email when failed sync jobs pile up: `Enabled` (default false), `RecipientEmail`, `Threshold`, `CheckMinutes`, `CooldownHours`. Throttled. |
+| `PDFGenerationSettings:TimeoutSeconds` | Max wait for a DinkToPdf render before abandoning it (default 60) so a hung render can't block the request. |
 | `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SyncRetentionDays`. |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |
 | `EmailConfiguration` | SMTP (**`SmtpPassword` secret**), base URLs, per-event subjects, notification toggles. |
