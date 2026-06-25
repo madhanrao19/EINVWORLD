@@ -24,7 +24,8 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   `14` Self-billed Refund Note.
 - Submit to MyInvois (UBL 2.1 JSON), poll validation status, capture **LongId** (QR code), cancel/reject.
 - **Centralised LHDN rate limiting** (`LhdnRateLimitHandler`) — evenly paced per endpoint so the system
-  stays under MyInvois limits and avoids `429` storms.
+  stays under MyInvois limits and avoids `429` storms. _Buckets are per-process — the app is designed for
+  **single-instance** deployment (scale-out needs a shared/Redis limiter)._
 - **Durable background jobs** — manual sync/import/refresh run as **SQL-backed** jobs that survive an
   IIS app-pool recycle / reboot: a worker claims each job, retries with backoff, and recovers orphaned
   jobs on startup. Progress + **Retry/Cancel** on the **Sync Jobs** admin page (`/Admin/SyncJobs`).

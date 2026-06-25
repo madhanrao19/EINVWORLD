@@ -222,6 +222,7 @@ builder.Services.AddScoped<GlobalThemeService>();
 builder.Services.AddHostedService<InvoiceStatusUpdater>();
 //builder.Services.AddSingleton<InvoiceStatusUpdater>();
 builder.Services.AddHostedService<eInvWorld.Services.Background.LogCleanupService>();
+builder.Services.AddHostedService<EINVWORLD.Services.Background.SyncFailureAlertService>(); // emails admin on failed-job backlog (off by default)
 builder.Services.AddSingleton<QRCodeGeneratorService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
@@ -451,6 +452,23 @@ builder.Services.AddRateLimiter(options =>
             _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
             {
                 PermitLimit = permitsPerMinute <= 0 ? 1200 : permitsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
+
+    // Stricter per-user policy for admin sync triggers (each enqueues background work). Prevents one admin
+    // from flooding the durable job queue. Partitioned by user name so it's independent of the global per-IP
+    // limiter. Configurable via RateLimiting:AdminSyncPerMinute (default 10).
+    var adminSyncPerMinute = builder.Configuration.GetValue("RateLimiting:AdminSyncPerMinute", 10);
+    options.AddPolicy("admin-sync", httpContext =>
+    {
+        var user = httpContext.User?.Identity?.Name ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(user,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = adminSyncPerMinute <= 0 ? 10 : adminSyncPerMinute,
                 Window = TimeSpan.FromMinutes(1),
                 SegmentsPerWindow = 6,
                 QueueLimit = 0
