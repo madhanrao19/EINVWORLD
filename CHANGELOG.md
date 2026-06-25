@@ -1,5 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.3.6 (Correlation IDs — review Batch C round 2)
+
+### Added
+- **End-to-end correlation IDs.** Every request gets a correlation id (`CorrelationIdMiddleware`, placed
+  early in the pipeline) — taken from an incoming `X-Correlation-ID` header or the framework
+  `TraceIdentifier`, echoed back in the response header, and pushed to Serilog's `LogContext`. Since
+  `Enrich:FromLogContext` was already on, every log line for the request now carries it; the file sink
+  shows it (`[{CorrelationId}]`) and the `SystemLogs` sink captures it in the `LogEvent` column — no
+  schema change.
+- **Background jobs are correlated too** — `DurableSyncJobWorker` tags all logs for a job with
+  `syncjob-{id}`, and `InvoiceStatusUpdater` tags each invoice's sync with `statussync-{invoiceNo}`.
+- **Audit rows inherit the request correlation** — `AuditService` falls back to the request
+  `TraceIdentifier` when a caller doesn't pass a `CorrelationId`, so an audit entry ties back to the
+  request's log lines (`AuditLog.CorrelationId` already existed).
+
 ## 📅 2026-06-25 — v1.3.5 (Tests — review Batch C round 1)
 
 ### Added (test coverage — no production code changes)
