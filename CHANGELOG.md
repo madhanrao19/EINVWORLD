@@ -1,5 +1,17 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.3.7 (Dead-letter visibility — review Batch C round 3)
+
+### Added
+- **Failed-job (dead-letter) view on Admin → Sync Jobs.** A red "N failed" badge in the header links to a
+  `?status=Failed` view that lists **all** failed jobs (up to 500, so failures that fell past the latest-100
+  window are still reachable), with a **"Retry all failed"** bulk action to re-queue the whole dead-letter
+  queue at once. Full Running/Queued/Failed counts are now computed across the table, not just the page.
+
+> Note: the Admin → System Health dashboard already surfaced the failed-job count (red, with a "review"
+> link) and the oldest-queued age — this round adds the drill-down + bulk recovery. A proactive email/alert
+> on repeated failures remains a deferred option.
+
 ## 📅 2026-06-25 — v1.3.6 (Correlation IDs — review Batch C round 2)
 
 ### Added
