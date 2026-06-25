@@ -1,5 +1,26 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.3.5 (Tests — review Batch C round 1)
+
+### Added (test coverage — no production code changes)
+- **Money math tests** (`InvoiceCalculationTests`) — line totals (Qty×Price, discount, multi/zero/exempt
+  tax) and header aggregation, covering the core financial-correctness logic.
+- **UBL mapper tests** (`InvoiceMapperTests`) — drive `InvoiceMapper.MapToJsonModel` from in-memory
+  invoices and assert legal monetary totals + rounding, the BillingReference doc-type dispatch
+  (01 vs 02), "NA" party-identification filtering, and that missing required party fields throw.
+- **Helper tests** (`HelperTests`) — `GeneralTINHelper.IsGeneralTIN`, `DateTimeHelper.ToMalaysiaTime`,
+  `AmountInWordsHelper.ToWordsEnglish`.
+- All use the existing xUnit project with **no new package dependencies**; they run in the same CI
+  `dotnet test` step that gates merges.
+
+### Fixed (surfaced by the new mapper tests)
+- **`InvoiceMapper.MapLineAllowanceCharges` null-safety** — it dereferenced `line.InvoiceHeader.Currency`
+  directly while every sibling line in the same method already used `line.InvoiceHeader?.Currency ?? "MYR"`.
+  Aligned the lone outlier to be null-safe.
+
+> Deferred Batch C follow-ons (their own PRs): correlation-ID log enricher; failure/dead-letter
+> Admin visibility.
+
 ## 📅 2026-06-25 — v1.3.4 (Data-integrity — review Batch B)
 
 ### Fixed
