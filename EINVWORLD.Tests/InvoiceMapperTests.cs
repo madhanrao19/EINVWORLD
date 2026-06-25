@@ -61,7 +61,11 @@ namespace EINVWORLD.Tests
                 Customer = ValidParty("C2222222222", "Buyer Sdn Bhd"),
                 RefDocumentNo = "INV-ORIG-1",
             };
-            foreach (var l in lines) header.InvoiceLines.Add(l);
+            foreach (var l in lines)
+            {
+                l.InvoiceHeader = header; // EF/production always set this back-reference; the mapper reads it.
+                header.InvoiceLines.Add(l);
+            }
             return header;
         }
 

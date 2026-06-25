@@ -13,6 +13,11 @@
 - All use the existing xUnit project with **no new package dependencies**; they run in the same CI
   `dotnet test` step that gates merges.
 
+### Fixed (surfaced by the new mapper tests)
+- **`InvoiceMapper.MapLineAllowanceCharges` null-safety** — it dereferenced `line.InvoiceHeader.Currency`
+  directly while every sibling line in the same method already used `line.InvoiceHeader?.Currency ?? "MYR"`.
+  Aligned the lone outlier to be null-safe.
+
 > Deferred Batch C follow-ons (their own PRs): correlation-ID log enricher; failure/dead-letter
 > Admin visibility.
 
