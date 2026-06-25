@@ -17,17 +17,46 @@ namespace eInvWorld.Pages.Admin
         public List<SyncJob> Jobs { get; private set; } = new();
         public int RunningCount { get; private set; }
         public int QueuedCount { get; private set; }
+        public int FailedCount { get; private set; }
+        public bool FailedOnly { get; private set; }
 
-        public async Task OnGetAsync()
+        public async Task OnGetAsync(string? status = null)
         {
-            Jobs = await _db.Set<SyncJob>()
-                .AsNoTracking()
-                .OrderByDescending(j => j.Id)
-                .Take(100)
-                .ToListAsync();
+            FailedOnly = string.Equals(status, "Failed", StringComparison.OrdinalIgnoreCase);
 
-            RunningCount = Jobs.Count(j => j.Status == SyncJobStatus.Running);
-            QueuedCount = Jobs.Count(j => j.Status == SyncJobStatus.Queued);
+            var all = _db.Set<SyncJob>().AsNoTracking();
+
+            // Full counts (not limited to the page window) so a Failed job that fell past the latest 100 is
+            // still surfaced — the "dead-letter" view (?status=Failed) lists them all for review/retry.
+            RunningCount = await all.CountAsync(j => j.Status == SyncJobStatus.Running);
+            QueuedCount = await all.CountAsync(j => j.Status == SyncJobStatus.Queued);
+            FailedCount = await all.CountAsync(j => j.Status == SyncJobStatus.Failed);
+
+            var query = FailedOnly ? all.Where(j => j.Status == SyncJobStatus.Failed) : all;
+            Jobs = await query
+                .OrderByDescending(j => j.Id)
+                .Take(FailedOnly ? 500 : 100)
+                .ToListAsync();
+        }
+
+        // Bulk-recover the dead-letter queue: re-queue every Failed job at once.
+        public async Task<IActionResult> OnPostRetryAllFailedAsync()
+        {
+            var failed = await _db.Set<SyncJob>().Where(j => j.Status == SyncJobStatus.Failed).ToListAsync();
+            foreach (var job in failed)
+            {
+                job.Status = SyncJobStatus.Queued;
+                job.AttemptCount = 0;
+                job.NextRunAtUtc = null;
+                job.StartedAtUtc = null;
+                job.FinishedAtUtc = null;
+                job.LockedBy = null;
+                job.LockedUntilUtc = null;
+                job.Message = "Bulk re-queued by admin.";
+            }
+            if (failed.Count > 0) await _db.SaveChangesAsync();
+            TempData["Message"] = failed.Count == 0 ? "No failed jobs to retry." : $"✅ Re-queued {failed.Count} failed job(s).";
+            return RedirectToPage(new { status = "Failed" });
         }
 
         // Re-queue a Failed job for a fresh run (the DurableSyncJobWorker picks it up on its next poll).
