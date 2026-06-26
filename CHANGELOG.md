@@ -1,5 +1,25 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.4.0 (Unify bulk invoice import)
+
+### Changed
+- **One "Bulk Invoice Import".** The full importer (`/Invoices/ImportCSV` — validate → confirm → create
+  drafts) now accepts **`.xlsx` as well as `.csv`** (same column schema, mapped by header name), with a
+  **"Download Excel Template"** button. The separate validate-only **"Bulk Import (validate)"** menu item is
+  retired (its `BulkInvoiceImportService` + XLSX template are kept — they still power the
+  `POST /api/import/validate` REST API). Menu labels unified (the importer was inconsistently shown as
+  "Import Invoices" vs "Bulk Invoice Import").
+
+## 📅 2026-06-25 — v1.3.9 (HTTPS-redirect smart default — tunnel loop fix)
+
+### Fixed
+- **Redirect loop behind a TLS-terminating proxy / Cloudflare Tunnel.** The HTTP→HTTPS redirect now
+  defaults **OFF when `ForwardedHeaders` is enabled** (the app has declared it's behind an edge that
+  terminates TLS and forwards plain HTTP) — an in-app redirect there loops `http→https→http`. For a direct
+  IIS HTTPS binding it still defaults to `443`. An explicit `Security:HttpsRedirectPort` always wins
+  (a port = on, `0` = off), and `UseHttpsRedirection` is now skipped entirely when the redirect is off.
+  Removed the hardcoded `HttpsRedirectPort: 443` from `appsettings.json` so the smart default applies.
+
 ## 📅 2026-06-25 — v1.3.8 (Optional hardening — safe set)
 
 ### Added

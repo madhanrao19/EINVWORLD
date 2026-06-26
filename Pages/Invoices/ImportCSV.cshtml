@@ -48,6 +48,10 @@
                                 <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Sample CSV
                             </a>
 
+                            <a href="?handler=Template" class="btn btn-outline-success btn-sm me-2">
+                                <i class="ri-file-excel-2-line align-bottom me-1"></i> Download Excel Template
+                            </a>
+
                             <div class="btn-group">
                                 <button type="button" class="btn btn-outline-info btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="ri-file-excel-2-line align-bottom me-1"></i> Download Reference Codes
@@ -67,8 +71,9 @@
                         </div>
 
                         <div class="col-md-6 mt-2">
-                            <label class="form-label">Select CSV File</label>
-                            <input type="file" asp-for="UploadFile" class="form-control" accept=".csv" required />
+                            <label class="form-label">Select CSV or Excel File</label>
+                            <input type="file" asp-for="UploadFile" class="form-control" accept=".csv,.xlsx" required />
+                            <small class="text-muted">Accepts <strong>.csv</strong> or <strong>.xlsx</strong> (one row per invoice line).</small>
                             <span asp-validation-for="UploadFile" class="text-danger"></span>
                         </div>
                     </div>

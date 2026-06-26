@@ -153,25 +153,31 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // Add API Controllers support
 builder.Services.AddMemoryCache(); // Backs the LHDN token cache (TokenService)
 
-// HTTPS redirect port. Behind IIS the middleware can't auto-discover the public HTTPS port and logs
-// "Failed to determine the https port for redirect" on every request that needs redirecting. Set it
-// explicitly (default 443; override with Security:HttpsRedirectPort, or 0 to leave it auto/disabled).
-var httpsRedirectPort = builder.Configuration.GetValue<int?>("Security:HttpsRedirectPort") ?? 443;
-if (httpsRedirectPort > 0)
-{
-    builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsRedirectPort);
-}
-
 // Reverse-proxy / tunnel support (e.g. Cloudflare Tunnel). When TLS is terminated upstream and the app
 // is reached over plain HTTP on a local port, the app must honour the forwarded headers the proxy sends:
-//   • X-Forwarded-Proto — so the app knows the original request was HTTPS (correct redirect/no-loop,
-//     Secure cookies, HSTS) instead of treating it as http.
+//   • X-Forwarded-Proto — so the app knows the original request was HTTPS (correct Secure cookies, HSTS)
+//     instead of treating it as http.
 //   • X-Forwarded-For   — so the app sees the REAL client IP instead of 127.0.0.1, which the per-IP rate
 //     limiter and the audit/log IP enrichment depend on.
 // Only headers from a trusted proxy (KnownProxies/KnownNetworks) are honoured, so this is safe to leave
 // on. Defaults: enabled, trusting loopback (cloudflared runs on the same host). Add more proxies or tune
 // the hop limit via the ForwardedHeaders config section. Disable with ForwardedHeaders:Enabled=false.
 var forwardedHeadersEnabled = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled", true);
+
+// HTTPS redirect port. For a DIRECT IIS HTTPS binding the default is 443 (behind IIS the port can't be
+// auto-discovered, so it's set explicitly to avoid the "Failed to determine the https port" warning).
+// BUT when ForwardedHeaders is enabled — i.e. we've declared "I'm behind a TLS-terminating proxy /
+// Cloudflare Tunnel that forwards plain HTTP" — the redirect DEFAULTS OFF, because an in-app HTTP->HTTPS
+// redirect would loop (http->https->http) when the edge already terminates TLS. Let the edge enforce HTTPS
+// (e.g. Cloudflare "Always Use HTTPS"). An explicit Security:HttpsRedirectPort always wins: set a port to
+// force the redirect on, or 0 to force it off.
+var configuredHttpsPort = builder.Configuration.GetValue<int?>("Security:HttpsRedirectPort");
+var httpsRedirectPort = configuredHttpsPort ?? (forwardedHeadersEnabled ? 0 : 443);
+if (httpsRedirectPort > 0)
+{
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = httpsRedirectPort);
+}
+
 if (forwardedHeadersEnabled)
 {
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -605,7 +611,12 @@ app.Use(async (context, next) =>
 // documents (PDFs, history) are delivered by authenticated, IDOR-guarded page actions
 // (OnGetDownloadPdfAsync / OnGetExportHistoryAsync), so the static-file guard protected nothing.
 
-app.UseHttpsRedirection();
+// Only redirect to HTTPS when a port is configured/derived (see the HttpsRedirectPort logic above).
+// Behind a TLS-terminating proxy/tunnel this is skipped so the request pipeline never tries to redirect.
+if (httpsRedirectPort > 0)
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles(); // Serves static files from wwwroot
 app.UseRouting();
 app.UseRateLimiter();
