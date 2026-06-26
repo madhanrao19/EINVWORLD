@@ -90,7 +90,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
 | `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` in `appsettings.Production.json` — migrations are additive (data preserved), but **back up first**. Set `false` to apply `Apply_*.sql` manually. |
 | `Security:EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`; no lockout — they self-enrol). |
-| `Security:HttpsRedirectPort` | Public HTTPS port for redirects (default `443`); set explicitly behind IIS so the port isn't guessed. `0` = disable (use behind a TLS-terminating proxy / Cloudflare Tunnel). |
+| `Security:HttpsRedirectPort` | HTTP→HTTPS redirect. **Smart default:** off when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel — an in-app redirect would loop); `443` for a direct IIS HTTPS binding. Set explicitly to force: a port = on, `0` = off. |
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support (default on). Honours `X-Forwarded-Proto` (scheme) and `X-Forwarded-For` (real client IP) from a trusted proxy — needed so cookies, redirects, rate limiting and audit IPs are correct when TLS terminates upstream. |
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
 | `AIAssistant` | Optional local-LLM assistant (OFF by default). |
