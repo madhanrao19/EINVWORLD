@@ -1,5 +1,15 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.4.0 (Unify bulk invoice import)
+
+### Changed
+- **One "Bulk Invoice Import".** The full importer (`/Invoices/ImportCSV` — validate → confirm → create
+  drafts) now accepts **`.xlsx` as well as `.csv`** (same column schema, mapped by header name), with a
+  **"Download Excel Template"** button. The separate validate-only **"Bulk Import (validate)"** menu item is
+  retired (its `BulkInvoiceImportService` + XLSX template are kept — they still power the
+  `POST /api/import/validate` REST API). Menu labels unified (the importer was inconsistently shown as
+  "Import Invoices" vs "Bulk Invoice Import").
+
 ## 📅 2026-06-25 — v1.3.9 (HTTPS-redirect smart default — tunnel loop fix)
 
 ### Fixed
