@@ -275,8 +275,8 @@ forwards plain **HTTP to your server on localhost**, so the IIS site itself only
 7. **Tell the app it's behind a tunnel** (Part 10 environment variables, then `iisreset`):
    | Name | Value | Why |
    |---|---|---|
-   | `ForwardedHeaders__Enabled` | `true` (this is the default) | App trusts `X-Forwarded-Proto`/`X-Forwarded-For` from cloudflared so it sees the original **HTTPS** scheme (correct Secure cookies / no redirect loop) and the **real client IP** (correct rate limiting + audit logs) instead of `127.0.0.1`. |
-   | `Security__HttpsRedirectPort` | `0` | Disables the app's own HTTP→HTTPS redirect; Cloudflare's **Always Use HTTPS** does it at the edge. Prevents any redirect loop. |
+   | `ForwardedHeaders__Enabled` | `true` (this is the default) | App trusts `X-Forwarded-Proto`/`X-Forwarded-For` from cloudflared so it sees the **real client IP** (correct rate limiting + audit logs) instead of `127.0.0.1`. **Also flips the HTTPS-redirect default OFF** (next row), preventing a redirect loop. |
+   | `Security__HttpsRedirectPort` | `0` (already the default when `ForwardedHeaders__Enabled=true`) | Disables the app's own HTTP→HTTPS redirect; Cloudflare's **Always Use HTTPS** does it at the edge. You normally don't need to set this — it's only here to force-off if someone set a port. |
 
 ✅ **You should see:** browsing `https://einvworld.com` loads the site over Cloudflare's certificate; the
 app's **Admin → System Logs** show real visitor IPs (not `127.0.0.1`), and there is no
