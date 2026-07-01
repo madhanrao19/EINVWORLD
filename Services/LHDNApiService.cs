@@ -132,18 +132,12 @@ public class LHDNApiService : ILHDNApiService
             // Log only the method + URI, never the HttpRequestMessage itself (avoids leaking headers/token).
             _logger.LogDebug("Outgoing LHDN request: {Method} {Uri}", request.Method, request.RequestUri);
 
-            request.Headers.Add("Authorization", $"Bearer {accessToken}");
-
-            var response = await _httpClient.SendAsync(request);
-
-            // Handle throttling (Rate Limit 12 requests/min)
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            {
-                _logger.LogWarning("Received 429 Too Many Requests. Retrying in 5 seconds...");
-                await Task.Delay(5000);
-                response = await _httpClient.SendAsync(request);
-            }
-            response.EnsureSuccessStatusCode();
+            // Reuse the shared retry helper: it clones the request per attempt, honours the LHDN
+            // Retry-After on 429, and ensures success (throws on failure). The previous inline path
+            // ("delay 5s, then re-send the SAME request") both ignored Retry-After and threw, because a
+            // sent HttpRequestMessage cannot be re-sent. tin is intentionally not passed as onbehalfof —
+            // taxpayer validation uses the taxpayer's own token, matching the prior behaviour.
+            var response = await SendWithRetryAsync(request, accessToken);
 
             var result = await response.Content.ReadAsStringAsync();
             _logger.LogInformation("Taxpayer validation successful for TIN: {TIN}.", tin);

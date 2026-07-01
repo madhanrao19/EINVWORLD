@@ -1,5 +1,34 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — v1.5.2 (Post-audit reliability & hardening batch)
+
+### Fixed
+- **`LHDNApiService.ValidateTaxpayerAsync` 429 handling was broken.** On a rate-limit it did a fixed 5s
+  delay (ignoring `Retry-After`) and re-sent the **same** `HttpRequestMessage`, which throws
+  (`InvalidOperationException` — a sent request can't be reused). It now routes through the shared
+  `SendWithRetryAsync` helper: clones the request per attempt, honours the LHDN `Retry-After`, retries 3×,
+  and ensures success. Behaviour is otherwise unchanged (no `onbehalfof`; taxpayer's own token).
+
+### Changed
+- **`AsNoTracking()`** added to three read-only dashboard queries (`GetTopProductsAsync`,
+  `GetInvoicesByCustomerAsync`, `GetInvoiceTypesAsync`) to match the others — less tracking overhead on
+  read-only chart data.
+- **Observability:** added `app.UseSerilogRequestLogging()` (one tidy line per request) and a one-line
+  startup summary logging environment / PDF engine / AI / DocumentCapture / OCR / AutoMigrate flags
+  (no secrets), so an operator can confirm from the logs exactly what an instance loaded.
+- **Config hygiene:** blanked the committed test SMTP username and BCC in `appsettings.json` — these are
+  environment-specific and must be supplied via env vars / user-secrets.
+
+### Security
+- **`InvoiceLists` toast messages** now inject `TempData` into the `Swal.fire` JavaScript via
+  `@Json.Serialize(...)` (safe, escaped JS string) instead of `@Html.Raw(...)` inside a quoted string —
+  defensive hardening against any future case where those messages carry untrusted text.
+
+### Notes
+- Reviewed but **intentionally not changed:** invoice-number generation (`InvoiceService.CurrentMaxNumber`)
+  — it only runs on invoice creation and projects the `EINV` suffixes, and a refactor of the money-numbering
+  path carries more correctness risk than the marginal performance gain justifies.
+
 ## 📅 2026-07-01 — Docs: existing-install upgrade checklist
 
 ### Added

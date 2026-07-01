@@ -500,6 +500,18 @@ var app = builder.Build();
 // deploy stops here with ONE clear message instead of failing vaguely at runtime.
 EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Environment.IsProduction());
 
+// One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
+// (no secrets — just feature/mode flags).
+Log.Information(
+    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, AutoMigrate={AutoMigrate}",
+    app.Configuration["AppInfo:Version"] ?? "?",
+    app.Environment.EnvironmentName,
+    app.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf",
+    app.Configuration.GetValue("AI:Enabled", false),
+    app.Configuration.GetValue("DocumentCapture:Enabled", false),
+    app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
+    app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
+
 // Apply migrations and seed data
 using (var scope = app.Services.CreateScope())
 {
@@ -629,6 +641,9 @@ if (httpsRedirectPort > 0)
     app.UseHttpsRedirection();
 }
 app.UseStaticFiles(); // Serves static files from wwwroot
+// Structured per-request log (method, path, status, elapsed ms) — one tidy line per request instead of
+// the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
+app.UseSerilogRequestLogging();
 app.UseRouting();
 app.UseRateLimiter();
 app.Use(async (context, next) =>
