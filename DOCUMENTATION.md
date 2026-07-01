@@ -62,7 +62,7 @@ have to.
 | PDF text extraction | **PdfPig** (AI Document Capture) |
 | Signing | **XAdES** (System.Security.Cryptography.Xml) — built, OFF by default |
 | HTTP resilience | **Microsoft.Extensions.Http.Resilience** (token client) + custom rate-limit handler |
-| AI (optional) | **Ollama** local LLM (open-weight models) |
+| AI (optional) | Provider-agnostic (`IAiProvider`/`IAiService`); ships with **Ollama** local LLM (open-weight models) |
 | QR | **QRCoder** |
 
 ---
@@ -114,7 +114,8 @@ EINVWORLD/                     ASP.NET Core web project
 ├── Pages/                     Razor Pages (Admin, Invoices, Suppliers, Templates, Assistant, …)
 │   └── Shared/                Layouts, _Sidebar, partials
 ├── Services/
-│   ├── Assistant/             AI e-invoice assistant (Ollama)
+│   ├── AI/                    Provider-agnostic AI core (IAiProvider/IAiService; Ollama provider)
+│   ├── Assistant/             AI e-invoice assistant (domain prompts; delegates to IAiService)
 │   ├── Audit/                 Tamper-evident hash-chained audit
 │   ├── Background/            Hosted workers + durable job queue
 │   ├── DocumentCapture/       PDF text extraction (PdfPig)
@@ -294,9 +295,11 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 **AI (optional, on-prem, OFF by default)**
 - **AI E-Invoice Assistant** (`/Assistant`) — answers MyInvois questions and turns a plain-English
   description into a reviewed invoice **suggestion** (grounded on real LHDN codes + the user's
-  customers). Suggest-only; never submits. (`AIAssistant` config + Ollama.)
+  customers). Suggest-only; never submits. (`AI` config; Ollama provider by default.)
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — upload a digital PDF → extract text (PdfPig) →
-  suggestion → review. Draft-safe. (`DocumentCapture` config; needs `AIAssistant:Enabled`.)
+  suggestion → review. Draft-safe. (`DocumentCapture` config; needs `AI:Enabled`.)
+- **Admin → AI Settings** (`/Admin/AiSettings`) — read-only view of the active AI config + a **Test
+  connection** probe (reachable / model pulled / latency). Never shows the API key.
 
 **Ingestion / connectors** (draft-safe — validate/suggest only)
 - **Bulk Import** (`/Invoices/BulkImport`) — CSV/XLSX per-row validation against LHDN codes + a
@@ -361,7 +364,7 @@ blank in files and supplied via env vars / user-secrets.
 | `LogCleanupSettings` | `RetentionDays` (default 30) and `BatchSize` (default 5000) for the batched `SystemLogs` prune. |
 | `InvoiceSettings` | e.g. `BackdateSeconds`. |
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
-| `AIAssistant` | Ollama assistant: `Enabled`, `BaseUrl`, `Model`, `TimeoutSeconds`. |
+| `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). Legacy `AIAssistant` still read as a fallback for one release. |
 | `DocumentCapture` | AI Document Capture: `Enabled`, `MaxFileSizeMb`, `MaxPages`. |
 | `WatchedFolderImport` | `Enabled`, `InboxPath`, `PollSeconds`. |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate`. |

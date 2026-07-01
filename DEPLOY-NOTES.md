@@ -95,8 +95,8 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 Draft-safe — they validate/suggest only; none creates or submits invoices automatically.
 
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — set `DocumentCapture:Enabled=true` **and**
-  `AIAssistant:Enabled=true` (needs Ollama; see IIS guide PART O). Digital (text-layer) PDFs only;
-  scanned images report "needs OCR".
+  `AI:Enabled=true` (needs Ollama; see IIS guide PART O). Verify with Admin → AI Settings → Test
+  connection. Digital (text-layer) PDFs only; scanned images report "needs OCR".
 - **Bulk Import** (`/Invoices/BulkImport`) — always available to Admin/Supplier; download the template,
   upload CSV/XLSX, get a per-row validation report. No config needed.
 - **Watched-folder importer** — set `WatchedFolderImport:Enabled=true` and `InboxPath`
