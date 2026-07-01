@@ -1,5 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — Engineering guide
+
+### Added
+- **`CLAUDE.md`** — the enterprise engineering standard for the project: the mandatory engineering loop,
+  production/security/performance/DB/LHDN/logging/docs standards, the CI-is-the-compiler + hand-authored-
+  migration realities, the branch/PR/secrets workflow, architecture strengths to protect, and the known
+  improvement backlog. Read it before changing code.
+
 ## 📅 2026-06-25 — v1.4.1 (AI Document Capture OCR; remove legacy Extract Invoice)
 
 ### Added
