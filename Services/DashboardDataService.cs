@@ -16,6 +16,7 @@ namespace eInvWorld.Services
         public async Task<List<ChartDataPoint>> GetTopProductsAsync(int? supplierId, int? customerId, int year, string currency)
         {
             var query = _context.InvoiceLines
+                .AsNoTracking()
                 .Include(x => x.InvoiceHeader)
                 .Where(x =>
                     x.InvoiceHeader != null &&
@@ -76,6 +77,7 @@ namespace eInvWorld.Services
         public async Task<List<ChartDataPoint>> GetInvoicesByCustomerAsync(int? supplierId, int? customerId, int year, string currency)
         {
             var query = _context.InvoiceHeaders
+                .AsNoTracking()
                 .Include(i => i.Customer)
                 .Where(i =>
                     i.InternalStatusId != "Draft" &&
@@ -105,6 +107,7 @@ namespace eInvWorld.Services
         public async Task<List<ChartDataPoint>> GetInvoiceTypesAsync(int? supplierId, int? customerId, int year, string currency)
         {
             var query = _context.InvoiceHeaders
+                .AsNoTracking()
                 .Where(i =>
                     i.InternalStatusId != "Draft" &&
                     i.IssueDate.HasValue &&
