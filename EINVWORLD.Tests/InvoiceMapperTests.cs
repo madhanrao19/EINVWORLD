@@ -130,6 +130,22 @@ namespace EINVWORLD.Tests
             Assert.False(br.TryGetProperty("AdditionalDocumentReference", out _));
         }
 
+        [Fact]
+        public void Map_SelfBilled11_HasBothBillingReferences()
+        {
+            // Self-billed docs (11–14) carry BOTH the invoice-document reference and the additional ref.
+            var json = new InvoiceMapper().MapToJsonModel(Header("11", LineWithTax(1, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var invoice = doc.RootElement.GetProperty("Invoice")[0];
+            Assert.Equal("11", invoice.GetProperty("InvoiceTypeCode")[0].GetProperty("_").GetString());
+
+            var br = invoice.GetProperty("BillingReference")[0];
+            Assert.True(br.TryGetProperty("InvoiceDocumentReference", out var idr));
+            Assert.Equal("INV-ORIG-1", idr[0].GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.True(br.TryGetProperty("AdditionalDocumentReference", out _));
+        }
+
         // ── Party identification filtering ────────────────────────────────────────────────────
         [Fact]
         public void Map_FiltersNaSstAndKeepsTin()
