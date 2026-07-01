@@ -7,9 +7,9 @@ using Xunit;
 namespace EINVWORLD.Tests
 {
     /// <summary>
-    /// Focused tests for the AI branch of <see cref="ProductionConfigValidator"/>: the canonical "AI"
-    /// section is validated when present (and takes precedence over the legacy "AIAssistant" section),
-    /// enabling AI without a BaseUrl/Model is a blocking error, and a missing AI config is a no-op.
+    /// Focused tests for the AI branch of <see cref="ProductionConfigValidator"/>: the "AI" section is
+    /// the only section consulted, enabling AI without a BaseUrl/Model is a blocking error, and a missing
+    /// AI config is a no-op. The retired "AIAssistant" section is ignored entirely.
     /// </summary>
     public class ProductionConfigValidatorAiTests
     {
@@ -62,25 +62,13 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
-        public void AiSection_TakesPrecedenceOverLegacyAiAssistant()
+        public void RetiredAiAssistantSection_IsIgnored()
         {
-            // Valid "AI" section present → the invalid legacy "AIAssistant" section must be ignored.
-            var ex = Record.Exception(() => ProductionConfigValidator.Validate(
-                Config(
-                    ("AI:Enabled", "true"), ("AI:BaseUrl", "http://localhost:11434"), ("AI:Model", "gemma3:12b"),
-                    ("AIAssistant:Enabled", "true")), // legacy enabled but blank — should NOT be checked
-                isProduction: false));
-            Assert.Null(ex);
-        }
-
-        [Fact]
-        public void LegacyAiAssistant_UsedWhenNoAiSection()
-        {
-            // No "AI" section → the validator falls back to "AIAssistant".
-            var ex = Assert.Throws<InvalidOperationException>(() =>
+            // The legacy "AIAssistant" section is no longer read: even enabled + blank must NOT error,
+            // because only the "AI" section is consulted now.
+            var ex = Record.Exception(() =>
                 ProductionConfigValidator.Validate(Config(("AIAssistant:Enabled", "true")), isProduction: false));
-
-            Assert.Contains("AIAssistant:BaseUrl", ex.Message);
+            Assert.Null(ex);
         }
     }
 }

@@ -1,18 +1,14 @@
 namespace EINVWORLD.Services.AI
 {
     /// <summary>
-    /// Provider-agnostic AI configuration, bound from the "AI" config section (falling back to the
-    /// legacy "AIAssistant" section for one release — see <c>Program.cs</c>). OFF by default: the
+    /// Provider-agnostic AI configuration, bound from the "AI" config section. OFF by default: the
     /// platform never depends on AI for normal invoice operations, so nothing runs until an admin
     /// opts in and a local model is available.
     /// </summary>
     public sealed class AiSettings
     {
-        /// <summary>Canonical config section name.</summary>
+        /// <summary>Config section name.</summary>
         public const string SectionName = "AI";
-
-        /// <summary>Legacy section kept as a fallback for existing deployments.</summary>
-        public const string LegacySectionName = "AIAssistant";
 
         /// <summary>Master switch. When false, every AI call returns a graceful "disabled" result.</summary>
         public bool Enabled { get; set; } = false;
