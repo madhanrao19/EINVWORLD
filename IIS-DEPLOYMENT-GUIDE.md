@@ -500,7 +500,30 @@ Runs a **local, free** AI model (Ollama) on the server. **No invoice data leaves
    | `DocumentCapture__Enabled` | `true` (enables PDF → suggestion) |
 
 ✅ The **E-Invoice Assistant** and **AI Document Capture** menus now work. They only *suggest* drafts —
-they never submit. Always review every field before saving.
+they never submit. Always review every field before saving. (AI Document Capture replaces the old
+"Extract Invoice (Beta)" page, which has been removed.)
+
+#### 17a-OCR — Scanned-PDF OCR for AI Document Capture (optional)
+
+By default AI Document Capture reads **digital (text-based) PDFs** only. To also read **scanned/image**
+PDFs, enable the built-in OCR (Tesseract). The native libraries (Tesseract + PDFium) ship with the app
+and are only loaded when OCR is on, so leaving it off costs nothing.
+
+1. **Stage the language data.** Create a `tessdata` folder, e.g. `D:\EINVWORLD\tessdata`, and copy the
+   Tesseract trained-data files into it: `eng.traineddata` (and `msa.traineddata` for Malay). Get them
+   from `https://github.com/tesseract-ocr/tessdata_fast` (FOSS, Apache-2.0). Grant the app-pool **Read**.
+2. **Visual C++ runtime.** Ensure the **Microsoft Visual C++ 2015–2022 Redistributable (x64)** is
+   installed on the server (the native OCR/PDF libraries need it). Most servers already have it.
+3. Add env vars (Part 10) and `iisreset`:
+   | Name | Value |
+   |---|---|
+   | `DocumentCapture__OcrEnabled` | `true` |
+   | `DocumentCapture__TessdataPath` | `D:\EINVWORLD\tessdata` |
+   | `DocumentCapture__OcrLanguage` | `eng` (or `eng+msa`) |
+
+✅ **Verify:** upload a scanned invoice PDF to **AI Document Capture** — it should extract text and produce
+a suggestion. If you see "couldn't read this document", check the `tessdata` path/permissions and the VC++
+runtime; the app log records the OCR error. (OCR can't be exercised by CI — it must be verified here.)
 
 ### 17b — Watched-folder import (drop files to validate)
 

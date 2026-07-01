@@ -391,6 +391,8 @@ var docCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.Docu
     .Get<EINVWORLD.Services.DocumentCapture.DocumentCaptureOptions>() ?? new EINVWORLD.Services.DocumentCapture.DocumentCaptureOptions();
 builder.Services.AddSingleton(docCaptureOptions);
 builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtractor, EINVWORLD.Services.DocumentCapture.PdfDocumentTextExtractor>();
+// OCR fallback for scanned PDFs (Tesseract + PDFium). Inert unless DocumentCapture:OcrEnabled + tessdata.
+builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentOcrService, EINVWORLD.Services.DocumentCapture.TesseractDocumentOcrService>();
 
 // Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
 builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
