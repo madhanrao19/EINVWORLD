@@ -1,0 +1,119 @@
+@page
+@model eInvWorld.Pages.Admin.AiSettingsModel
+@{
+    ViewData["Title"] = "AI Settings";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>🤖 AI Settings</h3>
+    <a asp-page="/Assistant" class="btn btn-sm btn-outline-secondary">💬 Open Assistant</a>
+</div>
+
+<p class="text-muted">
+    AI is <strong>optional</strong> and never required for invoicing — if the AI service is unavailable,
+    invoice creation and submission continue to work normally. Settings are configured in
+    <code>appsettings</code> / environment variables (the <code>AI</code> section); this page is read-only
+    and lets you verify connectivity. No API key is ever shown here.
+</p>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Current configuration</span>
+        @if (Model.Enabled)
+        {
+            <span class="badge bg-success">Enabled</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">Disabled</span>
+        }
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Provider</dt>
+            <dd class="col-sm-9">@Model.Provider</dd>
+
+            <dt class="col-sm-3">Base URL</dt>
+            <dd class="col-sm-9"><code>@Model.BaseUrl</code></dd>
+
+            <dt class="col-sm-3">Model</dt>
+            <dd class="col-sm-9"><code>@Model.Model</code></dd>
+
+            <dt class="col-sm-3">Timeout</dt>
+            <dd class="col-sm-9">@Model.TimeoutSeconds s</dd>
+
+            <dt class="col-sm-3">Temperature</dt>
+            <dd class="col-sm-9">@Model.Temperature</dd>
+
+            <dt class="col-sm-3">Max tokens</dt>
+            <dd class="col-sm-9">@Model.MaxTokens</dd>
+        </dl>
+    </div>
+</div>
+
+@if (!Model.Enabled)
+{
+    <div class="alert alert-secondary">
+        AI is currently <strong>disabled</strong>. To enable it: install the provider (for Ollama, run
+        <code>ollama pull @Model.Model</code>), set <code>AI:Enabled=true</code>, then restart the app.
+        Recommended local models: <code>gemma3:12b</code>, <code>gemma3:27b</code>, <code>qwen3:32b</code>
+        (models are not bundled — pull them separately).
+    </div>
+}
+else if (!Model.ProviderReady)
+{
+    <div class="alert alert-warning">
+        AI is enabled but no provider matches "<strong>@Model.Provider</strong>". Check the
+        <code>AI:Provider</code> setting.
+    </div>
+}
+
+<form method="post" asp-page-handler="TestConnection" onsubmit="document.getElementById('testBtn').disabled=true;document.getElementById('testSpin').style.display='inline-block';">
+    <button type="submit" class="btn btn-primary" id="testBtn">
+        <span class="spinner-border spinner-border-sm" id="testSpin" role="status" style="display:none;"></span>
+        Test connection
+    </button>
+</form>
+
+@if (Model.ProbeResult is not null)
+{
+    var p = Model.ProbeResult;
+    <div class="card mt-3">
+        <div class="card-header">Test result</div>
+        <div class="card-body">
+            <p class="mb-2">
+                @if (p.Reachable && p.ModelAvailable)
+                {
+                    <span class="badge bg-success">Reachable</span>
+                    <span class="badge bg-success">Model ready</span>
+                }
+                else if (p.Reachable)
+                {
+                    <span class="badge bg-success">Reachable</span>
+                    <span class="badge bg-warning text-dark">Model not pulled</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Unreachable</span>
+                }
+                @if (p.LatencyMs is not null)
+                {
+                    <span class="text-muted ms-2">@p.LatencyMs ms</span>
+                }
+            </p>
+            <p class="mb-2">@p.Detail</p>
+            @if (p.AvailableModels.Count > 0)
+            {
+                <details>
+                    <summary>Available models (@p.AvailableModels.Count)</summary>
+                    <ul class="mt-2 mb-0">
+                        @foreach (var m in p.AvailableModels)
+                        {
+                            <li><code>@m</code></li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+    </div>
+}
