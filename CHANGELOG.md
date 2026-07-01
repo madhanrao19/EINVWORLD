@@ -1,5 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — Provider-agnostic AI (default-on abstraction; admin Test-connection)
+
+### Added
+- **Provider-agnostic AI layer** (`Services/AI`). Business logic now depends only on `IAiService`, never a
+  concrete backend, so OpenAI/Azure/Claude/Gemini can be added as drop-in `IAiProvider` registrations
+  without touching callers. Ships with the local, on-prem **Ollama** provider. Typed
+  `AiChatRequest`/`AiChatResult`/`AiProbeResult` DTOs; `AiService` owns the master enable switch, provider
+  selection by name, default temperature/max-tokens, and a **non-throwing guarantee** — if AI is disabled,
+  misconfigured or the provider errors, callers get a typed failure and **invoice creation/submission is
+  unaffected**. Logging is metadata-only (provider, model, outcome, duration) — **no prompts, keys or
+  tokens are logged**. Covered by new `AiServiceTests`.
+- **Admin → AI Settings** (`/Admin/AiSettings`) — read-only view of the active AI config plus a **Test
+  connection** probe reporting reachable / model-pulled / latency and the provider's available models.
+  Never displays the API key; audits the outcome only (`AiConnectionTested`).
+
+### Changed
+- **Canonical config section is now `AI`** (adds `Temperature`/`MaxTokens`; default model **`gemma3:12b`**).
+  The legacy **`AIAssistant`** section is still read as a **fallback for one release** (logs a deprecation
+  warning). Recommended local models: **`gemma3:12b` / `gemma3:27b` / `qwen3:32b`** — models are **not
+  bundled**; pull them with Ollama (`ollama pull gemma3:12b`). `ProductionConfigValidator` validates
+  whichever section is active. `EInvoiceAssistantService` keeps its LHDN prompts/grounding/validation but
+  now delegates model calls to `IAiService` (no HTTP in domain code). Docs updated (README, DOCUMENTATION,
+  IIS guide PART O, DEPLOY-NOTES, SECRETS-SETUP).
+
 ## 📅 2026-07-01 — More test coverage (submitter-TIN rule; self-billed UBL)
 
 ### Added
