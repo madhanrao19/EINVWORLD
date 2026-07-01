@@ -1,5 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — More test coverage (submitter-TIN rule; self-billed UBL)
+
+### Added
+- **`TinHelperTests`** — locks down the LHDN submitter-TIN rule (`IsSelfBilledDocType`; `ResolveSubmitterTin`
+  → Customer TIN for self-billed 11–14, Supplier TIN otherwise, incl. null-navigation and null-arg cases).
+- **`InvoiceMapperTests`** — added a self-billed (doc type 11) case asserting the `BillingReference` carries
+  **both** `InvoiceDocumentReference` and `AdditionalDocumentReference`. Pure tests, no new dependencies.
+
 ## 📅 2026-07-01 — Engineering guide
 
 ### Added
