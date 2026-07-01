@@ -2,6 +2,37 @@
 
 Practical checklist for deploying to a self-hosted Windows + IIS + SQL Server box.
 
+## 0. Upgrading an existing installation
+
+Follow this order when moving an already-running server to a newer build. It is safe because schema
+changes are additive and AI/features stay off unless already enabled.
+
+1. **Back up first (non-negotiable).**
+   - Full **database** backup (your rollback point).
+   - Copy the current **`App\`** folder (fast binary rollback) and note the running version
+     (`AppInfo:Version`, shown in the footer / `appsettings.json`).
+   - Confirm the **DataProtection key ring** lives OUTSIDE `App\` (`DataProtection__KeyRingPath`,
+     e.g. `D:\EINVWORLD\Keys`). If it doesn't, set it **before** upgrading — otherwise this deploy
+     will rotate the keys and log everyone out / break 2FA. Startup now fails fast if it's blank in
+     Production, so verify it is set.
+2. **Stop the site** (or the app pool) so no requests hit a half-swapped folder.
+3. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
+   key-ring folder intact — never overwrite server secrets).
+4. **Config/env changes for this version:**
+   - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
+     `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
+     If you skip this, AI simply stays **off** after the upgrade — invoicing is unaffected. Default
+     model is now `gemma3:12b`; pull it with `ollama pull gemma3:12b` if you switch models.
+   - Re-check any other env vars against **SECRETS-SETUP.md** (no new required secrets in this release).
+5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
+   has DDL rights and start in a **low-traffic window** with a **single** worker process.
+6. **Start the site**, then **verify**:
+   - `/health` returns Healthy; sign-in works; open an existing invoice; create + submit one to LHDN.
+   - If AI is enabled: **Admin → AI Settings → Test connection** reports reachable + model pulled.
+   - Check the startup logs for no configuration-validation errors (the app fail-fasts on bad prod config).
+7. **Rollback if needed:** stop the site, restore the previous `App\` folder, and (only if a migration
+   caused the problem) restore the database backup. Additive migrations rarely need a DB restore.
+
 ## 1. Database migrations
 
 **Default: automatic.** `appsettings.Production.json` ships with
