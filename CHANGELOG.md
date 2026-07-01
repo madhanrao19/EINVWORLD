@@ -1,5 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — Docs: existing-install upgrade checklist
+
+### Added
+- **DEPLOY-NOTES.md §0 "Upgrading an existing installation"** — an ordered operator checklist for moving a
+  running server to a newer build: back up DB + `App\` + verify the DataProtection key ring persists,
+  stop the site, deploy, rename retired `AIAssistant__*` env vars to `AI__*`, let additive migrations run,
+  start, smoke-test (health / sign-in / create+submit / AI Test connection), and roll back if needed.
+
 ## 📅 2026-07-01 — v1.5.1 (Retire legacy AIAssistant config; AI cleanup)
 
 ### Changed / Removed
