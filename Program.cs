@@ -376,18 +376,9 @@ builder.Services.AddScoped<eInvWorld.Services.IDocumentSigningService, eInvWorld
 
 // Provider-agnostic AI (FOSS, on-prem; OFF by default). Business logic depends only on IAiService,
 // never on a concrete backend, so OpenAI/Azure/Claude/Gemini can be added as extra IAiProvider
-// registrations without touching callers. Canonical config section is "AI"; the legacy "AIAssistant"
-// section is honoured as a fallback for one release so existing deployments keep working.
+// registrations without touching callers. Configuration lives entirely in the "AI" section.
 var aiSettings = builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.SectionName)
-    .Get<EINVWORLD.Services.AI.AiSettings>();
-if (aiSettings is null)
-{
-    aiSettings = builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.LegacySectionName)
-        .Get<EINVWORLD.Services.AI.AiSettings>() ?? new EINVWORLD.Services.AI.AiSettings();
-    if (builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.LegacySectionName).Exists())
-        Log.Warning("Config: using legacy '{Legacy}' section for AI. Rename it to '{Canonical}' — the fallback will be removed in a future release.",
-            EINVWORLD.Services.AI.AiSettings.LegacySectionName, EINVWORLD.Services.AI.AiSettings.SectionName);
-}
+    .Get<EINVWORLD.Services.AI.AiSettings>() ?? new EINVWORLD.Services.AI.AiSettings();
 builder.Services.AddSingleton(aiSettings);
 
 // Provider transport (typed HttpClient via the factory — no socket exhaustion). Registered as IAiProvider

@@ -1,5 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — v1.5.1 (Retire legacy AIAssistant config; AI cleanup)
+
+### Changed / Removed
+- **Retired the legacy `AIAssistant` configuration section.** AI configuration now lives **only** in the
+  `AI` section. The one-release fallback that read `AIAssistant` is removed from `Program.cs` and
+  `ProductionConfigValidator`, and `AiSettings.LegacySectionName` is deleted. Stale in-app hints and docs
+  that still referenced `AIAssistant:Enabled` / `ollama pull llama3.1` now point at `AI:Enabled` /
+  `gemma3:12b`.
+  > **⚠️ Action on upgrade:** if a server sets `AIAssistant__*` environment variables, **rename them to
+  > `AI__*`** (e.g. `AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`).
+  > Otherwise AI simply stays **off** after upgrading — invoicing is unaffected either way.
+- Validator tests updated to assert the retired `AIAssistant` section is ignored.
+- **Database:** no changes — the AI features are fully stateless (no AI tables/columns exist), so there is
+  nothing to migrate or drop.
+
 ## 📅 2026-07-01 — v1.5.0 (Provider-agnostic AI; admin Test-connection)
 
 > Ships the built-in-by-default, provider-agnostic AI layer (Ollama today; OpenAI/Azure/Claude/Gemini
