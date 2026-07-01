@@ -99,7 +99,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Deleted!',
-                    text: '@Html.Raw(TempData["DeleteMessage"])',
+                    text: @Json.Serialize(TempData["DeleteMessage"]),
                     timer: 2000,
                     showConfirmButton: false
                 });
@@ -113,7 +113,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Sync Complete',
-                    text: '@Html.Raw(TempData["SuccessMessage"])',
+                    text: @Json.Serialize(TempData["SuccessMessage"]),
                     timer: 4000,
                     showConfirmButton: false
                 });
@@ -127,7 +127,7 @@
                 Swal.fire({
                     icon: 'warning',
                     title: 'Notice',
-                    text: '@Html.Raw(TempData["ErrorMessage"])',
+                    text: @Json.Serialize(TempData["ErrorMessage"]),
                     showConfirmButton: true,
                     confirmButtonColor: '#3AA564'
                 });
