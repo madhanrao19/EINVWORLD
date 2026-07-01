@@ -64,13 +64,15 @@ namespace EINVWORLD.Helpers
             if (Blank(config["EmailConfiguration:Default:SmtpPassword"]))
                 warnings.Add("EmailConfiguration:Default:SmtpPassword is empty — outgoing email will fail unless the relay accepts unauthenticated mail.");
 
-            // ── AI Assistant (optional, off by default) ───────────────────────────────────
-            if (config.GetValue("AIAssistant:Enabled", false))
+            // ── AI (optional, off by default) ─────────────────────────────────────────────
+            // Canonical section is "AI"; fall back to the legacy "AIAssistant" section for one release.
+            var aiSection = config.GetSection("AI").Exists() ? "AI" : "AIAssistant";
+            if (config.GetValue($"{aiSection}:Enabled", false))
             {
-                if (Blank(config["AIAssistant:BaseUrl"]))
-                    errors.Add("AIAssistant:Enabled=true but AIAssistant:BaseUrl is empty (e.g. http://localhost:11434).");
-                if (Blank(config["AIAssistant:Model"]))
-                    errors.Add("AIAssistant:Enabled=true but AIAssistant:Model is empty (e.g. llama3.1).");
+                if (Blank(config[$"{aiSection}:BaseUrl"]))
+                    errors.Add($"{aiSection}:Enabled=true but {aiSection}:BaseUrl is empty (e.g. http://localhost:11434).");
+                if (Blank(config[$"{aiSection}:Model"]))
+                    errors.Add($"{aiSection}:Enabled=true but {aiSection}:Model is empty (e.g. gemma3:12b).");
             }
 
             foreach (var w in warnings)
