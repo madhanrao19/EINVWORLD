@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EINVWORLD.Services.AI;
@@ -51,17 +52,19 @@ namespace eInvWorld.Pages.Admin
         {
             ProbeResult = await _ai.TestConnectionAsync(ct);
 
-            // Audit the outcome only — no prompts, no secrets.
-            await _audit.WriteAsync("AiConnectionTested", new AuditEntry
+            // Audit the outcome only — no prompts, no secrets. Serialized (not string-built) so an unusual
+            // provider/model name can never produce malformed JSON.
+            var outcome = JsonSerializer.Serialize(new
             {
-                NewValueJson =
-                    $"{{\"provider\":\"{Provider}\",\"model\":\"{Model}\",\"reachable\":{Lower(ProbeResult.Reachable)}," +
-                    $"\"modelAvailable\":{Lower(ProbeResult.ModelAvailable)},\"latencyMs\":{ProbeResult.LatencyMs?.ToString() ?? "null"}}}"
-            }, ct);
+                provider = Provider,
+                model = Model,
+                reachable = ProbeResult.Reachable,
+                modelAvailable = ProbeResult.ModelAvailable,
+                latencyMs = ProbeResult.LatencyMs,
+            });
+            await _audit.WriteAsync("AiConnectionTested", new AuditEntry { NewValueJson = outcome }, ct);
 
             return Page();
         }
-
-        private static string Lower(bool b) => b ? "true" : "false";
     }
 }
