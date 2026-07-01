@@ -374,16 +374,34 @@ builder.Services.Configure<TaxpayerValidationSettings>(builder.Configuration.Get
 builder.Services.Configure<DigitalSignatureSettings>(builder.Configuration.GetSection("LHDNApiConfig"));
 builder.Services.AddScoped<eInvWorld.Services.IDocumentSigningService, eInvWorld.Services.DocumentSigningService>();
 
-// AI E-invoice Assistant (local Ollama LLM — FOSS, on-prem; OFF by default, see appsettings "AIAssistant").
-var aiOptions = builder.Configuration.GetSection(EINVWORLD.Services.Assistant.AIAssistantOptions.SectionName)
-    .Get<EINVWORLD.Services.Assistant.AIAssistantOptions>() ?? new EINVWORLD.Services.Assistant.AIAssistantOptions();
-builder.Services.AddSingleton(aiOptions);
-builder.Services.AddHttpClient<EINVWORLD.Services.Assistant.IEInvoiceAssistantService, EINVWORLD.Services.Assistant.EInvoiceAssistantService>(client =>
+// Provider-agnostic AI (FOSS, on-prem; OFF by default). Business logic depends only on IAiService,
+// never on a concrete backend, so OpenAI/Azure/Claude/Gemini can be added as extra IAiProvider
+// registrations without touching callers. Canonical config section is "AI"; the legacy "AIAssistant"
+// section is honoured as a fallback for one release so existing deployments keep working.
+var aiSettings = builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.SectionName)
+    .Get<EINVWORLD.Services.AI.AiSettings>();
+if (aiSettings is null)
 {
-    if (Uri.TryCreate(aiOptions.BaseUrl, UriKind.Absolute, out var baseUri))
+    aiSettings = builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.LegacySectionName)
+        .Get<EINVWORLD.Services.AI.AiSettings>() ?? new EINVWORLD.Services.AI.AiSettings();
+    if (builder.Configuration.GetSection(EINVWORLD.Services.AI.AiSettings.LegacySectionName).Exists())
+        Log.Warning("Config: using legacy '{Legacy}' section for AI. Rename it to '{Canonical}' — the fallback will be removed in a future release.",
+            EINVWORLD.Services.AI.AiSettings.LegacySectionName, EINVWORLD.Services.AI.AiSettings.SectionName);
+}
+builder.Services.AddSingleton(aiSettings);
+
+// Provider transport (typed HttpClient via the factory — no socket exhaustion). Registered as IAiProvider
+// so AiService can resolve every provider and select the configured one by name.
+builder.Services.AddHttpClient<EINVWORLD.Services.AI.IAiProvider, EINVWORLD.Services.AI.Providers.OllamaAiProvider>(client =>
+{
+    if (Uri.TryCreate(aiSettings.BaseUrl, UriKind.Absolute, out var baseUri))
         client.BaseAddress = baseUri;
-    client.Timeout = TimeSpan.FromSeconds(aiOptions.TimeoutSeconds <= 0 ? 120 : aiOptions.TimeoutSeconds);
+    client.Timeout = TimeSpan.FromSeconds(aiSettings.TimeoutSeconds <= 0 ? 120 : aiSettings.TimeoutSeconds);
 });
+builder.Services.AddScoped<EINVWORLD.Services.AI.IAiService, EINVWORLD.Services.AI.AiService>();
+
+// E-invoicing domain assistant — owns LHDN prompts/grounding/validation, delegates model calls to IAiService.
+builder.Services.AddScoped<EINVWORLD.Services.Assistant.IEInvoiceAssistantService, EINVWORLD.Services.Assistant.EInvoiceAssistantService>();
 
 // AI Document Capture (upload PDF → extract text → reuse the assistant to suggest a reviewed invoice).
 // OFF by default; also requires the AI assistant to be enabled.
