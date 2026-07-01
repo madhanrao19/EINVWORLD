@@ -20,6 +20,10 @@ namespace EINVWORLD.Services.AI
     /// </remarks>
     public sealed class AiService : IAiService
     {
+        // AiService is scoped (constructed per request); this guard keeps the misconfiguration warning
+        // to a single line per process instead of one per request.
+        private static int _misconfigWarned;
+
         private readonly AiSettings _settings;
         private readonly IAiProvider? _provider;
         private readonly ILogger<AiService> _log;
@@ -33,7 +37,8 @@ namespace EINVWORLD.Services.AI
             _provider = all.FirstOrDefault(
                 p => string.Equals(p.Name, _settings.Provider, StringComparison.OrdinalIgnoreCase));
 
-            if (_settings.Enabled && _provider is null)
+            if (_settings.Enabled && _provider is null &&
+                Interlocked.Exchange(ref _misconfigWarned, 1) == 0)
             {
                 _log.LogWarning(
                     "AI is enabled but no provider matches '{Provider}'. Registered: [{Registered}]. AI calls will be disabled.",
