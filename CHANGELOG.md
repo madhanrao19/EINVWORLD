@@ -1,6 +1,12 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-## 📅 2026-07-01 — Provider-agnostic AI (default-on abstraction; admin Test-connection)
+## 📅 2026-07-01 — v1.5.0 (Provider-agnostic AI; admin Test-connection)
+
+> Ships the built-in-by-default, provider-agnostic AI layer (Ollama today; OpenAI/Azure/Claude/Gemini
+> ready) with an admin **Test connection** page. AI stays optional and off by default — invoicing is
+> unaffected if AI is disabled or unreachable. Additive only: **no migration, no breaking changes.**
+> Also folds in the same-day CLAUDE.md engineering guide and the expanded submitter-TIN / self-billed
+> UBL test coverage (entries below).
 
 ### Added
 - **Provider-agnostic AI layer** (`Services/AI`). Business logic now depends only on `IAiService`, never a
