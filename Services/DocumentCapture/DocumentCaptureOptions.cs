@@ -5,7 +5,7 @@ namespace EINVWORLD.Services.DocumentCapture
     {
         public const string SectionName = "DocumentCapture";
 
-        /// <summary>Master switch. Also requires the AI assistant (AIAssistant:Enabled) to be on,
+        /// <summary>Master switch. Also requires AI (AI:Enabled) to be on,
         /// since capture turns the extracted text into a suggestion via the local LLM.</summary>
         public bool Enabled { get; set; } = false;
 

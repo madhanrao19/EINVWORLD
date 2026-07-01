@@ -1,29 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using EINVWORLD.Services.AI;
 
 namespace EINVWORLD.Services.Assistant
 {
-    /// <summary>Bound from the "AIAssistant" config section.</summary>
-    public sealed class AIAssistantOptions
-    {
-        public const string SectionName = "AIAssistant";
-
-        /// <summary>Master switch. OFF by default — the assistant only works once a local LLM is running.</summary>
-        public bool Enabled { get; set; } = false;
-
-        /// <summary>Currently only "Ollama" is implemented (local, FOSS, on-prem — no invoice data leaves the server).</summary>
-        public string Provider { get; set; } = "Ollama";
-
-        /// <summary>Ollama endpoint. Default is the standard local Ollama port.</summary>
-        public string BaseUrl { get; set; } = "http://localhost:11434";
-
-        /// <summary>Open-weight model name pulled into Ollama, e.g. "llama3.1", "qwen2.5", "mistral".</summary>
-        public string Model { get; set; } = "llama3.1";
-
-        public int TimeoutSeconds { get; set; } = 120;
-    }
-
     /// <summary>One turn of a conversation. <c>Role</c> is "user" or "assistant".</summary>
     public sealed record ChatTurn(string Role, string Content);
 
@@ -75,14 +56,14 @@ namespace EINVWORLD.Services.Assistant
     }
 
     /// <summary>
-    /// Local-LLM (Ollama) backed assistant. Honours the FOSS-only + on-prem constraints: the model
-    /// runs on the same server and no invoice data is sent to any external service. Fails gracefully
-    /// (returns a friendly message) when disabled or when Ollama is unreachable.
+    /// E-invoicing domain assistant. Owns the LHDN-specific prompts, reference-data grounding and
+    /// output validation, and delegates the actual model call to the provider-agnostic
+    /// <see cref="IAiService"/> — so it never references a concrete backend (Ollama today) directly.
+    /// Fails gracefully (returns a friendly message) when AI is disabled or the provider is unreachable.
     /// </summary>
     public sealed class EInvoiceAssistantService : IEInvoiceAssistantService
     {
-        private readonly HttpClient _http;
-        private readonly AIAssistantOptions _options;
+        private readonly IAiService _ai;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _config;
         private readonly ILogger<EInvoiceAssistantService> _log;
@@ -130,20 +111,18 @@ namespace EINVWORLD.Services.Assistant
             "Leave a field blank if the description does not specify it. Put any assumptions or missing-info warnings in \"notes\".";
 
         public EInvoiceAssistantService(
-            HttpClient http,
-            AIAssistantOptions options,
+            IAiService ai,
             IWebHostEnvironment env,
             IConfiguration config,
             ILogger<EInvoiceAssistantService> log)
         {
-            _http = http;
-            _options = options;
+            _ai = ai;
             _env = env;
             _config = config;
             _log = log;
         }
 
-        public bool IsEnabled => _options.Enabled;
+        public bool IsEnabled => _ai.IsEnabled;
 
         public Task<AssistantResult> AskAsync(string question, CancellationToken ct = default)
             => ChatAsync(QaSystemPrompt, question, jsonMode: false, ct);
@@ -153,7 +132,7 @@ namespace EINVWORLD.Services.Assistant
             if (string.IsNullOrWhiteSpace(question))
                 return Task.FromResult(AssistantResult.Fail("Please enter a question."));
 
-            var messages = new List<OllamaMessage> { new() { Role = "system", Content = QaSystemPrompt } };
+            var messages = new List<AiMessage> { new("system", QaSystemPrompt) };
 
             // Carry a bounded slice of prior turns so the model has context without an unbounded prompt.
             if (history is { Count: > 0 })
@@ -163,11 +142,11 @@ namespace EINVWORLD.Services.Assistant
                     if (string.IsNullOrWhiteSpace(turn.Content)) continue;
                     var role = turn.Role == "assistant" ? "assistant" : "user";
                     var text = turn.Content.Length > 4000 ? turn.Content[..4000] : turn.Content;
-                    messages.Add(new OllamaMessage { Role = role, Content = text });
+                    messages.Add(new AiMessage(role, text));
                 }
             }
 
-            messages.Add(new OllamaMessage { Role = "user", Content = question });
+            messages.Add(new AiMessage("user", question));
             return ChatMessagesAsync(messages, jsonMode: false, ct);
         }
 
@@ -284,82 +263,25 @@ namespace EINVWORLD.Services.Assistant
             if (string.IsNullOrWhiteSpace(userInput))
                 return Task.FromResult(AssistantResult.Fail("Please enter a question or description."));
 
-            var messages = new List<OllamaMessage>
+            var messages = new List<AiMessage>
             {
-                new() { Role = "system", Content = systemPrompt },
-                new() { Role = "user", Content = userInput }
+                new("system", systemPrompt),
+                new("user", userInput)
             };
             return ChatMessagesAsync(messages, jsonMode, ct);
         }
 
-        private async Task<AssistantResult> ChatMessagesAsync(List<OllamaMessage> messages, bool jsonMode, CancellationToken ct)
+        /// <summary>
+        /// Delegates to the provider-agnostic AI service and adapts its typed result to an
+        /// <see cref="AssistantResult"/>. All transport/timeout/unreachable handling lives in the
+        /// provider layer, so this method never talks HTTP and never throws for AI failures.
+        /// </summary>
+        private async Task<AssistantResult> ChatMessagesAsync(List<AiMessage> messages, bool jsonMode, CancellationToken ct)
         {
-            if (!_options.Enabled)
-                return AssistantResult.Fail("The AI assistant is disabled. Set AIAssistant:Enabled=true and run a local Ollama model to enable it.");
-
-            var payload = new OllamaChatRequest
-            {
-                Model = _options.Model,
-                Stream = false,
-                Format = jsonMode ? "json" : null,
-                Messages = messages
-            };
-
-            try
-            {
-                using var content = new StringContent(
-                    JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-
-                using var resp = await _http.PostAsync("/api/chat", content, ct);
-                var body = await resp.Content.ReadAsStringAsync(ct);
-
-                if (!resp.IsSuccessStatusCode)
-                {
-                    _log.LogWarning("Ollama returned {Status}: {Body}", (int)resp.StatusCode, body);
-                    return AssistantResult.Fail($"AI service error ({(int)resp.StatusCode}). Is the model '{_options.Model}' pulled in Ollama?");
-                }
-
-                var parsed = JsonSerializer.Deserialize<OllamaChatResponse>(body);
-                var text = parsed?.Message?.Content?.Trim();
-
-                return string.IsNullOrEmpty(text)
-                    ? AssistantResult.Fail("The AI returned an empty response.")
-                    : AssistantResult.Success(text);
-            }
-            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
-            {
-                return AssistantResult.Fail($"The AI request timed out after {_options.TimeoutSeconds}s. The model may be loading — try again.");
-            }
-            catch (HttpRequestException ex)
-            {
-                _log.LogWarning(ex, "Could not reach Ollama at {Url}", _options.BaseUrl);
-                return AssistantResult.Fail($"Could not reach the local AI service at {_options.BaseUrl}. Is Ollama running?");
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "AI assistant call failed");
-                return AssistantResult.Fail("Unexpected error talking to the AI service.");
-            }
-        }
-
-        // ---- Ollama DTOs ----
-        private sealed class OllamaChatRequest
-        {
-            [JsonPropertyName("model")] public string Model { get; set; } = "";
-            [JsonPropertyName("messages")] public List<OllamaMessage> Messages { get; set; } = new();
-            [JsonPropertyName("stream")] public bool Stream { get; set; }
-            [JsonPropertyName("format")][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Format { get; set; }
-        }
-
-        private sealed class OllamaMessage
-        {
-            [JsonPropertyName("role")] public string Role { get; set; } = "";
-            [JsonPropertyName("content")] public string Content { get; set; } = "";
-        }
-
-        private sealed class OllamaChatResponse
-        {
-            [JsonPropertyName("message")] public OllamaMessage? Message { get; set; }
+            var result = await _ai.ChatAsync(new AiChatRequest { Messages = messages, JsonMode = jsonMode }, ct);
+            return result.Ok
+                ? AssistantResult.Success(result.Content)
+                : AssistantResult.Fail(result.Error ?? "Unexpected error talking to the AI service.");
         }
 
         private sealed class ClassificationCodeDto
