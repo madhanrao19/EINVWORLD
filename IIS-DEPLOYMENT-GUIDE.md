@@ -502,10 +502,11 @@ still works normally. Models are **not bundled** with the app — you pull them 
    | `AI__Model` | `gemma3:12b` (must match what you pulled) |
    | `DocumentCapture__Enabled` | `true` (enables PDF → suggestion) |
 
-   > The canonical config section is **`AI`** (env prefix `AI__`). The old **`AIAssistant__…`** variables
-   > are still honoured as a fallback for one release, but you should move to `AI__…`. Only the `AI`
-   > section carries the new `Temperature`/`MaxTokens` knobs. A cloud provider's key (future
-   > OpenAI/Azure/Claude/Gemini) goes in `AI__ApiKey` as an env var — never in a settings file.
+   > The config section is **`AI`** (env prefix `AI__`). The old **`AIAssistant__…`** variables are
+   > **retired** — if you set them on a previous version, rename them to `AI__…` (e.g. `AIAssistant__Enabled`
+   > → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`), otherwise AI will stay off after upgrading.
+   > A cloud provider's key (future OpenAI/Azure/Claude/Gemini) goes in `AI__ApiKey` as an env var —
+   > never in a settings file.
 4. Verify from the app: sign in as Admin → **AI Settings** → **Test connection**. It reports whether the
    provider is reachable and the model is pulled, plus round-trip latency — without exposing any API key.
 

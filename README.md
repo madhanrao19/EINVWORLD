@@ -96,7 +96,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `Security:HttpsRedirectPort` | HTTP→HTTPS redirect. **Smart default:** off when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel — an in-app redirect would loop); `443` for a direct IIS HTTPS binding. Set explicitly to force: a port = on, `0` = off. |
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support (default on). Honours `X-Forwarded-Proto` (scheme) and `X-Forwarded-For` (real client IP) from a trusted proxy — needed so cookies, redirects, rate limiting and audit IPs are correct when TLS terminates upstream. |
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
-| `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. Replaces the legacy `AIAssistant` section (still read as a fallback for one release). |
+| `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. (Replaces the retired `AIAssistant` section — rename any `AIAssistant__*` env vars to `AI__*`.) |
 | `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |

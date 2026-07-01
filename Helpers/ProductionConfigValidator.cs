@@ -65,14 +65,12 @@ namespace EINVWORLD.Helpers
                 warnings.Add("EmailConfiguration:Default:SmtpPassword is empty — outgoing email will fail unless the relay accepts unauthenticated mail.");
 
             // ── AI (optional, off by default) ─────────────────────────────────────────────
-            // Canonical section is "AI"; fall back to the legacy "AIAssistant" section for one release.
-            var aiSection = config.GetSection("AI").Exists() ? "AI" : "AIAssistant";
-            if (config.GetValue($"{aiSection}:Enabled", false))
+            if (config.GetValue("AI:Enabled", false))
             {
-                if (Blank(config[$"{aiSection}:BaseUrl"]))
-                    errors.Add($"{aiSection}:Enabled=true but {aiSection}:BaseUrl is empty (e.g. http://localhost:11434).");
-                if (Blank(config[$"{aiSection}:Model"]))
-                    errors.Add($"{aiSection}:Enabled=true but {aiSection}:Model is empty (e.g. gemma3:12b).");
+                if (Blank(config["AI:BaseUrl"]))
+                    errors.Add("AI:Enabled=true but AI:BaseUrl is empty (e.g. http://localhost:11434).");
+                if (Blank(config["AI:Model"]))
+                    errors.Add("AI:Enabled=true but AI:Model is empty (e.g. gemma3:12b).");
             }
 
             foreach (var w in warnings)
