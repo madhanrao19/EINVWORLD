@@ -1,5 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-06-25 — v1.4.1 (AI Document Capture OCR; remove legacy Extract Invoice)
+
+### Added
+- **Scanned-PDF OCR in AI Document Capture.** When an uploaded PDF has no text layer, it's now rasterized
+  (PDFtoImage/PDFium on the existing SkiaSharp) and OCR'd (Tesseract, Apache-2.0), then fed into the same
+  LLM suggestion path — so scanned invoices work, not just digital PDFs. **OFF by default**
+  (`DocumentCapture:OcrEnabled`); requires a `TessdataPath` (e.g. `eng.traineddata`) and the native
+  runtimes. The native libs load only when OCR is enabled, so default installs are unaffected. Deploy
+  steps in IIS guide **Part 17a-OCR**. (Note: CI verifies compilation only — OCR must be verified on the
+  server.)
+
+### Removed
+- **Legacy "Extract Invoice (Beta)" page** and its `ExtractInvoice` config — it depended on an external
+  Python OCR service (`127.0.0.1:8000`) and is superseded by AI Document Capture's built-in OCR.
+
 ## 📅 2026-06-25 — v1.4.0 (Unify bulk invoice import)
 
 ### Changed

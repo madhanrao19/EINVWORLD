@@ -23,6 +23,7 @@ namespace eInvWorld.Pages.Invoices
 
         private readonly IEInvoiceAssistantService _assistant;
         private readonly IDocumentTextExtractor _extractor;
+        private readonly IDocumentOcrService _ocr;
         private readonly DocumentCaptureOptions _options;
         private readonly ApplicationDbContext _context;
         private readonly IAuditService _audit;
@@ -31,6 +32,7 @@ namespace eInvWorld.Pages.Invoices
         public CreateFromFileModel(
             IEInvoiceAssistantService assistant,
             IDocumentTextExtractor extractor,
+            IDocumentOcrService ocr,
             DocumentCaptureOptions options,
             ApplicationDbContext context,
             IAuditService audit,
@@ -38,6 +40,7 @@ namespace eInvWorld.Pages.Invoices
         {
             _assistant = assistant;
             _extractor = extractor;
+            _ocr = ocr;
             _options = options;
             _context = context;
             _audit = audit;
@@ -81,7 +84,7 @@ namespace eInvWorld.Pages.Invoices
 
             if (!Upload.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                ErrorText = "Only PDF files are supported in this phase (scanned-image OCR is a later phase).";
+                ErrorText = "Only PDF files are supported (digital PDFs, or scanned PDFs when OCR is enabled).";
                 return Page();
             }
 
@@ -101,10 +104,22 @@ namespace eInvWorld.Pages.Invoices
             }
 
             var text = _extractor.ExtractPdfText(bytes, _options.MaxPages);
+            var usedOcr = false;
+            if (string.IsNullOrWhiteSpace(text) && _ocr.IsAvailable)
+            {
+                // No text layer (scanned image) — fall back to OCR when it's enabled + tessdata is present.
+                _logger.LogInformation("No PDF text layer for {File}; attempting OCR.", FileName);
+                text = _ocr.OcrPdf(bytes, _options.MaxPages);
+                usedOcr = !string.IsNullOrWhiteSpace(text);
+            }
+
             if (string.IsNullOrWhiteSpace(text))
             {
-                ErrorText = "No text could be extracted — this looks like a scanned image. Image OCR is not supported yet; " +
-                            "please upload a digital (text-based) PDF or capture the invoice via the AI Assistant.";
+                ErrorText = _ocr.IsAvailable
+                    ? "Couldn't read this document. If it's a scanned image, make sure the scan is clear and upright, " +
+                      "or upload a digital (text-based) PDF."
+                    : "No text could be extracted — this looks like a scanned image, and OCR is not enabled. " +
+                      "Upload a digital (text-based) PDF, or enable DocumentCapture OCR on the server.";
                 return Page();
             }
             ExtractedText = text;
@@ -124,7 +139,7 @@ namespace eInvWorld.Pages.Invoices
 
             await _audit.WriteAsync("DocumentCaptured", new AuditEntry
             {
-                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { file = FileName, bytes = bytes.Length })
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { file = FileName, bytes = bytes.Length, ocr = usedOcr })
             });
 
             return Page();
