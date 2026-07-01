@@ -276,8 +276,10 @@ namespace eInvWorld.Pages.Invoices
                 IsViewOnly = anyCompany.IsViewOnly;
             }
             UserType = user.UserType;
-            this.SortBy = sortBy;
-            this.SortOrder = sortOrder;
+            // Default view is "most recently updated first" (see ApplyFilters' default case). Reflect that
+            // in the header arrows so the active column matches the data when no explicit sort was chosen.
+            this.SortBy = string.IsNullOrEmpty(sortBy) ? "UpdatedDate" : sortBy;
+            this.SortOrder = string.IsNullOrEmpty(sortOrder) ? "desc" : sortOrder;
 
             // ENFORCE: If the user is a Buyer, strictly override any URL parameter
             if (UserType == "Buyer")
@@ -562,7 +564,9 @@ namespace eInvWorld.Pages.Invoices
                     "InternalStatus" => isDescending ? query.OrderByDescending(i => i.InternalStatus) : query.OrderBy(i => i.InternalStatus),
                     "RejectedDate" => isDescending ? query.OrderByDescending(i => i.RejectedTimestamp) : query.OrderBy(i => i.RejectedTimestamp),
                     "UpdatedDate" => isDescending ? query.OrderByDescending(i => i.LastUpdated) : query.OrderBy(i => i.LastUpdated),
-                    _ => query.OrderBy(i => i.InvoiceNo) // Default sorting
+                    // Default (no explicit sort chosen) for every tab: most recently updated first, with
+                    // InvoiceNo as a stable tie-breaker so pagination is deterministic.
+                    _ => query.OrderByDescending(i => i.LastUpdated).ThenByDescending(i => i.InvoiceNo)
                 };
             }
 
