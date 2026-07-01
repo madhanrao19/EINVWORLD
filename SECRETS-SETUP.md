@@ -33,8 +33,9 @@ ASP.NET Core configuration precedence means these sources **override** the blank
 | `DataProtection:KeyRingPath` | `DataProtection__KeyRingPath` | Folder for the encryption key ring. **Required in Production — the app will not start if blank.** Point it OUTSIDE `App\` (preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`) so a redeploy doesn't wipe the keys (which would log everyone out / break 2FA). Create the folder and grant the app-pool **Modify**. |
 | `DatabaseSettings:AutoMigrateOnStartup` | `DatabaseSettings__AutoMigrateOnStartup` | `true` in `appsettings.Production.json`: applies additive migrations on boot (data preserved). **Back up the DB first** and ensure the SQL login has DDL rights. Set `false` to apply `Apply_*.sql` manually. |
 | `Security:EnforceAdminMfa` | `Security__EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`). Set `false` only as an emergency escape hatch. Not a secret. |
-| `AIAssistant:Enabled` etc. | `AIAssistant__Enabled` | Optional AI assistant (local Ollama). Not a secret. See deployment guide PART O. |
-| `DocumentCapture:Enabled` | `DocumentCapture__Enabled` | Optional AI Document Capture (needs `AIAssistant:Enabled`). Not a secret. |
+| `AI:Enabled` etc. | `AI__Enabled` | Optional provider-agnostic AI (local Ollama by default). Not a secret. Canonical section is `AI` (legacy `AIAssistant__…` still read as a fallback for one release). See deployment guide PART O. |
+| `AI:ApiKey` | `AI__ApiKey` | **Secret** — only for future cloud providers (OpenAI/Azure/Claude/Gemini); unused by the local Ollama provider. Set via env var / user-secrets, never a settings file. |
+| `DocumentCapture:Enabled` | `DocumentCapture__Enabled` | Optional AI Document Capture (needs `AI:Enabled`). Not a secret. |
 | `WatchedFolderImport:Enabled` / `:InboxPath` | `WatchedFolderImport__Enabled` / `WatchedFolderImport__InboxPath` | Optional folder validator. Not a secret. |
 
 ---

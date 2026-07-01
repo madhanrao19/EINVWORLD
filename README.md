@@ -40,10 +40,13 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   Capture** (PDF → reviewed suggestion), **Bulk Import** (CSV/XLSX validation + template), a
   **watched-folder** importer, and a **REST validate API** (`POST /api/import/validate`). All OFF by
   default.
-- **AI E-Invoice Assistant** (optional, OFF by default) — a local, on-prem [Ollama](https://ollama.com)
-  LLM that answers e-invoicing questions and turns a plain-English description into a suggested invoice
-  that pre-fills the Create Invoice form. **No invoice data leaves the server**; it only suggests, never
-  submits. See deployment guide PART O.
+- **AI features** (optional, OFF by default) — a **provider-agnostic** AI layer that answers e-invoicing
+  questions and turns a plain-English description into a suggested invoice that pre-fills the Create
+  Invoice form. Ships with a local, on-prem [Ollama](https://ollama.com) provider (**no invoice data
+  leaves the server**); the abstraction leaves room for OpenAI/Azure/Claude/Gemini without touching
+  business logic. AI is never required for invoicing — if it is disabled or unreachable, invoice creation
+  and submission continue normally. Verify connectivity at **Admin → AI Settings** ("Test connection").
+  It only suggests, never submits. See deployment guide PART O.
 - **v1.1 digital signing** (XAdES) is built and config-gated **OFF** until a signing certificate is
   purchased — flip `LHDNApiConfig:SigningEnabled` to enable.
 - Security: per-TIN ownership checks (IDOR protection), secrets externalised, security response headers,
@@ -93,8 +96,8 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `Security:HttpsRedirectPort` | HTTP→HTTPS redirect. **Smart default:** off when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel — an in-app redirect would loop); `443` for a direct IIS HTTPS binding. Set explicitly to force: a port = on, `0` = off. |
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support (default on). Honours `X-Forwarded-Proto` (scheme) and `X-Forwarded-For` (real client IP) from a trusted proxy — needed so cookies, redirects, rate limiting and audit IPs are correct when TLS terminates upstream. |
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
-| `AIAssistant` | Optional local-LLM assistant (OFF by default). |
-| `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AIAssistant:Enabled`). |
+| `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. Replaces the legacy `AIAssistant` section (still read as a fallback for one release). |
+| `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
 | `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. |

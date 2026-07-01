@@ -478,26 +478,36 @@ All are **OFF by default**. Enable only if asked.
 
 ### 17a — AI E-Invoice Assistant & AI Document Capture (local, private)
 
-Runs a **local, free** AI model (Ollama) on the server. **No invoice data leaves the server.**
+The AI layer is **provider-agnostic** but ships with a **local, free** provider (Ollama) that runs on the
+server — **no invoice data leaves the server.** AI is **optional**: if it is off or unreachable, invoicing
+still works normally. Models are **not bundled** with the app — you pull them separately with Ollama.
 
 1. Download & install **Ollama for Windows** from `https://ollama.com/download`. It runs as a service on
    `http://localhost:11434`.
 2. Open Command Prompt and pull a model:
    ```
-   ollama pull llama3.2:3b
+   ollama pull gemma3:12b
    ```
-   Test it: `ollama run llama3.2:3b "Say hello"`.
+   Test it: `ollama run gemma3:12b "Say hello"`.
 
-   > **Pick a model your server's RAM can hold.** `llama3.2:3b` (~2 GB) is recommended and fits a modest
-   > server. Bigger models (e.g. `llama3.1` 8B ~5 GB, or 70B) can fail with
-   > *"failed to allocate buffer …"* in the Ollama log, which makes the assistant time out
+   > **Pick a model your server's RAM can hold.** Recommended models are `gemma3:12b` (~8 GB, the default),
+   > `gemma3:27b` and `qwen3:32b` — larger models need proportionally more RAM/VRAM. On a modest server a
+   > smaller model (e.g. `llama3.2:3b` ~2 GB) still works. Oversized models can fail with
+   > *"failed to allocate buffer …"* in the Ollama log, which makes the request time out
    > (`TaskCanceledException` in the app log). Only move up if you have the RAM/VRAM to spare.
 3. Add these environment variables (Part 10) and `iisreset`:
    | Name | Value |
    |---|---|
-   | `AIAssistant__Enabled` | `true` |
-   | `AIAssistant__Model` | `llama3.2:3b` (must match what you pulled) |
+   | `AI__Enabled` | `true` |
+   | `AI__Model` | `gemma3:12b` (must match what you pulled) |
    | `DocumentCapture__Enabled` | `true` (enables PDF → suggestion) |
+
+   > The canonical config section is **`AI`** (env prefix `AI__`). The old **`AIAssistant__…`** variables
+   > are still honoured as a fallback for one release, but you should move to `AI__…`. Only the `AI`
+   > section carries the new `Temperature`/`MaxTokens` knobs. A cloud provider's key (future
+   > OpenAI/Azure/Claude/Gemini) goes in `AI__ApiKey` as an env var — never in a settings file.
+4. Verify from the app: sign in as Admin → **AI Settings** → **Test connection**. It reports whether the
+   provider is reachable and the model is pulled, plus round-trip latency — without exposing any API key.
 
 ✅ The **E-Invoice Assistant** and **AI Document Capture** menus now work. They only *suggest* drafts —
 they never submit. Always review every field before saving. (AI Document Capture replaces the old
