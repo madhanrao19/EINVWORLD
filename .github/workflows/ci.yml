@@ -26,5 +26,15 @@ jobs:
       - name: Build
         run: dotnet build EINVWORLD.sln --configuration Release --no-restore
 
+      # windows-latest ships SQL Server Express LocalDB; start the default instance so the integration
+      # tests run against a real SQL Server. If it's unavailable the tests no-op (see SqlServerFixture).
+      - name: Start SQL Server LocalDB (integration tests)
+        shell: pwsh
+        run: |
+          sqllocaldb start MSSQLLocalDB
+          sqllocaldb info MSSQLLocalDB
+
       - name: Test
+        env:
+          INTEGRATION_SQLSERVER: 'Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True;'
         run: dotnet test EINVWORLD.sln --configuration Release --no-build --verbosity normal
