@@ -23,6 +23,12 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
 - **There is no local .NET SDK in this environment.** You cannot `dotnet build`/`dotnet test` locally.
 - **GitHub Actions** (`.github/workflows/ci.yml`, `build-and-test` on `windows-latest`) restores, builds
   (Release), and runs `dotnet test`. **A PR's green CI is the only proof it compiles and tests pass.**
+- **CI also runs real SQL Server integration tests** (`EINVWORLD.Tests/Integration/`, SQL Server Express
+  LocalDB started in the workflow) — migrations are applied with `Migrate()` against a real database and
+  raw-SQL paths (e.g. `InvoiceSubmissionGuard`'s atomic claim) are exercised for real, not just via the
+  in-memory provider. They no-op safely wherever `INTEGRATION_SQLSERVER` isn't set. Prefer adding new
+  DB-touching logic tests here over asserting against the in-memory provider when raw SQL or a real FK/seed
+  is involved.
 - Therefore: write code carefully to compile first-try; every change ships as a PR and is validated by CI.
 - **Migrations are hand-authored** (no `dotnet ef` locally). Each new migration = **4 artifacts**:
   `Migrations/<timestamp>_<Name>.cs` (Up/Down), `<...>.Designer.cs` (full `BuildTargetModel` snapshot,

@@ -406,8 +406,13 @@ blank in files and supplied via env vars / user-secrets.
 - **Build:** `dotnet build EINVWORLD.sln -c Release`. **Run:** `dotnet run` (dev; default
   `https://localhost:7073`).
 - **Tests:** `EINVWORLD.Tests/` (xUnit) — `dotnet test`. Covers helpers, validators, the background
-  queue, and AI-assistant guards.
-- **CI:** `.github/workflows/ci.yml` runs restore → build → test on **windows-latest** for every push/PR.
+  queue, AI (`Services/AI`, provider mapping, config validation), and UBL mapping.
+- **Integration tests:** `EINVWORLD.Tests/Integration/` runs against a **real SQL Server** — migrations
+  applied via `Migrate()` and raw-SQL paths (e.g. `InvoiceSubmissionGuard`'s atomic claim) exercised for
+  real. Gated on the `INTEGRATION_SQLSERVER` env var; no-ops cleanly when it's unset (e.g. local dev
+  without a DB), so the suite always passes either way. CI sets it against SQL Server Express LocalDB.
+- **CI:** `.github/workflows/ci.yml` runs restore → build → start LocalDB → test on **windows-latest** for
+  every push/PR.
 - **No local SDK?** Migrations are hand-authored with a generated `Designer` + idempotent `Apply_*.sql`;
   CI is the compiler of record.
 
