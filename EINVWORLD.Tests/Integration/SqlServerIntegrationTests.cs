@@ -68,7 +68,10 @@ namespace EINVWORLD.Tests.Integration
 
             Assert.True(await ctx.Database.CanConnectAsync());
             Assert.Empty(await ctx.Database.GetPendingMigrationsAsync());   // Migrate() left nothing pending
-            Assert.Equal(0, await ctx.InvoiceHeaders.CountAsync());          // core table exists & queryable
+            // Prove the core table exists and is queryable. Do NOT assert emptiness — the class fixture
+            // database is shared with the sibling SubmissionGuard tests, which insert rows, and xUnit's
+            // run order within a class is not guaranteed.
+            Assert.True(await ctx.InvoiceHeaders.CountAsync() >= 0);
         }
 
         // ── InvoiceSubmissionGuard: the atomic claim is raw SQL, so it needs a real database ──────
