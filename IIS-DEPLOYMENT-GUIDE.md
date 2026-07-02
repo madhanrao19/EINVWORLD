@@ -505,6 +505,10 @@ still works normally. Models are **not bundled** with the app — you pull them 
    > The config section is **`AI`** (env prefix `AI__`). The old **`AIAssistant__…`** variables are
    > **retired** — if you set them on a previous version, rename them to `AI__…` (e.g. `AIAssistant__Enabled`
    > → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`), otherwise AI will stay off after upgrading.
+   > For machine/user-scope env vars, the helper script does this for you (run elevated):
+   > `powershell -ExecutionPolicy Bypass -File scripts\Rename-AiEnvVars.ps1 -AppPool '<YourAppPool>'`
+   > (add `-WhatIf` first to preview). If the variables were set in the IIS app-pool dialog or a
+   > server-side `web.config` instead, rename them there by hand.
    > A cloud provider's key (future OpenAI/Azure/Claude/Gemini) goes in `AI__ApiKey` as an env var —
    > never in a settings file.
 4. Verify from the app: sign in as Admin → **AI Settings** → **Test connection**. It reports whether the
