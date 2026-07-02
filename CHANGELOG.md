@@ -1,5 +1,14 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-01 — Ops: AI env-var rename helper script
+
+### Added
+- **`scripts/Rename-AiEnvVars.ps1`** — helper to migrate retired `AIAssistant__*` environment variables
+  to `AI__*` on a Windows server. Finds them at Machine/User scope, creates the `AI__*` equivalents with
+  the same values, removes the old ones (won't clobber an existing `AI__*` unless `-Force`), supports
+  `-WhatIf` preview and an optional `-AppPool` recycle. DEPLOY-NOTES §0 now references it. Env vars set in
+  the IIS app-pool dialog or a server `web.config` must still be renamed by hand.
+
 ## 📅 2026-07-01 — v1.5.2 (Post-audit reliability & hardening batch)
 
 ### Fixed
