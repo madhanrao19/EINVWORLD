@@ -23,6 +23,10 @@ changes are additive and AI/features stay off unless already enabled.
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
      If you skip this, AI simply stays **off** after the upgrade — invoicing is unaffected. Default
      model is now `gemma3:12b`; pull it with `ollama pull gemma3:12b` if you switch models.
+     For machine/user-scope env vars you can automate the rename with the helper script (run elevated):
+     `powershell -ExecutionPolicy Bypass -File scripts\Rename-AiEnvVars.ps1 -AppPool '<YourAppPool>'`
+     (add `-WhatIf` first to preview). If you set the variables in the IIS app-pool dialog or a
+     server-side `web.config` instead, rename them there by hand and recycle the pool.
    - Re-check any other env vars against **SECRETS-SETUP.md** (no new required secrets in this release).
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
