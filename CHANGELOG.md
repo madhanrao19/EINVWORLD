@@ -1,5 +1,21 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-02 — CI: SQL Server integration tests (LocalDB)
+
+### Added
+- **Integration tests against a real SQL Server** (`EINVWORLD.Tests/Integration/SqlServerIntegrationTests.cs`),
+  run in CI via **SQL Server Express LocalDB** (pre-installed on the `windows-latest` runner). These close
+  a runtime gap the in-memory provider can't cover:
+  - **Migrations apply cleanly** — a fresh throwaway database is created with `Migrate()` (validating every
+    migration, FK and `HasData` seed against real SQL Server), then dropped on dispose; schema is queryable.
+  - **`InvoiceSubmissionGuard`** — its atomic claim/release is **raw SQL** (`ExecuteSqlInterpolatedAsync`),
+    so it needs a real DB: verifies one claimant wins, a second is blocked while the claim is fresh, release
+    re-opens it, and an already-submitted invoice (UUID present) is never claimed.
+- CI: a step starts the `MSSQLLocalDB` instance and passes `INTEGRATION_SQLSERVER` to `dotnet test`; the
+  test project references `Microsoft.EntityFrameworkCore.SqlServer` (version-matched to the app).
+- **Safe everywhere:** if `INTEGRATION_SQLSERVER` is unset (e.g. no SQL Server available), the integration
+  tests **no-op** so the suite still passes. Each CI run uses a uniquely-named database (no cross-job clash).
+
 ## 📅 2026-07-02 — Docs: post-deployment verification checklist
 
 ### Added
