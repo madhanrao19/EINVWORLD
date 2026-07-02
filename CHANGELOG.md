@@ -1,5 +1,14 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-02 — Docs: post-deployment verification checklist
+
+### Added
+- **POST-DEPLOY-CHECKLIST.md** — a per-feature smoke test to run on the server after every deploy
+  (startup/config fail-fast gates, DB/migrations, auth/IDOR, full invoice lifecycle + all 8 doc types,
+  LHDN submit/sync/cancel/validate, bulk import, AI + AI-down safety, email, admin/audit/observability,
+  Cloudflare Tunnel). CI proves compilation + unit tests only; this closes the runtime-verification gap
+  that cannot be exercised in CI (no DB/LHDN/PDF/email/OCR/Ollama there). Linked from README.
+
 ## 📅 2026-07-01 — Ops: AI env-var rename helper script
 
 ### Added

@@ -122,6 +122,8 @@ set them in dev (user-secrets) and on the server (environment variables).
   (DataProtection keys, backup + auto-migration, admin 2FA, optional Ollama setup).
 - **[DEPLOY-NOTES.md](DEPLOY-NOTES.md)** — concise on-prem operator checklist (migration order,
   app-pool settings, health endpoints, backups, rollback).
+- **[POST-DEPLOY-CHECKLIST.md](POST-DEPLOY-CHECKLIST.md)** — per-feature smoke test to run on the server
+  after every deploy (auth, invoice create/submit, LHDN sync, PDF, email, bulk import, AI, admin, health).
 - **[CHANGELOG.md](CHANGELOG.md)** — release history and notable fixes.
 
 ---
