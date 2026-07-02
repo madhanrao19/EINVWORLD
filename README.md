@@ -80,6 +80,15 @@ Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 dotnet test
 ```
 
+Unit tests always run. The `EINVWORLD.Tests/Integration/` suite additionally runs against a **real SQL
+Server** when `INTEGRATION_SQLSERVER` is set (CI does this automatically via LocalDB); it no-ops otherwise,
+so `dotnet test` passes with or without a database available:
+
+```bash
+$env:INTEGRATION_SQLSERVER = 'Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True;'
+dotnet test
+```
+
 ---
 
 ## Configuration
