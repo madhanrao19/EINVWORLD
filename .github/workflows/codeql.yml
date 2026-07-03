@@ -17,6 +17,10 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      # The analyze step reads workflow-run metadata (for SARIF fingerprinting/baseline comparison) even
+      # on a plain push/PR run — without this it fails post-analysis with "Resource not accessible by
+      # integration" despite the scan itself succeeding.
+      actions: read
 
     steps:
       - name: Checkout
