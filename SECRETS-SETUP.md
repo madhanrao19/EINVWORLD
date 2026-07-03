@@ -115,3 +115,18 @@ Then **restart IIS** (`iisreset`) so the new values are picked up.
 - After rotating, update the env var (or user-secret) and `iisreset`.
 - Keep the `.p12` signing certificate and its password out of the repo; store the cert on the server only
   (see deployment guide PART I) and supply `CertPass` via env var.
+
+## Signing-key custody (`LHDNApiConfig:SigningKeyProvider`)
+
+The signing service gets its certificate from a pluggable **`ICertificateProvider`**, selected by
+`LHDNApiConfig:SigningKeyProvider`:
+
+- **`File`** (default) — loads the `.p12` from `CertPath`/`CertPass` as documented above. Fine for a
+  single on-prem server, but the private key lives as a file on disk.
+- **Vault/HSM upgrade path** (not yet implemented — a clean drop-in when you're ready): implement
+  `ICertificateProvider` (e.g. an `AzureKeyVaultCertificateProvider` named `"AzureKeyVault"`) using the
+  `Azure.Security.KeyVault.Certificates` NuGet package with `DefaultAzureCredential` (managed identity —
+  no secret in config), add config keys such as `LHDNApiConfig:KeyVaultUri` and
+  `LHDNApiConfig:KeyVaultCertName`, register it in `Program.cs`, and set
+  `SigningKeyProvider = "AzureKeyVault"`. The signing service and its callers need **no changes** —
+  selection is by provider name, mirroring the AI provider pattern.

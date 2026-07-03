@@ -25,5 +25,13 @@ namespace eInvWorld.Models.Settings
 
         /// <summary>Password for the signing certificate. Keep in user-secrets / env vars.</summary>
         public string? CertPass { get; set; }
+
+        /// <summary>
+        /// Which <c>ICertificateProvider</c> supplies the signing certificate. "File" (default) loads the
+        /// .p12 from <see cref="CertPath"/>. Reserved for future custody upgrades (e.g. "AzureKeyVault" —
+        /// see SECRETS-SETUP.md for the drop-in contract); selection is by provider name, so adding one is
+        /// a DI registration plus this config value, with no change to the signing service or its callers.
+        /// </summary>
+        public string SigningKeyProvider { get; set; } = "File";
     }
 }

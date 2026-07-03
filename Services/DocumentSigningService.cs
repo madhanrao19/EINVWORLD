@@ -46,17 +46,16 @@ namespace eInvWorld.Services
     public class DocumentSigningService : IDocumentSigningService
     {
         private readonly DigitalSignatureSettings _settings;
-        private readonly IWebHostEnvironment _env;
+        private readonly IEnumerable<Signing.ICertificateProvider> _certificateProviders;
         private readonly ILogger<DocumentSigningService> _logger;
-        private X509Certificate2? _certificate;
 
         public DocumentSigningService(
             IOptions<DigitalSignatureSettings> settings,
-            IWebHostEnvironment env,
+            IEnumerable<Signing.ICertificateProvider> certificateProviders,
             ILogger<DocumentSigningService> logger)
         {
             _settings = settings.Value;
-            _env = env;
+            _certificateProviders = certificateProviders;
             _logger = logger;
         }
 
@@ -104,25 +103,25 @@ namespace eInvWorld.Services
             }
         }
 
+        /// <summary>
+        /// Resolves the signing certificate from the configured custody provider
+        /// (<c>LHDNApiConfig:SigningKeyProvider</c>, default "File"). Throws — never silently no-ops —
+        /// when no provider matches, because an unsigned document must never be sent while signing is on.
+        /// The actual loading/caching lives in the provider (see <see cref="Signing.FileCertificateProvider"/>).
+        /// </summary>
         private X509Certificate2 GetCertificate()
         {
-            if (_certificate != null) return _certificate;
+            var providerName = string.IsNullOrWhiteSpace(_settings.SigningKeyProvider) ? "File" : _settings.SigningKeyProvider;
+            var provider = _certificateProviders.FirstOrDefault(
+                p => string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
 
-            if (string.IsNullOrWhiteSpace(_settings.CertPath))
-                throw new InvalidOperationException("LHDNApiConfig:CertPath is not configured but SigningEnabled is true.");
+            if (provider is null)
+                throw new InvalidOperationException(
+                    $"SigningEnabled is true but no ICertificateProvider named '{providerName}' is registered " +
+                    $"(registered: [{string.Join(", ", _certificateProviders.Select(p => p.Name))}]). " +
+                    "Check LHDNApiConfig:SigningKeyProvider.");
 
-            var path = Path.IsPathRooted(_settings.CertPath)
-                ? _settings.CertPath
-                : Path.Combine(_env.ContentRootPath, _settings.CertPath);
-
-            if (!File.Exists(path))
-                throw new FileNotFoundException($"Signing certificate not found at '{path}'.");
-
-            // X509CertificateLoader is the non-obsolete loader on .NET 9+.
-            _certificate = X509CertificateLoader.LoadPkcs12FromFile(path, _settings.CertPass);
-            _logger.LogInformation("🔐 Loaded signing certificate '{Subject}' (valid until {Expiry:yyyy-MM-dd}).",
-                _certificate.Subject, _certificate.NotAfter);
-            return _certificate;
+            return provider.GetSigningCertificate();
         }
 
         private static string ParseSerial(X509Certificate2 cert)
