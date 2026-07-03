@@ -601,7 +601,7 @@ namespace EINVWORLD.Pages.Invoices
                 // require the user to notice and resubmit — it auto-retries, and lands in
                 // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
                 await _jobTracker.CreateAsync(
-                    submitterTin ?? string.Empty, EINVWORLD.Services.Background.SyncJobType.SubmitDocument,
+                    submitterTin ?? string.Empty, eInvWorld.Models.Background.SyncJobType.SubmitDocument,
                     User.Identity?.Name ?? "System",
                     EINVWORLD.Services.Background.SyncJobPayload.CreateForInvoice(invoiceNo));
 
