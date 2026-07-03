@@ -231,7 +231,7 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 
 | Service | Purpose |
 |---|---|
-| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh. |
+| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw — reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view). |
 | **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. |
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
 | **`RecurringInvoiceWorker`** | Generates invoices from `RecurringProfile`s on schedule (roll-forward, no catch-up storms). |
@@ -256,8 +256,10 @@ stay reachable, so there is no lockout). Toggle with `Security:EnforceAdminMfa` 
 **Tamper-evident audit** — `AuditService` writes an append-only, **hash-chained** `AuditLogs`: each row
 stores the previous row's hash plus a SHA-256 of its own contents chained onto it. Recomputing the chain
 (**Admin → Audit Trail → Verify**) detects any insert/delete/edit. Wired into LHDN submit/cancel/reject,
-bulk/watched/API imports, and document capture. Appends are serialised and isolated (own DbContext);
-writing never throws to the caller.
+bulk/watched/API imports, document capture, admin sync-job actions, and **cross-tenant invoice reads**
+(`InvoiceViewedCrossTenant` — written when a viewer's own companies include none of the invoice's
+parties, which post-IDOR-guard can only be an Admin; same-tenant views are deliberately not audited).
+Appends are serialised and isolated (own DbContext); writing never throws to the caller.
 
 **Authorization / IDOR** — per-TIN ownership checks (`OwnsTinAsync`, `UserCompany`) gate invoice
 access; `SafePath.TryResolve` blocks path traversal on all file-serving endpoints; uploads are
