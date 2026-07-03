@@ -1,5 +1,38 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-03 — v1.7.0 (Blueprint-gap remediation, Tier 2)
+
+> Second tranche of the blueprint-gap roadmap: submission failures become visible and replayable
+> instead of relying on the user to notice, encryption-in-transit is stated explicitly, and Admin
+> cross-tenant reads join the tamper-evident audit trail. No schema changes; no breaking changes.
+
+### Added
+- **Submission dead-letter visibility + automatic retry.** A new durable job type,
+  `SyncJobType.SubmitDocument`, is queued whenever an interactive LHDN submission throws (network blip,
+  LHDN outage): the existing `DurableSyncJobWorker` retries it with backoff via a new
+  `SubmitDocumentJobHandler` (which reuses `InvoiceSubmissionHelper.SubmitInvoiceAsync` — re-reads the
+  invoice + draft JSON fresh, safe to replay later; no-ops if the invoice is no longer Draft, so it can
+  never double-submit). If every attempt fails it lands in **Admin → Sync Jobs (Failed)** for manual
+  replay — the existing dead-letter UI, `SyncFailureAlertService` email, and audit entries all apply
+  automatically. Wired into all six interactive submission paths (`CreateInvoice`, `CreateCN`,
+  `CreateSBI`, `CreateSBCN`, `InvoiceEdit`, `InvoiceLists`); the user-facing error message now says a
+  retry has been queued. (The recurring-invoice worker and the raw REST controller were deliberately
+  left out: the worker already self-heals by reverting to Draft for its next scheduled pass, and the
+  controller has no invoice-scoped claim to correlate a retry with.)
+- **`InvoiceViewedCrossTenant` audit entries** — when a user views an invoice none of whose parties
+  belong to their own companies (post-IDOR-guard, that can only be an Admin reading another tenant's
+  document), a tamper-evident audit row is written. Same-tenant views are deliberately not audited to
+  avoid flooding the chain. Best-effort: an audit failure never breaks the page view.
+- **`SyncJobPayloadTests`** — pure round-trip tests for the durable-job payload helpers (LookbackDays +
+  the new InvoiceNo field), including cross-shape tolerance (a payload written for one job type parses
+  safely for another).
+
+### Changed
+- **Explicit `Encrypt=True`** in all production connection-string guidance (IIS-DEPLOYMENT-GUIDE,
+  SECRETS-SETUP, appsettings comment) so SQL Server encryption-in-transit is a visible, auditable
+  setting rather than an implicit driver default; the `TrustServerCertificate=True` trade-off is
+  documented alongside it.
+
 ## 📅 2026-07-02 — v1.6.0 (Blueprint-gap remediation, Tier 1)
 
 > An external technical review of MyInvois-intermediary best practices was checked against the actual

@@ -96,6 +96,7 @@ builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobTracker, EINVWO
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.StatusSyncJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.FullImportJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SupplierRefreshJobHandler>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SubmitDocumentJobHandler>(); // background retry of a failed interactive submission
 builder.Services.AddHostedService<EINVWORLD.Services.Background.DurableSyncJobWorker>();
 
 // Tamper-evident, hash-chained audit trail.

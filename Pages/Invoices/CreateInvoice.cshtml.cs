@@ -53,6 +53,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly InvoiceTemplateService _invoiceTemplateService;
         private readonly ITokenService _tokenService;
         private readonly IBuyerService _buyerService;
+        private readonly EINVWORLD.Services.Background.ISyncJobTracker _jobTracker;
 
         public CreateInvoiceModel(
             IWebHostEnvironment webHostEnvironment,
@@ -68,7 +69,8 @@ namespace EINVWORLD.Pages.Invoices
             DropdownHelper dropdownHelper,
             InvoiceTemplateService invoiceTemplateService,
             ITokenService tokenService,
-            IBuyerService buyerService) : base(context)
+            IBuyerService buyerService,
+            EINVWORLD.Services.Background.ISyncJobTracker jobTracker) : base(context)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
@@ -85,6 +87,7 @@ namespace EINVWORLD.Pages.Invoices
             _invoiceTemplateService = invoiceTemplateService;
             _tokenService = tokenService;
             _buyerService = buyerService;
+            _jobTracker = jobTracker;
         }
 
         [BindProperty]
@@ -1143,6 +1146,9 @@ namespace EINVWORLD.Pages.Invoices
 
         public async Task<IActionResult> OnPostSubmitDocumentsAsync([FromForm] string invoiceNo, [FromForm] bool isAjax)
         {
+            // Declared at method scope (not inside the try) so the catch block below can still report
+            // which TIN a failed submission was for when queuing a background retry job.
+            string? tin = null;
             try
             {
                 _logger.LogInformation($"[Debug] Submitting Invoice: {invoiceNo}, Ajax: {isAjax}");
@@ -1219,7 +1225,7 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 // Determine TIN based on document type - self-billed (11,12,13,14) use customer TIN
-                string? tin = fullInvoice.DocTypeCode switch
+                tin = fullInvoice.DocTypeCode switch
                 {
                     "11" or "12" or "13" or "14" => fullInvoice.Customer?.TIN,
                     _ => fullInvoice.Supplier?.TIN
@@ -1349,10 +1355,19 @@ namespace EINVWORLD.Pages.Invoices
                 // the rare "accepted but then errored" case if a retry actually reaches LHDN twice.
                 await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError(ex, $"[Error] Exception during submission of Invoice: {invoiceNo}");
+
+                // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't
+                // require the user to notice and resubmit — it auto-retries, and lands in
+                // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
+                await _jobTracker.CreateAsync(
+                    tin ?? string.Empty, eInvWorld.Models.Background.SyncJobType.SubmitDocument,
+                    User.Identity?.Name ?? "System",
+                    EINVWORLD.Services.Background.SyncJobPayload.CreateForInvoice(invoiceNo));
+
                 return new JsonResult(new
                 {
                     success = false,
-                    message = $"Error submitting Invoice: {ex.Message}"
+                    message = $"Error submitting Invoice: {ex.Message} A retry has been queued automatically."
                 });
             }
         }
