@@ -94,7 +94,8 @@
                             <p class="mb-0">
                                 <a href="https://www.datamationgroup.com/" class="text-muted">
                                     <strong>
-                                        © eInvWorld | @Configuration["AppInfo:Version"] | Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
+                                        @* Version string is Admin-only — a granular build number aids attacker fingerprinting for no benefit to other roles. *@
+                                        © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
                                     </strong>
                                 </a>
                             </p>

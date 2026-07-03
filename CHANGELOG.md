@@ -1,5 +1,37 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-02 — v1.6.0 (Blueprint-gap remediation, Tier 1)
+
+> An external technical review of MyInvois-intermediary best practices was checked against the actual
+> codebase (three parallel audits + direct verification). Most of the review's concerns were already
+> handled (token caching, IDOR/object-level auth, idempotency, a durable dead-letter job queue, a
+> tamper-evident audit trail) — this release closes the genuine, low-risk gaps found. Larger items
+> (submission-pipeline dead-letter visibility, signing-key custody, PII field encryption, a webhook
+> subsystem) are scoped for follow-up releases.
+
+### Fixed
+- **`LHDNApiService.SendWithRetryAsync`** — the 429 retry wait now grows per attempt and adds jitter
+  (still never shortening LHDN's own `Retry-After`), instead of retrying 3× at the exact same delay —
+  reduces the chance many concurrently-retrying submissions all wake up and re-trigger the limit together.
+
+### Added
+- **`CertExpiryAlertService`** — proactively emails an admin as the LHDN XAdES signing certificate
+  approaches expiry (config: `CertExpiryAlerts:{Enabled,RecipientEmail,WarnDays,CheckHours,CooldownHours}`,
+  off by default). Previously this was only visible by manually checking Admin → System Health.
+- **`SECURITY.md`** — vulnerability-disclosure policy and scope.
+- **`RETENTION-POLICY.md`** — makes the Income Tax Act s.82A 7-year document-retention guarantee explicit
+  (invoices/UBL/PDFs/validation records are never purged by any job — only diagnostic `SystemLogs` are),
+  and is honest about what it does *not* yet guarantee (no WORM/immutability, no separate cold archive).
+- **`RUNBOOKS.md`** — operator procedures for signing-certificate rotation, LHDN downtime, and failed-job
+  (dead-letter) replay, writing up mechanisms that already existed but weren't documented as procedures.
+- **`.github/dependabot.yml`** — weekly NuGet + GitHub Actions dependency updates (grouped Microsoft/EF
+  Core and Serilog point releases into single PRs to avoid CI thrash).
+- **`.github/workflows/codeql.yml`** — CodeQL (`security-extended`) SAST scanning on push/PR/weekly.
+
+### Changed
+- **`Pages/Shared/_Layout.cshtml`** — the `AppInfo:Version` footer string is now Admin-only (was visible
+  to any authenticated Buyer/Supplier) — a minor information-disclosure reduction.
+
 ## 📅 2026-07-02 — CI: SQL Server integration tests (LocalDB)
 
 ### Added

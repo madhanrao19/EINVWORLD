@@ -133,6 +133,11 @@ set them in dev (user-secrets) and on the server (environment variables).
   app-pool settings, health endpoints, backups, rollback).
 - **[POST-DEPLOY-CHECKLIST.md](POST-DEPLOY-CHECKLIST.md)** — per-feature smoke test to run on the server
   after every deploy (auth, invoice create/submit, LHDN sync, PDF, email, bulk import, AI, admin, health).
+- **[RUNBOOKS.md](RUNBOOKS.md)** — operator procedures for signing-cert rotation, LHDN downtime, and
+  failed-job (dead-letter) replay.
+- **[RETENTION-POLICY.md](RETENTION-POLICY.md)** — the 7-year (Income Tax Act s.82A) document-retention
+  guarantee and what it does/doesn't cover.
+- **[SECURITY.md](SECURITY.md)** — vulnerability-disclosure policy and scope.
 - **[CHANGELOG.md](CHANGELOG.md)** — release history and notable fixes.
 
 ---
