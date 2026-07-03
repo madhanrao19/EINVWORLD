@@ -229,6 +229,7 @@ builder.Services.AddHostedService<InvoiceStatusUpdater>();
 //builder.Services.AddSingleton<InvoiceStatusUpdater>();
 builder.Services.AddHostedService<eInvWorld.Services.Background.LogCleanupService>();
 builder.Services.AddHostedService<EINVWORLD.Services.Background.SyncFailureAlertService>(); // emails admin on failed-job backlog (off by default)
+builder.Services.AddHostedService<EINVWORLD.Services.Background.CertExpiryAlertService>(); // emails admin as the LHDN signing cert nears expiry (off by default)
 builder.Services.AddSingleton<QRCodeGeneratorService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
