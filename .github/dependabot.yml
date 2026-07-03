@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # NuGet packages (main app + test project, both covered from the solution root).
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+    # Group routine Microsoft/EF Core/Serilog point releases into one PR instead of ten,
+    # so CI (build + real SQL Server integration tests) runs once per batch, not once per package.
+    groups:
+      microsoft-and-efcore:
+        patterns:
+          - "Microsoft.*"
+      serilog:
+        patterns:
+          - "Serilog.*"
+
+  # GitHub Actions used by the CI workflow itself.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
