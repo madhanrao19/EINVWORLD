@@ -25,11 +25,16 @@ namespace EINVWORLD.Services.Background
     public sealed class SyncJobPayload
     {
         public int? LookbackDays { get; set; }
+        public string? InvoiceNo { get; set; }
 
         private static readonly JsonSerializerOptions Opts = new() { PropertyNameCaseInsensitive = true };
 
         public static string Create(int lookbackDays) =>
             JsonSerializer.Serialize(new SyncJobPayload { LookbackDays = lookbackDays });
+
+        /// <summary>Payload for a <see cref="SyncJobType.SubmitDocument"/> retry job.</summary>
+        public static string CreateForInvoice(string invoiceNo) =>
+            JsonSerializer.Serialize(new SyncJobPayload { InvoiceNo = invoiceNo });
 
         /// <summary>Reads LookbackDays from the job payload, falling back to <paramref name="fallback"/>.</summary>
         public static int LookbackOrDefault(string? payloadJson, int fallback)
@@ -43,6 +48,21 @@ namespace EINVWORLD.Services.Background
             catch (JsonException)
             {
                 return fallback;
+            }
+        }
+
+        /// <summary>Reads InvoiceNo from the job payload, or null if absent/unparsable.</summary>
+        public static string? InvoiceNoOrNull(string? payloadJson)
+        {
+            if (string.IsNullOrWhiteSpace(payloadJson)) return null;
+            try
+            {
+                var p = JsonSerializer.Deserialize<SyncJobPayload>(payloadJson, Opts);
+                return string.IsNullOrWhiteSpace(p?.InvoiceNo) ? null : p!.InvoiceNo;
+            }
+            catch (JsonException)
+            {
+                return null;
             }
         }
     }

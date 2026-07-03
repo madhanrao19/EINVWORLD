@@ -78,5 +78,11 @@ namespace eInvWorld.Models.Background
         public const string StatusSync = "StatusSync";
         public const string FullImport = "FullImport";
         public const string SupplierRefresh = "SupplierRefresh";
+
+        /// <summary>Background retry of an interactive LHDN submission that threw (network blip, LHDN
+        /// outage, transient error). Queued alongside the existing inline error shown to the user, so a
+        /// failure is never silent: it retries automatically, and lands in Admin -&gt; Sync Jobs (Failed)
+        /// for visibility/manual replay if every attempt fails.</summary>
+        public const string SubmitDocument = "SubmitDocument";
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using eInvWorld.Data;
@@ -26,6 +27,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILHDNApiService _lhdnApiService;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
         public InvoiceHeader? InvoiceDetail { get; set; }
         public List<InvoiceLine> InvoiceLines { get; set; } = new();
@@ -45,7 +47,8 @@ namespace EINVWORLD.Pages.Invoices
             DropdownHelper dropdownHelper,
             IPdfGeneratorService pdfGeneratorService,
             UserManager<ApplicationUser> userManager,
-            ILHDNApiService lhdnApiService
+            ILHDNApiService lhdnApiService,
+            EINVWORLD.Services.Audit.IAuditService audit
         )
         {
             _context = context;
@@ -55,6 +58,7 @@ namespace EINVWORLD.Pages.Invoices
             _pdfGeneratorService = pdfGeneratorService;
             _userManager = userManager;
             _lhdnApiService = lhdnApiService;
+            _audit = audit;
         }
 
         public async Task<IActionResult> OnGetAsync(string uuid, bool fromEmail = false)
@@ -125,6 +129,12 @@ namespace EINVWORLD.Pages.Invoices
                 _logger.LogWarning("InvoiceDetails2 view denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, InvoiceDetail.InvoiceNo);
                 return Forbid();
             }
+
+            // Audit CROSS-TENANT reads only: a view by someone whose own companies don't include any party
+            // on this invoice can only be an Admin (the guard above forbids everyone else), and Admin access
+            // to another company's invoice is exactly what the tamper-evident trail should record. Same-tenant
+            // views are deliberately NOT audited — that would flood the chain with routine activity.
+            await AuditCrossTenantViewIfApplicableAsync(InvoiceDetail);
 
             if (!string.IsNullOrEmpty(InvoiceDetail.Currency))
             {
@@ -415,6 +425,51 @@ namespace EINVWORLD.Pages.Invoices
             {
                 _logger.LogError(ex, "❌ Error canceling document with ID: {DocumentId}", documentId);
                 return StatusCode(500, "An error occurred while canceling the document.");
+            }
+        }
+
+        /// <summary>
+        /// Writes an <c>InvoiceViewedCrossTenant</c> audit entry when the current user views an invoice
+        /// none of whose parties (Supplier/Customer/PublicCustomer) belong to the user's own companies.
+        /// After the IDOR guard, that situation can only be an Admin reading another tenant's document —
+        /// the one kind of read the tamper-evident trail should record. Best-effort: an audit/query
+        /// hiccup must never break the page view itself.
+        /// </summary>
+        private async Task AuditCrossTenantViewIfApplicableAsync(InvoiceHeader invoice)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrWhiteSpace(userId)) return;
+
+                var userTins = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.PartyInfo.TIN)
+                    .ToListAsync();
+
+                var partyTins = new[] { invoice.Supplier?.TIN, invoice.Customer?.TIN, invoice.PublicCustomer?.TIN }
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .ToList();
+
+                // Same-tenant view (or an unresolvable edge case) — not audited by design.
+                if (partyTins.Count == 0 || userTins.Any(ut => partyTins.Contains(ut, StringComparer.OrdinalIgnoreCase)))
+                    return;
+
+                await _audit.WriteAsync("InvoiceViewedCrossTenant", new EINVWORLD.Services.Audit.AuditEntry
+                {
+                    Tin = invoice.Supplier?.TIN ?? invoice.Customer?.TIN,
+                    InvoiceNo = invoice.InvoiceNo,
+                    Uuid = invoice.UUID,
+                    NewValueJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        viewerRole = User.IsInRole("Admin") ? "Admin" : "Other",
+                        status = invoice.LHDNStatusId ?? invoice.InternalStatusId,
+                    })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cross-tenant view audit failed for {InvoiceNo} (view itself unaffected).", invoice.InvoiceNo);
             }
         }
     }
