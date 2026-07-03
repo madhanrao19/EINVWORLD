@@ -195,7 +195,10 @@ POST could create a duplicate document).
 
 **Digital signing (v1.1)** — XAdES signing (`DocumentSigningService`) is **built but OFF**
 (`LHDNApiConfig:SigningEnabled=false`). When enabled, signing happens centrally inside
-`SubmitDocumentsAsync` for all submission paths.
+`SubmitDocumentsAsync` for all submission paths. The certificate comes from a pluggable
+**`ICertificateProvider`** (`Services/Signing/`), selected by `LHDNApiConfig:SigningKeyProvider` —
+`"File"` (default) loads the `.p12` from `CertPath`; a vault/HSM provider (e.g. Azure Key Vault) is a
+drop-in registration with no signing-service change (see SECRETS-SETUP.md "Signing-key custody").
 
 ---
 
@@ -355,7 +358,7 @@ blank in files and supplied via env vars / user-secrets.
 | `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200), `AdminSyncPerMinute` (default 10 — stricter per-user cap on `/Admin/InvoiceSync`). |
 | `SyncFailureAlerts` | Optional email when failed sync jobs pile up: `Enabled` (default false), `RecipientEmail`, `Threshold`, `CheckMinutes`, `CooldownHours`. Throttled. |
 | `PDFGenerationSettings:TimeoutSeconds` | Max wait for a DinkToPdf render before abandoning it (default 60) so a hung render can't block the request. |
-| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`. |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |
 | `EmailConfiguration` | SMTP (**`SmtpPassword` secret**), base URLs, per-event subjects, notification toggles. |
 | `PDFGenerationSettings` | `Engine` (DinkToPdf/Puppeteer), `BaseUrl`, render delay, `ChromiumExecutablePath`. |

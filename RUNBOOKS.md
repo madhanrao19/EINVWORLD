@@ -32,6 +32,12 @@ will fail. Unsigned (v1.0) submission is unaffected — this only applies once s
 zero-downtime rotation via the dual `ClientSecret`/`ClientSecret2` slots — see `SECRETS-SETUP.md`
 "Rotation & hygiene".
 
+> **Custody note:** these steps describe the default `File` provider
+> (`LHDNApiConfig:SigningKeyProvider = "File"`). If the key is ever moved to a vault/HSM provider (see
+> SECRETS-SETUP.md "Signing-key custody"), rotation happens in the vault instead — steps 1–3 above are
+> replaced by renewing the certificate there; the recycle in step 4 still applies (the provider caches
+> the certificate for the process lifetime).
+
 ---
 
 ## Runbook 2 — MyInvois (LHDN) is down or heavily rate-limiting

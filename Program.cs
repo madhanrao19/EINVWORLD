@@ -374,6 +374,12 @@ builder.Services.Configure<TaxpayerValidationSettings>(builder.Configuration.Get
 // v1.1 document digital signing — bound from LHDNApiConfig (SigningEnabled/DocVersion/CertPath/CertPass).
 // Disabled by default; flip LHDNApiConfig:SigningEnabled to true in appsettings to activate (see SECRETS-SETUP.md / §14).
 builder.Services.Configure<DigitalSignatureSettings>(builder.Configuration.GetSection("LHDNApiConfig"));
+// Signing-key custody seam: the signing service resolves its certificate from an ICertificateProvider
+// selected by LHDNApiConfig:SigningKeyProvider ("File" default — loads the .p12 from CertPath). A future
+// vault/HSM provider (e.g. Azure Key Vault) is an extra registration here + that config value, with no
+// change to the signing service. Singleton: the certificate caches process-wide (rotation = swap file +
+// iisreset, per the cert-rotation runbook).
+builder.Services.AddSingleton<eInvWorld.Services.Signing.ICertificateProvider, eInvWorld.Services.Signing.FileCertificateProvider>();
 builder.Services.AddScoped<eInvWorld.Services.IDocumentSigningService, eInvWorld.Services.DocumentSigningService>();
 
 // Provider-agnostic AI (FOSS, on-prem; OFF by default). Business logic depends only on IAiService,
