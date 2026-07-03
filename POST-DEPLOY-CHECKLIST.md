@@ -37,6 +37,7 @@ bottom; stop and investigate on the first ❌.
 ## 4. LHDN / MyInvois integration  *(use PREPROD or a disposable doc first)*
 - [ ] **Taxpayer validation** (Admin/Supplier "Validate TIN"). ✅ returns a result; on a 429 it now retries with `Retry-After` instead of erroring (v1.5.2 fix).
 - [ ] **Submit** a document. ✅ UUID/longId persisted; status transitions; audit row written.
+- [ ] **Failed-submission retry:** force a submission failure (e.g. temporarily wrong LHDN BaseUrl on staging). ✅ error message says a retry was queued; a `SubmitDocument` job appears in Admin → Sync Jobs and retries/dead-letters per the backoff schedule.
 - [ ] **Duplicate submit** of the same payload within the dedup window. ✅ replays the prior response — no second LHDN call.
 - [ ] **Manual status sync** (Admin → Invoice Sync). ✅ job queued; Sync Jobs page shows it run/complete.
 - [ ] **Background sync** runs on its own cadence. ✅ statuses update; no worker crash after an app-pool recycle (orphan recovery).
@@ -61,6 +62,7 @@ bottom; stop and investigate on the first ❌.
 
 ## 8. Admin & observability
 - [ ] Admin → **Audit Trail** → Verify Chain. ✅ hash chain intact (tamper-evident).
+- [ ] As Admin, open another company's invoice. ✅ an `InvoiceViewedCrossTenant` entry appears in the Audit Trail (same-tenant views are not audited, by design).
 - [ ] Admin → **Sync Jobs**: retry / cancel a job; dead-letter (Failed) visible. ✅ actions audited.
 - [ ] Admin → **System Health** and **Logs**. ✅ load; `SystemLogs` receiving structured entries with CorrelationId.
 - [ ] Per-request log line appears (Serilog request logging). ✅ one tidy line per request.

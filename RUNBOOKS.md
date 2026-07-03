@@ -44,6 +44,10 @@ or the Admin → Sync Jobs page shows a growing Failed backlog.
   traffic shouldn't trigger 429s in the first place.
 - `SendWithRetryAsync` (submission calls) honours LHDN's `Retry-After` and retries with growing,
   jittered backoff before giving up.
+- An interactive submission that still fails **automatically queues a `SubmitDocument` background retry**
+  (the user is told so in the error message) — it re-attempts on the durable queue's backoff schedule and
+  no-ops safely if the invoice got submitted in the meantime, so a LHDN blip usually heals itself with no
+  operator action at all.
 - `TokenService` caches the OAuth token for its full lifetime with a DB-backed fallback, so a LHDN blip
   doesn't force a token re-fetch storm.
 - The durable background job queue (`DurableSyncJobWorker`) retries failed sync/import jobs on an
@@ -67,7 +71,10 @@ or the Admin → Sync Jobs page shows a growing Failed backlog.
 ## Runbook 3 — Failed-job / dead-letter replay
 
 **When:** a document is stuck in the Failed state on **Admin → Sync Jobs** for a reason that's now fixed
-(e.g. a transient LHDN error, a since-corrected TIN, a since-renewed token).
+(e.g. a transient LHDN error, a since-corrected TIN, a since-renewed token). This covers all job types —
+StatusSync / FullImport / SupplierRefresh **and `SubmitDocument`** (a failed interactive LHDN submission
+whose automatic retries were exhausted; retrying it re-runs the submission itself, and it no-ops safely
+if the invoice was already submitted another way).
 
 **Steps:**
 1. Go to **Admin → Sync Jobs**, filter by `Failed`.
