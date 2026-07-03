@@ -74,8 +74,10 @@ List what you've set:
 dotnet user-secrets list
 ```
 
-> `TrustServerCertificate=True` is fine for a local/in-house SQL Server with a self-signed cert. Avoid it
-> against a server where you can install a proper TLS certificate.
+> Always state **`Encrypt=True`** explicitly in production connection strings so encryption-in-transit is
+> a visible, auditable setting rather than an implicit driver default. `TrustServerCertificate=True` is
+> fine for a local/in-house SQL Server with a self-signed cert. Avoid it against a server where you can
+> install a proper TLS certificate.
 
 ---
 
@@ -87,7 +89,7 @@ Set these as **environment variables on the IIS application** (or the app pool /
 Example (PowerShell, machine-level — adjust scope to your policy):
 
 ```powershell
-[Environment]::SetEnvironmentVariable("ConnectionStrings__DefaultConnection", "Server=...;Database=eInvWorld;User Id=...;Password=...;TrustServerCertificate=True", "Machine")
+[Environment]::SetEnvironmentVariable("ConnectionStrings__DefaultConnection", "Server=...;Database=eInvWorld;User Id=...;Password=...;Encrypt=True;TrustServerCertificate=True", "Machine")
 [Environment]::SetEnvironmentVariable("LHDNApiConfig__ClientSecret",  "prod-secret",   "Machine")
 [Environment]::SetEnvironmentVariable("LHDNApiConfig__ClientSecret2", "prod-secret-2", "Machine")
 [Environment]::SetEnvironmentVariable("Turnstile__SecretKey", "turnstile-secret", "Machine")

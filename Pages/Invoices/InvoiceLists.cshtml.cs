@@ -1410,6 +1410,9 @@ namespace eInvWorld.Pages.Invoices
                 return RedirectToPage();
             }
 
+            // Declared at method scope (not inside the try) so the catch block below can still report
+            // which TIN a failed submission was for when queuing a background retry job.
+            string? submitterTin = null;
             try
             {
                 var invoice = await _context.InvoiceHeaders
@@ -1432,7 +1435,7 @@ namespace eInvWorld.Pages.Invoices
                 // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
                 // ownership check (consistent with Create Invoice); falls back to the session token below
                 // if it can't be resolved.
-                var submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(invoice);
+                submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(invoice);
                 if (!string.IsNullOrWhiteSpace(submitterTin)
                     && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
                 {
@@ -1573,7 +1576,16 @@ namespace eInvWorld.Pages.Invoices
                     _context.InvoiceHeaders.Update(failedInvoice);
                     await _context.SaveChangesAsync();
                 }
-                TempData["ErrorMessage"] = $"Error submitting invoice {invoiceNo}: {ex.Message}";
+
+                // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't
+                // require the user to notice and resubmit — it auto-retries, and lands in
+                // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
+                await _jobTracker.CreateAsync(
+                    submitterTin ?? string.Empty, SyncJobType.SubmitDocument,
+                    User.Identity?.Name ?? "System",
+                    SyncJobPayload.CreateForInvoice(invoiceNo));
+
+                TempData["ErrorMessage"] = $"Error submitting invoice {invoiceNo}: {ex.Message} A retry has been queued automatically.";
                 return RedirectToPage();
             }
         }

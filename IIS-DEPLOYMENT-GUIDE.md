@@ -319,8 +319,13 @@ This is where the passwords go — **not** in `appsettings.json`.
    | Name | Value (example) |
    |---|---|
    | `ASPNETCORE_ENVIRONMENT` | `Production` |
-   | `ConnectionStrings__DefaultConnection` | `Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;TrustServerCertificate=True;MultipleActiveResultSets=true` |
-   | `ConnectionStrings__WebsiteDb` | `Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;TrustServerCertificate=True;MultipleActiveResultSets=true` |
+   | `ConnectionStrings__DefaultConnection` | `Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
+   | `ConnectionStrings__WebsiteDb` | `Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
+
+   > **`Encrypt=True` is stated explicitly** so encryption-in-transit to SQL Server is a visible, auditable
+   > setting rather than an implicit driver default. `TrustServerCertificate=True` accepts the local
+   > server's self-signed certificate (fine for same-host/private-network SQL); if your SQL Server has a
+   > properly trusted certificate, remove it for full chain validation.
    | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
    | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
    | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |

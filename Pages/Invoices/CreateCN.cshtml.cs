@@ -40,6 +40,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly FilePathConfig _filePathConfig;
         private readonly IConfiguration _configuration;
         private readonly IStatusMappingService _statusMappingService;
+        private readonly EINVWORLD.Services.Background.ISyncJobTracker _jobTracker;
 
 
         public CreateCNModel(
@@ -50,7 +51,8 @@ namespace EINVWORLD.Pages.Invoices
             ILogger<CreateModel> logger,
             IOptions<FilePathConfig> filePathConfig,
             IConfiguration configuration,
-            IStatusMappingService statusMappingService)
+            IStatusMappingService statusMappingService,
+            EINVWORLD.Services.Background.ISyncJobTracker jobTracker)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
@@ -61,6 +63,7 @@ namespace EINVWORLD.Pages.Invoices
             _filePathConfig = filePathConfig.Value;
             _configuration = configuration;
             _statusMappingService = statusMappingService;
+            _jobTracker = jobTracker;
         }
 
         [BindProperty]
@@ -728,6 +731,9 @@ namespace EINVWORLD.Pages.Invoices
 
         public async Task<IActionResult> OnPostSubmitDocumentsAsync(string invoiceNo)
         {
+            // Declared at method scope (not inside the try) so the catch block below can still report
+            // which TIN a failed submission was for when queuing a background retry job.
+            string? submitterTin = null;
             try
             {
                 _logger.LogInformation($"[Debug] Submitting Credit Note: {invoiceNo}");
@@ -766,7 +772,7 @@ namespace EINVWORLD.Pages.Invoices
 
                 // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
                 // ownership check (consistent with Create Invoice); falls back to the session token if null.
-                var submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(existingInvoice);
+                submitterTin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(existingInvoice);
                 if (!string.IsNullOrWhiteSpace(submitterTin)
                     && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
                 {
@@ -864,7 +870,16 @@ namespace EINVWORLD.Pages.Invoices
             {
                 await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError($"[Error] Exception during submission of Invoice {invoiceNo}: {ex.Message}");
-                SubmissionResult = $"Error submitting Invoice {invoiceNo}.";
+
+                // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't
+                // require the user to notice and resubmit — it auto-retries, and lands in
+                // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
+                await _jobTracker.CreateAsync(
+                    submitterTin ?? string.Empty, eInvWorld.Models.Background.SyncJobType.SubmitDocument,
+                    User.Identity?.Name ?? "System",
+                    EINVWORLD.Services.Background.SyncJobPayload.CreateForInvoice(invoiceNo));
+
+                SubmissionResult = $"Error submitting Invoice {invoiceNo}. A retry has been queued automatically.";
                 return Page();
             }
         }
