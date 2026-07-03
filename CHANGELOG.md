@@ -1,5 +1,36 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-03 — v1.7.1 (Blueprint-gap remediation, Tier 3a: signing-key custody seam)
+
+> Prepares the signing private key for a custody upgrade (vault/HSM) before signing is ever enabled in
+> production. Pure refactor behind a new seam — signing is still OFF by default and the File-based
+> loading behaviour is preserved verbatim. No schema changes; no breaking changes.
+
+### Added
+- **`ICertificateProvider`** (`Services/Signing/`) — a pluggable source of the XAdES signing certificate,
+  selected by the new **`LHDNApiConfig:SigningKeyProvider`** config key (default `"File"`), mirroring the
+  `IAiProvider` pattern. `DocumentSigningService` now resolves its certificate through this seam and
+  **throws** (never silently no-ops) if signing is enabled but no provider matches.
+- **`FileCertificateProvider`** — the previous `DocumentSigningService.GetCertificate()` file-loading
+  logic extracted verbatim (blank-`CertPath` error, content-root path resolution, missing-file error,
+  `X509CertificateLoader.LoadPkcs12FromFile`, load log line). Registered as a **singleton**, so the
+  certificate caches process-wide — consistent with the cert-rotation runbook's `iisreset` step.
+- **Vault/HSM drop-in documented** (SECRETS-SETUP.md "Signing-key custody", DOCUMENTATION.md, RUNBOOKS.md):
+  a future `AzureKeyVaultCertificateProvider` is one class (`Azure.Security.KeyVault.Certificates` +
+  managed identity), one DI registration, and one config value — no signing-service change.
+- **`DocumentSigningServiceTests`** — disabled pass-through returns the input reference unchanged and
+  never touches a provider; provider selection by name (case-insensitive, blank → `File`); unknown
+  provider throws listing what IS registered; `FileCertificateProvider` blank-path/missing-file errors.
+
+### Notes
+- Deliberate design deviation from the original plan sketch: the provider method is **synchronous**
+  (`GetSigningCertificate()`, not async) because `PrepareDocumentForSubmission` is sync end-to-end and
+  behaviour preservation was the stated priority; the Azure SDK offers sync variants, and the seam can be
+  widened if a strictly-async provider ever appears.
+- The Admin → System Health cert check and `CertExpiryAlertService` still read the cert file directly —
+  they are read-only diagnostics, deliberately independent of the signing path so they can report a
+  broken configuration without throwing.
+
 ## 📅 2026-07-03 — v1.7.0 (Blueprint-gap remediation, Tier 2)
 
 > Second tranche of the blueprint-gap roadmap: submission failures become visible and replayable
