@@ -706,9 +706,17 @@ public class LHDNApiService : ILHDNApiService
                     }
                 }
 
-                _logger.LogWarning("⏳ 429 Too Many Requests. LHDN Penalty: Waiting {Delay} seconds before retry {Attempt}/{Max}...", delaySeconds, i + 1, maxRetries);
+                // The server-told delay is authoritative and is never shortened, but a repeated 429 despite
+                // honouring it (still-congested LHDN) grows the wait per attempt, and jitter is added so
+                // multiple invoices retrying at once don't all wake up in the same instant and re-trigger
+                // the limit together.
+                var growthMultiplier = 1.0 + (0.5 * i); // attempt 0 -> 1x, 1 -> 1.5x, 2 -> 2x
+                var jitterMs = Random.Shared.Next(250, 1500);
+                var waitMs = (int)(delaySeconds * 1000 * growthMultiplier) + 2000 + jitterMs; // + 2s safety buffer
 
-                await Task.Delay((delaySeconds * 1000) + 2000); // Wait penalty + 2s safety buffer
+                _logger.LogWarning("⏳ 429 Too Many Requests. LHDN Penalty: Waiting {WaitMs}ms (server said {Delay}s) before retry {Attempt}/{Max}...", waitMs, delaySeconds, i + 1, maxRetries);
+
+                await Task.Delay(waitMs);
                 continue;
             }
 

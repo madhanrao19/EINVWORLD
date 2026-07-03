@@ -1,0 +1,57 @@
+name: CodeQL
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Weekly sweep catches new CodeQL query-pack rules against unchanged code, not just new PRs.
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze (csharp)
+    runs-on: windows-latest
+    # NON-BLOCKING for now: this is a PRIVATE repo, and uploading CodeQL results requires GitHub
+    # Advanced Security ("Code scanning is not enabled for this repository"). The scan itself runs and
+    # its findings are in the job log/SARIF, but the upload step fails until GHAS is enabled in
+    # Settings -> Security -> Code security and analysis. Once enabled, delete this continue-on-error
+    # so CodeQL becomes a required, blocking check.
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+      # The analyze step reads workflow-run metadata (for SARIF fingerprinting/baseline comparison) even
+      # on a plain push/PR run — without this it fails post-analysis with "Resource not accessible by
+      # integration" despite the scan itself succeeding.
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (from global.json)
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          # security-extended adds broader query coverage beyond the default security-quality set.
+          queries: security-extended
+
+      # C# is a compiled language — CodeQL needs an actual build to trace through, not just a checkout.
+      - name: Restore
+        run: dotnet restore EINVWORLD.sln
+
+      - name: Build
+        run: dotnet build EINVWORLD.sln --configuration Release --no-restore
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"
