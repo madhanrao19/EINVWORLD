@@ -2,15 +2,20 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using eInvWorld.Data;
 using eInvWorld.Models;
 using eInvWorld.Models.Background;
+using eInvWorld.Services.Security;
+using EINVWORLD.Services.Audit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace eInvWorld.Pages.Admin
@@ -22,15 +27,29 @@ namespace eInvWorld.Pages.Admin
         private readonly IConfiguration _config;
         private readonly FilePathConfig _paths;
         private readonly IWebHostEnvironment _env;
+        private readonly PiiEncryptionBackfillService _piiBackfill;
+        private readonly IAuditService _audit;
+        private readonly ILogger<SystemHealthModel> _logger;
 
         public SystemHealthModel(ApplicationDbContext db, IConfiguration config,
-            IOptions<FilePathConfig> paths, IWebHostEnvironment env)
+            IOptions<FilePathConfig> paths, IWebHostEnvironment env,
+            PiiEncryptionBackfillService piiBackfill, IAuditService audit,
+            ILogger<SystemHealthModel> logger)
         {
             _db = db;
             _config = config;
             _paths = paths.Value;
             _env = env;
+            _piiBackfill = piiBackfill;
+            _audit = audit;
+            _logger = logger;
         }
+
+        [TempData]
+        public string? PiiBackfillMessage { get; set; }
+
+        [TempData]
+        public bool PiiBackfillFailed { get; set; }
 
         // App
         public string Version => _config["AppInfo:Version"] ?? "—";
@@ -59,6 +78,34 @@ namespace eInvWorld.Pages.Admin
             LoadKeyRing();
             LoadDisk();
             LoadSigningCert();
+        }
+
+        /// <summary>
+        /// Admin-triggered, idempotent encryption backfill for the field-level PII columns. Take a full
+        /// database backup first (the button warns about this). Re-running is safe: already-encrypted rows
+        /// are skipped. The outcome is written to the tamper-evident audit trail.
+        /// </summary>
+        public async Task<IActionResult> OnPostEncryptPiiAsync(CancellationToken ct)
+        {
+            try
+            {
+                var result = await _piiBackfill.RunAsync(ct);
+                PiiBackfillMessage = result.Summary();
+                PiiBackfillFailed = false;
+                _logger.LogInformation("PII encryption backfill run by {User}: {Summary}",
+                    User.Identity?.Name, PiiBackfillMessage);
+                await _audit.WriteAsync("PiiEncryptionBackfill", new AuditEntry
+                {
+                    NewValueJson = $"{{\"scanned\":{result.TotalScanned},\"encrypted\":{result.TotalEncrypted}}}"
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                PiiBackfillFailed = true;
+                PiiBackfillMessage = $"Backfill failed ({ex.GetType().Name}): {ex.Message}";
+                _logger.LogError(ex, "PII encryption backfill failed.");
+            }
+            return RedirectToPage();
         }
 
         private async Task LoadJobsAsync()
