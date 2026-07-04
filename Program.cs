@@ -97,7 +97,17 @@ builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWO
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.FullImportJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SupplierRefreshJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.Background.SubmitDocumentJobHandler>(); // background retry of a failed interactive submission
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, eInvWorld.Services.Webhooks.WebhookDeliveryJobHandler>(); // durable outbound webhook delivery
 builder.Services.AddHostedService<EINVWORLD.Services.Background.DurableSyncJobWorker>();
+
+// Outbound webhooks to customer ERPs (OFF by default; enable via Webhooks:Enabled + a subscription).
+builder.Services.Configure<eInvWorld.Models.Settings.WebhookSettings>(builder.Configuration.GetSection("Webhooks"));
+builder.Services.AddScoped<eInvWorld.Services.Webhooks.IWebhookDispatchService, eInvWorld.Services.Webhooks.WebhookDispatchService>();
+var webhookTimeout = builder.Configuration.GetValue<int>("Webhooks:DeliveryTimeoutSeconds", 15);
+builder.Services.AddHttpClient(eInvWorld.Services.Webhooks.WebhookDeliveryJobHandler.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(webhookTimeout > 0 ? webhookTimeout : 15);
+});
 
 // Tamper-evident, hash-chained audit trail.
 builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();

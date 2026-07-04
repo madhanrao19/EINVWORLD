@@ -132,6 +132,14 @@ namespace eInvWorld.Models.InputModel
         public bool IsPdfGenerated { get; set; } = false;
         public DateTime? PdfGeneratedAt { get; set; }
 
+        /// <summary>
+        /// The last terminal LHDN status for which an outbound webhook was enqueued. Used by the webhook
+        /// dispatcher to fire exactly once per status transition (e.g. Valid → later Cancelled fires twice,
+        /// re-scanning the same Valid invoice does not). Null until the first webhook is enqueued.
+        /// </summary>
+        [MaxLength(20)]
+        public string? WebhookNotifiedStatus { get; set; }
+
         [Display(Name = "Bank Account Number")]
         [StringLength(150, ErrorMessage = "Bank Account Number cannot exceed 150 characters.")]
         public string? BankAccountNo { get; set; }
