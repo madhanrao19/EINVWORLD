@@ -1,0 +1,126 @@
+@page
+@model eInvWorld.Pages.Admin.WebhooksModel
+@{
+    ViewData["Title"] = "Webhooks";
+}
+
+<h3 class="mb-3">🔔 Webhooks</h3>
+<p class="text-muted">
+    Notify customer ERPs over HTTP when an invoice reaches a terminal LHDN status
+    (Valid / Cancelled / Rejected / Invalid). Deliveries run on the durable job queue, so a receiver being
+    down is retried automatically and surfaces in <a asp-page="/Admin/SyncJobs">Sync Jobs</a>.
+</p>
+
+@if (!Model.WebhooksEnabled)
+{
+    <div class="alert alert-warning py-2">
+        Webhooks are currently <strong>disabled</strong> (<code>Webhooks:Enabled = false</code>). You can
+        pre-register subscriptions here, but no events will be delivered until webhooks are enabled in
+        configuration and the app is restarted.
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert @(Model.StatusIsError ? "alert-danger" : "alert-success") py-2">@Model.StatusMessage</div>
+}
+
+@if (!string.IsNullOrEmpty(Model.RevealedSecret))
+{
+    <div class="alert alert-info">
+        <div class="fw-semibold mb-1">Signing secret for @Model.RevealedFor — shown only once</div>
+        <code class="user-select-all d-inline-block p-1 bg-body-secondary">@Model.RevealedSecret</code>
+        <div class="small mt-1 text-muted">
+            Configure the receiver to verify the <code>X-EInvWorld-Signature</code> header as
+            <code>sha256=HMAC_SHA256(secret, rawBody)</code>. Store this secret securely; it cannot be
+            retrieved later (only rotated).
+        </div>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Register a subscription</div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Create" class="row g-2">
+            <div class="col-md-3">
+                <label class="form-label" asp-for="Input.Tin"></label>
+                <input class="form-control" asp-for="Input.Tin" placeholder="C1234567890" />
+                <span class="text-danger small" asp-validation-for="Input.Tin"></span>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label" asp-for="Input.CallbackUrl"></label>
+                <input class="form-control" asp-for="Input.CallbackUrl" placeholder="https://erp.example.com/hooks/einvworld" />
+                <span class="text-danger small" asp-validation-for="Input.CallbackUrl"></span>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" asp-for="Input.Description"></label>
+                <input class="form-control" asp-for="Input.Description" placeholder="Optional label" />
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary btn-sm">Create &amp; generate secret</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>#</th><th>TIN</th><th>Callback URL</th><th>Enabled</th><th>Last delivery</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Subscriptions.Count == 0)
+        {
+            <tr><td colspan="6" class="text-muted">No subscriptions registered yet.</td></tr>
+        }
+        @foreach (var s in Model.Subscriptions)
+        {
+            <tr>
+                <td>@s.Id</td>
+                <td>@s.Tin</td>
+                <td>
+                    <span class="text-break">@s.CallbackUrl</span>
+                    @if (!string.IsNullOrWhiteSpace(s.Description))
+                    {
+                        <div class="small text-muted">@s.Description</div>
+                    }
+                </td>
+                <td>
+                    <span class="badge @(s.IsEnabled ? "bg-success" : "bg-secondary")">@(s.IsEnabled ? "Enabled" : "Disabled")</span>
+                </td>
+                <td class="small">
+                    @if (s.LastDeliveryAtUtc is null)
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                    else
+                    {
+                        <span>@s.LastDeliveryAtUtc?.ToString("yyyy-MM-dd HH:mm") UTC</span>
+                        <div class="text-muted">@s.LastDeliveryResult</div>
+                    }
+                </td>
+                <td>
+                    <div class="d-flex flex-wrap gap-1">
+                        <form method="post" asp-page-handler="Test" asp-route-id="@s.Id">
+                            <button class="btn btn-outline-secondary btn-sm" type="submit">Test</button>
+                        </form>
+                        <form method="post" asp-page-handler="Toggle" asp-route-id="@s.Id">
+                            <button class="btn btn-outline-secondary btn-sm" type="submit">@(s.IsEnabled ? "Disable" : "Enable")</button>
+                        </form>
+                        <form method="post" asp-page-handler="Rotate" asp-route-id="@s.Id"
+                              onsubmit="return confirm('Rotate the signing secret? The old secret stops working immediately — update the receiver.');">
+                            <button class="btn btn-outline-warning btn-sm" type="submit">Rotate secret</button>
+                        </form>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@s.Id"
+                              onsubmit="return confirm('Delete this subscription? This cannot be undone.');">
+                            <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

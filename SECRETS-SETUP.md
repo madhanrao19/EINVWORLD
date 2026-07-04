@@ -162,3 +162,15 @@ Rows created before v1.7.2 hold plaintext until encrypted. To encrypt them in pl
 
 TIN is **not** encrypted (it is filtered on throughout the app and is a semi-public tax identifier), and
 neither are `Addr1`/city/state/postal (used in reporting and PDFs). See CHANGELOG v1.7.2 for the rationale.
+
+### Webhook signing secrets (v1.8.0)
+
+Outbound webhook subscriptions (Admin → Webhooks) each carry an HMAC signing secret. These are **generated
+by the app** (not entered by you), shown exactly once at create/rotate time, and stored **encrypted** with
+the DataProtection key-ring under a dedicated purpose (`eInvWorld.Secret.FieldEncryption.v1`). There is
+nothing to put in `appsettings`/env vars for them. Two consequences:
+
+- The key-ring backup now also protects these secrets — losing it means re-issuing (rotating) every
+  webhook secret and reconfiguring each receiver.
+- Rotating a secret (Admin → Webhooks → Rotate) invalidates the old one immediately; update the receiver in
+  the same change window.

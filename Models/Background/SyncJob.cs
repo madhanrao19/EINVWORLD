@@ -84,5 +84,11 @@ namespace eInvWorld.Models.Background
         /// failure is never silent: it retries automatically, and lands in Admin -&gt; Sync Jobs (Failed)
         /// for visibility/manual replay if every attempt fails.</summary>
         public const string SubmitDocument = "SubmitDocument";
+
+        /// <summary>Durable delivery of an outbound webhook to a customer ERP when an invoice reaches a
+        /// terminal LHDN status. Reuses the queue's retry/backoff/dead-letter and the Admin -&gt; Sync Jobs
+        /// UI, so a receiver being down is retried automatically and surfaces as Failed if all attempts are
+        /// exhausted.</summary>
+        public const string WebhookDelivery = "WebhookDelivery";
     }
 }

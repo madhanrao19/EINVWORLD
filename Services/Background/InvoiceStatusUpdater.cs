@@ -67,6 +67,11 @@ public class InvoiceStatusUpdater : BackgroundService
                 await UpdateInvoiceStatuses(dbContext, lhdnApiService, tokenService, pdfService, notificationService, syncHelper, stoppingToken);
                 await RunFinalizerAsync(dbContext, pdfService, notificationService);
 
+                // Enqueue outbound webhooks for invoices that reached a terminal LHDN status (no-op unless
+                // Webhooks:Enabled and at least one enabled subscription exists).
+                var webhookDispatch = scope.ServiceProvider.GetRequiredService<eInvWorld.Services.Webhooks.IWebhookDispatchService>();
+                await webhookDispatch.ScanAndEnqueueAsync(dbContext, stoppingToken);
+
                 // Run LHDN import every 10 cycles to avoid overloading the API
                 _cycleCount++;
                 if (_cycleCount % 10 == 0)

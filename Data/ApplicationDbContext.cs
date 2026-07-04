@@ -7,6 +7,7 @@ using eInvWorld.Models.Logs;
 using eInvWorld.Models.Settings;
 using eInvWorld.Models.Templates;
 using eInvWorld.Models.ViewModels;
+using eInvWorld.Models.Webhooks;
 using eInvWorld.Services.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -24,11 +25,18 @@ namespace eInvWorld.Data
         /// </summary>
         public const string PiiProtectionPurpose = "eInvWorld.Pii.FieldEncryption.v1";
 
+        /// <summary>
+        /// DataProtection purpose used to encrypt stored application secrets (currently webhook signing
+        /// secrets). Kept distinct from the PII purpose so the two classes of ciphertext are isolated.
+        /// </summary>
+        public const string SecretProtectionPurpose = "eInvWorld.Secret.FieldEncryption.v1";
+
         private readonly IDataProtector? _piiProtector;
+        private readonly IDataProtector? _secretProtector;
 
         /// <summary>
         /// Runtime constructor. <paramref name="dataProtectionProvider"/> is injected from the app's DI
-        /// container so the PII columns are transparently encrypted at rest. It is optional so the
+        /// container so the PII / secret columns are transparently encrypted at rest. It is optional so the
         /// design-time factory and integration tests can still build the context from options alone
         /// (those paths store/read plaintext, which is correct for a throwaway schema-only database).
         /// </summary>
@@ -37,6 +45,7 @@ namespace eInvWorld.Data
             : base(options)
         {
             _piiProtector = dataProtectionProvider?.CreateProtector(PiiProtectionPurpose);
+            _secretProtector = dataProtectionProvider?.CreateProtector(SecretProtectionPurpose);
         }
 
         public DbSet<LHDNToken> LHDNTokens { get; set; }
@@ -91,6 +100,9 @@ namespace eInvWorld.Data
 
         // --- Tamper-evident audit trail (hash-chained, append-only) ---
         public DbSet<eInvWorld.Models.Audit.AuditLog> AuditLogs { get; set; }
+
+        // --- Outbound webhook subscriptions (customer ERP callbacks) ---
+        public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
 
         //for dashboard
         public DbSet<InvoiceTopProduct> InvoiceTopProducts { get; set; }
@@ -333,6 +345,17 @@ namespace eInvWorld.Data
             Encrypt<PublicCustomer>(c => c.BankAccountNo);
 
             Encrypt<InvoiceTemplate>(t => t.BankAccountNo);
+
+            // Webhook subscription: encrypt the HMAC signing secret at rest (distinct secret protector),
+            // and index by TIN for the dispatcher's per-company lookup.
+            modelBuilder.Entity<WebhookSubscription>(b =>
+            {
+                b.HasIndex(s => s.Tin);
+                var secret = b.Property(s => s.Secret);
+                secret.HasColumnType("nvarchar(max)");
+                if (_secretProtector is not null)
+                    secret.HasConversion(new ProtectedStringConverter(_secretProtector));
+            });
         }
     }
 }
