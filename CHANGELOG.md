@@ -1,5 +1,17 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-04 — v1.8.1 (Webhook config hygiene warnings)
+
+> Small post-roadmap hardening. No schema/behaviour change.
+
+### Added
+- **`ProductionConfigValidator`** now emits startup **warnings** (never blockers) when
+  `Webhooks:Enabled=true` in Production with the SSRF guard (`BlockPrivateNetworks`) or TLS requirement
+  (`RequireHttps`) turned off, or with a non-positive `DeliveryTimeoutSeconds`. Surfaces an insecure
+  webhook configuration as one clear line at boot instead of a silent runtime surprise.
+- **`ProductionConfigValidatorWebhookTests`** — confirms the webhook checks warn but never fail startup,
+  and are ignored when webhooks are disabled.
+
 ## 📅 2026-07-04 — v1.8.0 (Blueprint-gap remediation, Tier 3c: outbound webhooks)
 
 > Adds an outbound webhook subsystem so customer ERPs can be notified over HTTP when an invoice reaches a
