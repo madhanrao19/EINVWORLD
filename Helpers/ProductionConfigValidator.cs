@@ -73,6 +73,21 @@ namespace EINVWORLD.Helpers
                     errors.Add("AI:Enabled=true but AI:Model is empty (e.g. gemma3:12b).");
             }
 
+            // ── Outbound webhooks (optional, off by default) ──────────────────────────────
+            // No required secrets (per-subscription secrets are generated in-app), so these are
+            // security-hygiene warnings, not blockers: flag when the SSRF/TLS guards are turned off
+            // in Production, since webhook payloads carry invoice identifiers and go to
+            // operator-configured URLs.
+            if (config.GetValue("Webhooks:Enabled", false))
+            {
+                if (config.GetValue("Webhooks:DeliveryTimeoutSeconds", 15) <= 0)
+                    warnings.Add("Webhooks:Enabled=true but Webhooks:DeliveryTimeoutSeconds is <= 0 — the delivery timeout falls back to 15s.");
+                if (isProduction && !config.GetValue("Webhooks:RequireHttps", true))
+                    warnings.Add("Webhooks:Enabled=true with Webhooks:RequireHttps=false in Production — signed payloads may be sent over plain HTTP. Only disable HTTPS for a trusted internal receiver.");
+                if (isProduction && !config.GetValue("Webhooks:BlockPrivateNetworks", true))
+                    warnings.Add("Webhooks:Enabled=true with Webhooks:BlockPrivateNetworks=false in Production — the SSRF guard is off. Only disable it for a trusted internal receiver on a private network.");
+            }
+
             foreach (var w in warnings)
                 Log.Warning("⚠️ Config check: {Warning}", w);
 
