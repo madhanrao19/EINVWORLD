@@ -72,3 +72,29 @@
         </div>
     </div>
 </div>
+
+<div class="card mt-3">
+    <div class="card-header fw-semibold">🔐 PII encryption (maintenance)</div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(Model.PiiBackfillMessage))
+        {
+            <div class="alert @(Model.PiiBackfillFailed ? "alert-danger" : "alert-success") py-2">
+                @Model.PiiBackfillMessage
+            </div>
+        }
+        <p class="mb-2 small text-muted">
+            Bank account numbers and secondary/tertiary address lines are encrypted at rest with the
+            DataProtection key-ring. New and edited records are encrypted automatically. Use this one-time
+            action to encrypt <strong>existing</strong> rows that predate this feature. It is safe to run
+            more than once — already-encrypted rows are skipped.
+        </p>
+        <div class="alert alert-warning py-2 small mb-2">
+            <strong>Before running:</strong> take a full database backup and confirm the DataProtection
+            key-ring folder is backed up. Losing the key-ring makes these columns permanently unreadable.
+        </div>
+        <form method="post" asp-page-handler="EncryptPii"
+              onsubmit="return confirm('Encrypt existing PII values now? Ensure a database backup has been taken first. This is safe to re-run.');">
+            <button type="submit" class="btn btn-outline-primary btn-sm">Encrypt existing PII</button>
+        </form>
+    </div>
+</div>

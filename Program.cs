@@ -382,6 +382,10 @@ builder.Services.Configure<DigitalSignatureSettings>(builder.Configuration.GetSe
 builder.Services.AddSingleton<eInvWorld.Services.Signing.ICertificateProvider, eInvWorld.Services.Signing.FileCertificateProvider>();
 builder.Services.AddScoped<eInvWorld.Services.IDocumentSigningService, eInvWorld.Services.DocumentSigningService>();
 
+// One-time, admin-triggered PII encryption backfill (Admin -> System Health). Scoped: uses the scoped
+// DbContext. The field-level encryption itself is wired into ApplicationDbContext via DataProtection.
+builder.Services.AddScoped<eInvWorld.Services.Security.PiiEncryptionBackfillService>();
+
 // Provider-agnostic AI (FOSS, on-prem; OFF by default). Business logic depends only on IAiService,
 // never on a concrete backend, so OpenAI/Azure/Claude/Gemini can be added as extra IAiProvider
 // registrations without touching callers. Configuration lives entirely in the "AI" section.
