@@ -916,8 +916,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("BankAccountNo")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BankName")
                         .HasMaxLength(100)
@@ -1253,12 +1252,10 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Addr2")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Addr3")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Attention")
                         .HasMaxLength(200)
@@ -1269,8 +1266,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("BankAccountNo")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BankName")
                         .HasMaxLength(100)
@@ -1415,12 +1411,10 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Addr2")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Addr3")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Attention")
                         .HasMaxLength(200)
@@ -1431,8 +1425,7 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("BankAccountNo")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BankName")
                         .HasMaxLength(100)

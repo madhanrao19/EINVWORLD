@@ -281,6 +281,16 @@ Production** — outside the App folder so redeploys don't wipe them). Startup *
 (`ProductionConfigValidator`) on missing key ring / blank connection string / misconfigured
 signing / localhost URLs in Production, etc.
 
+**Field-level PII encryption** (v1.7.2) — bank account numbers (`BankAccountNo`) and secondary/tertiary
+address lines (`Addr2`/`Addr3`) are encrypted at rest via an EF Core value converter
+(`Services/Security/ProtectedStringConverter`) backed by the DataProtection key-ring (purpose
+`eInvWorld.Pii.FieldEncryption.v1`). Encryption is transparent on read/write; reads fall back to plaintext
+for not-yet-migrated rows. Existing rows are encrypted by a one-time, idempotent, admin-triggered backfill
+(**Admin → System Health → "Encrypt existing PII"**, audited as `PiiEncryptionBackfill`). TIN and
+`Addr1`/city/state/postal are deliberately **not** encrypted (TIN is filtered on throughout; the primary
+address feeds reporting/PDFs). This makes the key-ring load-bearing for data — **back it up** (see
+SECRETS-SETUP.md and RUNBOOKS.md Runbook 4).
+
 **Secrets** — never committed; supplied via user-secrets (dev) or IIS environment variables (server).
 See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
