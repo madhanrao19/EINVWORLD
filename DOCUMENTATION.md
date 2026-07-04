@@ -234,8 +234,8 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 
 | Service | Purpose |
 |---|---|
-| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw — reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view). |
-| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. |
+| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw — reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
+| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`). |
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
 | **`RecurringInvoiceWorker`** | Generates invoices from `RecurringProfile`s on schedule (roll-forward, no catch-up storms). |
 | **`TokenRenewalService`** | Keeps per-TIN LHDN tokens fresh. |
@@ -323,8 +323,22 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 - **REST validate API** — `POST /api/import/validate` (header `X-Api-Key`) for an external ERP.
 - **Legacy "Extract Invoice"** — posts a PDF to an external OCR service (`ExtractInvoice:ServiceUrl`).
 
+**Outbound webhooks (optional, OFF by default)**
+- When an invoice reaches a terminal LHDN status (Valid / Cancelled / Rejected / Invalid), a signed HTTP
+  callback is delivered to each enabled subscription for the invoice's supplier/customer TIN — so a
+  customer ERP learns of the change without polling or relying on email.
+- **Durable delivery**: each callback is a `WebhookDelivery` job on the durable queue, so a receiver being
+  down is retried with backoff and dead-letters into **Sync Jobs** (no bespoke retry code).
+- **Signed**: `X-EInvWorld-Signature: sha256=HMAC_SHA256(secret, rawBody)` (plus `X-EInvWorld-Event` and
+  `X-EInvWorld-Delivery`). Receivers must verify the signature and treat `invoiceNo`+`status` as an
+  idempotency key (delivery is at-least-once).
+- **SSRF-guarded**: callback URLs must be absolute http(s), HTTPS by default, and (default) may not resolve
+  to loopback/private/link-local addresses (`Webhooks:BlockPrivateNetworks`).
+- **Admin → Webhooks** manages subscriptions (register / rotate secret / enable-disable / delete / test).
+  Secrets are generated server-side, shown once, and stored encrypted (DataProtection). Config: `Webhooks`.
+
 **Admin & ops** — user/company management, resources (CMS), system logs, **Sync Jobs**, **Audit Trail**,
-**System Health**, global theme, dashboards/KPIs.
+**System Health**, **Webhooks**, global theme, dashboards/KPIs.
 
 ---
 
@@ -367,6 +381,7 @@ blank in files and supplied via env vars / user-secrets.
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support. `Enabled` (default `true`) makes the app honour `X-Forwarded-Proto` (original scheme = https → correct Secure cookies, HSTS, no redirect loop) and `X-Forwarded-For` (real client IP → correct per-IP rate limiting + audit/log IPs). `KnownProxies` (extra trusted proxy IPs beyond loopback) and `ForwardLimit` (hops, default 1). Only headers from a known proxy are trusted. |
 | `RateLimiting` | Inbound per-IP limiter: `Enabled`, `PermitsPerMinute` (default 1200), `AdminSyncPerMinute` (default 10 — stricter per-user cap on `/Admin/InvoiceSync`). |
 | `SyncFailureAlerts` | Optional email when failed sync jobs pile up: `Enabled` (default false), `RecipientEmail`, `Threshold`, `CheckMinutes`, `CooldownHours`. Throttled. |
+| `Webhooks` | Outbound customer-ERP webhooks (default OFF): `Enabled`, `DeliveryTimeoutSeconds` (default 15), `BlockPrivateNetworks` (SSRF guard, default true), `RequireHttps` (default true). Subscriptions managed in Admin → Webhooks; signing secrets encrypted at rest. |
 | `PDFGenerationSettings:TimeoutSeconds` | Max wait for a DinkToPdf render before abandoning it (default 60) so a hung render can't block the request. |
 | `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`. |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |

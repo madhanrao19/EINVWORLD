@@ -1089,6 +1089,10 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("WebhookNotifiedStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("InvoiceNo");
 
                     b.HasIndex("CreatedDate");
@@ -2690,6 +2694,56 @@ namespace eInvWorld.Migrations
                         .HasColumnType("int");
 
                     b.ToTable("InvoiceTypeBreakdowns");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.Webhooks.WebhookSubscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CallbackUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastDeliveryAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastDeliveryResult")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Secret")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tin")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Tin");
+
+                    b.ToTable("WebhookSubscriptions");
                 });
 
             modelBuilder.Entity("BuyerSupplier", b =>

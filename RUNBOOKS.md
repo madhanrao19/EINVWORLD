@@ -127,3 +127,36 @@ no rush and no downtime.
 **Note:** TIN is intentionally left in plaintext (it's filtered on throughout the app and is a semi-public
 tax identifier); so are `Addr1`/city/state/postal (used for reporting and PDF rendering). This is by
 design — see CHANGELOG v1.7.2.
+
+---
+
+## Runbook 5 — Outbound webhooks (setup & troubleshooting)
+
+**When:** a customer's ERP wants an HTTP callback when their invoices reach a terminal LHDN status
+(Valid / Cancelled / Rejected / Invalid), instead of (or as well as) email.
+
+**Enable:**
+1. Set `Webhooks:Enabled = true` (env var `Webhooks__Enabled`) and `iisreset`. While disabled you can
+   still pre-register subscriptions, but nothing is delivered.
+2. **Admin → Webhooks → Register a subscription**: enter the company **TIN**, the receiver's **callback
+   URL** (HTTPS by default), and an optional label. A **signing secret is generated and shown once** — copy
+   it and configure it on the receiver. It is stored encrypted and can never be shown again (only rotated).
+3. Give the receiver these verification rules: read `X-EInvWorld-Signature` (`sha256=<hex>`) and confirm it
+   equals `HMAC_SHA256(secret, rawRequestBody)`; treat `invoiceNo` + `status` as an idempotency key
+   (delivery is **at-least-once**).
+4. Click **Test** to enqueue a synthetic event — check the receiver logged it and that **Admin → Sync Jobs**
+   shows the `WebhookDelivery` job as Completed.
+
+**Troubleshoot a failing webhook:**
+1. **Admin → Sync Jobs → filter Failed** — `WebhookDelivery` jobs carry the HTTP status or transport error
+   in the `Message` column, and the subscription row (Admin → Webhooks) shows the last delivery result.
+2. A receiver being down is **retried automatically** with backoff; once it recovers, use **Retry All
+   Failed** (Runbook 3) to flush the backlog immediately.
+3. `Webhook callback URL resolves to a private/reserved address` means the SSRF guard blocked it. If the
+   receiver legitimately lives on a private network, set `Webhooks:BlockPrivateNetworks = false` (and, for
+   plain-HTTP internal receivers, `Webhooks:RequireHttps = false`) and `iisreset`.
+4. **Rotate a leaked secret** in Admin → Webhooks → **Rotate secret**. The old secret stops working
+   immediately, so update the receiver in the same change window.
+
+**Related:** the signing secrets are encrypted with the DataProtection key-ring — losing the key-ring means
+re-issuing every secret. Keep the key-ring backed up (SECRETS-SETUP.md).
