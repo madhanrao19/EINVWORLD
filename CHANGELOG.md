@@ -1,5 +1,49 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-04 — v1.8.0 (Blueprint-gap remediation, Tier 3c: outbound webhooks)
+
+> Adds an outbound webhook subsystem so customer ERPs can be notified over HTTP when an invoice reaches a
+> terminal LHDN status (Valid / Cancelled / Rejected / Invalid) — previously status changes reached
+> customers only by email. OFF by default; additive schema (new table + one nullable column); no breaking
+> changes. This is the final item of the blueprint-gap roadmap.
+
+### Added
+- **`WebhookSubscription`** entity + **migration `20260704000000_AddWebhookSubscriptions`** (4 artifacts +
+  idempotent `Apply_*.sql`): per-company (TIN) callback URL, HMAC signing secret (encrypted at rest via a
+  dedicated DataProtection purpose), enabled flag, and last-delivery diagnostics. Also adds a nullable
+  `InvoiceHeaders.WebhookNotifiedStatus` dedup marker.
+- **`IWebhookDispatchService`** — scans for invoices at a terminal status not yet notified for that status
+  and enqueues one durable **`SyncJobType.WebhookDelivery`** job per matching enabled subscription (matched
+  by supplier or customer TIN). Runs inside the existing `InvoiceStatusUpdater` loop; fires once per status
+  transition via `WebhookNotifiedStatus`.
+- **`WebhookDeliveryJobHandler`** — delivers one webhook: builds the JSON payload, signs it
+  (`X-EInvWorld-Signature: sha256=HMAC_SHA256(secret, rawBody)`), and POSTs via a named `IHttpClientFactory`
+  client with a configurable timeout. Non-2xx / transport failure throws so the durable queue retries with
+  backoff and dead-letters — visible/replayable in **Admin → Sync Jobs**.
+- **`WebhookSigner`** — the HMAC-SHA256 hex signature helper (receivers verify with it).
+- **SSRF mitigation** — callback URLs are validated: absolute http(s), HTTPS required by default, and
+  (default) rejected if they resolve to a loopback/private/link-local address
+  (`Webhooks:BlockPrivateNetworks`).
+- **Admin → Webhooks** UI — register / edit / enable-disable / rotate-secret / delete / send-test. The
+  signing secret is generated server-side and shown **exactly once** (on create or rotate); all mutating
+  actions are audited (`WebhookSubscriptionCreated`, `WebhookSecretRotated`, `WebhookSubscription
+  Enabled/Disabled/Deleted`, `WebhookTestSent`).
+- **Config section `Webhooks`** (`Enabled` (default false), `DeliveryTimeoutSeconds`,
+  `BlockPrivateNetworks`, `RequireHttps`) and a second DataProtection purpose
+  (`eInvWorld.Secret.FieldEncryption.v1`) for the signing secret.
+- **Tests** — `WebhookSignerTests` (HMAC vector, determinism, prefix, tamper-sensitivity) and real-SQL
+  integration tests for the delivery handler (success marks the subscription; non-2xx throws for retry;
+  disabled subscription is a no-op and never contacts the receiver).
+
+### Delivery semantics
+- **At-least-once.** A crash between enqueue and the dedup-marker commit can re-enqueue, so receivers must
+  treat `invoiceNo` + `status` as an idempotency key and verify the HMAC signature before acting.
+
+### Operational notes
+- The signing secrets are encrypted with the DataProtection key-ring, so the key-ring remains a critical
+  backup target (see SECRETS-SETUP.md). Rotating a secret invalidates the old one immediately — update the
+  receiver in step.
+
 ## 📅 2026-07-04 — v1.7.2 (Blueprint-gap remediation, Tier 3b: field-level PII encryption)
 
 > Encrypts the most sensitive free-text PII at rest — bank account numbers and secondary/tertiary address

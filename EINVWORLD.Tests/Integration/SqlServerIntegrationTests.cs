@@ -1,13 +1,21 @@
 using System;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using eInvWorld.Data;
+using eInvWorld.Models.Background;
+using eInvWorld.Models.Settings;
+using eInvWorld.Models.Webhooks;
 using eInvWorld.Services.Security;
+using eInvWorld.Services.Webhooks;
 using EINVWORLD.Helpers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace EINVWORLD.Tests.Integration
@@ -183,6 +191,139 @@ namespace EINVWORLD.Tests.Integration
                 .FirstAsync();
             Assert.Equal(storedBefore, storedAfter); // untouched on the second pass
             Assert.Equal(plaintext, protector.Unprotect(storedAfter!));
+        }
+
+        // ── Webhook delivery handler: loads the subscription, signs, POSTs (raw HTTP stubbed) ─────
+        [Fact]
+        public async Task WebhookDelivery_Success_MarksSubscription_AndReturnsDelivered()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var sub = new WebhookSubscription
+            {
+                Tin = $"C{Guid.NewGuid():N}".Substring(0, 12),
+                CallbackUrl = "https://receiver.example.com/hook",
+                Secret = "test-secret",
+                IsEnabled = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            ctx.WebhookSubscriptions.Add(sub);
+            await ctx.SaveChangesAsync();
+
+            var handler = BuildWebhookHandler(ctx, HttpStatusCode.OK, out var seenSignature);
+            var job = WebhookJob(sub.Id, "INV-WH-1", "Valid");
+
+            var msg = await handler.ExecuteAsync(job, CancellationToken.None);
+
+            Assert.Contains("Delivered", msg);
+            Assert.StartsWith("sha256=", seenSignature.Value); // the receiver got a signature header
+            var reloaded = await ctx.WebhookSubscriptions.AsNoTracking().FirstAsync(s => s.Id == sub.Id);
+            Assert.Equal("200 OK", reloaded.LastDeliveryResult);
+            Assert.NotNull(reloaded.LastDeliveryAtUtc);
+        }
+
+        [Fact]
+        public async Task WebhookDelivery_Non2xx_Throws_ForRetry()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var sub = new WebhookSubscription
+            {
+                Tin = $"C{Guid.NewGuid():N}".Substring(0, 12),
+                CallbackUrl = "https://receiver.example.com/hook",
+                Secret = "test-secret",
+                IsEnabled = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            ctx.WebhookSubscriptions.Add(sub);
+            await ctx.SaveChangesAsync();
+
+            var handler = BuildWebhookHandler(ctx, HttpStatusCode.InternalServerError, out _);
+            var job = WebhookJob(sub.Id, "INV-WH-2", "Valid");
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => handler.ExecuteAsync(job, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task WebhookDelivery_DisabledSubscription_IsNoOp()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var sub = new WebhookSubscription
+            {
+                Tin = $"C{Guid.NewGuid():N}".Substring(0, 12),
+                CallbackUrl = "https://receiver.example.com/hook",
+                Secret = "test-secret",
+                IsEnabled = false, // disabled → nothing should be sent
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            ctx.WebhookSubscriptions.Add(sub);
+            await ctx.SaveChangesAsync();
+
+            var handler = BuildWebhookHandler(ctx, HttpStatusCode.OK, out var seenSignature, out var sendCount);
+            var job = WebhookJob(sub.Id, "INV-WH-3", "Valid");
+
+            var msg = await handler.ExecuteAsync(job, CancellationToken.None);
+
+            Assert.Contains("disabled", msg, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(0, sendCount.Value); // the receiver was never contacted
+        }
+
+        private static SyncJob WebhookJob(int subId, string invoiceNo, string status) => new()
+        {
+            Id = 1,
+            Tin = "C-test",
+            JobType = SyncJobType.WebhookDelivery,
+            PayloadJson = EINVWORLD.Services.Background.SyncJobPayload.CreateForWebhook(subId, invoiceNo, status, "uuid-1")
+        };
+
+        private static WebhookDeliveryJobHandler BuildWebhookHandler(
+            ApplicationDbContext ctx, HttpStatusCode code, out StrongBox<string> seenSignature) =>
+            BuildWebhookHandler(ctx, code, out seenSignature, out _);
+
+        private static WebhookDeliveryJobHandler BuildWebhookHandler(
+            ApplicationDbContext ctx, HttpStatusCode code, out StrongBox<string> seenSignature, out StrongBox<int> sendCount)
+        {
+            var sig = new StrongBox<string>("");
+            var count = new StrongBox<int>(0);
+            seenSignature = sig;
+            sendCount = count;
+
+            var factory = new StubHttpClientFactory(req =>
+            {
+                count.Value++;
+                sig.Value = req.Headers.TryGetValues("X-EInvWorld-Signature", out var v)
+                    ? string.Join("", v) : "";
+                return new HttpResponseMessage(code);
+            });
+
+            // BlockPrivateNetworks=false keeps the test hermetic (no DNS resolution of example.com).
+            var settings = Options.Create(new WebhookSettings { BlockPrivateNetworks = false, RequireHttps = false });
+            return new WebhookDeliveryJobHandler(ctx, factory, settings, NullLogger<WebhookDeliveryJobHandler>.Instance);
+        }
+
+        private sealed class StrongBox<T>
+        {
+            public T Value;
+            public StrongBox(T value) => Value = value;
+        }
+
+        private sealed class StubHttpClientFactory : IHttpClientFactory
+        {
+            private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+            public StubHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
+            public HttpClient CreateClient(string name) => new(new StubHandler(_responder));
+
+            private sealed class StubHandler : HttpMessageHandler
+            {
+                private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+                public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
+                protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+                    => Task.FromResult(_responder(request));
+            }
         }
 
         /// <summary>

@@ -27,6 +27,11 @@ namespace EINVWORLD.Services.Background
         public int? LookbackDays { get; set; }
         public string? InvoiceNo { get; set; }
 
+        // ── Webhook delivery (SyncJobType.WebhookDelivery) ──────────────────────────────────────
+        public int? WebhookSubscriptionId { get; set; }
+        public string? Status { get; set; }
+        public string? Uuid { get; set; }
+
         private static readonly JsonSerializerOptions Opts = new() { PropertyNameCaseInsensitive = true };
 
         public static string Create(int lookbackDays) =>
@@ -35,6 +40,24 @@ namespace EINVWORLD.Services.Background
         /// <summary>Payload for a <see cref="SyncJobType.SubmitDocument"/> retry job.</summary>
         public static string CreateForInvoice(string invoiceNo) =>
             JsonSerializer.Serialize(new SyncJobPayload { InvoiceNo = invoiceNo });
+
+        /// <summary>Payload for a <see cref="SyncJobType.WebhookDelivery"/> job.</summary>
+        public static string CreateForWebhook(int subscriptionId, string invoiceNo, string status, string? uuid) =>
+            JsonSerializer.Serialize(new SyncJobPayload
+            {
+                WebhookSubscriptionId = subscriptionId,
+                InvoiceNo = invoiceNo,
+                Status = status,
+                Uuid = uuid
+            });
+
+        /// <summary>Deserializes the full payload, or null if absent/unparsable.</summary>
+        public static SyncJobPayload? Parse(string? payloadJson)
+        {
+            if (string.IsNullOrWhiteSpace(payloadJson)) return null;
+            try { return JsonSerializer.Deserialize<SyncJobPayload>(payloadJson, Opts); }
+            catch (JsonException) { return null; }
+        }
 
         /// <summary>Reads LookbackDays from the job payload, falling back to <paramref name="fallback"/>.</summary>
         public static int LookbackOrDefault(string? payloadJson, int fallback)
