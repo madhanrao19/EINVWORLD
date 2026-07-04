@@ -7,6 +7,8 @@ using eInvWorld.Models.Logs;
 using eInvWorld.Models.Settings;
 using eInvWorld.Models.Templates;
 using eInvWorld.Models.ViewModels;
+using eInvWorld.Services.Security;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -15,9 +17,26 @@ namespace eInvWorld.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        /// <summary>
+        /// DataProtection purpose used to encrypt the field-level PII columns (bank account numbers and
+        /// secondary/tertiary address lines). Stable and versioned — changing it makes existing ciphertext
+        /// unreadable, so it must never change without a re-encryption migration.
+        /// </summary>
+        public const string PiiProtectionPurpose = "eInvWorld.Pii.FieldEncryption.v1";
+
+        private readonly IDataProtector? _piiProtector;
+
+        /// <summary>
+        /// Runtime constructor. <paramref name="dataProtectionProvider"/> is injected from the app's DI
+        /// container so the PII columns are transparently encrypted at rest. It is optional so the
+        /// design-time factory and integration tests can still build the context from options alone
+        /// (those paths store/read plaintext, which is correct for a throwaway schema-only database).
+        /// </summary>
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options,
+                                    IDataProtectionProvider? dataProtectionProvider = null)
             : base(options)
         {
+            _piiProtector = dataProtectionProvider?.CreateProtector(PiiProtectionPurpose);
         }
 
         public DbSet<LHDNToken> LHDNTokens { get; set; }
@@ -269,6 +288,51 @@ namespace eInvWorld.Data
                 .WithOne()
                 .HasForeignKey(t => t.InvoiceTemplateLineId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            ConfigureEncryptedPii(modelBuilder);
+        }
+
+        /// <summary>
+        /// Encrypts a small, deliberately-scoped set of sensitive free-text PII columns at rest:
+        /// bank account numbers and the secondary/tertiary address lines. These fields are never used in a
+        /// query predicate (no WHERE/JOIN/Any), so transparent value-converter encryption is safe.
+        /// <para>
+        /// TIN, Addr1, city/state/postal are intentionally left in plaintext — TIN is filtered on throughout
+        /// (encrypting it would break every tenant query), and the primary address/locality fields feed
+        /// reporting and PDF rendering. See the Tier 3b remediation plan.
+        /// </para>
+        /// <para>
+        /// The store columns are widened to <c>nvarchar(max)</c> because ciphertext is far longer than the
+        /// 150-char plaintext limit. The converter is only attached when a DataProtector is available
+        /// (runtime); the design-time/test model keeps the widened columns but stores plaintext.
+        /// </para>
+        /// </summary>
+        private void ConfigureEncryptedPii(ModelBuilder modelBuilder)
+        {
+            void Encrypt<TEntity>(System.Linq.Expressions.Expression<Func<TEntity, string?>> selector)
+                where TEntity : class
+            {
+                var property = modelBuilder.Entity<TEntity>().Property(selector);
+                property.HasColumnType("nvarchar(max)");
+                // The CLR property keeps its [StringLength(150)] for plaintext input validation, but the
+                // stored ciphertext is far longer — clear the inferred max-length facet so EF never sizes
+                // the parameter to 150 and truncates the ciphertext.
+                property.Metadata.SetMaxLength(null);
+                if (_piiProtector is not null)
+                    property.HasConversion(new ProtectedStringConverter(_piiProtector));
+            }
+
+            Encrypt<InvoiceHeader>(h => h.BankAccountNo);
+
+            Encrypt<PartyInfo>(p => p.Addr2);
+            Encrypt<PartyInfo>(p => p.Addr3);
+            Encrypt<PartyInfo>(p => p.BankAccountNo);
+
+            Encrypt<PublicCustomer>(c => c.Addr2);
+            Encrypt<PublicCustomer>(c => c.Addr3);
+            Encrypt<PublicCustomer>(c => c.BankAccountNo);
+
+            Encrypt<InvoiceTemplate>(t => t.BankAccountNo);
         }
     }
 }

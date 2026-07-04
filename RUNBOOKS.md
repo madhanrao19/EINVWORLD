@@ -94,3 +94,36 @@ if the invoice was already submitted another way).
 6. All retry/cancel/bulk-retry actions are written to the tamper-evident audit trail
    (**Admin → Audit Trail**) — `SyncJobRetried`, `SyncJobCancelled`, `SyncJobsBulkRetried` — so there's a
    record of who replayed what and when.
+
+---
+
+## Runbook 4 — Encrypt existing PII (one-time backfill)
+
+**When:** immediately after upgrading to v1.7.2 (or later) for the first time, to encrypt bank account
+numbers and secondary/tertiary address lines that were stored as plaintext before this release. New and
+edited records are encrypted automatically — this is only for pre-existing rows.
+
+**What's protected already (no action needed):** from v1.7.2 on, `BankAccountNo` and `Addr2`/`Addr3` on
+suppliers/buyers/invoices/templates are encrypted at rest transparently using the DataProtection key-ring.
+Reads are lenient, so the app keeps working with a mix of encrypted and not-yet-encrypted rows — there is
+no rush and no downtime.
+
+**Before you start:**
+1. **Take a full database backup.** (Additive-only, but back up anyway per policy.)
+2. Confirm the DataProtection key-ring folder (`DataProtection:KeyRingPath`, e.g. `E:\EINVWORLD\Keys`) is
+   backed up. **Losing the key-ring makes the encrypted columns permanently unreadable** — see
+   SECRETS-SETUP.md "Field-level PII encryption".
+
+**Steps:**
+1. Go to **Admin → System Health**.
+2. In the **🔐 PII encryption (maintenance)** card, read the warning, then click **"Encrypt existing PII"**
+   and confirm.
+3. The page reports how many values were scanned and encrypted. The action is **idempotent** — rows that
+   are already encrypted are skipped — so if it's interrupted (app-pool recycle, timeout on a very large
+   database) just **run it again**; it resumes where it left off and a fully-encrypted database is a no-op.
+4. Verify: open a supplier/buyer or invoice with a bank account number in the UI — it displays normally
+   (decrypted transparently). The run is recorded in **Admin → Audit Trail** as `PiiEncryptionBackfill`.
+
+**Note:** TIN is intentionally left in plaintext (it's filtered on throughout the app and is a semi-public
+tax identifier); so are `Addr1`/city/state/postal (used for reporting and PDF rendering). This is by
+design — see CHANGELOG v1.7.2.

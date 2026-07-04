@@ -130,3 +130,35 @@ The signing service gets its certificate from a pluggable **`ICertificateProvide
   `LHDNApiConfig:KeyVaultCertName`, register it in `Program.cs`, and set
   `SigningKeyProvider = "AzureKeyVault"`. The signing service and its callers need **no changes** —
   selection is by provider name, mirroring the AI provider pattern.
+
+## Field-level PII encryption & the DataProtection key-ring (IMPORTANT)
+
+As of v1.7.2 a small set of sensitive free-text columns — **bank account numbers** (`BankAccountNo`) and
+the **secondary/tertiary address lines** (`Addr2`, `Addr3`) — are **encrypted at rest** using the same
+ASP.NET Core DataProtection key-ring configured by `DataProtection:KeyRingPath`. Encryption/decryption is
+transparent: new and edited records are encrypted automatically.
+
+This raises the stakes on the key-ring:
+
+- **The key-ring is now load-bearing for data, not just sessions.** Previously, losing the key-ring only
+  logged users out and broke 2FA/antiforgery. Now it **also makes the encrypted PII columns permanently
+  unreadable.** Treat the key-ring folder (`DataProtection:KeyRingPath`, e.g. `E:\EINVWORLD\Keys`) as a
+  **critical backup target** — back it up whenever you back up the database, and store the backup with the
+  same protection as the DB backup.
+- **Never delete or hand-edit** the `*.xml` key files. Key rotation is automatic (DataProtection rolls
+  keys on its own schedule); old keys are retained so existing ciphertext keeps decrypting.
+- The DataProtection **purpose** for this data is `eInvWorld.Pii.FieldEncryption.v1` (in
+  `ApplicationDbContext`). It is versioned and **must not change** without a planned re-encryption, or
+  existing ciphertext becomes unreadable.
+
+### One-time backfill of existing rows
+
+Rows created before v1.7.2 hold plaintext until encrypted. To encrypt them in place:
+
+1. **Take a full database backup** and confirm the key-ring folder is backed up.
+2. Go to **Admin → System Health → "Encrypt existing PII"** and confirm.
+3. The operation is **idempotent** — already-encrypted rows are skipped, so it is safe to re-run (e.g. if
+   interrupted). The outcome is recorded in **Admin → Audit Trail** (`PiiEncryptionBackfill`).
+
+TIN is **not** encrypted (it is filtered on throughout the app and is a semi-public tax identifier), and
+neither are `Addr1`/city/state/postal (used in reporting and PDFs). See CHANGELOG v1.7.2 for the rationale.

@@ -1,5 +1,45 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-04 — v1.7.2 (Blueprint-gap remediation, Tier 3b: field-level PII encryption)
+
+> Encrypts the most sensitive free-text PII at rest — bank account numbers and secondary/tertiary address
+> lines — transparently via the existing DataProtection key-ring. Newly created and edited records are
+> encrypted automatically; existing rows are encrypted by a one-time, admin-triggered, idempotent
+> backfill. Additive schema change (columns widened, no data destroyed); no breaking changes.
+
+### Scope (deliberately narrow)
+- **Encrypted:** `BankAccountNo` (InvoiceHeader, PartyInfo, PublicCustomer, InvoiceTemplate) and
+  `Addr2`/`Addr3` (PartyInfo, PublicCustomer). These are free-text and are **never** used in a query
+  predicate (no `WHERE`/`JOIN`/`Any`), so transparent value-converter encryption is safe.
+- **NOT encrypted (by design):** `TIN` (filtered on throughout — encrypting it would break every tenant
+  query), and `Addr1`/`CityName`/`StateCode`/`PostalCode` (feed reporting and PDF rendering). TIN is a
+  semi-public tax identifier, not comparable in sensitivity to a bank account number.
+
+### Added
+- **`ProtectedStringConverter`** (`Services/Security/`) — an EF Core value converter that encrypts on
+  write and decrypts on read via an `IDataProtector`. Reads are **lenient**: a value that cannot be
+  decrypted (a legacy plaintext row not yet backfilled) is returned verbatim, so the app stays fully
+  functional during a partial backfill and the backfill is safely re-runnable.
+- **`PiiEncryptionBackfillService`** (`Services/Security/`) — a one-time, **idempotent** backfill that
+  encrypts existing plaintext values in place using raw SQL (so it can distinguish already-encrypted rows
+  from plaintext and skip them). Triggered from **Admin → System Health → "Encrypt existing PII"**; the
+  outcome is written to the tamper-evident audit trail (`PiiEncryptionBackfill`).
+- **Migration `20260703000000_EncryptPiiFields`** — widens the seven affected `nvarchar(150)` columns to
+  `nvarchar(max)` so they can hold ciphertext (`InvoiceTemplates.BankAccountNo` was already `nvarchar(max)`).
+  Purely additive; idempotent `Apply_EncryptPiiFields.sql` provided.
+- **Tests** — `ProtectedStringConverterTests` (round-trip, non-deterministic ciphertext, lenient
+  plaintext/garbage/empty/foreign-purpose reads) and a real-SQL integration test
+  (`PiiBackfill_EncryptsExistingPlaintext_InPlace_AndIsIdempotent`) exercising the raw-SQL backfill.
+
+### Operational notes (important)
+- **Key-ring custody is now load-bearing for data, not just sessions.** Losing the DataProtection
+  key-ring makes these columns **permanently unreadable**. Back up the key-ring folder
+  (`DataProtection:KeyRingPath`) routinely — see SECRETS-SETUP.md.
+- **Before running the backfill:** take a full database backup (per CLAUDE.md). The button warns about
+  this and the operation is safe to re-run.
+- The `PiiProtectionPurpose` DataProtection purpose (`eInvWorld.Pii.FieldEncryption.v1`) is versioned and
+  must never change without a re-encryption migration.
+
 ## 📅 2026-07-03 — v1.7.1 (Blueprint-gap remediation, Tier 3a: signing-key custody seam)
 
 > Prepares the signing private key for a custody upgrade (vault/HSM) before signing is ever enabled in

@@ -2,9 +2,12 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using eInvWorld.Data;
+using eInvWorld.Services.Security;
 using EINVWORLD.Helpers;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace EINVWORLD.Tests.Integration
@@ -127,6 +130,59 @@ namespace EINVWORLD.Tests.Integration
             await ctx.SaveChangesAsync();
 
             Assert.False(await InvoiceSubmissionGuard.TryClaimAsync(ctx, invoiceNo));
+        }
+
+        // ── PII encryption backfill: raw SQL read+update, so it needs a real database ─────────────
+        [Fact]
+        public async Task PiiBackfill_EncryptsExistingPlaintext_InPlace_AndIsIdempotent()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext(); // no protector → stores/reads raw values
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-PII-{Guid.NewGuid():N}".Substring(0, 20);
+            const string plaintext = "ACCT-PLAINTEXT-12345";
+            ctx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = status,
+                BankAccountNo = plaintext, // stored as raw plaintext (this context has no converter)
+            });
+            await ctx.SaveChangesAsync();
+
+            // Same provider instance for both the backfill and verification (ephemeral keys are per-instance).
+            var provider = new EphemeralDataProtectionProvider();
+            var protector = provider.CreateProtector(ApplicationDbContext.PiiProtectionPurpose);
+            var backfill = new PiiEncryptionBackfillService(
+                ctx, provider, NullLogger<PiiEncryptionBackfillService>.Instance);
+
+            var first = await backfill.RunAsync();
+            Assert.True(first.TotalEncrypted >= 1); // at least our row was encrypted
+
+            // Read the raw stored value back (no converter on this context): it must be ciphertext now,
+            // and must decrypt to the original plaintext.
+            var stored = await ctx.InvoiceHeaders.AsNoTracking()
+                .Where(h => h.InvoiceNo == invoiceNo)
+                .Select(h => h.BankAccountNo)
+                .FirstAsync();
+            Assert.NotNull(stored);
+            Assert.NotEqual(plaintext, stored);
+            Assert.Equal(plaintext, protector.Unprotect(stored!));
+
+            // Second run is a no-op for our row (already encrypted) — proves idempotency.
+            var storedBefore = stored;
+            var second = await backfill.RunAsync();
+            var storedAfter = await ctx.InvoiceHeaders.AsNoTracking()
+                .Where(h => h.InvoiceNo == invoiceNo)
+                .Select(h => h.BankAccountNo)
+                .FirstAsync();
+            Assert.Equal(storedBefore, storedAfter); // untouched on the second pass
+            Assert.Equal(plaintext, protector.Unprotect(storedAfter!));
         }
 
         /// <summary>
