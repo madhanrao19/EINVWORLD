@@ -176,6 +176,12 @@ namespace EINVWORLD.Helpers
                                 skipped++;
                             }
                         }
+                        catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound || ex.Message.Contains("404"))
+                        {
+                            // Benign: document not on LHDN yet (or stale UUID). Clean Warning, not an ERROR+stacktrace.
+                            _logger.LogWarning("[SYNC] {Context} - document not found on LHDN (404); skipping.", context);
+                            skipped++;
+                        }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "[SYNC] {Context} - DocumentDetails polling error.", context);
@@ -361,6 +367,12 @@ namespace EINVWORLD.Helpers
                     {
                         _logger.LogWarning("[SYNC] GetDocumentDetailsAsync returned null for InvoiceNo: {InvoiceNo}, UUID: {UUID}", invoice.InvoiceNo, invoice.UUID);
                     }
+                }
+                catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound || ex.Message.Contains("404"))
+                {
+                    // Benign: the document isn't on LHDN (not yet submitted, or a stale/placeholder UUID).
+                    // Log clean at Warning — an ERROR + stack trace here fired every sync cycle and buried the log.
+                    _logger.LogWarning("[LHDN Sync] Document not found on LHDN (404) for {InvoiceNo}; skipping this cycle.", invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {
