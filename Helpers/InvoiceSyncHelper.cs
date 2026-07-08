@@ -220,8 +220,12 @@ namespace EINVWORLD.Helpers
             // 1. Define the 72-hour cutoff time
             var cutoffTime = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow).AddHours(-72);
 
-            // 2. Add the cutoff filter to the query
+            // 2. Add the cutoff filter to the query. Include the parties so the validated email has its
+            //    recipients (Customer/Supplier), and PublicCustomer so B2C invoices reach the buyer too.
             var invoices = _context.InvoiceHeaders
+                .Include(i => i.Customer)
+                .Include(i => i.Supplier)
+                .Include(i => i.PublicCustomer)
                 .Where(i => i.LHDNStatusId == "Valid" && !string.IsNullOrWhiteSpace(i.LongId) && i.DateTimeValidated != null
                             && (!i.IsPdfGenerated || !i.IsValidationEmailSent))
                 // ONLY rely on CreatedDate
@@ -256,12 +260,13 @@ namespace EINVWORLD.Helpers
                     try
                     {
                         await _notificationService.SendValidatedNotificationEmail(
-                            invoice.Customer?.CompanyName ?? "Customer",
+                            invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
                             invoice.Customer,
                             invoice.Supplier,
                             invoice.InvoiceNo,
                             invoice.IssueDate ?? DateTime.Now,
-                            invoice.DateTimeValidated ?? DateTime.Now);
+                            invoice.DateTimeValidated ?? DateTime.Now,
+                            invoice.PublicCustomer);
 
                         invoice.IsValidationEmailSent = true;
                         invoice.ValidationEmailSentAt = DateTime.Now;

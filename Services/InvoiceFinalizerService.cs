@@ -65,6 +65,7 @@ public class InvoiceFinalizerService : BackgroundService
         var invoices = await dbContext.InvoiceHeaders
             .Include(i => i.Customer)
             .Include(i => i.Supplier)
+            .Include(i => i.PublicCustomer)
             .Where(i =>
                 i.LHDNStatusId == "Valid" &&
                 !string.IsNullOrWhiteSpace(i.LongId) &&
@@ -120,17 +121,18 @@ public class InvoiceFinalizerService : BackgroundService
                     _logger.LogInformation($"📧 Sending email for invoice {invoice.InvoiceNo}");
 
                     await notificationService.SendValidatedNotificationEmail(
-                        invoice.Customer?.CompanyName ?? "Customer",
+                        invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
                         invoice.Customer,
                         invoice.Supplier,
                         invoice.InvoiceNo,
                         invoice.IssueDate ?? DateTime.Now,
-                        invoice.DateTimeValidated ?? DateTime.Now);
+                        invoice.DateTimeValidated ?? DateTime.Now,
+                        invoice.PublicCustomer);
 
                     invoice.IsValidationEmailSent = true;
                     invoice.ValidationEmailSentAt = DateTime.Now;
                     invoice.ValidationEmailSentTo = string.Join(", ", new[] {
-                        invoice.Customer?.Email,
+                        invoice.Customer?.Email ?? invoice.PublicCustomer?.Email,
                         invoice.Supplier?.Email
                     }.Where(e => !string.IsNullOrWhiteSpace(e)));
 
