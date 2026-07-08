@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -330,6 +330,55 @@ namespace EINVWORLD.Tests.Integration
         /// Returns a valid Status key (StatusCode) to satisfy the InternalStatus FK. Migrations seed
         /// Status via HasData, so an existing code is reused; a throwaway is inserted only if none exist.
         /// </summary>
+        // ── InvoiceHeader.RowVersion: real rowversion semantics need a real SQL Server ────────────
+        [Fact]
+        public async Task InvoiceHeader_RowVersion_SecondWriterConflicts_AndRetryWithFreshTokenWins()
+        {
+            if (!_fx.Available) return;
+            await using var seedCtx = _fx.CreateContext();
+
+            var status = await SeedStatusAsync(seedCtx);
+            var invoiceNo = $"INV-CC-{Guid.NewGuid():N}".Substring(0, 20);
+            seedCtx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = status,
+            });
+            await seedCtx.SaveChangesAsync();
+
+            // Two independent contexts read the same row (simulating the background sync and a user action).
+            await using var ctxA = _fx.CreateContext();
+            await using var ctxB = _fx.CreateContext();
+            var invoiceA = await ctxA.InvoiceHeaders.SingleAsync(i => i.InvoiceNo == invoiceNo);
+            var invoiceB = await ctxB.InvoiceHeaders.SingleAsync(i => i.InvoiceNo == invoiceNo);
+
+            // Writer A wins.
+            invoiceA.Notes = "written by A";
+            await ctxA.SaveChangesAsync();
+
+            // Writer B, holding the stale RowVersion, must conflict instead of silently overwriting.
+            invoiceB.Notes = "written by B";
+            var ex = await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => ctxB.SaveChangesAsync());
+
+            // The user-cancel policy: refresh the token from the database, keep our values, retry — wins.
+            foreach (var entry in ex.Entries)
+            {
+                var databaseValues = await entry.GetDatabaseValuesAsync();
+                Assert.NotNull(databaseValues);
+                entry.OriginalValues.SetValues(databaseValues!);
+            }
+            await ctxB.SaveChangesAsync();
+
+            await using var verifyCtx = _fx.CreateContext();
+            var final = await verifyCtx.InvoiceHeaders.AsNoTracking().SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.Equal("written by B", final.Notes);
+        }
+
         private static async Task<string> SeedStatusAsync(ApplicationDbContext ctx)
         {
             var existing = await ctx.Set<eInvWorld.Models.Status>().Select(s => s.StatusCode).FirstOrDefaultAsync();

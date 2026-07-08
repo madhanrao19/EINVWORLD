@@ -1036,7 +1036,29 @@ namespace eInvWorld.Pages.Invoices
             try
             {
                 _logger.LogInformation($"💾 Saving database changes for cancelled document {documentId}...");
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    // A concurrent writer (e.g. the background status sync) updated this invoice between
+                    // our read and save. LHDN has already accepted the cancellation, so the cancel must
+                    // win: refresh the concurrency token from the database, keep our values, retry once.
+                    _logger.LogWarning(
+                        "Concurrency conflict recording cancellation for {DocumentId}; retrying with fresh row version.",
+                        documentId);
+                    foreach (var entry in ex.Entries)
+                    {
+                        var databaseValues = await entry.GetDatabaseValuesAsync();
+                        if (databaseValues == null)
+                        {
+                            throw; // row deleted concurrently — surface it, don't invent state
+                        }
+                        entry.OriginalValues.SetValues(databaseValues);
+                    }
+                    await _context.SaveChangesAsync();
+                }
                 _logger.LogInformation($" Database successfully updated for cancelled document {documentId}");
             }
             catch (Exception dbEx)
