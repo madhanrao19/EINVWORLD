@@ -1,5 +1,15 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.8 (Remove dead showToast call on the home page)
+
+> Found by authenticated browser QA. `Home/Index.cshtml` ran an "Example" `$(document).ready`
+> block calling `showToast(...)`, a function that is defined nowhere (the app uses NToastNotify),
+> so every home-page load threw `Uncaught ReferenceError: showToast is not defined`.
+
+### Removed
+- The dead example `showToast` block on the home page. It never worked (no such function); removing
+  it clears the console error. No feature lost.
+
 ## 📅 2026-07-08 — v1.8.7 (CSP: allow the Contact-page Google Map frame)
 
 > Found by browser QA of the public pages. The Contact page embeds a Google Maps iframe, but the
