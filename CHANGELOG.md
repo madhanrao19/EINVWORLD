@@ -1,5 +1,16 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.7 (CSP: allow the Contact-page Google Map frame)
+
+> Found by browser QA of the public pages. The Contact page embeds a Google Maps iframe, but the
+> Content-Security-Policy `frame-src` only allowed Cloudflare Turnstile — a report-only violation today,
+> but the map would break the moment CSP is promoted to enforcing. This is exactly what the report-only
+> phase exists to surface.
+
+### Changed
+- `frame-src` now includes `https://www.google.com` alongside `https://challenges.cloudflare.com`, so
+  the map renders under an enforcing CSP. No other directive changed; still report-only for now.
+
 ## 📅 2026-07-08 — v1.8.6 (Validated-invoice email reaches public customers)
 
 > Found while verifying the submit → status → PDF → email pipeline. The validated-invoice email
