@@ -1,5 +1,24 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.6 (Validated-invoice email reaches public customers)
+
+> Found while verifying the submit → status → PDF → email pipeline. The validated-invoice email
+> (with the QR-coded PDF) only considered a registered `Customer`/`Supplier` (PartyInfo). For a
+> **public/one-off customer** (`PublicCustomer`, no PartyInfo) the buyer email was silently skipped —
+> confirmed on staging: 4 Valid public-customer invoices whose buyer never got the email. Also, the
+> manual-sync finalizer query loaded no navigation properties at all, so its emails had no recipients
+> beyond the BCC.
+
+### Fixed
+- `SendValidatedNotificationEmail` takes an optional `PublicCustomer?` and falls back to it for the
+  buyer email/name when there is no registered `Customer`. All three finalizer callers
+  (`InvoiceStatusUpdater`, `InvoiceFinalizerService`, `InvoiceSyncHelper`) pass `invoice.PublicCustomer`
+  and now `.Include(i => i.PublicCustomer)`; the manual-sync query also gained the missing
+  `.Include(Customer)`/`.Include(Supplier)`. Registered-customer behaviour is unchanged.
+
+> Note: three separate finalizer paths still duplicate the PDF-generate + email logic — a
+> consolidation candidate for a future PR, tracked here so it isn't forgotten.
+
 ## 📅 2026-07-08 — v1.8.5 (Quiet benign LHDN 404s in sync logs)
 
 > Found by reviewing D:\EINVWORLD\Logs. The background status sync logs an LHDN document-details 404
