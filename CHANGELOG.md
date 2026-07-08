@@ -1,5 +1,17 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.3 (Fix dead client-side validation scripts)
+
+> Found by staging browser QA. `_ValidationScriptsPartial.cshtml` referenced `~/libs/jquery-validation/...`
+> files that never existed in `wwwroot` (no libman restore is wired into the build), so client-side
+> unobtrusive validation was silently dead on every page using the partial — the script requests 404'd
+> into the auth login redirect ("Refused to execute script" console errors). Server-side validation was
+> always enforcing, so no data-integrity impact; UX-only.
+
+### Fixed
+- `_ValidationScriptsPartial.cshtml` now loads `jquery-validate` 1.19.5 + `jquery-validation-unobtrusive`
+  3.2.12 from cdnjs — consistent with `_Layout.cshtml`, which already CDN-loads jQuery itself.
+
 ## 📅 2026-07-08 — v1.8.2 (InvoiceHeader optimistic concurrency)
 
 > Closes the long-deferred backlog item: concurrent writers to the same invoice (background status sync
