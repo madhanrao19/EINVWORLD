@@ -17,7 +17,8 @@ changes are additive and AI/features stay off unless already enabled.
      Production, so verify it is set.
 2. **Stop the site** (or the app pool) so no requests hit a half-swapped folder.
 3. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
-   key-ring folder intact — never overwrite server secrets).
+   key-ring folder intact — never overwrite server secrets). Get the build from the green **CI run on
+   `main`** → **Artifacts → `einvworld-app`** (a ready `dotnet publish` output; carries no secrets).
 4. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
