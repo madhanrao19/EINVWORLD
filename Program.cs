@@ -639,7 +639,7 @@ app.Use(async (context, next) =>
         "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
         "img-src 'self' data: https:",
         "connect-src 'self' https://www.google-analytics.com https://cdn.tiny.cloud",
-        "frame-src https://challenges.cloudflare.com",
+        "frame-src https://challenges.cloudflare.com https://www.google.com",
         "object-src 'none'",
         "base-uri 'self'",
         "frame-ancestors 'self'",
