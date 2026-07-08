@@ -168,5 +168,15 @@ namespace eInvWorld.Models.InputModel
         [StringLength(150, ErrorMessage = "Prepayment Reference Number cannot exceed 150 characters.")] // NEW
         public string? PrepaymentReferenceNumber { get; set; }
 
+        /// <summary>
+        /// SQL Server rowversion concurrency token. Guards against lost updates when the background
+        /// status sync and a user action (cancel/edit) write the same invoice concurrently: the later
+        /// SaveChanges throws <see cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/>
+        /// instead of silently overwriting. Background sync reloads and lets the next poll re-sync;
+        /// the user cancel path reapplies and retries (LHDN has already accepted the cancellation).
+        /// </summary>
+        [Timestamp]
+        public byte[]? RowVersion { get; set; }
+
     }
 }
