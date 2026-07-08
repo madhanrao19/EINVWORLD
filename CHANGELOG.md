@@ -1,5 +1,19 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.5 (Quiet benign LHDN 404s in sync logs)
+
+> Found by reviewing D:\EINVWORLD\Logs. The background status sync logs an LHDN document-details 404
+> as `[ERR]` with a full stack trace, and re-polls the same not-on-LHDN invoices every cycle — 33 of the
+> 77 total errors across the retained logs were this one benign case (document not yet submitted, or a
+> stale/placeholder UUID), drowning real errors. Rate-limit (429) handling was already correct and is
+> unchanged.
+
+### Changed
+- `InvoiceSyncHelper` (both details-polling catch blocks) now treats an LHDN 404 as a clean `[WRN]`
+  ("document not found on LHDN; skipping") instead of an `[ERR]` + stack trace. Sync behaviour is
+  unchanged (the invoice is simply skipped, as before); only the log noise is removed. Genuine
+  non-404 failures still log as errors.
+
 ## 📅 2026-07-08 — v1.8.4 (Fix duplicate JS const on auth pages)
 
 > Found by staging browser QA (authenticated). For a signed-in user, `_LoginLayout.cshtml` declared
