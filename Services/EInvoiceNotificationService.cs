@@ -67,7 +67,7 @@ namespace eInvWorld.Services
         private string ContactLink => BuildEmailUrl(_emailBaseUrls.ContactBaseUrl);
 
 
-        public async Task SendValidatedNotificationEmail(string recipientName, PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, DateTime validatedTimestamp)
+        public async Task SendValidatedNotificationEmail(string recipientName, PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, DateTime validatedTimestamp, PublicCustomer? publicCustomer = null)
         {
             try
             {
@@ -99,10 +99,13 @@ namespace eInvWorld.Services
 
                 _logger.LogInformation("Preparing validated invoice email for document {DocumentId}", documentId);
 
-                var buyerEmail = buyer?.Email;
+                // Buyer may be a registered party (PartyInfo) OR a public/one-off customer. Fall back to the
+                // PublicCustomer so B2C validated invoices still reach the buyer, not only the supplier.
+                var buyerEmail = !string.IsNullOrWhiteSpace(buyer?.Email) ? buyer!.Email : publicCustomer?.Email;
+                var buyerName = buyer?.CompanyName ?? publicCustomer?.CompanyName ?? "Valued Customer";
                 if (IsValidEmail(buyerEmail))
                 {
-                    var body = GenerateValidatedEmailBody(buyer?.CompanyName ?? "Valued Customer", documentId, issueDate, validatedTimestamp, invoiceLink, accountLink, contactLink);
+                    var body = GenerateValidatedEmailBody(buyerName, documentId, issueDate, validatedTimestamp, invoiceLink, accountLink, contactLink);
                     SendEmailWithBcc(buyerEmail!, subject, body, pdfFilePath, adminEmails);
                     LogInvoiceHistory(documentId, "EmailSent", "System", $"To Buyer: {buyerEmail}");
                 }
