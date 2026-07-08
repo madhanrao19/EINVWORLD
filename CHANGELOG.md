@@ -1,5 +1,23 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.2 (InvoiceHeader optimistic concurrency)
+
+> Closes the long-deferred backlog item: concurrent writers to the same invoice (background status sync
+> vs a user cancel/edit) previously raced last-writer-wins — a stale "Valid" sync could silently bury a
+> user's "Cancelled". Additive schema (one rowversion column); no behaviour change on the happy path.
+
+### Added
+- **`InvoiceHeader.RowVersion`** (`[Timestamp]` SQL Server `rowversion`) + **migration
+  `20260708000000_AddInvoiceHeaderRowVersion`** (4 artifacts incl. idempotent `Apply_*.sql`). Any
+  conflicting `SaveChanges` now throws `DbUpdateConcurrencyException` instead of silently overwriting.
+- **Conflict policies at the real race sites** (everywhere else stays loud-by-design):
+  - `InvoiceStatusUpdater` / `InvoiceStatusSyncHelper` (background sync): log a warning, reload the
+    conflicting entries, skip — the next poll re-syncs from LHDN, the source of truth for status.
+  - `InvoiceLists` cancel handler (user path): refresh the concurrency token, keep the cancel values,
+    retry once — LHDN has already accepted the cancellation, so it must be recorded.
+- **Integration test** `InvoiceHeader_RowVersion_SecondWriterConflicts_AndRetryWithFreshTokenWins`
+  (real SQL Server; rowversion semantics are faked by the in-memory provider).
+
 ## 📅 2026-07-04 — v1.8.1 (Webhook config hygiene warnings)
 
 > Small post-roadmap hardening. No schema/behaviour change.

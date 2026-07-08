@@ -38,6 +38,32 @@ public class InvoiceStatusUpdater : BackgroundService
         _settings = settings.Value;
     }
 
+    /// <summary>
+    /// Saves pending changes, treating an optimistic-concurrency conflict (InvoiceHeader.RowVersion) as a
+    /// benign skip: another writer (user cancel/edit or a parallel sync) updated the row first. Local
+    /// changes are discarded by reloading the conflicting entries so the scoped context stays usable, and
+    /// the next poll cycle re-syncs the invoice from LHDN — the source of truth for status fields.
+    /// </summary>
+    private async Task<bool> TrySaveAsync(ApplicationDbContext dbContext, string invoiceNo)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync();
+            return true;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(
+                "Concurrency conflict saving invoice {InvoiceNo}: another writer updated it first. Skipping; the next poll re-syncs from LHDN.",
+                invoiceNo);
+            foreach (var entry in ex.Entries)
+            {
+                await entry.ReloadAsync();
+            }
+            return false;
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_settings.Enabled)
@@ -152,7 +178,7 @@ public class InvoiceStatusUpdater : BackgroundService
             }
 
             if (changesMade)
-                await dbContext.SaveChangesAsync();
+                await TrySaveAsync(dbContext, invoice.InvoiceNo);
         }
     }
 
@@ -210,7 +236,7 @@ public class InvoiceStatusUpdater : BackgroundService
                         {
                             invoice.UUID = submissionSummary.uuid;
                             dbContext.InvoiceHeaders.Update(invoice);
-                            await dbContext.SaveChangesAsync();
+                            if (!await TrySaveAsync(dbContext, invoice.InvoiceNo)) continue;
                         }
                     }
                     catch (Exception ex)
@@ -237,13 +263,13 @@ public class InvoiceStatusUpdater : BackgroundService
                 await syncHelper.SyncInvoiceFromDocumentSummaryAsync(invoice.InvoiceNo, summary, "BackgroundService", saveImmediately: true);
 
                 invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
-                await dbContext.SaveChangesAsync();
+                await TrySaveAsync(dbContext, invoice.InvoiceNo);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error syncing invoice {InvoiceNo}", invoice.InvoiceNo);
                 invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
-                await dbContext.SaveChangesAsync();
+                await TrySaveAsync(dbContext, invoice.InvoiceNo);
             }
         }
     }

@@ -107,8 +107,6 @@ probes · two-layer rate limiting · end-to-end correlation IDs · smart HTTPS-r
 tunnel) · externalized secrets · DataProtection key-ring outside `App\`.
 
 ## Known improvement backlog (deferred — need a scoped, tested effort)
-- **`InvoiceHeader` optimistic concurrency (`RowVersion`)** — 20+ `SaveChanges` sites; needs a global
-  concurrency-retry strategy + tests. High blast radius; do as its own PR.
 - **Split the 1,263-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
 - **OpenTelemetry metrics** — low value on a single on-prem node with no metrics backend; revisit if scaled.
 - **Future-readiness** — multi-company/tenant, API versioning, message queue, containerization: design new
