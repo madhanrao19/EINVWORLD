@@ -1,5 +1,17 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-08 — v1.8.4 (Fix duplicate JS const on auth pages)
+
+> Found by staging browser QA (authenticated). For a signed-in user, `_LoginLayout.cshtml` declared
+> `const idleTimeoutMinutes` twice at page scope — once inside the `@if (SignInManager.IsSignedIn)`
+> idle-timeout block and again in an orphaned `<script>` lower down — so the browser threw
+> `SyntaxError: Identifier 'idleTimeoutMinutes' has already been declared`, aborting the scripts after
+> it (the logout-reason toastr). Anonymous pages were unaffected (only the orphan ran).
+
+### Fixed
+- Removed the redundant/orphaned `const idleTimeoutMinutes` declaration and hoisted its `@inject
+  SessionOptions` to the top of `_LoginLayout.cshtml`. One declaration remains (the idle-timeout timer).
+
 ## 📅 2026-07-08 — v1.8.3 (Fix dead client-side validation scripts)
 
 > Found by staging browser QA. `_ValidationScriptsPartial.cshtml` referenced `~/libs/jquery-validation/...`
