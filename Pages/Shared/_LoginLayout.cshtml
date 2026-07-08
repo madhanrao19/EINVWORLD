@@ -1,5 +1,6 @@
 ﻿@using eInvWorld.Models
 @inject Microsoft.AspNetCore.Identity.SignInManager<ApplicationUser> SignInManager
+@inject Microsoft.Extensions.Options.IOptions<eInvWorld.Models.Settings.SessionSettings> SessionOptions
 @{
     string? logoutReason = Context.Request.Query["logoutReason"];
 
@@ -122,10 +123,6 @@
             </div>
         </div>
 
-        @inject Microsoft.Extensions.Options.IOptions<eInvWorld.Models.Settings.SessionSettings> SessionOptions
-        <script>
-            const idleTimeoutMinutes = @SessionOptions.Value.IdleTimeoutMinutes;
-        </script>
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const reason = document.body.getAttribute("data-logout-reason");
