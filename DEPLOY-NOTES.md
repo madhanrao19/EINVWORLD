@@ -66,7 +66,14 @@ sqlcmd %DB% -i "Migrations\Apply_AddInvoiceSubmissionClaim.sql"
 sqlcmd %DB% -i "Migrations\Apply_AddSyncJobDurability.sql"
 sqlcmd %DB% -i "Migrations\Apply_AddSubmissionRecords.sql"
 sqlcmd %DB% -i "Migrations\Apply_AddAuditLog.sql"
+sqlcmd %DB% -i "Migrations\Apply_EncryptPiiFields.sql"
+sqlcmd %DB% -i "Migrations\Apply_AddWebhookSubscriptions.sql"
+sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHeaderRowVersion.sql"
 ```
+
+> v1.8.2 note: `Apply_AddInvoiceHeaderRowVersion.sql` adds a `rowversion` column to `InvoiceHeaders`
+> (optimistic concurrency). It takes a brief schema lock on that table — run it (or first-boot
+> auto-migrate) in a quiet window on large databases.
 
 Verify the expected migrations are recorded:
 ```sql
