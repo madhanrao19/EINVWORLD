@@ -203,7 +203,23 @@ namespace eInvWorld.Helpers
                 _dbContext.InvoiceHeaders.Update(invoice);
                 if (saveImmediately)
                 {
-                    await _dbContext.SaveChangesAsync();
+                    try
+                    {
+                        await _dbContext.SaveChangesAsync();
+                    }
+                    catch (DbUpdateConcurrencyException ex)
+                    {
+                        // Another writer (user cancel/edit) updated this invoice between our read and save.
+                        // Discard this sync's stale view — the caller's next cycle re-reads from LHDN.
+                        _logger.LogWarning(
+                            "Concurrency conflict syncing invoice {InvoiceNo}: another writer updated it first. Discarding this sync pass.",
+                            invoiceNo);
+                        foreach (var entry in ex.Entries)
+                        {
+                            await entry.ReloadAsync();
+                        }
+                        return false;
+                    }
                     _logger.LogInformation("✅ Invoice {InvoiceNo} updated and saved in MY Time.", invoiceNo);
                 }
             }
