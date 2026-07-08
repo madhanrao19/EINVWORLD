@@ -38,3 +38,18 @@ jobs:
         env:
           INTEGRATION_SQLSERVER: 'Server=(localdb)\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True;'
         run: dotnet test EINVWORLD.sln --configuration Release --no-build --verbosity normal
+
+      # Produce a deployable build only for main (the deploy source) so feature-branch CI stays fast.
+      # The artifact carries no secrets: repo appsettings*.json ship with empty secret fields — real
+      # values live in the server's env vars / web.config, which are NOT in the repo or this output.
+      - name: Publish (main only)
+        if: github.ref == 'refs/heads/main'
+        run: dotnet publish EINVWORLD.csproj --configuration Release --output publish
+
+      - name: Upload deployable artifact (main only)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: einvworld-app
+          path: publish
+          retention-days: 30
