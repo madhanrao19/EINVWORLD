@@ -42,6 +42,7 @@ bottom; stop and investigate on the first ❌.
 - [ ] **Manual status sync** (Admin → Invoice Sync). ✅ job queued; Sync Jobs page shows it run/complete.
 - [ ] **Background sync** runs on its own cadence. ✅ statuses update; no worker crash after an app-pool recycle (orphan recovery).
 - [ ] **Cancel/Reject** within the 72h window. ✅ succeeds; outside the window ✅ blocked with a clear message.
+- [ ] **Cancel vs background sync (v1.8.2):** cancel an invoice while background sync is enabled, then wait one sync cycle. ✅ the invoice stays **Cancelled** (concurrency token prevents a stale sync overwriting it; sync log may show a benign "concurrency conflict … skipping" warning).
 - [ ] Intermediary submit with `onbehalfof`. ✅ uses the right per-TIN token.
 
 ## 5. Bulk import & connectors
