@@ -119,6 +119,7 @@ public class InvoiceStatusUpdater : BackgroundService
         var invoices = dbContext.InvoiceHeaders
             .Include(i => i.Customer)
             .Include(i => i.Supplier)
+            .Include(i => i.PublicCustomer)
             .Where(i => i.LHDNStatusId == "Valid" && !string.IsNullOrWhiteSpace(i.LongId) && i.DateTimeValidated != null
                         && (!i.IsPdfGenerated || !i.IsValidationEmailSent))
             .ToList();
@@ -159,16 +160,17 @@ public class InvoiceStatusUpdater : BackgroundService
 
                     // Send the email with the freshly generated PDF attached
                     await notificationService.SendValidatedNotificationEmail(
-                        invoice.Customer?.CompanyName ?? "Customer",
+                        invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
                         invoice.Customer,
                         invoice.Supplier,
                         invoice.InvoiceNo,
                         issueDate,
-                        validatedDate);
+                        validatedDate,
+                        invoice.PublicCustomer);
 
                     invoice.IsValidationEmailSent = true;
                     invoice.ValidationEmailSentAt = DateTime.Now;
-                    invoice.ValidationEmailSentTo = string.Join(", ", new[] { invoice.Customer?.Email, invoice.Supplier?.Email }.Where(e => !string.IsNullOrWhiteSpace(e)));
+                    invoice.ValidationEmailSentTo = string.Join(", ", new[] { invoice.Customer?.Email ?? invoice.PublicCustomer?.Email, invoice.Supplier?.Email }.Where(e => !string.IsNullOrWhiteSpace(e)));
                     changesMade = true;
                 }
                 catch (Exception ex)
