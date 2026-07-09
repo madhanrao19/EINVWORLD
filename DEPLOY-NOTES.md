@@ -70,6 +70,7 @@ sqlcmd %DB% -i "Migrations\Apply_AddAuditLog.sql"
 sqlcmd %DB% -i "Migrations\Apply_EncryptPiiFields.sql"
 sqlcmd %DB% -i "Migrations\Apply_AddWebhookSubscriptions.sql"
 sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHeaderRowVersion.sql"
+sqlcmd %DB% -i "Migrations\Apply_AddGrossTonUnitType.sql"
 ```
 
 > v1.8.2 note: `Apply_AddInvoiceHeaderRowVersion.sql` adds a `rowversion` column to `InvoiceHeaders`

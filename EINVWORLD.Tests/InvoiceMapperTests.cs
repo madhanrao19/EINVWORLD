@@ -165,5 +165,88 @@ namespace EINVWORLD.Tests
 
             Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
         }
+
+        // ── Currency Exchange Rate (LHDN SDK, effective 1 Sep 2025) ──────────────────────────
+        [Fact]
+        public void Map_NonMyrWithoutExchangeRate_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Currency = "USD";
+            header.ExchangeRate = null; // previously fell back silently to 1
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Currency Exchange Rate", ex.Message);
+        }
+
+        [Fact]
+        public void Map_NonMyrWithZeroExchangeRate_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Currency = "USD";
+            header.ExchangeRate = 0m;
+
+            Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+        }
+
+        [Fact]
+        public void Map_NonMyrWithExchangeRate_EmitsTaxExchangeRate()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Currency = "USD";
+            header.ExchangeRate = 4.7123m;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+
+            using var doc = JsonDocument.Parse(json);
+            var ter = doc.RootElement.GetProperty("Invoice")[0].GetProperty("TaxExchangeRate")[0];
+            Assert.Equal("USD", ter.GetProperty("SourceCurrencyCode")[0].GetProperty("_").GetString());
+            Assert.Equal("MYR", ter.GetProperty("TargetCurrencyCode")[0].GetProperty("_").GetString());
+            Assert.Equal(4.7123m, ter.GetProperty("CalculationRate")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_MyrWithoutExchangeRate_StillSucceeds()
+        {
+            // Regression guard: MYR invoices never needed an exchange rate and the payload
+            // shape (MYR→MYR rate 1) must stay exactly as before.
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var ter = doc.RootElement.GetProperty("Invoice")[0].GetProperty("TaxExchangeRate")[0];
+            Assert.Equal(1m, ter.GetProperty("CalculationRate")[0].GetProperty("_").GetDecimal());
+        }
+
+        // ── State Code 17 restriction (LHDN SDK, effective 30 Apr 2026) ──────────────────────
+        [Fact]
+        public void Map_State17MalaysianCustomer_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.StateCode = "17"; // "Not Applicable" — invalid for a domestic buyer
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("State Code 17", ex.Message);
+        }
+
+        [Fact]
+        public void Map_State17ForeignCustomer_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.StateCode = "17";
+            header.Customer.CountryCode = "SGP"; // foreign party may use 17
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("\"17\"", json);
+        }
+
+        [Fact]
+        public void Map_State17GeneralTinCustomer_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.StateCode = "17";
+            header.Customer.TIN = "EI00000000010"; // consolidated / general public buyer
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("EI00000000010", json);
+        }
     }
 }
