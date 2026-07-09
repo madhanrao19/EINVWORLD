@@ -59,13 +59,13 @@ namespace eInvWorld.Services.Background
                             // (exact match via the helper — not a fragile substring Contains).
                             if (string.IsNullOrWhiteSpace(token.TIN) || token.TIN == "NA" || GeneralTINHelper.IsGeneralTIN(token.TIN))
                             {
-                                _logger.LogInformation("🗑️ Cleaning up invalid/general TIN '{TIN}' from LHDNTokens table.", token.TIN);
+                                _logger.LogInformation("🗑️ Cleaning up invalid/general TIN '{TIN}' from LHDNTokens table.", LogSanitizer.MaskTin(token.TIN));
                                 dbContext.LHDNTokens.Remove(token);
                                 await dbContext.SaveChangesAsync(stoppingToken);
                                 continue; // Skip the API call
                             }
 
-                            _logger.LogInformation("🔄 Renewing token for TIN {TIN}", token.TIN);
+                            _logger.LogInformation("🔄 Renewing token for TIN {TIN}", LogSanitizer.MaskTin(token.TIN));
 
                             // This will now throw immediately on 400 errors thanks to the change in TokenService
                             await tokenService.GetAccessTokenForTIN(token.TIN);
@@ -77,7 +77,7 @@ namespace eInvWorld.Services.Background
                         // Catch the permanent rejection and delete the token so it doesn't loop forever
                         catch (InvalidOperationException ex) when (ex.Message.Contains("rejected intermediary") || ex.Message.Contains("unauthorized_client"))
                         {
-                            _logger.LogWarning("🗑️ LHDN revoked intermediary access for {TIN}. Removing from database to stop auto-renewal.", token.TIN);
+                            _logger.LogWarning("🗑️ LHDN revoked intermediary access for {TIN}. Removing from database to stop auto-renewal.", LogSanitizer.MaskTin(token.TIN));
                             dbContext.LHDNTokens.Remove(token);
                             try
                             {
@@ -87,12 +87,12 @@ namespace eInvWorld.Services.Background
                             {
                                 // If the delete itself fails, log it — otherwise the same revoked token would
                                 // be retried (and re-throw the same rejection) on every cycle, forever.
-                                _logger.LogError(saveEx, "❌ Failed to delete revoked token for TIN {TIN}; it may be retried next cycle.", token.TIN);
+                                _logger.LogError(saveEx, "❌ Failed to delete revoked token for TIN {TIN}; it may be retried next cycle.", LogSanitizer.MaskTin(token.TIN));
                             }
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "❌ Failed to renew token for TIN {TIN}", token.TIN);
+                            _logger.LogError(ex, "❌ Failed to renew token for TIN {TIN}", LogSanitizer.MaskTin(token.TIN));
                         }
                     }
                 }

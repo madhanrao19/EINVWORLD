@@ -177,7 +177,7 @@ namespace eInvWorld.Pages.Lead
 
                 if (tinExists)
                 {
-                    _logger.LogWarning("❌ TIN already exists: {TIN}", Input.TIN);
+                    _logger.LogWarning("❌ TIN already exists: {TIN}", EINVWORLD.Helpers.LogSanitizer.MaskTin(Input.TIN));
                     ModelState.AddModelError("Input.TIN", "This TIN is already registered.");
                     PopulateDropdowns();
                     return Page();
