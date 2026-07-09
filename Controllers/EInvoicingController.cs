@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using EINVWORLD.Helpers;
 
 namespace eInvWorld.Controllers
 {
@@ -40,14 +41,14 @@ namespace eInvWorld.Controllers
         public async Task<IActionResult> ValidateTaxpayer(string tin, [FromQuery] string idType, [FromQuery] string idValue)
         {
 
-            _logger.LogDebug("Received TIN: {Tin}, ID Type: {IdType}, ID Value: {IdValue}", tin, idType, idValue);
+            _logger.LogDebug("Received TIN: {Tin}, ID Type: {IdType}, ID Value: {IdValue}", LogSanitizer.MaskTin(tin), idType, LogSanitizer.MaskId(idValue));
 
             // Use the values from appsettings.json or fallback to defaults
             tin ??= _taxpayerValidationSettings.DefaultTIN;
             idType ??= _taxpayerValidationSettings.DefaultIdType;
             idValue ??= _taxpayerValidationSettings.DefaultIdValue;
 
-            _logger.LogDebug("Using TIN: {Tin}, ID Type: {IdType}, ID Value: {IdValue}", tin, idType, idValue);
+            _logger.LogDebug("Using TIN: {Tin}, ID Type: {IdType}, ID Value: {IdValue}", LogSanitizer.MaskTin(tin), idType, LogSanitizer.MaskId(idValue));
 
             // Validate query parameters
             if (string.IsNullOrWhiteSpace(tin))
@@ -70,19 +71,19 @@ namespace eInvWorld.Controllers
 
             try
             {
-                _logger.LogInformation("Validating taxpayer with TIN: {TIN}, ID Type: {IDType}, ID Value: {IDValue}", tin, idType, idValue);
+                _logger.LogInformation("Validating taxpayer with TIN: {TIN}, ID Type: {IDType}, ID Value: {IDValue}", LogSanitizer.MaskTin(tin), idType, LogSanitizer.MaskId(idValue));
                 var result = await _lhdnApiService.ValidateTaxpayerAsync(tin, idType, idValue);
-                _logger.LogInformation("Taxpayer validation successful for TIN: {TIN}.", tin);
+                _logger.LogInformation("Taxpayer validation successful for TIN: {TIN}.", LogSanitizer.MaskTin(tin));
                 return Ok(result);
             }
             catch (HttpRequestException httpEx)
             {
-                _logger.LogError(httpEx, "HTTP request error while validating taxpayer with TIN: {TIN}.", tin);
+                _logger.LogError(httpEx, "HTTP request error while validating taxpayer with TIN: {TIN}.", LogSanitizer.MaskTin(tin));
                 return StatusCode(500, "Error validating taxpayer.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating taxpayer with TIN: {TIN}.", tin);
+                _logger.LogError(ex, "Error validating taxpayer with TIN: {TIN}.", LogSanitizer.MaskTin(tin));
                 return StatusCode(500, "Error validating taxpayer.");
             }
         }
