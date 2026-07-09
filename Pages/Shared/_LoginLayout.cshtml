@@ -97,8 +97,8 @@
     <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
     <script src="~/assets/libs/flatpickr/flatpickr.min.js"></script>
 
-    <!--Turnstile widget-->
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <!--Turnstile widget. data-cfasync="false" exempts it from Cloudflare Rocket Loader (incompatible with Turnstile).-->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" data-cfasync="false" async defer></script>
 
     <!-- ✅ REQUIRED for Select2 -->
     <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>

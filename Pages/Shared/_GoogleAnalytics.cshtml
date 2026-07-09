@@ -8,15 +8,24 @@
 
 @if (!string.IsNullOrEmpty(gtmId))
 {
-    <!-- Google Tag Manager -->
+    <!-- Google Tag Manager.
+         Injected only AFTER DOMContentLoaded: on networks that black-hole analytics hosts
+         (ad-block DNS, strict firewalls) the hanging gtm.js fetch — and the tags the container
+         itself loads, e.g. Cloudflare Insights — measurably stalled DOMContentLoaded/load by
+         ~20-25s. Analytics must never gate the page lifecycle. -->
     <script>
         (function (w, d, s, l, i) {
             w[l] = w[l] || []; w[l].push({
                 'gtm.start':
                     new Date().getTime(), event: 'gtm.js'
-            }); var f = d.getElementsByTagName(s)[0],
-                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+            });
+            function injectGtm() {
+                var f = d.getElementsByTagName(s)[0],
+                    j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                        'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+            }
+            if (d.readyState === 'loading') { d.addEventListener('DOMContentLoaded', injectGtm); }
+            else { injectGtm(); }
         })(window, document, 'script', 'dataLayer', '@gtmId');
     </script>
 
