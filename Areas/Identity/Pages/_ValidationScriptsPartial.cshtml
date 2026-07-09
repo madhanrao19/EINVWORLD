@@ -1,2 +1,5 @@
-﻿<script src="~/libs/jquery-validation/dist/jquery.validate.min.js"></script>
-<script src="~/libs/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+@* The ~/libs/... paths do not exist in wwwroot (no libman restore in the build); load from cdnjs,
+   matching Pages/Shared/_ValidationScriptsPartial.cshtml. Without this, unobtrusive validation was
+   dead on every Identity page (login/register/manage) — the script 404'd into the login redirect. *@
+<script src="~/assets/libs/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/assets/libs/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>

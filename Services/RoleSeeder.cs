@@ -84,16 +84,26 @@ namespace eInvWorld.Services
                 {
                     await _userManager.AddToRoleAsync(user, role);
 
-                    // ✅ Assign user to multiple companies
+                    // ✅ Assign user to multiple companies. A fresh database has no PartyInfos yet, so link
+                    // only to companies that actually exist — otherwise the FK
+                    // (FK_UserCompanies_PartyInfos_PartyInfoId) fails and crashes startup seeding. Demo
+                    // users are still created and roled; they simply start without company links.
                     if (companyIds != null)
                     {
                         foreach (var companyId in companyIds)
                         {
-                            _context.UserCompanies.Add(new UserCompany
+                            if (await _context.PartyInfos.AnyAsync(p => p.PartyInfoId == companyId))
                             {
-                                UserId = user.Id,
-                                PartyInfoId = companyId
-                            });
+                                _context.UserCompanies.Add(new UserCompany
+                                {
+                                    UserId = user.Id,
+                                    PartyInfoId = companyId
+                                });
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Seeding {Email}: skipping company link {CompanyId} — no such PartyInfo (fresh database).", email, companyId);
+                            }
                         }
                         await _context.SaveChangesAsync();
                     }

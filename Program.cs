@@ -134,10 +134,17 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+    // Role gate for the whole /Admin area. Applied as a folder convention below so any
+    // page under Pages/Admin is Admin-only by default — defence-in-depth against a new
+    // admin page shipping without its own [Authorize(Roles="Admin")] attribute.
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 // Razor Pages
 builder.Services.AddRazorPages(options =>
 {
+    // Every page under /Admin requires the Admin role (see "AdminOnly" policy above).
+    options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
+
     options.Conventions.AllowAnonymousToPage("/");
     options.Conventions.AllowAnonymousToPage("/about");
     options.Conventions.AllowAnonymousToPage("/ourservices");
@@ -546,6 +553,11 @@ using (var scope = app.Services.CreateScope())
     if (app.Configuration.GetValue<bool>("DatabaseSettings:AutoMigrateOnStartup", true))
     {
         context.Database.Migrate();
+        // WebsiteDbContext owns the Resources tables (ResourceTypes/ResourceItems). It has its own
+        // migrations but was never migrated at startup, so on a fresh database those tables were absent
+        // and /Admin/Resources/Manage 500'd with "Invalid object name 'ResourceTypes'".
+        var websiteContext = services.GetRequiredService<WebsiteDbContext>();
+        websiteContext.Database.Migrate();
         Log.Information("✅ Database migrations applied on startup.");
     }
     else
