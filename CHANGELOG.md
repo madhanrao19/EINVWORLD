@@ -21,6 +21,33 @@
 - SVDP flag is **not copied** to credit/debit notes created from an SVDP invoice, recurring invoices, or
   templates — a disclosure is a deliberate one-off choice each time.
 
+## 📅 2026-07-09 — v1.9.4 (Daily LHDN code-table sync from the official SDK files)
+
+> Until now the nine LHDN code tables (unit types, currencies, countries, states, tax types, payment
+> modes, classification, MSIC, e-invoice types) were kept current by manually copying JSON from the SDK
+> portal whenever a release note announced a change (e.g. CNH currency, Hectare/GT units, country
+> renames). That process is now automatic.
+
+### Added
+- **`CodeTableSyncWorker`** background service: once a day (config `CodeTableSync`, ON by default)
+  it downloads the official machine-readable files from
+  `https://sdk.myinvois.hasil.gov.my/files/<Table>.json` and upserts them into the database —
+  the **database remains the source of truth** the app reads.
+  - **Additive-only policy:** new codes are inserted (active, `UpdatedBy = "sdk-sync"`); renamed
+    descriptions are updated (the SDK is authoritative for wording); rows are **never deleted or
+    deactivated**, and an admin's `IsActive` choice is preserved — a truncated/bad download can never
+    remove reference data. Empty/implausibly small downloads are skipped with a warning.
+  - Each table syncs independently (one failing file doesn't stop the rest); the run logs a
+    per-table `+added/~updated` summary. Nine small GETs/day against the public static host —
+    completely separate from the LHDN API client and its rate limiter.
+- SQL Server integration test (`CodeTableSyncTests`) with stubbed HTTP proving the policy against a
+  real database: insert, rename-update, IsActive preservation, quirky JSON keys
+  (`"Payment Method"`, `"MSIC Category Reference"`), and never-delete.
+
+### Config
+- New `CodeTableSync` section: `Enabled` (default `true`), `BaseUrl`, `IntervalHours` (default 24),
+  `StartupDelayMinutes` (default 5).
+
 ## 📅 2026-07-09 — v1.9.3 (LHDN SDK compliance: exchange rate, State 17, GT unit, TIN log masking)
 
 > Result of a full LHDN MyInvois SDK release-note audit (Feb 2024 beta → 8 Jul 2026). Most rules were
