@@ -21,6 +21,13 @@ namespace eInvWorld.Models.InputModel
 
         public string DocTypeCode { get; set; } = null!;  // Document Type Code
 
+        /// <summary>
+        /// e-Invoice Special Voluntary Disclosure Programme flag (LHDN SDK, 8 Jul 2026; programme runs
+        /// until 31 Dec 2027). When set, the document is submitted as version 1.2 (SVDP, unsigned)
+        /// instead of 1.0. SVDP 1.3 (signed) additionally requires LHDNApiConfig:SigningEnabled + a cert.
+        /// </summary>
+        public bool IsSvdp { get; set; }
+
         [MaxLength(3)]
         public string Currency { get; set; } = null!;  // Currency Code (e.g., "MYR", "USD")
 

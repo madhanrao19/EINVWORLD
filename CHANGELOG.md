@@ -1,5 +1,26 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-09 — v1.9.5 (SVDP 1.2 support — Special Voluntary Disclosure Programme)
+
+> LHDN SDK 8 Jul 2026 introduced document versions for the e-Invoice Special Voluntary Disclosure
+> Programme (valid until 31 Dec 2027): SVDP **1.2** (unsigned) and SVDP **1.3** (signed). The official
+> sample confirms the 1.2 payload is byte-identical to v1.0 except `InvoiceTypeCode/@listVersionID`.
+> Business decision: adopt **1.2** (1.3 additionally needs the signing pipeline + certificate, still off).
+
+### Added
+- **`InvoiceHeader.IsSvdp`** flag (additive migration `20260709120000_AddSvdpFlagToInvoiceHeader`,
+  4 artifacts incl. idempotent `Apply_*.sql`; existing rows default to normal invoices).
+- **"SVDP e-Invoice" switch** on Invoice Create and Edit (per-invoice, off by default), shown only when
+  `LHDNApiConfig:SvdpEnabled` is `true` — set it `false` to retire the option when the programme ends.
+- **Mapper**: an SVDP-flagged invoice is submitted with `listVersionID = "1.2"`; everything else —
+  validation, totals, idempotency, signing-off behaviour — is unchanged. Normal invoices still emit `1.0`
+  (regression-tested).
+
+### Not included (by design)
+- SVDP **1.3** (needs the digital-signature pipeline: `SigningEnabled` + a purchased cert).
+- SVDP flag is **not copied** to credit/debit notes created from an SVDP invoice, recurring invoices, or
+  templates — a disclosure is a deliberate one-off choice each time.
+
 ## 📅 2026-07-09 — v1.9.3 (LHDN SDK compliance: exchange rate, State 17, GT unit, TIN log masking)
 
 > Result of a full LHDN MyInvois SDK release-note audit (Feb 2024 beta → 8 Jul 2026). Most rules were

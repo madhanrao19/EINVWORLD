@@ -1462,6 +1462,7 @@ namespace EINVWORLD.Pages.Invoices
                 IssueDate = Invoice.IssueDate,
                 DocTypeCode = Invoice.DocTypeCode,
                 InvoicePeriod = Invoice.InvoicePeriod,
+                IsSvdp = Invoice.IsSvdp,
                 Currency = Invoice.Currency,
                 ForeignCurrency = Invoice.ForeignCurrency ?? "MYR",
                 ExchangeRate = Invoice.ExchangeRate,
