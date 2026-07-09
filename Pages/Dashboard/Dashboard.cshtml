@@ -5,7 +5,6 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
 
 <style>
     :root {
@@ -975,7 +974,7 @@ else if (Model.UserType == "Buyer")
     </div>
 }
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script> 
+    <script src="/assets/libs/chart.js/chart.umd.js"></script>
+    <script src="/assets/libs/chartjs-plugin-zoom/chartjs-plugin-zoom.min.js"></script> 
     <script src="~/js/dashboard.js"></script>
 }
