@@ -1,5 +1,24 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-09 — v1.9.6 (Speed: exempt Turnstile from Cloudflare Rocket Loader; operator action to disable it)
+
+> Live QA against staging found every page's `DOMContentLoaded` delayed to **~21 seconds** (HTML TTFB
+> is ~0.3 s). Root cause: **Cloudflare Rocket Loader is enabled on the zone** — it rewrites every
+> `<script>` to a deferred type (including **Turnstile's api.js**, a documented incompatibility) and
+> re-executes them itself, holding back the whole page lifecycle. Production is affected identically.
+
+### Fixed (code)
+- Added `data-cfasync="false"` to the four Turnstile `api.js` script tags (`_Layout`, `_HomeLayout`,
+  `_LoginLayout`, `Contact`) so Rocket Loader can never capture the bot-protection script — per
+  Cloudflare's own guidance. This restores reliable Turnstile token issuance regardless of the zone
+  setting.
+
+### Required operator action (Cloudflare dashboard — cannot be fixed from code)
+- **Disable Rocket Loader** for the `einvworld.com` zone: *Speed → Optimization → Rocket Loader → Off*.
+  The app already self-hosts and optimizes all assets (v1.9.1/v1.9.2), so Rocket Loader adds nothing and
+  costs ~20 s of page-lifecycle delay on every page, breaks `DOMContentLoaded`-dependent code, and
+  degrades Turnstile. Re-measure after: `DOMContentLoaded` should drop to well under 2 s.
+
 ## 📅 2026-07-09 — v1.9.5 (SVDP 1.2 support — Special Voluntary Disclosure Programme)
 
 > LHDN SDK 8 Jul 2026 introduced document versions for the e-Invoice Special Voluntary Disclosure
