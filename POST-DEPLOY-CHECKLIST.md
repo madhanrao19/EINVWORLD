@@ -72,6 +72,9 @@ bottom; stop and investigate on the first ❌.
 ## 9. Behind Cloudflare Tunnel (if applicable)
 - [ ] Site reachable over the public HTTPS hostname. ✅ no redirect loop (smart HTTPS-redirect default is off behind the tunnel).
 - [ ] Cookies are Secure; audit shows the **real client IP** (forwarded headers honoured), not 127.0.0.1.
+- [ ] **Rocket Loader is OFF** in the Cloudflare zone (*Speed → Optimization*). With it on, every page's
+      `DOMContentLoaded` stalls ~20 s and Turnstile becomes unreliable (documented incompatibility).
+      Verify: page source must NOT contain `rocket-loader.min.js` / `type="…-text/javascript"` rewrites.
 
 ---
 
