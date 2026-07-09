@@ -1239,8 +1239,8 @@ namespace EINVWORLD.Pages.Invoices
                     return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
                 }
 
-                _logger.LogInformation($"🔑 Using TIN for submission - InvoiceNo: {invoiceNo}, DocType: {fullInvoice.DocTypeCode}, TIN: {tin}");
-                _logger.LogInformation($"📊 Debug TIN Info - SupplierTIN: {fullInvoice.Supplier?.TIN ?? "NULL"}, CustomerTIN: {fullInvoice.Customer?.TIN ?? "NULL"}");
+                _logger.LogInformation("🔑 Using TIN for submission - InvoiceNo: {InvoiceNo}, DocType: {DocType}, TIN: {TIN}", invoiceNo, fullInvoice.DocTypeCode, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
+                _logger.LogInformation("📊 Debug TIN Info - SupplierTIN: {SupplierTIN}, CustomerTIN: {CustomerTIN}", EINVWORLD.Helpers.LogSanitizer.MaskTin(fullInvoice.Supplier?.TIN), EINVWORLD.Helpers.LogSanitizer.MaskTin(fullInvoice.Customer?.TIN));
 
                 // The submitting TIN is the invoice issuer (supplier, or customer for self-billed). Read
                 // access (CanAccessInvoiceAsync) is granted to either party, so explicitly require the user
@@ -1248,7 +1248,7 @@ namespace EINVWORLD.Pages.Invoices
                 // the other party's TIN could submit as the issuer.
                 if (!await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, tin))
                 {
-                    _logger.LogWarning("🚫 User not authorized to submit InvoiceNo {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, tin);
+                    _logger.LogWarning("🚫 User not authorized to submit InvoiceNo {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
                     var msg = "You are not authorized to submit this invoice.";
                     return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
                 }
@@ -1453,7 +1453,7 @@ namespace EINVWORLD.Pages.Invoices
             InputModels.PublicCustomer? publicCustomer)
         {
             _logger.LogDebug("CreateInvoiceHeader: SupplierTIN={SupplierTIN}, CustomerTIN={CustomerTIN}, PublicCustomerId={PublicCustomerId}",
-                supplier?.TIN ?? "NULL", customer?.TIN ?? "NULL", publicCustomer?.PublicCustomerId.ToString() ?? "NULL");
+                EINVWORLD.Helpers.LogSanitizer.MaskTin(supplier?.TIN), EINVWORLD.Helpers.LogSanitizer.MaskTin(customer?.TIN), publicCustomer?.PublicCustomerId.ToString() ?? "NULL");
 
             var invoiceHeader = new InputModels.InvoiceHeader
             {
@@ -1483,7 +1483,7 @@ namespace EINVWORLD.Pages.Invoices
             {
                 invoiceHeader.Customer = customer;
                 invoiceHeader.CustomerId = customer.PartyInfoId;
-                _logger.LogDebug("CreateInvoiceHeader: Assigned PartyInfo Customer TIN={TIN}", customer.TIN);
+                _logger.LogDebug("CreateInvoiceHeader: Assigned PartyInfo Customer TIN={TIN}", EINVWORLD.Helpers.LogSanitizer.MaskTin(customer.TIN));
             }
             else if (publicCustomer != null)
             {

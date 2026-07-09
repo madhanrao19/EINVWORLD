@@ -45,7 +45,7 @@ namespace EINVWORLD.Helpers
                 using var txn = await _dbContext.Database.BeginTransactionAsync();
 
                 var submittingTIN = await TinHelper.GetSubmittingTinFromSummaryAsync(summary, _dbContext);
-                _logger.LogInformation("🔑 Submitting TIN for API sync of Invoice {InvoiceNo}: {TIN}", summary.internalId, submittingTIN);
+                _logger.LogInformation("🔑 Submitting TIN for API sync of Invoice {InvoiceNo}: {TIN}", summary.internalId, LogSanitizer.MaskTin(submittingTIN));
 
                 var rootJson = new JObject();
 
@@ -178,7 +178,7 @@ namespace EINVWORLD.Helpers
                 // --- FALLBACK IF RAW DOCUMENT ACCESS WAS DENIED BY LHDN ---
                 if (string.IsNullOrWhiteSpace(summary.document))
                 {
-                    _logger.LogWarning("⚠️ Raw document access denied by LHDN for TIN {TIN}. Falling back to summary data.", submittingTIN);
+                    _logger.LogWarning("⚠️ Raw document access denied by LHDN for TIN {TIN}. Falling back to summary data.", LogSanitizer.MaskTin(submittingTIN));
                 }
 
                 if (supplier == null && !string.IsNullOrWhiteSpace(summary.issuerTin))
@@ -198,7 +198,7 @@ namespace EINVWORLD.Helpers
                 }
 
                 _logger.LogInformation("📊 Parsed supplier: {SupplierTIN} (ID: {SupplierID}), customer: {CustomerTIN} (ID: {CustomerID})",
-                    supplier?.TIN, supplier?.PartyInfoId, customer?.TIN, customer?.PartyInfoId);
+                    LogSanitizer.MaskTin(supplier?.TIN), supplier?.PartyInfoId, LogSanitizer.MaskTin(customer?.TIN), customer?.PartyInfoId);
 
                 string Truncate(string? val, int maxLength) =>
                     string.IsNullOrWhiteSpace(val) ? val ?? string.Empty : (val.Length > maxLength ? val.Substring(0, maxLength) : val);

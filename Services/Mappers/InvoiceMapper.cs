@@ -20,6 +20,18 @@ namespace eInvWorld.Services.Mappers
             if (header == null)
                 throw new ArgumentNullException(nameof(header), "Invoice header cannot be null");
 
+            // LHDN SDK (effective 1 Sep 2025): when the invoice currency is not MYR, the payload must
+            // carry a real Currency Exchange Rate — submissions without it are rejected. Fail here
+            // instead of silently defaulting the rate to 1, which LHDN would accept as wrong tax data.
+            if (!string.IsNullOrEmpty(header.Currency)
+                && !string.Equals(header.Currency, "MYR", StringComparison.OrdinalIgnoreCase)
+                && (!header.ExchangeRate.HasValue || header.ExchangeRate.Value <= 0m))
+            {
+                var currencyError = $"Currency Exchange Rate (to MYR) is required and must be greater than zero when the invoice currency is {header.Currency}.";
+                Log.Warning("InvoiceMapper validation: {ErrorMessage}", currencyError);
+                throw new InvalidOperationException($"Validation failed for Invoice: {currencyError}");
+            }
+
             Log.Debug("InvoiceMapper: RefUUID={RefUUID}, LineCount={LineCount}", header.RefUUID, header.InvoiceLines.Count);
 
             var isSelfBilledInvoice = header.DocTypeCode == "11" || header.DocTypeCode == "12" || header.DocTypeCode == "13" || header.DocTypeCode == "14";
@@ -27,7 +39,7 @@ namespace eInvWorld.Services.Mappers
             var supplier = header.Supplier;
             var customer = header.Customer;
 
-            Log.Debug("InvoiceMapper: IsSelfBilled={IsSelfBilled}, SupplierTIN={SupplierTIN}, CustomerTIN={CustomerTIN}", isSelfBilledInvoice, supplier?.TIN ?? "NULL", customer?.TIN ?? "NULL");
+            Log.Debug("InvoiceMapper: IsSelfBilled={IsSelfBilled}, SupplierTIN={SupplierTIN}, CustomerTIN={CustomerTIN}", isSelfBilledInvoice, EINVWORLD.Helpers.LogSanitizer.MaskTin(supplier?.TIN), EINVWORLD.Helpers.LogSanitizer.MaskTin(customer?.TIN));
 
             var root = new JsonModels.Root
             {
@@ -145,6 +157,17 @@ namespace eInvWorld.Services.Mappers
 
         }
 
+        /// <summary>
+        /// LHDN SDK rule (effective 30 April 2026): State Code 17 ("Not Applicable") may only be used
+        /// on consolidated e-Invoices or e-Invoices involving a foreign party. A Malaysian party with a
+        /// real TIN must carry its actual state code. LHDN-assigned general TINs (general public,
+        /// foreign buyer/supplier, government) are exempt — they are exactly the consolidated/foreign cases.
+        /// </summary>
+        private static bool IsRestrictedState17(string? stateCode, string? countryCode, string? tin)
+            => stateCode == "17"
+               && string.Equals(countryCode, "MYS", StringComparison.OrdinalIgnoreCase)
+               && !EINVWORLD.Helpers.GeneralTINHelper.IsGeneralTIN(tin);
+
         private void ValidatePartyInfo(PartyInfo party, string role)
         {
             if (party == null)
@@ -172,6 +195,8 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} Country Code is required.");
             if (string.IsNullOrEmpty(party.PhoneNo))
                 errors.Add($"{role} Phone Number is required.");
+            if (IsRestrictedState17(party.StateCode, party.CountryCode, party.TIN))
+                errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
             // 👇 This line replaces the previous email validation
             party.Email ??= ""; // ✅ Ensures empty string if no email
 
@@ -1118,6 +1143,8 @@ namespace eInvWorld.Services.Mappers
             if (string.IsNullOrEmpty(customer.StateCode)) errors.Add($"{role} State Code is required.");
             if (string.IsNullOrEmpty(customer.CountryCode)) errors.Add($"{role} Country Code is required.");
             if (string.IsNullOrEmpty(customer.PhoneNo)) errors.Add($"{role} Phone Number is required.");
+            if (IsRestrictedState17(customer.StateCode, customer.CountryCode, customer.TIN))
+                errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
 
             // Ensure email is not null (matching original side-effect logic)
             customer.Email ??= "";

@@ -74,7 +74,7 @@ namespace eInvWorld.Services
             // Fast path: in-memory cache (auto-evicts at expiry).
             if (_cache.TryGetValue(CacheKey(tin), out string? cached) && !string.IsNullOrEmpty(cached))
             {
-                _logger.LogDebug("✅ Using cached token for TIN {TIN}", tin);
+                _logger.LogDebug("✅ Using cached token for TIN {TIN}", LogSanitizer.MaskTin(tin));
                 return cached!;
             }
 
@@ -89,7 +89,7 @@ namespace eInvWorld.Services
                 var dbToken = await _context.LHDNTokens.FirstOrDefaultAsync(t => t.TIN == tin);
                 if (dbToken != null && dbToken.ExpiryTime > DateTime.UtcNow)
                 {
-                    _logger.LogInformation("♻️ Using DB token for TIN {TIN}", tin);
+                    _logger.LogInformation("♻️ Using DB token for TIN {TIN}", LogSanitizer.MaskTin(tin));
                     CacheToken(tin, dbToken.AccessToken, dbToken.ExpiryTime);
                     return dbToken.AccessToken;
                 }
@@ -127,13 +127,13 @@ namespace eInvWorld.Services
                     if (ex.Data.Contains("RetryAfterSeconds"))
                     {
                         delay = (Convert.ToInt32(ex.Data["RetryAfterSeconds"]) * 1000) + Random.Shared.Next(500, 1500);
-                        _logger.LogWarning("⏳ 429 received. Retrying in {Delay}ms (TIN: {TIN})", delay, tin);
+                        _logger.LogWarning("⏳ 429 received. Retrying in {Delay}ms (TIN: {TIN})", delay, LogSanitizer.MaskTin(tin));
                     }
                     await Task.Delay(delay);
                 }
                 catch (InvalidOperationException ex) when (ex.Message.Contains("rejected intermediary") || ex.Message.Contains("unauthorized_client"))
                 {
-                    _logger.LogWarning("⛔ LHDN permanently rejected TIN {TIN}. Flagging in database and stopping retries.", tin);
+                    _logger.LogWarning("⛔ LHDN permanently rejected TIN {TIN}. Flagging in database and stopping retries.", LogSanitizer.MaskTin(tin));
 
                     // ✅ Update DB and break loop
                     var partyInfo = await _context.PartyInfos.FirstOrDefaultAsync(p => p.TIN == tin);
@@ -147,7 +147,7 @@ namespace eInvWorld.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ Token request failed for TIN {TIN}. Retry {Attempt}/5", tin, retries + 1);
+                    _logger.LogError(ex, "❌ Token request failed for TIN {TIN}. Retry {Attempt}/5", LogSanitizer.MaskTin(tin), retries + 1);
                     await Task.Delay(2000);
                     retries++;
                 }
@@ -193,7 +193,7 @@ namespace eInvWorld.Services
                 if (isIntermediary)
                 {
                     tokenRequest.Headers.Add("onbehalfof", tin);
-                    _logger.LogInformation("🧾 Acting as Intermediary. Adding onbehalfof header to Token Request: {TIN}", tin);
+                    _logger.LogInformation("🧾 Acting as Intermediary. Adding onbehalfof header to Token Request: {TIN}", LogSanitizer.MaskTin(tin));
                 }
                 else
                 {
@@ -212,7 +212,7 @@ namespace eInvWorld.Services
 
                     CacheToken(tin, tokenObj.access_token, expiry);
 
-                    _logger.LogInformation("✅ Token acquired and cached for TIN {TIN}", tin);
+                    _logger.LogInformation("✅ Token acquired and cached for TIN {TIN}", LogSanitizer.MaskTin(tin));
                     return tokenObj.access_token;
                 }
 

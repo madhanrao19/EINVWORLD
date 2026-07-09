@@ -38,6 +38,41 @@ namespace EINVWORLD.Tests
             Assert.False(GeneralTINHelper.IsGeneralTIN(tin));
         }
 
+        // ── LogSanitizer ──────────────────────────────────────────────────────────────────────
+        [Fact]
+        public void MaskTin_RealTin_KeepsFirst4Last2Only()
+        {
+            Assert.Equal("C123*****90", LogSanitizer.MaskTin("C1234567890"));
+        }
+
+        [Fact]
+        public void MaskTin_GeneralTin_PassesThroughUnmasked()
+        {
+            // General LHDN TINs are public constants, not PII — keep logs readable.
+            Assert.Equal("EI00000000010", LogSanitizer.MaskTin("EI00000000010"));
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void MaskTin_NullOrBlank_ReturnsPlaceholder(string? tin)
+        {
+            Assert.Equal("(none)", LogSanitizer.MaskTin(tin));
+        }
+
+        [Fact]
+        public void MaskId_ShortValue_FullyMasked()
+        {
+            Assert.Equal("******", LogSanitizer.MaskId("123456"));
+        }
+
+        [Fact]
+        public void MaskId_LongValue_KeepsFirst4Last2()
+        {
+            Assert.Equal("2019********67", LogSanitizer.MaskId("20190123456767"));
+        }
+
         // ── DateTimeHelper.ToMalaysiaTime ─────────────────────────────────────────────────────
         // Malaysia (MYT) is a fixed UTC+8 with no daylight saving, so the conversion is always +8h.
         [Theory]

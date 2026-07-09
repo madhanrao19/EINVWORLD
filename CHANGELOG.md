@@ -1,5 +1,40 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-09 — v1.9.3 (LHDN SDK compliance: exchange rate, State 17, GT unit, TIN log masking)
+
+> Result of a full LHDN MyInvois SDK release-note audit (Feb 2024 beta → 8 Jul 2026). Most rules were
+> already compliant (YYYY-MM-DD dates, decimal amounts — no scientific notation, Dec-2025 field lengths
+> via `UpdateSDKDec2025`, no state code 00, CNH currency, rate-limit pacing, search pagination). Four
+> gaps are closed here. **SVDP document versions 1.2/1.3 (SDK 8 Jul 2026, opt-in voluntary-disclosure
+> programme valid to 31 Dec 2027) are deliberately deferred pending a business decision.**
+
+### Fixed (LHDN compliance)
+- **Currency Exchange Rate enforced for non-MYR invoices** (LHDN rejects missing rates since
+  1 Sep 2025). Previously a non-MYR invoice with no rate silently submitted `CalculationRate = 1` —
+  wrong tax data that LHDN would *accept*. `InvoiceMapper` now fails validation with a clear message
+  before submission; MYR payloads are byte-for-byte unchanged. All seven submission paths (Create
+  Invoice/CN/SBI/SBCN, Edit, CSV import, recurring worker) flow through this choke point.
+- **State Code 17 ("Not Applicable") restricted** per the SDK rule effective 30 Apr 2026: rejected for
+  any party with country `MYS` unless the TIN is an LHDN general TIN (consolidated general public,
+  foreign buyer/supplier, government). Foreign parties (e.g. self-billed imports) are unaffected.
+
+### Added
+- **Unit code `GT` (gross ton)** — SDK addition of 28 Dec 2024 — seeded via data-only idempotent
+  migration `20260709000000_AddGrossTonUnitType` (4 artifacts incl. `Apply_AddGrossTonUnitType.sql`;
+  inserts only if absent, `Down` removes only its own row). Reference copy `wwwroot/codes/UnitTypes.json`
+  updated too.
+- `Helpers/LogSanitizer.cs` — masks TIN/BRN/NRIC values for logging (first 4 + last 2 kept; LHDN
+  general TINs stay readable since they are public constants).
+
+### Fixed (security / PII logging)
+- **TINs are no longer logged in plaintext.** All `{TIN}` structured-log sites across
+  `LHDNApiService`, `TokenService`, `TokenRenewalService`, sync helpers, `EInvoicingController`
+  (including BRN/NRIC `idValue`), invoice pages and the lead form now log masked values.
+
+### Tests
+- Mapper: non-MYR without/with/zero exchange rate, MYR regression (rate-1 payload unchanged),
+  State 17 domestic-blocked / foreign-allowed / general-TIN-allowed. Helpers: `LogSanitizer` masking.
+
 ## 📅 2026-07-09 — v1.9.2 (Self-host the remaining page-level CDN assets)
 
 > Follow-up to v1.9.1: that pass localized the shared layouts, but eight individual pages still loaded

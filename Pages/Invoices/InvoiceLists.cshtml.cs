@@ -646,7 +646,7 @@ namespace eInvWorld.Pages.Invoices
 
         public async Task<IActionResult> OnPutRejectDocumentAsync(string documentId, string rejectionReason, string tin)
         {
-            _logger.LogInformation("🚀 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, tin);
+            _logger.LogInformation("🚀 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
             if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
@@ -683,7 +683,7 @@ namespace eInvWorld.Pages.Invoices
                     return StatusCode(500, "User's TIN is missing.");
                 }
 
-                _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", userTin, tin);
+                _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin), EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
                 // Check rejection constraints
                 _logger.LogInformation("🔍 Checking rejection constraints for document {documentId}...", documentId);
@@ -695,7 +695,7 @@ namespace eInvWorld.Pages.Invoices
                 }
 
                 // FIRST: Call LHDN API to reject the document using user's TIN
-                _logger.LogInformation("📡 Calling LHDN RejectDocument API for document {documentId} with user TIN {userTin}...", documentId, userTin);
+                _logger.LogInformation("📡 Calling LHDN RejectDocument API for document {documentId} with user TIN {userTin}...", documentId, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                 string apiResponse;
                 try
                 {
@@ -704,7 +704,7 @@ namespace eInvWorld.Pages.Invoices
                 }
                 catch (Exception apiEx)
                 {
-                    _logger.LogError(apiEx, "❌ LHDN API call failed for document {documentId} with TIN {userTin}", documentId, userTin);
+                    _logger.LogError(apiEx, "❌ LHDN API call failed for document {documentId} with TIN {userTin}", documentId, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                     return StatusCode(500, $"Failed to reject document in LHDN API: {apiEx.Message}");
                 }
 
@@ -758,7 +758,7 @@ namespace eInvWorld.Pages.Invoices
 
         public async Task<IActionResult> OnPutCancelDocumentAsync(string documentId, string cancellationReason, string tin)
         {
-            _logger.LogInformation("CancelDocument handler called with documentId: {DocumentId}, reason: {CancellationReason}, tin: {Tin}", documentId, cancellationReason, tin);
+            _logger.LogInformation("CancelDocument handler called with documentId: {DocumentId}, reason: {CancellationReason}, tin: {Tin}", documentId, cancellationReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
             if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
@@ -980,7 +980,8 @@ namespace eInvWorld.Pages.Invoices
                 return StatusCode(500, "User's TIN is missing.");
             }
 
-            _logger.LogInformation($"User {user.Email} is assigned to company TIN: {userTin}");
+            // Log the user id, not the email (PII), and mask the TIN.
+            _logger.LogInformation("User {UserId} is assigned to company TIN: {UserTin}", user.Id, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
 
             // Try to fetch DocumentSummary, but don't fail if rate limited (since LHDN API already succeeded)
             DocumentSummary? documentSummary = null;
@@ -1461,7 +1462,7 @@ namespace eInvWorld.Pages.Invoices
                 if (!string.IsNullOrWhiteSpace(submitterTin)
                     && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
                 {
-                    _logger.LogWarning("🚫 User not authorized to submit {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, submitterTin);
+                    _logger.LogWarning("🚫 User not authorized to submit {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, EINVWORLD.Helpers.LogSanitizer.MaskTin(submitterTin));
                     TempData["ErrorMessage"] = "You are not authorized to submit this invoice.";
                     return RedirectToPage();
                 }
