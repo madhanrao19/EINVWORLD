@@ -1,5 +1,5 @@
 ﻿@* jQuery itself is CDN-loaded in _Layout; these must match. The previous ~/libs/... paths never
    existed in wwwroot (no libman restore is wired into the build), so client-side validation was
    silently dead on every page using this partial — requests 404'd into the login redirect. *@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+<script src="~/assets/libs/jquery-validation/dist/jquery.validate.min.js"></script>
+<script src="~/assets/libs/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
