@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -286,6 +287,14 @@ public class DataSeeder
         _logger.LogInformation($"Seeding MSIC sub-category codes from file: {filePath}");
         var jsonData = await File.ReadAllTextAsync(filePath);
         var msicSubCategoryCodes = JsonConvert.DeserializeObject<List<MSICSubCategoryCode>>(jsonData) ?? new List<MSICSubCategoryCode>();
+
+        // Guard against duplicate Codes in the source JSON: the loop AddAsync's by Code, and EF cannot
+        // track two entities with the same key — a single duplicate (the MSIC list has one, "16211")
+        // crashes seeding on a fresh database. Keep the first occurrence per Code.
+        msicSubCategoryCodes = msicSubCategoryCodes
+            .GroupBy(c => c.Code)
+            .Select(g => g.First())
+            .ToList();
 
         foreach (var msicSubCategoryCode in msicSubCategoryCodes)
         {
