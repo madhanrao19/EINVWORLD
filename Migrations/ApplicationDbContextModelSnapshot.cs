@@ -978,6 +978,9 @@ namespace eInvWorld.Migrations
                     b.Property<bool>("IsPdfGenerated")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSvdp")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsValidationEmailSent")
                         .HasColumnType("bit");
 

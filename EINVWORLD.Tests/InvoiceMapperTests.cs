@@ -166,6 +166,30 @@ namespace EINVWORLD.Tests
             Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
         }
 
+        // ── SVDP document version (LHDN SDK, 8 Jul 2026; programme until 31 Dec 2027) ────────
+        [Fact]
+        public void Map_SvdpInvoice_EmitsListVersion12()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.IsSvdp = true;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+
+            using var doc = JsonDocument.Parse(json);
+            var typeCode = doc.RootElement.GetProperty("Invoice")[0].GetProperty("InvoiceTypeCode")[0];
+            Assert.Equal("1.2", typeCode.GetProperty("listVersionID").GetString());
+        }
+
+        [Fact]
+        public void Map_NormalInvoice_EmitsListVersion10()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var typeCode = doc.RootElement.GetProperty("Invoice")[0].GetProperty("InvoiceTypeCode")[0];
+            Assert.Equal("1.0", typeCode.GetProperty("listVersionID").GetString());
+        }
+
         // ── Currency Exchange Rate (LHDN SDK, effective 1 Sep 2025) ──────────────────────────
         [Fact]
         public void Map_NonMyrWithoutExchangeRate_Throws()

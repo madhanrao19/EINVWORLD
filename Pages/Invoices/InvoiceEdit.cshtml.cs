@@ -300,6 +300,7 @@ namespace eInvWorld.Pages.Invoices
                 Currency = existingInvoice.Currency,
                 ForeignCurrency = existingInvoice.ForeignCurrency ?? "MYR",
                 ExchangeRate = existingInvoice.ExchangeRate,
+                IsSvdp = existingInvoice.IsSvdp,
                 SupplierId = existingInvoice.Supplier?.PartyInfoId ?? 0,
                 CustomerId = existingInvoice.Customer?.PartyInfoId ?? 0,
                 PublicCustomerId = existingInvoice.PublicCustomer?.PublicCustomerId ?? 0,
@@ -848,6 +849,7 @@ namespace eInvWorld.Pages.Invoices
                     draftInvoice.BankName = Invoice.BankName;
                     draftInvoice.Attention = Invoice.Attention;
                     draftInvoice.PaymentTerms = Invoice.PaymentTerms ?? "";
+                    draftInvoice.IsSvdp = Invoice.IsSvdp;
 
                     // ✅ Correct buyer relationship handling
                     if (customer != null)
