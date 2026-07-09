@@ -248,6 +248,15 @@ builder.Services.AddHostedService<InvoiceStatusUpdater>();
 builder.Services.AddHostedService<eInvWorld.Services.Background.LogCleanupService>();
 builder.Services.AddHostedService<EINVWORLD.Services.Background.SyncFailureAlertService>(); // emails admin on failed-job backlog (off by default)
 builder.Services.AddHostedService<EINVWORLD.Services.Background.CertExpiryAlertService>(); // emails admin as the LHDN signing cert nears expiry (off by default)
+// Daily additive sync of the LHDN code tables from the official SDK JSON files (on by default;
+// CodeTableSync:Enabled=false to turn off). Plain public static files — separate host, no auth,
+// so it does NOT go through the LHDN API client or its rate limiter.
+builder.Services.AddHttpClient(EINVWORLD.Services.Background.CodeTableSyncWorker.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(60);
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("EINVWORLD-CodeTableSync/1.0");
+});
+builder.Services.AddHostedService<EINVWORLD.Services.Background.CodeTableSyncWorker>();
 builder.Services.AddSingleton<QRCodeGeneratorService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
