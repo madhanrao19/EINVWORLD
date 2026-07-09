@@ -161,7 +161,7 @@
                 </nav>
             </div>
             
-            <form method="get" id="filterForm" class="d-flex align-items-center gap-2 bg-white p-2 rounded shadow-sm border">
+            <form method="get" id="filterForm" class="d-flex flex-wrap align-items-center gap-2 bg-white p-2 rounded shadow-sm border">
                 <select name="FilterType" id="filterType" class="form-select form-select-sm border-0" style="width: 110px; background-color: var(--primary-soft); color: var(--primary-text); font-weight: 600;">
                     <option value="Day" selected="@(Model.FilterType == "Day")">Specific Day</option>
                     <option value="Month" selected="@(Model.FilterType == "Month")">Full Month</option>

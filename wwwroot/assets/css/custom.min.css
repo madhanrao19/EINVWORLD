@@ -36,6 +36,15 @@
     overflow: visible !important;
     position: relative; /* Ensure dropdown can position absolutely */
 }
+/* ...but below the desktop breakpoint, restore horizontal scrolling so a wide table
+   scrolls inside its card instead of forcing the whole page to scroll sideways
+   (regressed responsiveness on mobile/tablet dashboards and list pages). */
+@media (max-width: 991.98px) {
+    .table-responsive {
+        overflow-x: auto !important;
+        overflow-y: visible;
+    }
+}
 
 .dropdown-menu {
     z-index: 9999 !important;
