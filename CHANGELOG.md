@@ -1,5 +1,88 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-09 — v1.9.1 (Self-host all front-end assets; kill the CDN dependency)
+
+> The UI loaded ~25 libraries and all its web fonts from public CDNs (jsDelivr, cdnjs, code.jquery.com,
+> cdn.tiny.cloud, Google Fonts) at runtime. On an on-prem / air-gapped-capable government e-invoicing
+> platform that is an availability, privacy and FOSS-policy problem — and it was measurably harmful:
+> when a CDN was unreachable the page's `load` event (and the theme preloader that waits on it) stalled
+> ~20–30s, freezing the UI behind a spinner. All first-party assets are now served locally.
+
+### Changed — everything self-hosted
+- **Repointed to the theme's already-bundled local copies:** jQuery, SweetAlert2, Flatpickr, Chart.js,
+  jQuery-Validation (+unobtrusive). These were shipped in `wwwroot/assets/libs` but loaded from CDN anyway.
+- **Downloaded & self-hosted (FOSS):** Select2 (+bootstrap-5 theme), Toastr, Font Awesome 6.5.0
+  (CSS + webfonts), Toastify, and Flatpickr CSS — under `wwwroot/assets/libs/…`.
+- **Google Fonts localized:** the 11 `@import`s in `app.min.css` (loaded on every page) were replaced
+  with a single self-hosted stylesheet + 31 latin/latin-ext `woff2` files under `assets/fonts/google/`.
+- **TinyMCE:** the editor JS was already self-hosted; repointed its skin CSS from `cdn.tiny.cloud`
+  (which also carried a cloud API key) to the local `assets/js/tinymce/skins/…`.
+- Only **Cloudflare Turnstile** (bot widget, must load from Cloudflare) and the optional **Google Tag
+  Manager** analytics snippet remain external; the Contact-page Google Map still loads Google resources.
+
+### Removed — dead CDN loads
+- DataTables (core + bs5 + responsive + buttons ×3 + 2 CSS), Inputmask, jszip and pdfmake were all loaded
+  from CDN but **never used** by any app page (the app renders its own server-side lists). Removed, along
+  with the theme's `datatables.init.js` (which only wired up demo tables).
+
+### Fixed
+- **Preloader can no longer freeze the UI.** The theme faded the spinner out on `window.load`; if any
+  resource was slow that never fired. It now hides on `DOMContentLoaded` with a hard 3s cap.
+
+## 📅 2026-07-09 — v1.9.0 (Security: Admin area role-gated by folder convention)
+
+> Found by automated Playwright authorization QA across Admin/Supplier/Buyer. **30 pages under
+> `/Admin` shipped without their per-page `[Authorize(Roles="Admin")]` attribute** — every master-data
+> Codes page (tax types, currency, MSIC, classification, unit/payment/state/country) plus all
+> Notifications and Resources Create/Types pages. Any authenticated Supplier or Buyer could view and
+> mutate the reference data that drives LHDN invoice generation and tax calculation. This is a
+> broken-access-control / privilege-escalation defect.
+
+### Fixed (security)
+- Added an `AdminOnly` authorization policy (`RequireRole("Admin")`) and applied it with
+  `Conventions.AuthorizeFolder("/Admin", "AdminOnly")` in `Program.cs`. The whole `/Admin` folder is now
+  Admin-only **by default**, so a new admin page can no longer ship unprotected by forgetting an
+  attribute. Composes with the existing `RequireAuthenticatedUser` fallback and the per-page attributes
+  already present — no behaviour change for legitimate Admins (verified: Admin still reaches all pages;
+  Supplier/Buyer now blocked to AccessDenied/login).
+
+### Fixed (startup on a fresh database)
+- `WebsiteDbContext` (owns `ResourceTypes`/`ResourceItems`) is now migrated at startup alongside the
+  primary context, so `/Admin/Resources/Manage` no longer 500s with *"Invalid object name 'ResourceTypes'"*
+  on a fresh DB. Additive only — no destructive migration.
+
+## 📅 2026-07-09 — v1.8.9 (UI/UX fixes found by full-site browser QA)
+
+> Found by automated Playwright QA of public pages, the three role dashboards, navigation, and
+> responsive breakpoints (375 / 768 / 1440 px).
+
+### Fixed
+- **Dead menu links** in the user dropdown (`_Sidebar.cshtml`): removed the template placeholders
+  *Help* → `pages-faqs.html`, *Settings* → `pages-profile-settings.html`, *Lock screen* →
+  `auth-lockscreen-basic.html` (all 404). Fixed the non-authenticated *Login* link from `login.html`
+  → `/login`. Profile and Logout are unchanged.
+- **Responsive tables**: a global `.table-responsive { overflow: visible !important }` override (added
+  so in-table dropdowns wouldn't clip) disabled Bootstrap's horizontal scroll everywhere, so wide tables
+  pushed the whole page sideways on mobile/tablet (e.g. dashboard overflowed 461 px at 375 px wide).
+  Restored `overflow-x: auto` below the `992 px` breakpoint; desktop dropdown behaviour preserved.
+- **Full-bleed banner overflow**: public pages reuse `mx-n4` banners designed for the authenticated
+  layout's padded `.page-content`; on `_HomeLayout` they spilled ~24 px past the viewport at every width.
+  Wrapped `@RenderBody()` in an `overflow-x: clip` container.
+- **Dashboard filter bar**: `#filterForm` now `flex-wrap`s so it no longer overflows 19 px at mobile width.
+- **Login/Register footer**: removed `white-space: nowrap` on the long company-credit link so it wraps
+  instead of overflowing 55 px at 375 px.
+- **Identity validation scripts**: `_ValidationScriptsPartial.cshtml` referenced non-existent
+  `~/libs/...` paths (404), so unobtrusive client validation was dead on login/register/manage pages.
+  Now loads jquery-validate from cdnjs, matching the shared partial.
+
+### Added
+- A Playwright QA harness under `tests/playwright/` covering: public pages; Supplier/Buyer login-logout
+  plus an Admin **2FA-enforcement** check (correct password is challenged for a second factor, not let
+  straight in); authorization/role-isolation across `/Admin`; per-role navigation crawl; responsive
+  overflow at 375/768/1440 px; and a full **Items CRUD lifecycle** (create → list → edit → delete,
+  self-cleaning QA data). Plus `playwright.config.js` and npm `qa`/`qa-headed`/`qa-report` scripts.
+  Navigation waits use `domcontentloaded` so a blocked third-party analytics host can't stall page loads.
+
 ## 📅 2026-07-08 — v1.8.8 (Remove dead showToast call on the home page)
 
 > Found by authenticated browser QA. `Home/Index.cshtml` ran an "Example" `$(document).ready`
