@@ -19,6 +19,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using EINVWORLD.Helpers;
 public class LHDNApiService : ILHDNApiService
 {
     private readonly HttpClient _httpClient;
@@ -91,7 +92,7 @@ public class LHDNApiService : ILHDNApiService
 
         try
         {
-            _logger.LogInformation("Validating taxpayer with TIN: {TIN}", tin);
+            _logger.LogInformation("Validating taxpayer with TIN: {TIN}", LogSanitizer.MaskTin(tin));
 
             // ✅ Step 1: Get logged-in user's assigned TIN
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext!.User);
@@ -114,7 +115,7 @@ public class LHDNApiService : ILHDNApiService
             }
 
             // Log the user id, not the email (PII), and never the email at Information level.
-            _logger.LogInformation("User {UserId} is assigned to company TIN: {UserTin}", user.Id, userTin);
+            _logger.LogInformation("User {UserId} is assigned to company TIN: {UserTin}", user.Id, LogSanitizer.MaskTin(userTin));
 
             // ✅ Step 2: Determine whether user is an intermediary
             bool isIntermediary = userTin != _onBehalfOf;
@@ -140,18 +141,18 @@ public class LHDNApiService : ILHDNApiService
             var response = await SendWithRetryAsync(request, accessToken);
 
             var result = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Taxpayer validation successful for TIN: {TIN}.", tin);
+            _logger.LogInformation("Taxpayer validation successful for TIN: {TIN}.", LogSanitizer.MaskTin(tin));
 
             return result;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP request failed while validating taxpayer with TIN: {TIN}.", tin);
+            _logger.LogError(ex, "HTTP request failed while validating taxpayer with TIN: {TIN}.", LogSanitizer.MaskTin(tin));
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating taxpayer with TIN: {TIN}.", tin);
+            _logger.LogError(ex, "Error validating taxpayer with TIN: {TIN}.", LogSanitizer.MaskTin(tin));
             throw;
         }
     }
@@ -175,7 +176,7 @@ public class LHDNApiService : ILHDNApiService
             {
                 _logger.LogWarning(
                     "♻️ Duplicate submission detected (same payload within {Minutes} min) for TIN {Tin} — " +
-                    "returning the previous response instead of resubmitting.", SubmissionDedupWindowMinutes, tin ?? "(session)");
+                    "returning the previous response instead of resubmitting.", SubmissionDedupWindowMinutes, tin is null ? "(session)" : LogSanitizer.MaskTin(tin));
                 return priorResponse;
             }
 
@@ -609,7 +610,7 @@ public class LHDNApiService : ILHDNApiService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❗ Exception during UUID sync. TIN: {TIN}, Date: {Start}→{End}, Page: {Page}", tin, start, chunkEnd, page);
+                    _logger.LogError(ex, "❗ Exception during UUID sync. TIN: {TIN}, Date: {Start}→{End}, Page: {Page}", LogSanitizer.MaskTin(tin), start, chunkEnd, page);
                     throw;
                 }
             }
@@ -617,7 +618,7 @@ public class LHDNApiService : ILHDNApiService
             start = chunkEnd.AddDays(1); // move to next 10-day window
         }
 
-        _logger.LogInformation("✅ Retrieved {Count} UUIDs from LHDN for TIN: {TIN}", uuids.Count, tin);
+        _logger.LogInformation("✅ Retrieved {Count} UUIDs from LHDN for TIN: {TIN}", uuids.Count, LogSanitizer.MaskTin(tin));
         return uuids;
     }
 
