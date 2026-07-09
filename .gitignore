@@ -45,3 +45,6 @@ EINVWORLD.csproj.bak-net8
 # ---- OS / editor ----
 Thumbs.db
 .DS_Store
+
+# Claude Code per-machine settings (may contain local credentials in permission entries)
+.claude/settings.local.json
