@@ -13,6 +13,14 @@ appsettings.*.local.json
 secrets.json
 *.p12
 *.pfx
+# DataProtection key ring written locally (contains encryption keys — NEVER commit).
+LocalKeys/
+
+# ---- Node / Playwright QA harness ----
+node_modules/
+test-results/
+playwright-report/
+/playwright/.cache/
 *.pem
 Cert/
 

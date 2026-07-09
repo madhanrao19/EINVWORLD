@@ -1,0 +1,32 @@
+{
+  "name": "einvworld",
+  "version": "1.0.0",
+  "description": "E-invoicing middleware for **Malaysia's LHDN MyInvois** system. EINVWORLD lets companies create,\r validate, submit, track and manage e-invoices against MyInvois, with a web UI for suppliers, buyers and\r admins. It is designed to run **self-hosted on a single in-house Windows / IIS server**.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "qa": "playwright test",
+    "qa-headed": "playwright test --headed",
+    "qa-report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madhanrao19/EINVWORLD.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/madhanrao19/EINVWORLD/issues"
+  },
+  "homepage": "https://github.com/madhanrao19/EINVWORLD#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
