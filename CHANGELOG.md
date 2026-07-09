@@ -17,7 +17,16 @@
 - **Disable Rocket Loader** for the `einvworld.com` zone: *Speed → Optimization → Rocket Loader → Off*.
   The app already self-hosts and optimizes all assets (v1.9.1/v1.9.2), so Rocket Loader adds nothing and
   costs ~20 s of page-lifecycle delay on every page, breaks `DOMContentLoaded`-dependent code, and
-  degrades Turnstile. Re-measure after: `DOMContentLoaded` should drop to well under 2 s.
+  degrades Turnstile. **Done 2026-07-09** — re-measurement then exposed the second cause below.
+
+### Fixed (code) — second cause found after Rocket Loader was disabled
+- With Rocket Loader off, `DOMContentLoaded` was *still* 21–26 s on networks that black-hole analytics
+  hosts (ad-block DNS / strict firewalls): the hanging `gtm.js` fetch — plus the Cloudflare Insights
+  beacon the GTM container itself loads — stalled the lifecycle until the ~24 s connection timeout.
+  Empirically verified: with those two hosts blocked at the network layer, the same pages complete
+  `DOMContentLoaded` in 0.2–3.3 s. **`_GoogleAnalytics.cshtml` now injects GTM only after
+  `DOMContentLoaded`**, so analytics can never gate the page lifecycle; on healthy networks GTM still
+  loads immediately after DCL with full dataLayer timing.
 
 ## 📅 2026-07-09 — v1.9.5 (SVDP 1.2 support — Special Voluntary Disclosure Programme)
 
