@@ -1,5 +1,6 @@
 ﻿using eInvWorld.Data;
 using eInvWorld.Helpers;
+using EINVWORLD.Helpers;
 using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Services;
@@ -91,7 +92,7 @@ namespace EINVWORLD.Helpers
                     }
 
                     string accessToken = await _tokenService.GetAccessTokenForTIN(tin);
-                    _logger.LogDebug("[SYNC] {Context} - Using TIN: {TIN}", context, tin);
+                    _logger.LogDebug("[SYNC] {Context} - Using TIN: {TIN}", context, LogSanitizer.MaskTin(tin));
 
                     // If UUID is missing but SubmissionID exists, poll SubmissionStatus to get UUID
                     if (!string.IsNullOrWhiteSpace(invoice.SubmissionID) && string.IsNullOrWhiteSpace(invoice.UUID))
@@ -300,8 +301,8 @@ namespace EINVWORLD.Helpers
                 return false;
             }
 
-            _logger.LogInformation("[SYNC] SyncLhdnInvoiceStatusAsync START for InvoiceNo: {InvoiceNo}, TIN: {TIN}", invoice.InvoiceNo, tin);
-            _logger.LogDebug("[SYNC] SyncLhdnInvoiceStatusAsync - Using TIN: {TIN}", tin);
+            _logger.LogInformation("[SYNC] SyncLhdnInvoiceStatusAsync START for InvoiceNo: {InvoiceNo}, TIN: {TIN}", invoice.InvoiceNo, LogSanitizer.MaskTin(tin));
+            _logger.LogDebug("[SYNC] SyncLhdnInvoiceStatusAsync - Using TIN: {TIN}", LogSanitizer.MaskTin(tin));
             _logger.LogDebug("[SYNC] SyncLhdnInvoiceStatusAsync - Invoice UUID: {UUID}, SubmissionID: {SubmissionID}", invoice.UUID, invoice.SubmissionID);
             
             // Get access token for the TIN
