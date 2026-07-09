@@ -20,6 +20,9 @@ namespace eInvWorld.Models.ViewModels
         public string ForeignCurrency { get; set; } = null!;
         public decimal? ExchangeRate { get; set; }
 
+        /// <summary>SVDP flag — submit as document version 1.2 (unsigned) instead of 1.0.</summary>
+        public bool IsSvdp { get; set; }
+
         public int SupplierId { get; set; }
         public int? CustomerId { get; set; }
         public int? PublicCustomerId { get; set; }

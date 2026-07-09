@@ -98,7 +98,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | Section | Purpose |
 |---|---|
 | `ConnectionStrings` | Database connections (**secret** — left blank, supplied via user-secrets / env vars). |
-| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP 1.2 switch; programme runs until 31 Dec 2027), `SyncRetentionDays`. |
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
 | `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` in `appsettings.Production.json` — migrations are additive (data preserved), but **back up first**. Set `false` to apply `Apply_*.sql` manually. |
 | `CodeTableSync` | Daily additive sync of the 9 LHDN code tables from the official SDK JSON files (`Enabled` default `true`, `IntervalHours` 24). Inserts/renames only — never deletes or deactivates, admin `IsActive` choices preserved. |

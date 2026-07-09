@@ -55,7 +55,11 @@ namespace eInvWorld.Services.Mappers
                         IssueTime = new List<JsonModels.IssueTime> { new JsonModels.IssueTime { _ = header.IssueDate?.ToUniversalTime().ToString("HH:mm:ssZ") ?? string.Empty } },
                         InvoiceTypeCode = new List<JsonModels.InvoiceTypeCode>
                         {
-                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = "1.0" }
+                            // "1.2" = e-Invoice Special Voluntary Disclosure Programme, unsigned (LHDN SDK
+                            // 8 Jul 2026, valid to 31 Dec 2027) — same UBL payload as 1.0, different version.
+                            // SVDP 1.3 (signed) is not emitted here; it additionally requires the signing
+                            // pipeline (LHDNApiConfig:SigningEnabled) which is off until a cert is bought.
+                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = header.IsSvdp ? "1.2" : "1.0" }
                         },
                         DocumentCurrencyCode = new List<JsonModels.DocumentCurrencyCode> { new JsonModels.DocumentCurrencyCode { _ = header.Currency } },
                     InvoicePeriod = (header.StartDate == null && header.EndDate == null && header.InvoicePeriod == null)

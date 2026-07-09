@@ -1,5 +1,6 @@
 ﻿@page
 @model EINVWORLD.Pages.Invoices.CreateInvoiceModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     Layout = "~/Pages/Shared/_Layout.cshtml";
     ViewData["IsEditMode"] = false;
@@ -1101,6 +1102,21 @@
                                 </label>
                             </div>
                         </div>
+
+                        @if (Configuration.GetValue<bool>("LHDNApiConfig:SvdpEnabled", false))
+                        {
+                            <!-- SVDP (Special Voluntary Disclosure Programme, until 31 Dec 2027) -->
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-3">
+                                    <input class="form-check-input" type="checkbox" asp-for="Invoice.IsSvdp" id="isSvdp" />
+                                    <label class="form-check-label" for="isSvdp">
+                                        SVDP e-Invoice
+                                        <i class="ri-information-line ms-1" data-bs-toggle="tooltip"
+                                           title="Submit under the Special Voluntary Disclosure Programme (document version 1.2, unsigned). Only for SVDP disclosures — leave off for normal invoices. Programme runs until 31 Dec 2027."></i>
+                                    </label>
+                                </div>
+                            </div>
+                        }
 
                         <!-- Issue Date -->
                         <div class="col-md-4">
