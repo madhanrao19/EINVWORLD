@@ -17,6 +17,11 @@ const LOCAL_ASSETS = [
   '/assets/libs/jquery-validation/dist/jquery.validate.min.js',
   '/assets/libs/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js',
   '/assets/js/tinymce/skins/ui/oxide/skin.min.css',
+  '/assets/libs/chartjs-plugin-zoom/chartjs-plugin-zoom.min.js',
+  '/assets/libs/html2pdf/html2pdf.bundle.min.js',
+  '/assets/libs/jspdf/jspdf.umd.min.js',
+  '/assets/libs/html2canvas/html2canvas.min.js',
+  '/assets/libs/qrcodejs/qrcode.min.js',
 ];
 
 test('assets: every localized vendor file returns 200', async ({ baseURL }) => {
@@ -63,6 +68,34 @@ test('assets: JS libraries load on the login page', async ({ page }) => {
   expect(globals.jquery).toBe('function');
   expect(globals.select2, 'select2 plugin registered').toBe(true);
   expect(globals.flatpickr).not.toBe('undefined');
+});
+
+test('assets: authenticated pages make no external asset-CDN requests', async ({ page }) => {
+  test.setTimeout(120000);
+  const external = new Set();
+  page.on('request', req => {
+    try {
+      const u = new URL(req.url());
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return;
+      const allowed = /localhost|127\.0\.0\.1|challenges\.cloudflare\.com|googletagmanager\.com|google-analytics\.com/.test(u.host);
+      if (!allowed) external.add(u.host);
+    } catch { /* ignore */ }
+  });
+  await login(page, 'supplier');
+  for (const p of ['/Dashboard/Dashboard', '/PublicCustomer/Create', '/Suppliers/Create?from=lead',
+                   '/Identity/Account/Manage/EnableAuthenticator']) {
+    await page.goto(p, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1000);
+  }
+  expect([...external], 'page-level external CDN hosts still requested').toEqual([]);
+});
+
+test('assets: qrcode library loads on the 2FA setup page', async ({ page }) => {
+  await login(page, 'supplier');
+  await page.goto('/Identity/Account/Manage/EnableAuthenticator', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1000);
+  const hasQR = await page.evaluate(() => typeof window.QRCode !== 'undefined');
+  expect(hasQR, 'QRCode global present').toBe(true);
 });
 
 test('assets: Chart.js loads on the supplier dashboard', async ({ page }) => {

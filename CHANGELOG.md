@@ -1,5 +1,24 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-09 — v1.9.2 (Self-host the remaining page-level CDN assets)
+
+> Follow-up to v1.9.1: that pass localized the shared layouts, but eight individual pages still loaded
+> their own libraries from public CDNs. Now fully first-party.
+
+### Changed
+- **Repointed to existing local copies:** Chart.js (Dashboard, MainDashboard), jQuery + Select2
+  (PublicCustomer/Create, Suppliers/Create — the shared layout already provides them locally).
+- **Downloaded & self-hosted (FOSS):** chartjs-plugin-zoom (Dashboard), html2pdf (InvoiceDetails2),
+  jsPDF + html2canvas (PdfTemplate — a `Layout=null` page, so these are essential there), and qrcodejs
+  (the 2FA authenticator-setup pages) — under `wwwroot/assets/libs/…`.
+- **Removed** the redundant remixicon CDN `<link>` on the Dashboard; the local `icons.min.css` already
+  bundles remixicon (verified the dashboard's `ri-*` glyphs are present).
+
+### Result
+No app page loads front-end assets from a CDN anymore. Only Cloudflare Turnstile and the optional Google
+Tag Manager snippet remain external (plus the Contact-page Google Map). Verified by a Playwright test that
+asserts the authenticated Dashboard / Create / 2FA-setup pages request zero external asset hosts.
+
 ## 📅 2026-07-09 — v1.9.1 (Self-host all front-end assets; kill the CDN dependency)
 
 > The UI loaded ~25 libraries and all its web fonts from public CDNs (jsDelivr, cdnjs, code.jquery.com,
