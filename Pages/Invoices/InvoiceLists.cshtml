@@ -5,7 +5,7 @@
 @model eInvWorld.Pages.Invoices.InvoiceListsModel
 @{
     ViewData["Title"] = "Invoice List";
-    Layout = "~/Pages/Shared/_Layout.cshtml";
+    Layout = "_LayoutTabler";
 
     var invoiceDirection = string.IsNullOrEmpty(Request.Query["invoiceDirection"]) ? "Sent" : Request.Query["invoiceDirection"].ToString();
     if (Model.UserType == "Buyer")
