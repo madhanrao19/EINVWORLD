@@ -1,0 +1,21 @@
+@inject IConfiguration Configuration
+@*
+    Shared footer for the Tabler layout. The build/version string stays Admin-only (attacker-
+    fingerprinting hygiene — same rule as the Velzon _Layout footer).
+*@
+<footer class="footer footer-transparent d-print-none">
+    <div class="container-fluid">
+        <div class="row text-muted align-items-center">
+            <div class="col-6 text-start">
+                <a href="https://www.datamationgroup.com/" class="link-secondary" rel="noopener">
+                    <strong>
+                        © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
+                    </strong>
+                </a>
+            </div>
+            <div class="col-6 text-end">
+                <a href="/contact" class="link-secondary">Contact</a>
+            </div>
+        </div>
+    </div>
+</footer>

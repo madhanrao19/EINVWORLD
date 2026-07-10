@@ -1,0 +1,25 @@
+@*
+    Tabler top header: global app-search (calls /api/Search, wired in _LayoutTabler) + the user menu.
+    Search element ids match the handler in _LayoutTabler and are unique on the page.
+*@
+<header class="navbar navbar-expand-md d-print-none" aria-label="Top bar">
+    <div class="container-fluid">
+        <div class="navbar-nav flex-row order-md-last">
+            @await Html.PartialAsync("_UserMenu")
+        </div>
+        <div class="collapse navbar-collapse" id="einv-topbar-content">
+            <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
+                <form class="app-search d-none d-md-block position-relative" role="search" onsubmit="return false;">
+                    <label for="einv-search-input" class="visually-hidden">Search</label>
+                    <input type="text" class="form-control" placeholder="Search..." autocomplete="off" id="einv-search-input">
+                    <span class="mdi mdi-close-circle search-widget-icon-close d-none" id="einv-search-close" aria-hidden="true"></span>
+                    <div class="dropdown-menu dropdown-menu-lg w-100" id="einv-search-dropdown">
+                        <div style="max-height: 320px; overflow:auto;">
+                            <div id="einv-search-results"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>

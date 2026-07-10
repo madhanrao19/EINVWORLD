@@ -1,0 +1,111 @@
+@*
+    Admin role navigation (Tabler). Rendered inside _TablerSidebar for Admin users only.
+    Menus are cosmetic — server-side [Authorize]/role checks are the real enforcement and are unchanged.
+    Unique ids per submenu (no duplicate DOM ids). Remix icons kept per the migration plan.
+*@
+<ul class="navbar-nav pt-lg-2" role="menubar">
+    <li class="nav-item" role="none">
+        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-dashboard-2-line"></i></span>
+            <span class="nav-link-title">Dashboard</span>
+        </a>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-codes" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-list-check"></i></span>
+            <span class="nav-link-title">Codes Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-codes">
+            <a class="dropdown-item" href="/Admin/Codes/StateCodes/ListState">State Codes</a>
+            <a class="dropdown-item" href="/Admin/Codes/CountryCodes/ListCountry">Country Codes</a>
+            <a class="dropdown-item" href="/Admin/Codes/CurrencyCodes/ListCurrency">Currency Codes</a>
+            <a class="dropdown-item" href="/Admin/Codes/ClassificationCodes/ListClassification">Classification Codes</a>
+            <a class="dropdown-item" href="/Admin/Codes/MSICSubCategoryCodes/ListMSICSubCategory">MSIC SubCategory Codes</a>
+            <a class="dropdown-item" href="/Admin/Codes/PaymentModes/ListPaymentMode">Payment Modes</a>
+            <a class="dropdown-item" href="/Admin/Codes/TaxTypes/ListTaxType">Tax Types</a>
+            <a class="dropdown-item" href="/Admin/Codes/UnitTypes/ListUnitType">Unit Types</a>
+            <a class="dropdown-item" href="/Admin/Codes/EInvoiceTypes/ListEInvoiceType">E-Invoice Types</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-items" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-line"></i></span>
+            <span class="nav-link-title">Item Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-items">
+            <a class="dropdown-item" href="/Items/Index">Items</a>
+            <a class="dropdown-item" href="/Items/Create">Create Item</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-users" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-group-line"></i></span>
+            <span class="nav-link-title">User Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-users">
+            <a class="dropdown-item" href="/Admin/Users/ManageUser">Manage Users</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-leads" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-user-add-line"></i></span>
+            <span class="nav-link-title">Lead Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-leads">
+            <a class="dropdown-item" href="/Lead/List">Customer Submissions</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-company" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-store-line"></i></span>
+            <span class="nav-link-title">Company Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-company">
+            <a class="dropdown-item" href="/Suppliers/Create">Create New Company</a>
+            <a class="dropdown-item" href="/Suppliers/Index">List of Companies</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-buyers" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-team-line"></i></span>
+            <span class="nav-link-title">Buyers Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-buyers">
+            <a class="dropdown-item" href="/PublicCustomer/List">List of Buyers</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-invoices" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-3-line"></i></span>
+            <span class="nav-link-title">Invoice Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-invoices">
+            <a class="dropdown-item" href="/Invoices/CreateInvoice">Create e-Invoice</a>
+            <a class="dropdown-item" href="/Invoices/ImportCSV">Bulk Invoice Import</a>
+            <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-admin-tools" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-tools-line"></i></span>
+            <span class="nav-link-title">Tools</span>
+        </a>
+        <div class="dropdown-menu" id="einv-admin-tools">
+            <a class="dropdown-item" href="/Admin/InvoiceSync">Invoice Sync</a>
+            <a class="dropdown-item" href="/Admin/SyncJobs">Sync Jobs</a>
+            <a class="dropdown-item" href="/Admin/AuditLog">Audit Trail</a>
+            <a class="dropdown-item" href="/Admin/SystemHealth">System Health</a>
+            <a class="dropdown-item" href="/Admin/Webhooks">Webhooks</a>
+            <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
+            <a class="dropdown-item" href="/Admin/AiSettings">AI Settings</a>
+            <a class="dropdown-item" href="/Invoices/CreateFromFile">AI Document Capture</a>
+            <a class="dropdown-item" href="/Admin/Resources/Manage">Manage Resource</a>
+        </div>
+    </li>
+    <li class="nav-item" role="none">
+        <a class="nav-link" role="menuitem" href="/Admin/Logs/Index">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-history-line"></i></span>
+            <span class="nav-link-title">System Logs</span>
+        </a>
+    </li>
+</ul>
