@@ -1,0 +1,22 @@
+@*
+    Buyer role navigation (Tabler). Rendered inside _TablerSidebar for Buyer users only.
+    Buyers can only view invoices addressed to their company — the same single entry as the Velzon menu.
+    Cosmetic only; server-side authorization is unchanged.
+*@
+<ul class="navbar-nav pt-lg-2" role="menubar">
+    <li class="nav-item" role="none">
+        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-dashboard-2-line"></i></span>
+            <span class="nav-link-title">Dashboard</span>
+        </a>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-buy-invoices" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-2-line"></i></span>
+            <span class="nav-link-title">My Invoice</span>
+        </a>
+        <div class="dropdown-menu" id="einv-buy-invoices">
+            <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+        </div>
+    </li>
+</ul>
