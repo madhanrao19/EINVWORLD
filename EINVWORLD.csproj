@@ -302,7 +302,7 @@
     <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
     <!-- SixLabors.ImageSharp removed: v4.0+ requires a paid commercial license, and the 3.x split-license
          is also restrictive for commercial use. Image resize/WebP now done with Magick.NET (Apache-2.0, already referenced). -->
-    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp" Version="4.150.0" />
     <!-- AI Document Capture OCR (scanned PDFs). FOSS: Tesseract (Apache-2.0) + PDFtoImage (MIT, PDFium
          rasterizer on the already-referenced SkiaSharp; no Ghostscript). Native libs ship but are only
          loaded when DocumentCapture:OcrEnabled=true, so they're inert on installs that leave OCR off. -->
