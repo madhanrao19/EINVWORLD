@@ -217,7 +217,10 @@ drop-in registration with no signing-service change (see SECRETS-SETUP.md "Signi
 **Concurrency & de-duplication** (defense in depth on the submit path):
 1. **UUID/Draft guard** — already-submitted invoices can't be resubmitted.
 2. **Atomic claim** — `InvoiceSubmissionGuard.TryClaimAsync` compare-and-sets `SubmissionClaimedAtUtc`
-   (5-min stale timeout) so a double-click can't double-submit.
+   (5-min stale timeout) so a double-click can't double-submit. A winning claim also reloads any
+   `InvoiceHeader` already tracked by the caller's context: the claim's raw UPDATE bumps the row's
+   `RowVersion`, so without the reload the caller's post-submission save would always fail with a
+   concurrency conflict. Callers must mutate the entity only **after** claiming.
 3. **Payload idempotency** — `SubmissionRecord` replays the prior response for an identical payload
    submitted within 10 minutes (mirrors MyInvois' own `422 DuplicateSubmission`).
 4. **TIN resolution** — `TinHelper.ResolveSubmitterTin` picks the correct submitter (self-billed →
