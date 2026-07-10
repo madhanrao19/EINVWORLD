@@ -1,0 +1,9 @@
+@{
+    // Tabler migration (Phase 5). Switch ALL authenticated Admin pages (this folder + nested
+    // subfolders like Codes/*) to the parallel Tabler layout. No anonymous pages exist under Admin.
+    // A page may override with its own `Layout`. Delete this file to revert the whole Admin area.
+    if (Context.User.Identity?.IsAuthenticated == true)
+    {
+        Layout = "_LayoutTabler";
+    }
+}
