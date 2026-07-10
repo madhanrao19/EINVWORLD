@@ -37,6 +37,14 @@ changes are additive and AI/features stay off unless already enabled.
      verified UUID/SubmissionUid rows into the script, then run SECTION 2. Do **not** run it
      verbatim — the fill-in rows are environment-specific (it refuses to run with none filled in).
      It is idempotent and never overwrites an already-recorded submission.
+   - **Tabler UI migration (unreleased, needs validation):** the authenticated UI is being migrated from
+     the Velzon theme to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN).
+     It ships as a normal build — no extra deploy step. The migration is **not yet validated on staging**;
+     after deploying, walk the modules (all roles) and confirm the layout renders before trusting it. To
+     run the automated check, set Cloudflare **test** Turnstile keys and disable admin MFA *temporarily*
+     for QA, then run `tests/playwright/10-tabler-modules.spec.js` (exact env vars in
+     `docs/TABLER-MIGRATION-AUDIT.md`), and **revert** those env vars afterwards. To roll a folder back to Velzon, delete its `Pages/<area>/_ViewStart.cshtml`
+     (or restore the one line in `Areas/Identity/Pages/_ViewStart.cshtml` for the auth pages).
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:

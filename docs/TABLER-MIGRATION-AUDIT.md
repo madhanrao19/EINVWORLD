@@ -1,5 +1,29 @@
 # EINVWORLD — Velzon → Tabler UI Migration Audit (Phase 1)
 
+> ## Progress log (updated 2026-07-10)
+> | Phase | Status | Notes |
+> |---|---|---|
+> | 1 — Audit | ✅ done | this document |
+> | 2 — Parallel scaffolding | ✅ merged | Tabler v1.4.0 assets + `_LayoutTabler` |
+> | 3 — Pilot (`Items/Index`) | ✅ merged | first opt-in page |
+> | Foundation partials | ✅ merged | decomposed `_TablerSidebar`/`_TablerTopbar`/`_UserMenu`/nav/`_Footer`/`_PageHeader` + tokens + UI helpers |
+> | 4 — Low-risk folders | ✅ merged | Items, Suppliers, PublicCustomer, Lead, Profile, RecurringInvoices (per-folder `_ViewStart`) |
+> | 5 — Admin (40 pages) | ✅ merged | one `Pages/Admin/_ViewStart.cshtml` |
+> | 6 — Dashboard + Invoices | ✅ merged | money path; **PDF/print `Layout=null` untouched** |
+> | 7 — Auth (`_LoginLayoutTabler`) | ✅ merged | login/2FA/register/manage; Velzon `_LoginLayout` kept as fallback |
+> | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | ⛔ **deferred** | destructive; do only after full staging validation |
+>
+> **⚠️ Not yet validated on staging.** All phases are CI-green (compile) but no Tabler page has been
+> visually verified — no local .NET SDK/renderer, and staging still runs the pre-Tabler v1.9.8 build.
+> **Rollout mechanism:** per-folder `_ViewStart.cshtml` switches a folder to `_LayoutTabler` for
+> authenticated users only (anonymous/public pages keep the marketing layout). **Revert** any area by
+> deleting its `_ViewStart.cshtml`. Velzon utility classes are shimmed in
+> `wwwroot/tabler/css/einvworld-tokens.css` so no per-page markup was rewritten.
+> **To validate:** deploy `main` to staging, set Turnstile **test** keys
+> (`Turnstile__SiteKey=1x00000000000000000000AA`, `Turnstile__SecretKey=1x0000000000000000000000000000000AA`)
+> and temporarily `Security__EnforceAdminMfa=false`, then run
+> `tests/playwright/10-tabler-modules.spec.js`.
+
 **Status:** Audit only. No application code changed in this phase.
 **Date:** 2026-07-10 · **Author:** Lead Architect (engineering audit)
 **Scope:** Replace the Velzon Bootstrap 5 admin theme on the **authenticated** UI with the free MIT
