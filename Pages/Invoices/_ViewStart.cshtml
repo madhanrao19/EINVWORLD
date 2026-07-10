@@ -1,0 +1,9 @@
+@{
+    // Tabler migration (Phase 6 — Dashboard + Invoices, the money path). Authenticated pages -> Tabler.
+    // Pages that set their own Layout (e.g. the PDF/print templates use `Layout = null`) override this
+    // and are unaffected. Delete this file to revert the folder to Velzon.
+    if (Context.User.Identity?.IsAuthenticated == true)
+    {
+        Layout = "_LayoutTabler";
+    }
+}
