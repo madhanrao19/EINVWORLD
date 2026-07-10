@@ -1,0 +1,232 @@
+@using eInvWorld.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IConfiguration Configuration
+
+@*
+    Tabler parallel layout (Phase 2 scaffolding). PARALLEL & OPT-IN: no page uses this by default —
+    a view opts in with `@{ Layout = "_LayoutTabler"; }`. Velzon `_Layout` remains the default until the
+    final cutover. This shell keeps the EXACT functional-plugin stack of `_Layout` (jQuery, Bootstrap
+    bundle, Select2, Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE) and the idle-timeout + app-search
+    behaviours, but replaces the Velzon chrome with Tabler CSS. It intentionally omits the Velzon theme
+    customizer and the global-theme (`/api/Theme/*`) client — Tabler does not use those data-attributes.
+    Tabler's own JS (`~/tabler/js/tabler.min.js`) is self-hosted but NOT loaded here to avoid a
+    double-Bootstrap load; the app's interactive components are standard Bootstrap 5 (provided by the
+    bundle below). It can be opted into per-page later if a Tabler-JS-only feature is needed.
+*@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    @await Html.PartialAsync("_Favicons")
+
+    <!-- Chart.js (self-hosted) -->
+    <script src="~/assets/libs/chart.js/chart.umd.js"></script>
+
+    <!-- Tabler core CSS (self-hosted, MIT) -->
+    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css">
+    <!-- Icon fonts (Remix + tail), kept from the current bundle during migration -->
+    <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
+
+    <!-- Functional plugin CSS (unchanged from _Layout) -->
+    <link href="~/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css">
+    <link href="~/assets/libs/select2/css/select2.min.css" rel="stylesheet" />
+    <link href="~/assets/libs/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
+    <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
+    <link rel="stylesheet" href="~/assets/libs/font-awesome/css/all.min.css" />
+
+    @await Html.PartialAsync("_GoogleAnalytics")
+
+    <!-- jQuery (self-hosted) — required by Select2 and inline app scripts -->
+    <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>
+</head>
+<body>
+
+    <!-- Bootstrap toast host (id reused by existing app scripts) -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="toast-success" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-success-message"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="page">
+        @if (ViewBag.HideSidebar != true)
+        {
+            @await Html.PartialAsync("_SidebarTabler")
+        }
+        <div class="page-wrapper">
+            <div class="page-body">
+                <div class="container-fluid">
+                    @RenderBody()
+                </div>
+            </div>
+            <footer class="footer footer-transparent d-print-none">
+                <div class="container-fluid">
+                    <div class="row text-muted align-items-center">
+                        <div class="col-6 text-start">
+                            <a href="https://www.datamationgroup.com/" class="link-secondary">
+                                <strong>
+                                    @* Version string is Admin-only (attacker-fingerprinting hygiene) — same rule as _Layout. *@
+                                    © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
+                                </strong>
+                            </a>
+                        </div>
+                        <div class="col-6 text-end">
+                            <a href="/contact" class="link-secondary">Contact</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    @if (ViewBag.AccessToken != null)
+    {
+        <div class="alert alert-success">
+            Access Token: <span id="access-token">@ViewBag.AccessToken</span>
+        </div>
+    }
+
+    <!-- Core JS: Bootstrap bundle (provides all interactive components the app uses) -->
+    <script src="~/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SweetAlert2 (self-hosted) -->
+    <script src="~/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script src="~/assets/js/pages/sweetalerts.init.js"></script>
+
+    <!-- Select2 (self-hosted) -->
+    <script src="~/assets/libs/select2/js/select2.min.js"></script>
+    <script>
+        $(function () {
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                placeholder: "-- Select an option --",
+                allowClear: false,
+                width: '100%'
+            });
+        });
+    </script>
+
+    <!-- Flatpickr (self-hosted) -->
+    <script src="~/assets/libs/flatpickr/flatpickr.min.js"></script>
+
+    <!-- Toastr (self-hosted) -->
+    <script src="~/assets/libs/toastr/toastr.min.js"></script>
+
+    <!-- Idle-timeout / auto-logout (unchanged behaviour from _Layout) -->
+    @inject Microsoft.Extensions.Options.IOptions<eInvWorld.Models.Settings.SessionSettings> SessionOptions
+    <script>
+        const idleTimeoutMinutes = @SessionOptions.Value.IdleTimeoutMinutes;
+    </script>
+    <script>
+        (function () {
+            const idleWarningMinutes = idleTimeoutMinutes - 1;
+            const warnAfter = idleWarningMinutes * 60 * 1000;
+            const logoutAfter = idleTimeoutMinutes * 60 * 1000;
+            let warnTimeout, logoutTimeout;
+            function startTimers() {
+                clearTimeout(warnTimeout);
+                clearTimeout(logoutTimeout);
+                warnTimeout = setTimeout(() => {
+                    Swal.fire({
+                        title: "Session Expiring",
+                        text: `You will be logged out in ${idleTimeoutMinutes - idleWarningMinutes} minute(s) due to inactivity.`,
+                        icon: "warning",
+                        confirmButtonText: "Stay Logged In",
+                        timer: 60000,
+                        showCancelButton: false,
+                        allowOutsideClick: false
+                    }).then(() => { startTimers(); });
+                }, warnAfter);
+                logoutTimeout = setTimeout(() => {
+                    window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
+                }, logoutAfter);
+            }
+            ['mousemove', 'keydown', 'mousedown', 'scroll'].forEach(evt => {
+                document.addEventListener(evt, startTimers, true);
+            });
+            startTimers();
+        })();
+    </script>
+
+    <!-- TinyMCE (self-hosted) -->
+    <script src="~/assets/js/tinymce/tinymce.min.js"></script>
+
+    <!-- Topbar app-search (calls /api/Search) — unchanged behaviour from _Layout -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("searchInput");
+            const searchDropdown = document.getElementById("search-dropdown");
+            const resultsContainer = document.getElementById("search-results-container");
+            const closeBtn = document.getElementById("search-close-options");
+            let debounceTimer;
+
+            if (searchInput) {
+                searchInput.addEventListener("input", function (e) {
+                    clearTimeout(debounceTimer);
+                    const query = e.target.value.trim();
+                    if (query.length > 0) { closeBtn.classList.remove("d-none"); }
+                    else { closeBtn.classList.add("d-none"); searchDropdown.classList.remove("show"); return; }
+                    debounceTimer = setTimeout(() => {
+                        if (query.length >= 2) { performSearch(query); }
+                    }, 300);
+                });
+                closeBtn.addEventListener("click", function () {
+                    searchInput.value = "";
+                    searchDropdown.classList.remove("show");
+                    closeBtn.classList.add("d-none");
+                });
+                document.addEventListener("click", function (e) {
+                    if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                        searchDropdown.classList.remove("show");
+                    }
+                });
+            }
+
+            async function performSearch(query) {
+                try {
+                    const response = await fetch(`/api/Search?q=${encodeURIComponent(query)}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        renderResults(data.results);
+                    }
+                } catch (error) { console.error("Search failed", error); }
+            }
+
+            function renderResults(results) {
+                resultsContainer.innerHTML = "";
+                if (results.length === 0) {
+                    resultsContainer.innerHTML = `<div class="p-3 text-center text-muted">No results found</div>`;
+                } else {
+                    const grouped = results.reduce((acc, curr) => {
+                        (acc[curr.type] = acc[curr.type] || []).push(curr.data);
+                        return acc;
+                    }, {});
+                    for (const [type, items] of Object.entries(grouped)) {
+                        resultsContainer.innerHTML += `<div class="dropdown-header mt-2"><h6 class="text-muted mb-1 text-uppercase">${type}s</h6></div>`;
+                        items.forEach(item => {
+                            const icon = item.icon || (type === 'User' ? 'ri-user-line' : type === 'Invoice' ? 'ri-file-list-3-line' : 'ri-search-line');
+                            resultsContainer.innerHTML += `
+                                <a href="${item.link}" class="dropdown-item">
+                                    <i class="${icon} align-middle fs-18 text-muted me-2"></i>
+                                    <span>${item.title} <small class="text-muted ms-1">${item.subtitle || ''}</small></span>
+                                </a>`;
+                        });
+                    }
+                }
+                searchDropdown.classList.add("show");
+            }
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>
