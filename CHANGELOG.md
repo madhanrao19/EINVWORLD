@@ -1,23 +1,60 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-## 📅 2026-07-10 — Unreleased (Tabler UI migration — Phase 1 audit + Phase 2 scaffolding, INERT)
+## 📅 2026-07-10 — Unreleased (Tabler UI migration — Phases 1–7 merged; UNVALIDATED on staging)
 
-> Groundwork for replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on
-> the authenticated UI. **Nothing changes for users in this change** — it is parallel + opt-in only.
+> Replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on the
+> **authenticated** UI. Server-rendered Razor Pages throughout — **no** SPA framework. Every phase is
+> CI-green (compiles) but **not yet visually validated on staging** (no local .NET SDK/renderer; staging
+> still runs the pre-Tabler v1.9.8 build). **No backend / DB / LHDN / calculation / PDF / authorization
+> change** in any phase — layout chrome only. Full plan, rollback and test strategy in
+> `docs/TABLER-MIGRATION-AUDIT.md`.
 
-### Added (no behaviour change)
-- `docs/TABLER-MIGRATION-AUDIT.md` — full Phase 1 audit (page/asset/JS/CSS/role-nav inventory,
-  responsive risk, migration order, rollback + test strategy, backend-coupling analysis).
-- Self-hosted **Tabler v1.4.0** (MIT) assets under `wwwroot/tabler/` (`css/tabler.min.css`,
-  `js/tabler.min.js`) — no CDN, offline/IIS-friendly.
-- `Pages/Shared/_LayoutTabler.cshtml` + `Pages/Shared/_SidebarTabler.cshtml` — a **parallel** Tabler
-  shell that reproduces the role menus and keeps the full functional-plugin stack (jQuery, Bootstrap
-  bundle, Select2, Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE) and idle-timeout + app-search.
+### Assets & foundation
+- Self-hosted **Tabler v1.4.0** (MIT) under `wwwroot/tabler/` (`css/tabler.min.css`, `js/tabler.min.js`) —
+  no CDN, offline/IIS-friendly. Tabler's own JS is intentionally **not** loaded (avoids a double-Bootstrap
+  load); interactivity is standard Bootstrap 5 from the existing bundle.
+- `wwwroot/tabler/css/einvworld-tokens.css` — brand green mapped onto Tabler CSS vars + **compatibility
+  shims** so existing Velzon utility classes (`page-title-box`, `btn-soft-*`, `material-shadow`,
+  `avatar-title`, and the auth chrome classes) render correctly under Tabler **without per-page markup
+  rewrites**.
+- `wwwroot/tabler/js/einvworld-ui.js` — current-route highlighting (`aria-current` + opens the active
+  dropdown) + an `einvworld.toast()` helper (vanilla JS).
+- Decomposed shared partials: `_LayoutTabler`, `_TablerSidebar`, `_TablerTopbar`, `_UserMenu`,
+  `_AdminNavigation` / `_SupplierNavigation` / `_BuyerNavigation`, `_Footer`, `_PageHeader`.
+  Plus `_LoginLayoutTabler` for the auth area. The full functional-plugin stack (jQuery, Bootstrap bundle,
+  Select2, Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE, lord-icon) and idle-timeout + app-search
+  are preserved.
 
-### Not changed
-- Velzon `_Layout`/`_Sidebar` remain the default; no page opts into the Tabler layout yet. No backend,
-  DB, LHDN, calculation, PDF, or authorization change. The global-theme system (`/api/Theme/*`) is left
-  intact and will only be retired at the final cutover (with agreement).
+### Rollout (opt-in via per-folder `_ViewStart.cshtml`, authenticated users only)
+- **Pilot:** `Pages/Items/Index`.
+- **Low-risk folders:** Items, Suppliers, PublicCustomer, Lead, Profile, RecurringInvoices.
+- **Admin** area (40 pages incl. nested Codes/*).
+- **Dashboard + Invoices** (money path). **PDF/print templates untouched** — `PdfTemplate.cshtml` and
+  `InvoiceDetails.cshtml` keep `Layout = null`.
+- **Auth** (login / 2FA / register / password reset / Manage/*) → `_LoginLayoutTabler`, preserving
+  Turnstile, the auth form ids, password/validation init, and the logout-reason toast.
+- Public/anonymous pages (marketing, `Lead/Submit`, `Lead/Create` for anonymous) stay on the marketing
+  layout (the folder `_ViewStart` is authenticated-only).
+- **Revert** any area by deleting its `_ViewStart.cshtml` (or restoring one line in
+  `Areas/Identity/Pages/_ViewStart.cshtml` for auth). Velzon `_Layout`/`_LoginLayout` are kept as the
+  fallback.
+
+### Invoice list UX
+- `Pages/Invoices/InvoiceLists.cshtml`: bulk Delete/Cancel/Reject buttons are now **hidden until ≥1 row is
+  selected**, and the header "select all" checkbox is now functional (it previously had no handler).
+  Presentational only — bulk handlers still read `.invoice-checkbox:checked`.
+
+### QA
+- `tests/playwright/10-tabler-modules.spec.js` — authenticated verification across every module per role
+  (asserts the Tabler shell rendered, no console/network errors, no horizontal overflow at
+  375/768/1366/1920). Requires the Tabler build deployed + Cloudflare Turnstile **test** keys (and
+  `Security__EnforceAdminMfa=false` for the admin arm) to run.
+
+### Deferred (NOT done — must follow staging validation)
+- **Phase 8 — Velzon removal**: delete the Velzon `_Layout`/`_LoginLayout`/`app.min.css`/theme JS, retire
+  the DB-backed global-theme system (`/api/Theme/*` + `GlobalThemeService` + `GlobalThemeSettings`,
+  additively — leave the table), and remove ~60 MB of unused Velzon demo assets. Deliberately held: do not
+  remove the working fallback theme before the Tabler UI is validated end-to-end on staging.
 
 ## 📅 2026-07-10 — v1.9.9 (Fix: validated/rejected/cancelled emails silently failed when SMTP creds blank)
 
