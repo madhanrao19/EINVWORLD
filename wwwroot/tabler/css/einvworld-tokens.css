@@ -1,0 +1,40 @@
+/* EINVWORLD design tokens for the Tabler theme.
+ * Loaded AFTER tabler.min.css so these overrides win. Rebrands Tabler's default blue to the
+ * EINVWORLD green and exposes brand tokens for the migrated UI. Pure CSS custom properties —
+ * no build step, self-hosted, offline-friendly. Does not affect the Velzon layout (only pages
+ * that opt into _LayoutTabler load this file).
+ */
+:root {
+  /* Brand palette (matches the current Velzon accent) */
+  --einv-primary: #3AA564;
+  --einv-primary-dark: #055332;
+  --einv-primary-rgb: 58, 165, 100;
+  --einv-accent: #2f8f56;
+
+  /* Map Tabler's primary onto the brand so buttons/links/active states are green */
+  --tblr-primary: var(--einv-primary);
+  --tblr-primary-rgb: var(--einv-primary-rgb);
+  --tblr-primary-fg: #ffffff;
+  --tblr-link-color: var(--einv-primary-dark);
+  --tblr-link-hover-color: var(--einv-primary);
+}
+
+/* Ensure the vertical navbar active/hover state reads as brand green in the dark sidebar. */
+.navbar-vertical .navbar-nav .nav-link.active,
+.navbar-vertical .navbar-nav .nav-item.show > .nav-link {
+  color: #ffffff;
+  background-color: rgba(var(--einv-primary-rgb), 0.22);
+}
+.navbar-vertical .navbar-nav .nav-link:hover {
+  color: #ffffff;
+}
+.navbar-vertical .navbar-nav .dropdown-menu .dropdown-item.active,
+.navbar-vertical .navbar-nav .dropdown-menu .dropdown-item[aria-current="page"] {
+  color: var(--einv-primary);
+  font-weight: 600;
+}
+
+/* Brand avatar ring reused across topbar + sidebar. */
+.einv-avatar-ring {
+  border: 2px solid var(--einv-primary);
+}
