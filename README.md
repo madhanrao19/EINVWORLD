@@ -11,6 +11,8 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 ## Tech stack
 
 - **.NET 10 (LTS)** — ASP.NET Core, Razor Pages + MVC API controllers
+- **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). Migrating the authenticated theme from
+  Velzon to the free MIT **Tabler** — in progress; see `docs/TABLER-MIGRATION-AUDIT.md`.
 - **EF Core 10** on **SQL Server**
 - **ASP.NET Core Identity** (roles: Admin, Supplier, Buyer)
 - **Serilog** (file + SQL `SystemLogs`)
