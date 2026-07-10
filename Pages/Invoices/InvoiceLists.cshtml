@@ -2015,5 +2015,47 @@
         }, 30000); // 30,000 milliseconds = 30 seconds
     });
 </script>
+<script>
+    // Bulk-action UX (presentational only — bulk handlers still read `.invoice-checkbox:checked`).
+    //  1) Keep the Delete/Cancel/Reject bulk buttons hidden until at least one row is selected.
+    //  2) Make the header "select all" checkbox actually select/deselect every row + reflect an
+    //     indeterminate state. No PageModel/query/permission/API change.
+    (function () {
+        var bulkIds = ['bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn'];
+
+        function rowCheckboxes() { return Array.prototype.slice.call(document.querySelectorAll('.invoice-checkbox')); }
+
+        function refreshBulkVisibility() {
+            var checked = document.querySelectorAll('.invoice-checkbox:checked').length;
+            bulkIds.forEach(function (id) {
+                var btn = document.getElementById(id);
+                if (btn) { btn.classList.toggle('d-none', checked === 0); }
+            });
+            var selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                var total = rowCheckboxes().length;
+                selectAll.checked = total > 0 && checked === total;
+                selectAll.indeterminate = checked > 0 && checked < total;
+            }
+        }
+
+        document.addEventListener('change', function (e) {
+            var t = e.target;
+            if (!t) return;
+            if (t.id === 'selectAll') {
+                rowCheckboxes().forEach(function (cb) { cb.checked = t.checked; });
+                refreshBulkVisibility();
+            } else if (t.classList && t.classList.contains('invoice-checkbox')) {
+                refreshBulkVisibility();
+            }
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', refreshBulkVisibility);
+        } else {
+            refreshBulkVisibility();
+        }
+    })();
+</script>
 }
 
