@@ -1,5 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-10 — v1.9.8 (Security: harden invoice export — company scoping + CSV injection)
+
+> Found during a full Supplier/Buyer flow verification pass.
+
+### Fixed (security)
+- **Cross-company export leak (IDOR).** `InvoiceLists.OnGetExportAsync` only applied the
+  per-TIN company scope inside `if (invoiceDirection != "All")`. A Supplier/Admin calling the
+  export endpoint with `invoiceDirection=All` (or blank) skipped the filter entirely and exported
+  **every company's invoices**. The TIN scope is now mandatory for the All/empty case too. Buyers
+  were already force-pinned to `Received` and were not affected.
+- **CSV formula injection.** `EscapeCsv` quoted delimiters but did not neutralise cells beginning
+  with `= + - @` / tab / CR, so a crafted item description or company name could execute as a
+  formula in Excel/Sheets. Such cells now get a leading apostrophe. XLSX export was not affected
+  (ClosedXML writes literal string cells, which Excel does not execute).
+
 ## 📅 2026-07-10 — v1.9.7 (Critical fix: LHDN submissions accepted but never persisted locally)
 
 > Since v1.8.2 added optimistic concurrency (`InvoiceHeader.RowVersion`), **every UI submission
