@@ -1,0 +1,14 @@
+@model string
+@*
+    Reusable Tabler page header. Usage from a page:
+        @await Html.PartialAsync("_PageHeader", "Manage Saved Items")
+    Renders a semantic <h1> page title so each migrated page has exactly one top-level heading
+    (accessibility). Model is the title text.
+*@
+<div class="page-header d-print-none mb-3">
+    <div class="row align-items-center">
+        <div class="col">
+            <h1 class="page-title mb-0 h2">@Model</h1>
+        </div>
+    </div>
+</div>
