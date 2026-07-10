@@ -1,5 +1,24 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-10 — Unreleased (Tabler UI migration — Phase 1 audit + Phase 2 scaffolding, INERT)
+
+> Groundwork for replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on
+> the authenticated UI. **Nothing changes for users in this change** — it is parallel + opt-in only.
+
+### Added (no behaviour change)
+- `docs/TABLER-MIGRATION-AUDIT.md` — full Phase 1 audit (page/asset/JS/CSS/role-nav inventory,
+  responsive risk, migration order, rollback + test strategy, backend-coupling analysis).
+- Self-hosted **Tabler v1.4.0** (MIT) assets under `wwwroot/tabler/` (`css/tabler.min.css`,
+  `js/tabler.min.js`) — no CDN, offline/IIS-friendly.
+- `Pages/Shared/_LayoutTabler.cshtml` + `Pages/Shared/_SidebarTabler.cshtml` — a **parallel** Tabler
+  shell that reproduces the role menus and keeps the full functional-plugin stack (jQuery, Bootstrap
+  bundle, Select2, Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE) and idle-timeout + app-search.
+
+### Not changed
+- Velzon `_Layout`/`_Sidebar` remain the default; no page opts into the Tabler layout yet. No backend,
+  DB, LHDN, calculation, PDF, or authorization change. The global-theme system (`/api/Theme/*`) is left
+  intact and will only be retired at the final cutover (with agreement).
+
 ## 📅 2026-07-10 — v1.9.9 (Fix: validated/rejected/cancelled emails silently failed when SMTP creds blank)
 
 > Found in live staging QA: after a submission reached **Valid**, the Supplier/Buyer notification
