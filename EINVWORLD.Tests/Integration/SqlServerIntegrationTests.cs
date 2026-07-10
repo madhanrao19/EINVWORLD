@@ -379,6 +379,76 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal("written by B", final.Notes);
         }
 
+        // ── Guard claim vs RowVersion: the submit-path regression (claim bumps rowversion) ────────
+        [Fact]
+        public async Task SubmissionGuard_Claim_ThenTrackedSave_Succeeds()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-RV-{Guid.NewGuid():N}".Substring(0, 20);
+            ctx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = status,
+            });
+            await ctx.SaveChangesAsync();
+            ctx.ChangeTracker.Clear();
+
+            // Mirror every submit page: load the tracked entity BEFORE the claim, mutate AFTER, save.
+            // The claim's raw UPDATE bumps the row's rowversion; without the guard's reload this save
+            // throws DbUpdateConcurrencyException and the accepted UUID is never persisted.
+            var invoice = await ctx.InvoiceHeaders.SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.True(await InvoiceSubmissionGuard.TryClaimAsync(ctx, invoiceNo));
+
+            invoice.UUID = "IT-UUID-AFTER-CLAIM";
+            invoice.SubmissionID = "IT-SUBMISSION-ID";
+            invoice.LHDNStatusId = "Submitted";
+            await ctx.SaveChangesAsync(); // must not throw
+
+            await using var verifyCtx = _fx.CreateContext();
+            var final = await verifyCtx.InvoiceHeaders.AsNoTracking().SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.Equal("IT-UUID-AFTER-CLAIM", final.UUID);
+            Assert.Equal("IT-SUBMISSION-ID", final.SubmissionID);
+            Assert.Equal("Submitted", final.LHDNStatusId);
+        }
+
+        [Fact]
+        public async Task SubmissionGuard_LoserOfClaim_StaysBlocked_EvenWithTrackedEntity()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-RV-{Guid.NewGuid():N}".Substring(0, 20);
+            ctx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = status,
+            });
+            await ctx.SaveChangesAsync();
+            ctx.ChangeTracker.Clear();
+
+            // Winner claims in one context; a second request (own context, tracked entity loaded
+            // before its claim attempt) must still be blocked — the reload must not weaken the guard.
+            Assert.True(await InvoiceSubmissionGuard.TryClaimAsync(ctx, invoiceNo));
+
+            await using var loserCtx = _fx.CreateContext();
+            _ = await loserCtx.InvoiceHeaders.SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.False(await InvoiceSubmissionGuard.TryClaimAsync(loserCtx, invoiceNo));
+        }
+
         private static async Task<string> SeedStatusAsync(ApplicationDbContext ctx)
         {
             var existing = await ctx.Set<eInvWorld.Models.Status>().Select(s => s.StatusCode).FirstOrDefaultAsync();

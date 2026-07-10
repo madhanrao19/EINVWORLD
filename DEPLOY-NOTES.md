@@ -29,6 +29,14 @@ changes are additive and AI/features stay off unless already enabled.
      (add `-WhatIf` first to preview). If you set the variables in the IIS app-pool dialog or a
      server-side `web.config` instead, rename them there by hand and recycle the pool.
    - Re-check any other env vars against **SECRETS-SETUP.md** (no new required secrets in this release).
+   - **v1.9.7 data fix (one-time):** builds between v1.8.2 and v1.9.7 accepted documents at LHDN
+     but failed to persist the UUID/status locally — those invoices still look like Drafts and could
+     be resubmitted as duplicates. After the new build is running, open
+     `scripts/Reconcile-OrphanedSubmissions.sql` and follow its steps **per environment**: run
+     SECTION 1 to list candidates, verify each at LHDN (MyInvois portal or server logs), fill the
+     verified UUID/SubmissionUid rows into the script, then run SECTION 2. Do **not** run it
+     verbatim — the fill-in rows are environment-specific (it refuses to run with none filled in).
+     It is idempotent and never overwrites an already-recorded submission.
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:
