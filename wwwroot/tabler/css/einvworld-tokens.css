@@ -84,3 +84,44 @@
   height: 100%;
   color: #fff;
 }
+
+/* ── Auth pages (Phase 7): shim the Velzon auth chrome so login/2FA/register/manage render
+ * as a centered card under Tabler. The auth PAGE markup (forms, ids, Turnstile) is unchanged;
+ * these are layout-only visual shims. */
+.auth-page-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.auth-one-bg-position, .auth-one-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 380px;
+  background: linear-gradient(135deg, var(--einv-primary-dark), var(--einv-primary));
+  overflow: hidden;
+}
+.auth-one-bg .bg-overlay { display: none; }
+.auth-one-bg .shape { position: absolute; bottom: 0; left: 0; right: 0; }
+.auth-one-bg .shape svg { width: 100%; height: auto; fill: var(--tblr-body-bg, #f5f7fb); }
+.auth-page-content {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+}
+.auth-page-content .container { width: 100%; }
+.auth-logo { display: inline-flex; align-items: center; justify-content: center; }
+.card-bg-fill { background-color: var(--tblr-bg-surface, #fff); }
+/* Password show/hide toggle button positioning (password-addon.init.js). */
+.auth-pass-inputgroup { position: relative; }
+.auth-pass-inputgroup .password-addon {
+  position: absolute;
+  top: 50%;
+  right: .25rem;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  z-index: 5;
+}
