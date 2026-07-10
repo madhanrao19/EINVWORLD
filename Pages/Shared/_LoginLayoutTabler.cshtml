@@ -1,0 +1,144 @@
+@using eInvWorld.Models
+@inject Microsoft.AspNetCore.Identity.SignInManager<ApplicationUser> SignInManager
+@inject Microsoft.Extensions.Options.IOptions<eInvWorld.Models.Settings.SessionSettings> SessionOptions
+@{
+    string? logoutReason = Context.Request.Query["logoutReason"];
+    if (string.IsNullOrEmpty(logoutReason) && Context.Request.Query.ContainsKey("ReturnUrl"))
+    {
+        var returnUrl = Context.Request.Query["ReturnUrl"].ToString();
+        var match = System.Text.RegularExpressions.Regex.Match(returnUrl, @"logoutReason=([^&]*)");
+        if (match.Success) { logoutReason = match.Groups[1].Value; }
+    }
+}
+@*
+    Tabler auth layout (Phase 7). Replaces the Velzon _LoginLayout for Identity pages (login, 2FA,
+    register, password reset, Manage/*). The auth PAGE markup and its critical ids (#account,
+    #username, #password-input, #login-submit, cf-turnstile-response) are unchanged — only the chrome.
+    Preserved: Turnstile api.js (login/register), password-addon + jQuery validation init, jQuery,
+    Select2, Flatpickr, SweetAlert2, Toastr, favicons, Google Analytics, idle-timeout (when signed in),
+    and the logout-reason toast. Velzon auth classes are shimmed in einvworld-tokens.css.
+*@
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <script>
+        const idleTimeoutMinutes = @SessionOptions.Value.IdleTimeoutMinutes;
+        (function () {
+            const idleWarningMinutes = idleTimeoutMinutes - 1;
+            const warnAfter = idleWarningMinutes * 60 * 1000;
+            const logoutAfter = idleTimeoutMinutes * 60 * 1000;
+            let warnTimeout, logoutTimeout;
+            function startTimers() {
+                clearTimeout(warnTimeout);
+                clearTimeout(logoutTimeout);
+                warnTimeout = setTimeout(() => {
+                    Swal.fire({
+                        title: "Session Expiring",
+                        text: `You will be logged out in ${idleTimeoutMinutes - idleWarningMinutes} minute(s) due to inactivity.`,
+                        icon: "warning", confirmButtonText: "Stay Logged In", timer: 60000,
+                        showCancelButton: false, allowOutsideClick: false
+                    }).then(() => { startTimers(); });
+                }, warnAfter);
+                logoutTimeout = setTimeout(() => {
+                    window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
+                }, logoutAfter);
+            }
+            ['mousemove', 'keydown', 'mousedown', 'scroll'].forEach(evt => {
+                document.addEventListener(evt, startTimers, true);
+            });
+            startTimers();
+        })();
+    </script>
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@ViewData["Title"]</title>
+    <meta name="description" content="@ViewData["Description"]" />
+    <meta name="keywords" content="@ViewData["Keywords"]" />
+
+    @await Html.PartialAsync("_Favicons")
+
+    <!-- Tabler CSS + brand tokens (tokens carry the auth-page shims) -->
+    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css">
+    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css">
+    <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
+
+    <link href="~/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
+    <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
+    <link href="~/assets/libs/select2/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Turnstile (must load from Cloudflare). data-cfasync=false exempts it from Rocket Loader. -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" data-cfasync="false" async defer></script>
+
+    <!-- jQuery (self-hosted) — required by Select2 + password/validation init -->
+    <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>
+    <script src="~/assets/libs/select2/js/select2.min.js"></script>
+    <script src="~/assets/libs/flatpickr/flatpickr.min.js"></script>
+
+    @await Html.PartialAsync("_GoogleAnalytics")
+</head>
+<body data-logout-reason="@logoutReason">
+    <div class="auth-page-wrapper">
+        <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
+            <div class="bg-overlay"></div>
+            <div class="shape">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120">
+                    <path d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,40L1440 140L0 140z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const reason = document.body.getAttribute("data-logout-reason");
+                if (reason === "timeout" && window.toastr) { toastr.info("You were logged out due to inactivity.", "Session Ended"); }
+                else if (reason === "manual" && window.toastr) { toastr.success("You have successfully logged out.", "Logged Out"); }
+                if (reason) { window.history.replaceState({}, document.title, window.location.pathname); }
+            });
+        </script>
+
+        <div class="auth-page-content">
+            <div class="container">
+                @RenderBody()
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="text-center">
+                    <p class="mb-0 text-muted">
+                        &copy; <script>document.write(new Date().getFullYear())</script> © eInvWorld |
+                        Designed by
+                        <a href="https://www.datamationgroup.com/" target="_blank" rel="noopener" class="border-bottom text-decoration-none">
+                            Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Core JS -->
+    <script src="~/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
+
+    <!-- password show/hide toggle + jQuery validation init (unchanged from _LoginLayout) -->
+    <script src="/assets/js/pages/password-addon.init.js"></script>
+    <script src="~/assets/js/pages/form-validation.init.js"></script>
+
+    <!-- SweetAlert2 + Toastr -->
+    <script src="~/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script src="~/assets/js/pages/sweetalerts.init.js"></script>
+    <script src="~/assets/libs/toastr/toastr.min.js"></script>
+
+    <partial name="_ValidationScriptsPartial" />
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

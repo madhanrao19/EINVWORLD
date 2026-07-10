@@ -1,4 +1,6 @@
 ﻿
 @{
-    Layout = "/Pages/Shared/_LoginLayout.cshtml";
+    // Tabler migration (Phase 7). Identity pages (login, 2FA, register, password reset, Manage/*)
+    // use the Tabler auth layout. Revert to Velzon by restoring "/Pages/Shared/_LoginLayout.cshtml".
+    Layout = "/Pages/Shared/_LoginLayoutTabler.cshtml";
 }
