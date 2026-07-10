@@ -1,0 +1,286 @@
+@using eInvWorld.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject eInvWorld.Data.ApplicationDbContext DbContext
+@using System.Security.Claims
+
+@*
+    Tabler parallel sidebar + topbar (Phase 2 scaffolding — inert until a page opts into _LayoutTabler).
+    Reproduces the EXACT role menus, hrefs, and per-user company scoping of _Sidebar.cshtml, using
+    Tabler's `navbar navbar-vertical` chrome. Remix icons (ri-*) are kept as-is per the migration plan.
+    No authorization change: menus are cosmetic; server-side [Authorize]/role checks are unchanged.
+*@
+
+@if (SignInManager.IsSignedIn(User))
+{
+    var me = await UserManager.GetUserAsync(User);
+    var fullName = me?.FullName ?? User?.Identity?.Name ?? "";
+    var profilePic = me?.ProfilePicture;
+    var roles = me != null ? await UserManager.GetRolesAsync(me) : new List<string>();
+    var firstRole = roles.FirstOrDefault() ?? "";
+    var firstLetter = string.IsNullOrWhiteSpace(fullName) ? "" : fullName.Substring(0, 1).ToUpper();
+
+    string? companyId = null;
+    if (User?.IsInRole("Supplier") == true)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        companyId = DbContext.UserCompanies
+            .Where(uc => uc.UserId == userId)
+            .Select(uc => uc.PartyInfoId.ToString())
+            .FirstOrDefault();
+    }
+
+    <!-- Tabler vertical sidebar -->
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-brand navbar-brand-autodark">
+                <a href="/Dashboard/Dashboard">
+                    <img src="~/assets/images/einvworld-logo-light.png" height="26" alt="eInvWorld">
+                </a>
+            </div>
+
+            <div class="collapse navbar-collapse" id="sidebar-menu">
+                @if (User?.IsInRole("Admin") == true)
+                {
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Dashboard/Dashboard">
+                                <span class="nav-link-icon"><i class="ri-dashboard-2-line"></i></span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#codes-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-list-check"></i></span>
+                                <span class="nav-link-title">Codes Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Admin/Codes/StateCodes/ListState">State Codes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/CountryCodes/ListCountry">Country Codes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/CurrencyCodes/ListCurrency">Currency Codes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/ClassificationCodes/ListClassification">Classification Codes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/MSICSubCategoryCodes/ListMSICSubCategory">MSIC SubCategory Codes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/PaymentModes/ListPaymentMode">Payment Modes</a>
+                                <a class="dropdown-item" href="/Admin/Codes/TaxTypes/ListTaxType">Tax Types</a>
+                                <a class="dropdown-item" href="/Admin/Codes/UnitTypes/ListUnitType">Unit Types</a>
+                                <a class="dropdown-item" href="/Admin/Codes/EInvoiceTypes/ListEInvoiceType">E-Invoice Types</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#items-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-file-list-line"></i></span>
+                                <span class="nav-link-title">Item Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Items/Index">Items</a>
+                                <a class="dropdown-item" href="/Items/Create">Create Item</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#users-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-group-line"></i></span>
+                                <span class="nav-link-title">User Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Admin/Users/ManageUser">Manage Users</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#adminlead-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-user-add-line"></i></span>
+                                <span class="nav-link-title">Lead Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Lead/List">Customer Submissions</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#company-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-store-line"></i></span>
+                                <span class="nav-link-title">Company Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Suppliers/Create">Create New Company</a>
+                                <a class="dropdown-item" href="/Suppliers/Index">List of Companies</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#adminbuyers-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-team-line"></i></span>
+                                <span class="nav-link-title">Buyers Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/PublicCustomer/List">List of Buyers</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#admininvoices-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-file-list-3-line"></i></span>
+                                <span class="nav-link-title">Invoice Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Invoices/CreateInvoice">Create e-Invoice</a>
+                                <a class="dropdown-item" href="/Invoices/ImportCSV">Bulk Invoice Import</a>
+                                <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#tools-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-tools-line"></i></span>
+                                <span class="nav-link-title">Tools</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Admin/InvoiceSync">Invoice Sync</a>
+                                <a class="dropdown-item" href="/Admin/SyncJobs">Sync Jobs</a>
+                                <a class="dropdown-item" href="/Admin/AuditLog">Audit Trail</a>
+                                <a class="dropdown-item" href="/Admin/SystemHealth">System Health</a>
+                                <a class="dropdown-item" href="/Admin/Webhooks">Webhooks</a>
+                                <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
+                                <a class="dropdown-item" href="/Admin/AiSettings">AI Settings</a>
+                                <a class="dropdown-item" href="/Invoices/CreateFromFile">AI Document Capture</a>
+                                <a class="dropdown-item" href="/Admin/Resources/Manage">Manage Resource</a>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Admin/Logs/Index">
+                                <span class="nav-link-icon"><i class="ri-history-line"></i></span>
+                                <span class="nav-link-title">System Logs</span>
+                            </a>
+                        </li>
+                    </ul>
+                }
+                else if (User?.IsInRole("Supplier") == true)
+                {
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Dashboard/Dashboard">
+                                <span class="nav-link-icon"><i class="ri-dashboard-2-line"></i></span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#supinvoices-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-file-list-3-line"></i></span>
+                                <span class="nav-link-title">My Invoice</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+                                <a class="dropdown-item" href="/Invoices/CreateInvoice">Create e-Invoice</a>
+                                <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
+                                <a class="dropdown-item" href="/Invoices/CreateFromFile">AI Document Capture</a>
+                                <a class="dropdown-item" href="/Templates/TemplateLists">Manage Templates</a>
+                                <a class="dropdown-item" href="/Invoices/ImportCsv">Bulk Invoice Import</a>
+                                <a class="dropdown-item" href="/RecurringInvoices/Index">Recurring Invoices</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#supitems-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-file-list-line"></i></span>
+                                <span class="nav-link-title">Item Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Items/Index">Items</a>
+                                <a class="dropdown-item" href="/Items/Create">Create Item</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#supbuyers-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-user-add-line"></i></span>
+                                <span class="nav-link-title">Buyers Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/PublicCustomer/List">List of Buyers</a>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#supcompany-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-building-line"></i></span>
+                                <span class="nav-link-title">My Company Management</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Suppliers/Details?id=@companyId">My Company Details</a>
+                            </div>
+                        </li>
+                    </ul>
+                }
+                else if (User?.IsInRole("Buyer") == true)
+                {
+                    <ul class="navbar-nav pt-lg-3">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Dashboard/Dashboard">
+                                <span class="nav-link-icon"><i class="ri-dashboard-2-line"></i></span>
+                                <span class="nav-link-title">Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#buyinvoices-menu" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+                                <span class="nav-link-icon"><i class="ri-file-list-2-line"></i></span>
+                                <span class="nav-link-title">My Invoice</span>
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+                            </div>
+                        </li>
+                    </ul>
+                }
+            </div>
+        </div>
+    </aside>
+
+    <!-- Tabler top header: search + user menu -->
+    <header class="navbar navbar-expand-md d-print-none">
+        <div class="container-fluid">
+            <div class="navbar-nav flex-row order-md-last">
+                <div class="nav-item dropdown">
+                    <a href="#" class="nav-link d-flex lh-1 p-0 px-2" data-bs-toggle="dropdown" aria-label="Open user menu">
+                        @if (!string.IsNullOrEmpty(profilePic))
+                        {
+                            <span class="avatar avatar-sm rounded-circle" style="border:2px solid #3AA564;background-image:url('@profilePic')"></span>
+                        }
+                        else
+                        {
+                            <span class="avatar avatar-sm rounded-circle" style="border:2px solid #3AA564;background:#f8f9fa;color:#055332;font-weight:bold;">@firstLetter</span>
+                        }
+                        <div class="d-none d-xl-block ps-2">
+                            <div>@fullName</div>
+                            <div class="mt-1 small text-secondary">@firstRole</div>
+                        </div>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                        <h6 class="dropdown-header">Welcome @(fullName)!</h6>
+                        <a class="dropdown-item" asp-page="/Profile/Index">
+                            <i class="ri-account-circle-line me-1"></i> My Profile
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                            <input type="hidden" name="logoutReason" value="manual" />
+                            <button type="submit" class="dropdown-item">
+                                <i class="ri-logout-box-line me-1"></i> Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="collapse navbar-collapse" id="navbar-menu-search">
+                <div class="d-flex flex-column flex-md-row flex-fill align-items-stretch align-items-md-center">
+                    <form class="app-search d-none d-md-block position-relative" onsubmit="return false;">
+                        <input type="text" class="form-control" placeholder="Search..." autocomplete="off" id="searchInput">
+                        <span class="mdi mdi-close-circle search-widget-icon-close d-none" id="search-close-options"></span>
+                        <div class="dropdown-menu dropdown-menu-lg w-100" id="search-dropdown">
+                            <div style="max-height: 320px; overflow:auto;">
+                                <div id="search-results-container"></div>
+                            </div>
+                            <div class="text-center pt-3 pb-1 d-none" id="search-view-all">
+                                <a href="#" class="btn btn-primary btn-sm">View All Results</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+}
