@@ -36,7 +36,8 @@ bottom; stop and investigate on the first ❌.
 
 ## 4. LHDN / MyInvois integration  *(use PREPROD or a disposable doc first)*
 - [ ] **Taxpayer validation** (Admin/Supplier "Validate TIN"). ✅ returns a result; on a 429 it now retries with `Retry-After` instead of erroring (v1.5.2 fix).
-- [ ] **Submit** a document. ✅ UUID/longId persisted; status transitions; audit row written.
+- [ ] **Submit** a document. ✅ UUID/longId persisted; status transitions; audit row written. *(Regression guard, v1.9.7: the UI submit must PERSIST the UUID locally — before v1.9.7 the submit-guard claim bumped the row's rowversion and the save silently failed with a concurrency conflict, leaving an accepted document as a local Draft. If the invoice still shows Draft after an "accepted" submit, the fix is not deployed.)*
+- [ ] **v1.9.7 one-time reconciliation** (first deploy of v1.9.7+ only). ✅ run `scripts/Reconcile-OrphanedSubmissions.sql` **per environment**: SECTION 1 lists invoices claimed-but-UUID-less; verify each at LHDN; fill in the verified UUID/SubmissionUid rows; run SECTION 2. Known staging orphans: EINV100360, EINV100361. Do **not** run it verbatim (it refuses to run with no rows filled in).
 - [ ] **Failed-submission retry:** force a submission failure (e.g. temporarily wrong LHDN BaseUrl on staging). ✅ error message says a retry was queued; a `SubmitDocument` job appears in Admin → Sync Jobs and retries/dead-letters per the backoff schedule.
 - [ ] **Duplicate submit** of the same payload within the dedup window. ✅ replays the prior response — no second LHDN call.
 - [ ] **Manual status sync** (Admin → Invoice Sync). ✅ job queued; Sync Jobs page shows it run/complete.
