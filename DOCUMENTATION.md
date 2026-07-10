@@ -112,7 +112,7 @@ EINVWORLD/                     ASP.NET Core web project
 ├── Migrations/                EF migrations + idempotent Apply_*.sql scripts
 ├── Models/                    Entities, input/view models, JSON DTOs (InputModel, JsonModels, Audit, Background, …)
 ├── Pages/                     Razor Pages (Admin, Invoices, Suppliers, Templates, Assistant, …)
-│   └── Shared/                Layouts, _Sidebar, partials
+│   └── Shared/                Layouts, _Sidebar, partials (Velzon + parallel Tabler set — see §4.1)
 ├── Services/
 │   ├── AI/                    Provider-agnostic AI core (IAiProvider/IAiService; Ollama provider)
 │   ├── Assistant/             AI e-invoice assistant (domain prompts; delegates to IAiService)
@@ -127,6 +127,26 @@ EINVWORLD/                     ASP.NET Core web project
 ├── appsettings*.json          Configuration (Production overrides base)
 └── *.md                       README, this doc, deployment & secrets guides, changelog
 ```
+
+### 4.1 Front-end theme (Velzon → Tabler migration, in progress)
+
+The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated UI is being migrated from
+the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) theme; both are self-hosted
+(no CDN). Migration state and plan: `docs/TABLER-MIGRATION-AUDIT.md`; user-visible history: `CHANGELOG.md`.
+
+- **Velzon (legacy, still the fallback):** `_Layout` + `_Sidebar` + `_LoginLayout`, assets under
+  `wwwroot/assets/`.
+- **Tabler (new):** `_LayoutTabler` composed of `_TablerSidebar` (+ `_AdminNavigation`/
+  `_SupplierNavigation`/`_BuyerNavigation`), `_TablerTopbar`, `_UserMenu`, `_Footer`, `_PageHeader`; and
+  `_LoginLayoutTabler` for the Identity area. Assets under `wwwroot/tabler/` (Tabler v1.4.0 +
+  `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting).
+- **Switch mechanism:** a per-folder `Pages/<area>/_ViewStart.cshtml` sets `Layout = "_LayoutTabler"` for
+  **authenticated** users only, so anonymous/public pages keep the marketing layout. Delete that file to
+  revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
+  Toastr, Chart.js, TinyMCE, lord-icon) and behaviour (idle-timeout, app-search, Turnstile on auth) are
+  identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
+- **Not migrated / deferred:** removing Velzon and retiring the DB-backed global-theme system
+  (`/api/Theme/*`) — held until the Tabler UI is validated end-to-end on staging.
 
 ---
 
