@@ -38,3 +38,49 @@
 .einv-avatar-ring {
   border: 2px solid var(--einv-primary);
 }
+
+/* ── Velzon-compat shims ─────────────────────────────────────────────────────
+ * Migrated pages still use a few Velzon utility classes. Rather than rewrite
+ * every page's markup, style them acceptably under Tabler so the rollout stays a
+ * small, low-risk change. These can be removed once markup is converted page-by-page.
+ */
+.page-title-box {
+  margin-bottom: 1rem;
+}
+.page-title-box h1,
+.page-title-box h2,
+.page-title-box h3,
+.page-title-box h4 {
+  margin-bottom: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Velzon "soft" buttons → light-tinted, colored-text buttons (semantic RGBs are
+ * theme-independent so they read correctly without visual verification). */
+.btn-soft-primary   { color: var(--einv-primary);     background-color: rgba(var(--einv-primary-rgb), .12); border-color: transparent; }
+.btn-soft-secondary { color: #5a6570; background-color: rgba(108, 117, 125, .12); border-color: transparent; }
+.btn-soft-success   { color: #198754; background-color: rgba(25, 135, 84, .12);  border-color: transparent; }
+.btn-soft-danger    { color: #dc3545; background-color: rgba(220, 53, 69, .12);  border-color: transparent; }
+.btn-soft-info      { color: #0aa2c0; background-color: rgba(13, 202, 240, .14); border-color: transparent; }
+.btn-soft-warning   { color: #cc9a06; background-color: rgba(255, 193, 7, .16);  border-color: transparent; }
+.btn-soft-primary:hover   { color: #fff; background-color: var(--einv-primary); }
+.btn-soft-secondary:hover { color: #fff; background-color: #6c757d; }
+.btn-soft-success:hover   { color: #fff; background-color: #198754; }
+.btn-soft-danger:hover    { color: #fff; background-color: #dc3545; }
+.btn-soft-info:hover      { color: #fff; background-color: #0aa2c0; }
+.btn-soft-warning:hover   { color: #000; background-color: #ffc107; }
+
+/* Velzon 'material-shadow' is decorative only — no-op under Tabler. */
+.material-shadow, .material-shadow-none { box-shadow: none; }
+
+/* Velzon '.avatar-title' — the flex-centered inner content of an avatar. Tabler centers
+ * differently, so keep this so migrated avatars (e.g. Suppliers/Details) render centered. */
+.avatar-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+}
