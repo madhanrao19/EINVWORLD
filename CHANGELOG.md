@@ -1,5 +1,36 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-10 — v1.9.7 (Critical fix: LHDN submissions accepted but never persisted locally)
+
+> Since v1.8.2 added optimistic concurrency (`InvoiceHeader.RowVersion`), **every UI submission
+> failed to save locally**: `InvoiceSubmissionGuard.TryClaimAsync`'s raw SQL claim UPDATE bumps the
+> row's rowversion, so the tracked entity loaded before the claim held a stale token and the
+> post-submission `SaveChangesAsync` (UUID / SubmissionID / status) always threw
+> `DbUpdateConcurrencyException`. LHDN **accepted** the documents, but locally they stayed Drafts —
+> an active duplicate-submission risk once the 10-min payload dedup and 5-min claim windows expired.
+> All six submit paths were affected (CreateInvoice, InvoiceEdit, InvoiceLists, CreateSBI, CreateCN,
+> CreateSBCN); the recurring-invoice background path was not.
+
+### Fixed
+- `InvoiceSubmissionGuard.TryClaimAsync` now reloads any tracked `InvoiceHeader` for the invoice
+  after winning the claim, refreshing its concurrency token so the post-submission save succeeds.
+  Fixes all six callers centrally; documented that mutations must happen after the claim.
+
+### Tests
+- New SQL Server integration tests (real rowversion semantics): load-tracked → claim → mutate →
+  save succeeds and persists; and a claim loser with a tracked entity stays blocked (the reload
+  does not weaken the guard). The in-memory provider cannot catch this class of bug.
+
+### Operator action (staging/production data fix)
+- Run `scripts/Reconcile-OrphanedSubmissions.sql` **after deploying this build**: it lists invoices
+  claimed-but-UUID-less, backfills UUID/SubmissionID/status for submissions confirmed at LHDN
+  (idempotent, `UUID IS NULL`-guarded, writes an `InvoiceHistories` audit row), and clears stale
+  claims for drafts never accepted at LHDN. Known staging orphans: EINV100360, EINV100361.
+
+### Known follow-up (not in this release)
+- `SyncJobTracker` shares the request's `DbContext`, so an unrelated dirty entity can poison its
+  save and make the "retry has been queued" message false. Harden it in a separate, scoped PR.
+
 ## 📅 2026-07-09 — v1.9.6 (Speed: exempt Turnstile from Cloudflare Rocket Loader; operator action to disable it)
 
 > Live QA against staging found every page's `DOMContentLoaded` delayed to **~21 seconds** (HTML TTFB
