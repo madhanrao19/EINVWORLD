@@ -1,0 +1,70 @@
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@inject eInvWorld.Data.ApplicationDbContext DbContext
+@*
+    Supplier role navigation (Tabler). Rendered inside _TablerSidebar for Supplier users only.
+    Resolves the caller's own company id (same query as the Velzon _Sidebar) for the
+    "My Company Details" link. Cosmetic only — authorization is enforced server-side and unchanged.
+*@
+@{
+    string? companyId = null;
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (!string.IsNullOrEmpty(userId))
+    {
+        companyId = DbContext.UserCompanies
+            .Where(uc => uc.UserId == userId)
+            .Select(uc => uc.PartyInfoId.ToString())
+            .FirstOrDefault();
+    }
+}
+<ul class="navbar-nav pt-lg-2" role="menubar">
+    <li class="nav-item" role="none">
+        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-dashboard-2-line"></i></span>
+            <span class="nav-link-title">Dashboard</span>
+        </a>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-sup-invoices" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-3-line"></i></span>
+            <span class="nav-link-title">My Invoice</span>
+        </a>
+        <div class="dropdown-menu" id="einv-sup-invoices">
+            <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+            <a class="dropdown-item" href="/Invoices/CreateInvoice">Create e-Invoice</a>
+            <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
+            <a class="dropdown-item" href="/Invoices/CreateFromFile">AI Document Capture</a>
+            <a class="dropdown-item" href="/Templates/TemplateLists">Manage Templates</a>
+            <a class="dropdown-item" href="/Invoices/ImportCsv">Bulk Invoice Import</a>
+            <a class="dropdown-item" href="/RecurringInvoices/Index">Recurring Invoices</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-sup-items" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-line"></i></span>
+            <span class="nav-link-title">Item Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-sup-items">
+            <a class="dropdown-item" href="/Items/Index">Items</a>
+            <a class="dropdown-item" href="/Items/Create">Create Item</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-sup-buyers" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-user-add-line"></i></span>
+            <span class="nav-link-title">Buyers Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-sup-buyers">
+            <a class="dropdown-item" href="/PublicCustomer/List">List of Buyers</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-sup-company" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-building-line"></i></span>
+            <span class="nav-link-title">My Company Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-sup-company">
+            <a class="dropdown-item" href="/Suppliers/Details?id=@companyId">My Company Details</a>
+        </div>
+    </li>
+</ul>

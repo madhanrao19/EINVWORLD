@@ -1,18 +1,15 @@
-@using eInvWorld.Models
-@using Microsoft.AspNetCore.Identity
-@inject SignInManager<ApplicationUser> SignInManager
-@inject IConfiguration Configuration
-
 @*
-    Tabler parallel layout (Phase 2 scaffolding). PARALLEL & OPT-IN: no page uses this by default —
-    a view opts in with `@{ Layout = "_LayoutTabler"; }`. Velzon `_Layout` remains the default until the
-    final cutover. This shell keeps the EXACT functional-plugin stack of `_Layout` (jQuery, Bootstrap
-    bundle, Select2, Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE) and the idle-timeout + app-search
-    behaviours, but replaces the Velzon chrome with Tabler CSS. It intentionally omits the Velzon theme
-    customizer and the global-theme (`/api/Theme/*`) client — Tabler does not use those data-attributes.
-    Tabler's own JS (`~/tabler/js/tabler.min.js`) is self-hosted but NOT loaded here to avoid a
-    double-Bootstrap load; the app's interactive components are standard Bootstrap 5 (provided by the
-    bundle below). It can be opted into per-page later if a Tabler-JS-only feature is needed.
+    Tabler parallel layout (migration foundation). PARALLEL & OPT-IN: no page uses this by default —
+    a view opts in with `@{ Layout = "_LayoutTabler"; }`. Velzon `_Layout` remains the default.
+
+    Composition (decomposed foundation):
+      _TablerSidebar  → brand + role nav (_AdminNavigation / _SupplierNavigation / _BuyerNavigation)
+      _TablerTopbar   → app-search + _UserMenu
+      _Footer         → Admin-only version string
+    Design tokens (einvworld-tokens.css) rebrand Tabler to the EINVWORLD green; einvworld-ui.js does
+    current-route highlighting. The full functional-plugin stack (jQuery, Bootstrap bundle, Select2,
+    Flatpickr, SweetAlert2, Toastr, Chart.js, TinyMCE) and the idle-timeout are preserved. Tabler's own
+    JS is intentionally not loaded (avoids a double-Bootstrap load); interactivity is standard Bootstrap 5.
 *@
 
 <!DOCTYPE html>
@@ -26,8 +23,9 @@
     <!-- Chart.js (self-hosted) -->
     <script src="~/assets/libs/chart.js/chart.umd.js"></script>
 
-    <!-- Tabler core CSS (self-hosted, MIT) -->
+    <!-- Tabler core CSS (self-hosted, MIT) + EINVWORLD brand tokens -->
     <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css">
+    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css">
     <!-- Icon fonts (Remix + tail), kept from the current bundle during migration -->
     <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
 
@@ -47,7 +45,7 @@
 </head>
 <body>
 
-    <!-- Bootstrap toast host (id reused by existing app scripts) -->
+    <!-- Bootstrap toast host (id reused by existing app scripts + einvworld.toast helper) -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
         <div id="toast-success" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
@@ -60,31 +58,19 @@
     <div class="page">
         @if (ViewBag.HideSidebar != true)
         {
-            @await Html.PartialAsync("_SidebarTabler")
+            @await Html.PartialAsync("_TablerSidebar")
         }
         <div class="page-wrapper">
+            @if (ViewBag.HideSidebar != true)
+            {
+                @await Html.PartialAsync("_TablerTopbar")
+            }
             <div class="page-body">
                 <div class="container-fluid">
                     @RenderBody()
                 </div>
             </div>
-            <footer class="footer footer-transparent d-print-none">
-                <div class="container-fluid">
-                    <div class="row text-muted align-items-center">
-                        <div class="col-6 text-start">
-                            <a href="https://www.datamationgroup.com/" class="link-secondary">
-                                <strong>
-                                    @* Version string is Admin-only (attacker-fingerprinting hygiene) — same rule as _Layout. *@
-                                    © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
-                                </strong>
-                            </a>
-                        </div>
-                        <div class="col-6 text-end">
-                            <a href="/contact" class="link-secondary">Contact</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            @await Html.PartialAsync("_Footer")
         </div>
     </div>
 
@@ -97,6 +83,9 @@
 
     <!-- Core JS: Bootstrap bundle (provides all interactive components the app uses) -->
     <script src="~/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- EINVWORLD shared UI helpers (route highlighting + toast) -->
+    <script src="~/tabler/js/einvworld-ui.js"></script>
 
     <!-- SweetAlert2 (self-hosted) -->
     <script src="~/assets/libs/sweetalert2/sweetalert2.min.js"></script>
@@ -160,16 +149,16 @@
     <!-- TinyMCE (self-hosted) -->
     <script src="~/assets/js/tinymce/tinymce.min.js"></script>
 
-    <!-- Topbar app-search (calls /api/Search) — unchanged behaviour from _Layout -->
+    <!-- Topbar app-search (calls /api/Search) — element ids match _TablerTopbar -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const searchInput = document.getElementById("searchInput");
-            const searchDropdown = document.getElementById("search-dropdown");
-            const resultsContainer = document.getElementById("search-results-container");
-            const closeBtn = document.getElementById("search-close-options");
+            const searchInput = document.getElementById("einv-search-input");
+            const searchDropdown = document.getElementById("einv-search-dropdown");
+            const resultsContainer = document.getElementById("einv-search-results");
+            const closeBtn = document.getElementById("einv-search-close");
             let debounceTimer;
 
-            if (searchInput) {
+            if (searchInput && searchDropdown && resultsContainer && closeBtn) {
                 searchInput.addEventListener("input", function (e) {
                     clearTimeout(debounceTimer);
                     const query = e.target.value.trim();

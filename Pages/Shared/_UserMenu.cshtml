@@ -1,0 +1,48 @@
+@using eInvWorld.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@*
+    Topbar user dropdown (Tabler). Avatar (image or initial fallback), name + Identity role, profile
+    link, and logout as a POST form (preserved from the Velzon menu). Avatar behaviour is unchanged:
+    ProfilePicture image when present, otherwise the first-letter badge with the brand ring.
+*@
+@if (SignInManager.IsSignedIn(User))
+{
+    var me = await UserManager.GetUserAsync(User);
+    var fullName = me?.FullName ?? User?.Identity?.Name ?? "";
+    var profilePic = me?.ProfilePicture;
+    var roles = me != null ? await UserManager.GetRolesAsync(me) : new List<string>();
+    var firstRole = roles.FirstOrDefault() ?? "";
+    var firstLetter = string.IsNullOrWhiteSpace(fullName) ? "" : fullName.Substring(0, 1).ToUpper();
+
+    <div class="nav-item dropdown">
+        <a href="#" class="nav-link d-flex lh-1 p-0 px-2" data-bs-toggle="dropdown" aria-label="Open user menu" aria-expanded="false">
+            @if (!string.IsNullOrEmpty(profilePic))
+            {
+                <span class="avatar avatar-sm rounded-circle einv-avatar-ring" style="background-image:url('@profilePic')"></span>
+            }
+            else
+            {
+                <span class="avatar avatar-sm rounded-circle einv-avatar-ring" style="background:#f8f9fa;color:#055332;font-weight:bold;">@firstLetter</span>
+            }
+            <div class="d-none d-xl-block ps-2">
+                <div>@fullName</div>
+                <div class="mt-1 small text-secondary">@firstRole</div>
+            </div>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+            <h6 class="dropdown-header">Welcome @(fullName)!</h6>
+            <a class="dropdown-item" asp-page="/Profile/Index">
+                <i class="ri-account-circle-line me-1" aria-hidden="true"></i> My Profile
+            </a>
+            <div class="dropdown-divider"></div>
+            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                <input type="hidden" name="logoutReason" value="manual" />
+                <button type="submit" class="dropdown-item">
+                    <i class="ri-logout-box-line me-1" aria-hidden="true"></i> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+}
