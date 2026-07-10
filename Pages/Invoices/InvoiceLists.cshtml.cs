@@ -1199,6 +1199,27 @@ namespace eInvWorld.Pages.Invoices
                             )
                         );
                     }
+                    else
+                    {
+                        // "All" (or any other value): still MUST scope to the user's own company TINs,
+                        // otherwise the export leaks every company's invoices. The user's TIN may be on
+                        // either party (issuer or counterparty), so accept a match on either side.
+                        query = query.Where(i =>
+                            userTINs.Contains(i.Supplier.TIN) ||
+                            (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                            (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
+                        );
+                    }
+                }
+                else
+                {
+                    // Empty direction: same mandatory company scope as "All" above (defense against
+                    // dropping the filter entirely via a blank invoiceDirection query param).
+                    query = query.Where(i =>
+                        userTINs.Contains(i.Supplier.TIN) ||
+                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
+                    );
                 }
 
                 // ✅ FIXED: Date range bug. Make the EndDate inclusive to 23:59:59
@@ -1408,6 +1429,15 @@ namespace eInvWorld.Pages.Invoices
         private string EscapeCsv(string? value)
         {
             if (string.IsNullOrEmpty(value)) return "";
+
+            // CSV formula-injection guard: a cell that a spreadsheet would treat as a formula
+            // (starts with = + - @, or a leading tab/CR) is neutralised with a leading apostrophe
+            // so Excel/Sheets render it as literal text instead of executing it.
+            if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0)
+            {
+                value = "'" + value;
+            }
+
             if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
             {
                 return $"\"{value.Replace("\"", "\"\"")}\""; // Escapes quotes and wraps the string
