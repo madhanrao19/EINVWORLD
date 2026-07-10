@@ -1,0 +1,39 @@
+@using eInvWorld.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@*
+    Tabler vertical sidebar shell. Brand + a mobile-collapsible container that renders the
+    role-specific navigation partial. The role split mirrors the Velzon _Sidebar exactly; the actual
+    access control is server-side and unchanged. Accessible: labelled toggler + aria-controls.
+*@
+@if (SignInManager.IsSignedIn(User))
+{
+    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#einv-sidebar-menu"
+                    aria-controls="einv-sidebar-menu" aria-expanded="false" aria-label="Toggle navigation menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a href="/Dashboard/Dashboard" class="navbar-brand navbar-brand-autodark" aria-label="EINVWORLD home">
+                <img src="~/assets/images/einvworld-logo-light.png" height="26" alt="eInvWorld">
+            </a>
+
+            <div class="collapse navbar-collapse" id="einv-sidebar-menu">
+                <nav aria-label="Main navigation">
+                    @if (User?.IsInRole("Admin") == true)
+                    {
+                        @await Html.PartialAsync("_AdminNavigation")
+                    }
+                    else if (User?.IsInRole("Supplier") == true)
+                    {
+                        @await Html.PartialAsync("_SupplierNavigation")
+                    }
+                    else if (User?.IsInRole("Buyer") == true)
+                    {
+                        @await Html.PartialAsync("_BuyerNavigation")
+                    }
+                </nav>
+            </div>
+        </div>
+    </aside>
+}
