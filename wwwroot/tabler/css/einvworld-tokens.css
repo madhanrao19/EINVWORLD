@@ -39,6 +39,21 @@
   border: 2px solid var(--einv-primary);
 }
 
+/* Brand logo: the source PNG is ~1080x723, so without an explicit constraint Tabler sizes it to the
+ * brand container width (~240px) — huge on desktop and full-width on mobile. Pin it to a sane height
+ * (the HTML height="26" attribute is overridden by Tabler's CSS, so this rule is required). */
+.navbar-brand img,
+.navbar-brand-autodark img {
+  height: 2.25rem !important;
+  width: auto !important;
+  max-width: 100%;
+}
+/* On the collapsed mobile navbar, keep the brand compact next to the toggler. */
+@media (max-width: 991.98px) {
+  .navbar-vertical .navbar-brand { padding-top: .25rem; padding-bottom: .25rem; }
+  .navbar-vertical .navbar-brand img { height: 2rem !important; }
+}
+
 /* ── Velzon-compat shims ─────────────────────────────────────────────────────
  * Migrated pages still use a few Velzon utility classes. Rather than rewrite
  * every page's markup, style them acceptably under Tabler so the rollout stays a
