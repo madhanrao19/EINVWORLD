@@ -1,0 +1,10 @@
+@{
+    // Tabler migration (Phase 4). Switch this folder's AUTHENTICATED pages to the parallel Tabler
+    // layout. Anonymous pages (e.g. public forms) are untouched — they keep whatever the root
+    // Pages/_ViewStart.cshtml chose (_HomeLayout). A page may still override this with its own
+    // `Layout = ...`. Delete this file to revert the whole folder to Velzon.
+    if (Context.User.Identity?.IsAuthenticated == true)
+    {
+        Layout = "_LayoutTabler";
+    }
+}
