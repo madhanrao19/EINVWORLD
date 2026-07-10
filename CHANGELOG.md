@@ -1,5 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-10 — v1.9.9 (Fix: validated/rejected/cancelled emails silently failed when SMTP creds blank)
+
+> Found in live staging QA: after a submission reached **Valid**, the Supplier/Buyer notification
+> email failed with `System.ArgumentException: The value cannot be an empty string (Parameter
+> 'address')` and was swallowed — no email sent.
+
+### Root cause
+- `SendEmailWithBcc` read the SMTP settings with **null-only** guards (`?? throw`). SMTP credentials
+  are intentionally server-specific and ship **blank** in `appsettings.json` (set per server via
+  `EmailConfiguration__Default__SmtpUsername` / `__SmtpPassword`). On a server where they are not set,
+  `SmtpUsername` is an **empty string** (not null), so the guard didn't fire and `new MailAddress(smtpUser, …)`
+  threw the cryptic empty-address error — masking the real cause and dropping every outbound email.
+
+### Fixed
+- SMTP server/username/password are now validated with `IsNullOrWhiteSpace` and throw a clear,
+  actionable message (`SMTP not configured: EmailConfiguration:Default:SmtpUsername is empty …`) instead
+  of the misleading `MailAddress` exception. (Recipient addresses were already validated correctly.)
+
+### Required operator action (this is what actually makes emails send)
+- Set the SMTP credentials on the server that runs EINVWORLD (they are **not** in the repo):
+  `EmailConfiguration__Default__SmtpUsername` and `EmailConfiguration__Default__SmtpPassword`
+  (see SECRETS-SETUP.md), then recycle the app pool. Until then, notifications correctly no-op with a
+  clear log line instead of a crash.
+
 ## 📅 2026-07-10 — v1.9.8 (Security: harden invoice export — company scoping + CSV injection)
 
 > Found during a full Supplier/Buyer flow verification pass.

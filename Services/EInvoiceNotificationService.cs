@@ -229,13 +229,18 @@ namespace eInvWorld.Services
         {
             var smtpSettings = _configuration.GetSection("EmailConfiguration:Default");
 
-            string smtpServer = smtpSettings["SmtpServer"]
-                ?? throw new InvalidOperationException("Missing SMTP Server configuration.");
-            int smtpPort = int.TryParse(smtpSettings["SmtpPort"], out int port) ? port : throw new InvalidOperationException("Invalid SMTP Port.");
-            string smtpUser = smtpSettings["SmtpUsername"]
-                ?? throw new InvalidOperationException("Missing SMTP Username.");
-            string smtpPass = smtpSettings["SmtpPassword"]
-                ?? throw new InvalidOperationException("Missing SMTP Password.");
+            // Guard on IsNullOrWhiteSpace, not just null: an unconfigured SMTP setting on the server is
+            // typically a BLANK env var / config key, not a missing one. With a null-only check an empty
+            // SmtpUsername slipped through to `new MailAddress(smtpUser, ...)` below and threw a cryptic
+            // "The value cannot be an empty string (Parameter 'address')" — masking the real cause
+            // (SMTP not configured) and silently dropping every validated/rejected/cancelled email.
+            string smtpServer = !string.IsNullOrWhiteSpace(smtpSettings["SmtpServer"])
+                ? smtpSettings["SmtpServer"]! : throw new InvalidOperationException("SMTP not configured: EmailConfiguration:Default:SmtpServer is empty. Set it via env var / user-secrets (see SECRETS-SETUP.md).");
+            int smtpPort = int.TryParse(smtpSettings["SmtpPort"], out int port) ? port : throw new InvalidOperationException("SMTP not configured: EmailConfiguration:Default:SmtpPort is missing or not a number.");
+            string smtpUser = !string.IsNullOrWhiteSpace(smtpSettings["SmtpUsername"])
+                ? smtpSettings["SmtpUsername"]! : throw new InvalidOperationException("SMTP not configured: EmailConfiguration:Default:SmtpUsername is empty. Set it via env var / user-secrets (see SECRETS-SETUP.md).");
+            string smtpPass = !string.IsNullOrWhiteSpace(smtpSettings["SmtpPassword"])
+                ? smtpSettings["SmtpPassword"]! : throw new InvalidOperationException("SMTP not configured: EmailConfiguration:Default:SmtpPassword is empty. Set it via env var / user-secrets (see SECRETS-SETUP.md).");
             string fromName = smtpSettings["FromEmailName"] ?? "eInvWorld";
 
             using var smtpClient = new SmtpClient(smtpServer)
