@@ -13,6 +13,42 @@ continuing.
 
 ---
 
+## The big picture (read this first — plain English)
+
+EINVWORLD is a website (an ASP.NET Core web app) that companies use to create e-invoices and send them
+to Malaysia's tax authority (**LHDN MyInvois**). Your job is to get that website **running on a Windows
+Server** so people can open it in a browser.
+
+You will do six simple things, in order. Everything after this is just the click-by-click detail:
+
+1. **Install the engine** — the .NET 10 runtime, so Windows can run the app (Part 4).
+2. **Prepare the database** — where all the data lives (SQL Server) (Part 5).
+3. **Put the app files on the server** — copy them into a folder (Part 6).
+4. **Tell IIS to host the app** — IIS is the Windows web server; you point it at the folder (Parts 7–8).
+5. **Give the app its passwords** — as environment variables, never in a file (Part 10).
+6. **Start it and check it works** — start the site, log in, run a quick test (Parts 13–15).
+
+If a step doesn't show the "✅ You should see…" result, **stop** and check **Part 16 — Troubleshooting**
+before moving on. Don't push forward hoping it fixes itself.
+
+### Jargon cheat-sheet (terms you'll meet)
+
+| Term | In plain words |
+|---|---|
+| **IIS** | The Windows web server. It "hosts" the app — accepts browser requests and hands them to the app. Open it via **Start → IIS Manager**. |
+| **Application Pool** (app pool) | The Windows process that actually runs the app. One app → one app pool. |
+| **Binding** | The address IIS listens on: protocol (http/https) + port + domain name. |
+| **.NET Hosting Bundle** | The "engine" — the .NET runtime plus the piece IIS needs to run .NET apps. |
+| **SQL Server / SSMS** | SQL Server = the database. **SSMS** (SQL Server Management Studio) = the app you use to manage it. |
+| **Environment variable** | A setting stored in Windows (not in a file). We put **secrets/passwords** here so they're never in the code. |
+| **Connection string** | One line of text that tells the app how to reach the database (server, database name, login, password). |
+| **`appsettings.json`** | The app's non-secret settings file. **Secrets stay blank here** — real values come from environment variables. |
+| **TLS / SSL / HTTPS** | Encryption so the site is `https://` (padlock). Provided by a certificate on IIS, or by Cloudflare (Part 8b). |
+| **2FA / MFA** | Two-factor authentication — the 6-digit code from a phone app, required for Admin logins. |
+| **DDL rights** | Permission for the app to create/change database tables (it sets up its own tables on first run). |
+
+---
+
 ## Contents
 
 1. [What you need before you start](#part-1--what-you-need-before-you-start)
@@ -328,8 +364,12 @@ This is where the passwords go — **not** in `appsettings.json`.
    > properly trusted certificate, remove it for full chain validation.
    | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
    | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
+   | `EmailConfiguration__Default__SmtpUsername` | `YOUR_SMTP_USERNAME` |
    | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |
    | `Turnstile__SecretKey` | `YOUR_TURNSTILE_SECRET` |
+
+   > 📧 **Email needs BOTH** `SmtpUsername` **and** `SmtpPassword`. If the username is left blank, no email
+   > is sent and the log shows a clear *"SMTP not configured: …SmtpUsername is empty"* message.
 
    **Add these only if you use the feature:**
 
@@ -472,7 +512,7 @@ there almost always names the exact problem. (Also **Admin → System Logs** onc
 | **First start is very slow then OK** | Normal — it's creating/updating tables. Only the first start. |
 | **Logged out after every deploy** | `E:\EINVWORLD\Keys` wasn't used/persisted — confirm Part 3 + Part 9 (the folder exists and the app pool has Modify). |
 | **LHDN submit fails** | Check `LHDNApiConfig__ClientSecret` / `ClientSecret2`. On staging confirm the **preprod** URLs. |
-| **Email not sending** | Check `EmailConfiguration__Default__SmtpPassword`. |
+| **Email not sending** | Check that **both** `EmailConfiguration__Default__SmtpUsername` **and** `__SmtpPassword` are set (a blank username sends nothing — the log says *"SMTP not configured…"*). |
 | **Too many "429 Too Many Requests"** | If many users share one office IP, raise `RateLimiting__PermitsPerMinute` (e.g. `3000`) or set `RateLimiting__Enabled` = `false`. |
 | **Page styles/images missing** | Confirm `wwwroot\` was copied into `App\`. |
 
