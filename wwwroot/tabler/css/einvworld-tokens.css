@@ -54,6 +54,25 @@
   .navbar-vertical .navbar-brand img { height: 2rem !important; }
 }
 
+/* Long inline code / tokens (e.g. env-var names on AI Settings, the import-instructions block) and
+ * preformatted blocks must wrap or scroll on narrow screens instead of forcing horizontal page
+ * overflow. Velzon's CSS wrapped these; Tabler does not, so restore it. */
+code, kbd, samp { overflow-wrap: anywhere; word-break: break-word; }
+pre { overflow-x: auto; max-width: 100%; }
+
+/* Invoice list: prioritise the columns that matter on phones so the 12-column table is readable
+ * instead of showing only Invoice No + UUID. Secondary columns are hidden < md; they remain
+ * reachable by horizontal scroll, and the desktop/"Customize" experience is unchanged. */
+@media (max-width: 767.98px) {
+  #invoiceTable .col-uuid,
+  #invoiceTable .col-submission-id,
+  #invoiceTable .col-submitted-date,
+  #invoiceTable .col-rejected-date,
+  #invoiceTable .col-last-updated,
+  #invoiceTable .col-internal-status,
+  #invoiceTable .col-supplier { display: none !important; }
+}
+
 /* ── Velzon-compat shims ─────────────────────────────────────────────────────
  * Migrated pages still use a few Velzon utility classes. Rather than rewrite
  * every page's markup, style them acceptably under Tabler so the rollout stays a
