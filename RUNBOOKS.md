@@ -160,3 +160,25 @@ design — see CHANGELOG v1.7.2.
 
 **Related:** the signing secrets are encrypted with the DataProtection key-ring — losing the key-ring means
 re-issuing every secret. Keep the key-ring backed up (SECRETS-SETUP.md).
+
+## Runbook 6 — UI theme (Tabler) revert & re-verify
+
+The authenticated UI uses the self-hosted MIT **Tabler** theme; the legacy Velzon theme is retained as a
+fallback. Nothing here touches business logic, data, or LHDN — it is layout only.
+
+**A page/area shows the wrong theme (or a broken layout):** each authenticated folder opts into Tabler via a
+`Pages/<area>/_ViewStart.cshtml` (`Layout = "_LayoutTabler"` for signed-in users); auth pages use
+`Areas/Identity/Pages/_ViewStart.cshtml` → `_LoginLayoutTabler`. To **revert one area to Velzon**, delete
+that folder's `_ViewStart.cshtml` (or restore the one line to `_LoginLayout` for auth) and redeploy. Public
+marketing/Home/Resources use the marketing layout by design; Error pages are standalone (`Layout = null`).
+
+**Re-verify the UI after any deploy (all roles, all modules):**
+1. Set Cloudflare **test** Turnstile keys and `Security__EnforceAdminMfa=false` on the server *temporarily*
+   (exact values in `SECRETS-SETUP.md` / `docs/TABLER-MIGRATION-AUDIT.md`), then `iisreset`.
+2. Run `EINVWORLD_BASE_URL=<url> npx playwright test tests/playwright/10-tabler-modules.spec.js`.
+   ✅ Every module page renders the Tabler shell with no app console/network errors and no unusable
+   horizontal overflow (375/768/1366/1920).
+3. **Revert** the two env vars and `iisreset` — never leave test keys / MFA-off on a live host.
+
+**Known residual:** a small AI-Settings mobile overflow. **Not a theme issue but seen during QA:** company
+logos emitted as `file:///…` paths (Suppliers/Index) and some 404 resource images — track those separately.
