@@ -67,6 +67,12 @@
     <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css">
     <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
 
+    <!-- Auth page design ("Forest Tech Precision") + Hanken Grotesk (CSP allows Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="~/tabler/css/einvworld-auth.css" rel="stylesheet" type="text/css">
+
     <link href="~/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
     <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
@@ -83,17 +89,8 @@
 
     @await Html.PartialAsync("_GoogleAnalytics")
 </head>
-<body data-logout-reason="@logoutReason">
+<body data-logout-reason="@logoutReason" class="einv-auth">
     <div class="auth-page-wrapper">
-        <div class="auth-one-bg-position auth-one-bg" id="auth-particles">
-            <div class="bg-overlay"></div>
-            <div class="shape">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120">
-                    <path d="M 0,36 C 144,53.6 432,123.2 720,124 C 1008,124.8 1296,56.8 1440,40L1440 140L0 140z"></path>
-                </svg>
-            </div>
-        </div>
-
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const reason = document.body.getAttribute("data-logout-reason");
@@ -105,6 +102,12 @@
 
         <div class="auth-page-content">
             <div class="container">
+                <div class="einv-auth-brand">
+                    <a href="/" class="d-inline-block" aria-label="eInvWorld home">
+                        <img src="~/images/einvworld-logo-light.png" alt="eInvWorld" class="einv-auth-logo">
+                    </a>
+                    <div class="einv-tagline">LHDN Compliance Secured</div>
+                </div>
                 @RenderBody()
             </div>
         </div>
@@ -112,11 +115,10 @@
         <footer class="footer">
             <div class="container">
                 <div class="text-center">
-                    <p class="mb-0 text-muted">
-                        &copy; <script>document.write(new Date().getFullYear())</script> © eInvWorld |
-                        Designed by
-                        <a href="https://www.datamationgroup.com/" target="_blank" rel="noopener" class="border-bottom text-decoration-none">
-                            Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
+                    <p class="mb-0">
+                        &copy; <script>document.write(new Date().getFullYear())</script> eInvWorld —
+                        <a href="https://www.datamationgroup.com/" target="_blank" rel="noopener" class="text-decoration-none">
+                            Datamation Technology (M) Sdn Bhd
                         </a>
                     </p>
                 </div>
