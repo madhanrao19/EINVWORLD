@@ -1,13 +1,14 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-## 📅 2026-07-10 — Unreleased (Tabler UI migration — Phases 1–7 merged; UNVALIDATED on staging)
+## 📅 2026-07-10 — Unreleased (Tabler UI migration — ALL authenticated pages migrated; deployed & QA'd on staging)
 
 > Replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on the
-> **authenticated** UI. Server-rendered Razor Pages throughout — **no** SPA framework. Every phase is
-> CI-green (compiles) but **not yet visually validated on staging** (no local .NET SDK/renderer; staging
-> still runs the pre-Tabler v1.9.8 build). **No backend / DB / LHDN / calculation / PDF / authorization
-> change** in any phase — layout chrome only. Full plan, rollback and test strategy in
-> `docs/TABLER-MIGRATION-AUDIT.md`.
+> **authenticated** UI. Server-rendered Razor Pages throughout — **no** SPA framework. **No backend / DB /
+> LHDN / calculation / PDF / authorization change** in any phase — layout chrome only. As of 2026-07-11
+> the build is **deployed to staging and Playwright-verified across all three roles** (Supplier/Buyer/
+> Admin); every authenticated page now renders Tabler (see the post-deploy QA section below). Velzon
+> `_Layout`/`_LoginLayout` are retained as the fallback until Phase 8. Full plan, rollback and test
+> strategy in `docs/TABLER-MIGRATION-AUDIT.md`.
 
 ### Assets & foundation
 - Self-hosted **Tabler v1.4.0** (MIT) under `wwwroot/tabler/` (`css/tabler.min.css`, `js/tabler.min.js`) —
@@ -31,6 +32,8 @@
 - **Admin** area (40 pages incl. nested Codes/*).
 - **Dashboard + Invoices** (money path). **PDF/print templates untouched** — `PdfTemplate.cshtml` and
   `InvoiceDetails.cshtml` keep `Layout = null`.
+- **Templates + Assistant** (the last 2 orphans found in the consistency audit — they had fallen through
+  to the Velzon default). After these, **every authenticated folder is on Tabler.**
 - **Auth** (login / 2FA / register / password reset / Manage/*) → `_LoginLayoutTabler`, preserving
   Turnstile, the auth form ids, password/validation init, and the logout-reason toast.
 - Public/anonymous pages (marketing, `Lead/Submit`, `Lead/Create` for anonymous) stay on the marketing
@@ -44,13 +47,31 @@
   selected**, and the header "select all" checkbox is now functional (it previously had no handler).
   Presentational only — bulk handlers still read `.invoice-checkbox:checked`.
 
-### QA
+### QA harness
 - `tests/playwright/10-tabler-modules.spec.js` — authenticated verification across every module per role
-  (asserts the Tabler shell rendered, no console/network errors, no horizontal overflow at
-  375/768/1366/1920). Requires the Tabler build deployed + Cloudflare Turnstile **test** keys (and
-  `Security__EnforceAdminMfa=false` for the admin arm) to run.
+  (Tabler shell present, no app console/network errors, no unusable horizontal overflow at
+  375/768/1366/1920). Logs in **once per role** and reuses the session cookie (fast + reliable), ignores
+  third-party analytics noise + `ERR_ABORTED`, and skips a role whose login is 2FA-gated. Requires the
+  Tabler build deployed + Cloudflare Turnstile **test** keys (and `Security__EnforceAdminMfa=false` for the
+  admin arm) to run.
 
-### Deferred (NOT done — must follow staging validation)
+### Post-deploy staging QA + fixes (2026-07-11)
+- **Brand logo oversize** — the source PNG (~1080×723) had no CSS height cap, so Tabler sized it to the
+  brand-container width (240×161 desktop, full-width mobile). Pinned to 2.25rem in `einvworld-tokens.css`.
+- **Long `<code>`/token/`<pre>` overflow** on narrow screens (AI Settings env-vars, import instructions,
+  Webhooks) — Velzon wrapped these, Tabler didn't; restored `overflow-wrap`/`word-break`/`pre` scroll.
+- **Invoice list mobile** — the 12-column table showed only Invoice No + UUID; it now prioritises
+  e-Invoice No / Buyer / Total / LHDN Status / Action `< md` via the existing `col-*` classes. Desktop and
+  the "Customize" column feature are unchanged.
+- **Verified**: colour utilities (`bg-primary`/`danger`/`success`/`warning`) render; **all Admin pages
+  display text correctly** (no invisible/low-contrast text — an automated flag on the dark sidebar was a
+  false positive).
+- **Two PRE-EXISTING app bugs surfaced (NOT Tabler; left for a separate PageModel/data fix):** company
+  logos emitted as `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and missing resource
+  images (404 on Manage Resources).
+- **Known residual:** AI Settings has a small mobile overflow to refine.
+
+### Deferred (Phase 8 — must follow a fully-green re-verification)
 - **Phase 8 — Velzon removal**: delete the Velzon `_Layout`/`_LoginLayout`/`app.min.css`/theme JS, retire
   the DB-backed global-theme system (`/api/Theme/*` + `GlobalThemeService` + `GlobalThemeSettings`,
   additively — leave the table), and remove ~60 MB of unused Velzon demo assets. Deliberately held: do not
