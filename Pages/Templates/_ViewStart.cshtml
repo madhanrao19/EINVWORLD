@@ -1,0 +1,9 @@
+@{
+    // Tabler migration (consistency audit). This authenticated folder was an orphan still on the
+    // Velzon _Layout; switch it to the Tabler layout like every other authenticated area. Delete this
+    // file to revert the folder to Velzon.
+    if (Context.User.Identity?.IsAuthenticated == true)
+    {
+        Layout = "_LayoutTabler";
+    }
+}
