@@ -11,18 +11,23 @@
 > | 5 — Admin (40 pages) | ✅ merged | one `Pages/Admin/_ViewStart.cshtml` |
 > | 6 — Dashboard + Invoices | ✅ merged | money path; **PDF/print `Layout=null` untouched** |
 > | 7 — Auth (`_LoginLayoutTabler`) | ✅ merged | login/2FA/register/manage; Velzon `_LoginLayout` kept as fallback |
-> | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | ⛔ **deferred** | destructive; do only after full staging validation |
+> | Consistency audit — orphans | ✅ merged | Templates + Assistant were the last 2 on Velzon → migrated. **All authenticated pages now Tabler.** |
+> | Post-deploy staging QA + fixes | ✅ merged | logo size, code/pre overflow, invoice-list mobile columns; text verified on all Admin pages |
+> | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | ⛔ **deferred** | destructive; do only after a fully-green re-verification |
 >
-> **⚠️ Not yet validated on staging.** All phases are CI-green (compile) but no Tabler page has been
-> visually verified — no local .NET SDK/renderer, and staging still runs the pre-Tabler v1.9.8 build.
+> **Status (2026-07-11): deployed to staging and Playwright-verified across Supplier/Buyer/Admin.** Every
+> authenticated page renders Tabler; only public marketing/Home/Resources (`_HomeLayout`) and Error pages
+> (`Layout = null`) are intentionally non-Tabler.
 > **Rollout mechanism:** per-folder `_ViewStart.cshtml` switches a folder to `_LayoutTabler` for
 > authenticated users only (anonymous/public pages keep the marketing layout). **Revert** any area by
 > deleting its `_ViewStart.cshtml`. Velzon utility classes are shimmed in
 > `wwwroot/tabler/css/einvworld-tokens.css` so no per-page markup was rewritten.
-> **To validate:** deploy `main` to staging, set Turnstile **test** keys
+> **To re-verify after any deploy:** set Turnstile **test** keys
 > (`Turnstile__SiteKey=1x00000000000000000000AA`, `Turnstile__SecretKey=1x0000000000000000000000000000000AA`)
-> and temporarily `Security__EnforceAdminMfa=false`, then run
-> `tests/playwright/10-tabler-modules.spec.js`.
+> and temporarily `Security__EnforceAdminMfa=false`, then run `tests/playwright/10-tabler-modules.spec.js`
+> (revert those env vars after). **Known residual:** AI Settings minor mobile overflow. **Pre-existing app
+> bugs surfaced by QA (not Tabler):** company logos emitted as `file:///` paths (Suppliers/Index) and
+> missing resource images (404).
 
 **Status:** Audit only. No application code changed in this phase.
 **Date:** 2026-07-10 · **Author:** Lead Architect (engineering audit)

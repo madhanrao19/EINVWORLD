@@ -12,6 +12,11 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
 ## What EINVWORLD is (context you must respect)
 - **Stack:** ASP.NET Core **.NET 10**, Razor Pages + MVC API controllers, **EF Core 10** on **SQL Server**,
   ASP.NET Core Identity (Admin/Supplier/Buyer), Serilog (file + `SystemLogs` MSSqlServer sink).
+- **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). The authenticated theme has been migrated
+  from Velzon to the free MIT **Tabler** template (all authenticated pages; layout switched per folder via
+  `_ViewStart` → `_LayoutTabler`; shared partials in `Pages/Shared/_Tabler*`, tokens/shims in
+  `wwwroot/tabler/`). Velzon is kept as a fallback until Phase 8. Public pages use the marketing layout.
+  See `docs/TABLER-MIGRATION-AUDIT.md` + `CHANGELOG.md`.
 - **Deployment:** self-hosted **on-prem Windows / IIS (in-process)**, typically behind a **Cloudflare
   Tunnel** (TLS terminated at the edge, plain HTTP to localhost). Single-instance.
 - **Dependency policy:** **FOSS-only.** Every package must be free/open-source (MIT/Apache/BSD/etc.).

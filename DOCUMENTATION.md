@@ -145,8 +145,12 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
   revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
   Toastr, Chart.js, TinyMCE, lord-icon) and behaviour (idle-timeout, app-search, Turnstile on auth) are
   identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
-- **Not migrated / deferred:** removing Velzon and retiring the DB-backed global-theme system
-  (`/api/Theme/*`) — held until the Tabler UI is validated end-to-end on staging.
+- **Coverage:** as of 2026-07-11 **all authenticated pages render Tabler** (deployed + Playwright-verified
+  across Supplier/Buyer/Admin). Only public marketing/Home/Resources (`_HomeLayout`) and Error pages
+  (`Layout = null`) are intentionally non-Tabler.
+- **Not migrated / deferred (Phase 8):** removing Velzon and retiring the DB-backed global-theme system
+  (`/api/Theme/*`) — held until a fully-green re-verification. Two pre-existing (non-Tabler) app bugs were
+  surfaced during QA and remain open: company logos emitted as `file:///` paths and 404 resource images.
 
 ---
 
