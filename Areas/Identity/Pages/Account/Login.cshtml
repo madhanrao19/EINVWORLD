@@ -5,20 +5,6 @@
     ViewData["Description"] = "Access your eInvWorld account to manage and submit LHDN-compliant e-Invoices efficiently and securely.";
     ViewData["Keywords"] = "login einvworld, e-invoicing portal login, Malaysia LHDN e-invoice, user login";
 }
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="text-center mt-sm-5 mb-4 text-white-50">
-                <div>
-                    <a href="/" class="d-inline-block auth-logo">
-                            <img src="~/images/einvworld-logo-light.png" alt="" style="width: 100px; height: auto;" class="me-2">
-                    </a>
-                </div>
-                <p class="mt-3 fs-15 fw-medium">eInvWorld</p>
-            </div>
-        </div>
-    </div>
-    <!-- end row -->
-
     <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.8); z-index: 9999; text-align: center;">
         <div class="d-flex justify-content-center align-items-center h-100">
             <div>
@@ -30,75 +16,59 @@
         </div>
     </div>
 
-
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6 col-xl-5">
-            <div class="card mt-4 card-bg-fill">
-
+            <div class="card">
                 <div class="card-body p-4">
-                    <div class="text-center mt-2">
-                        <h5 class="text-primary">Welcome Back !</h5>
-                        <p class="text-muted">Sign in to continue to eInvWorld.</p>
+                    <div class="text-center mb-3">
+                        <h5 class="text-primary">Welcome Back</h5>
+                        <p class="text-muted mb-0">Sign in to continue to eInvWorld.</p>
                     </div>
-                    <div class="p-2 mt-4">
-                            <form id="account" method="post">
-                                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
 
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                @* <input type="text" class="form-control" id="username" placeholder="Enter username"> *@
-                                <input asp-for="Input.UserName" class="form-control" id="username" autocomplete="username" aria-required="true" placeholder="Enter username" />
-                                <span asp-validation-for="Input.UserName" class="text-danger"></span>
+                    <form id="account" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="einv-input">
+                                <i class="einv-input-ic ri-user-3-line" aria-hidden="true"></i>
+                                <input asp-for="Input.UserName" class="form-control" id="username" autocomplete="username" aria-required="true" placeholder="Enter your username" />
                             </div>
+                            <span asp-validation-for="Input.UserName" class="text-danger"></span>
+                        </div>
 
-                            <div class="mb-3">
-                                <div class="float-end">
-                                <a id="forgot-password" href="/forgot-password" class="text-muted">Forgot password?</a>
-
-                                </div>
-                                <label class="form-label" for="password-input">Password</label>
-                                <div class="position-relative auth-pass-inputgroup mb-3">
-                                    <input type="password" asp-for="Input.Password" class="form-control pe-5 password-input" autocomplete="current-password" aria-required="true" placeholder="Enter password" id="password-input" />
-                                    <button class="btn btn-link position-absolute end-0 top-0 text-decoration-none text-muted password-addon material-shadow-none" type="button" id="password-addon"><i class="ri-eye-fill align-middle"></i></button>
-                                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                                </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label mb-0" for="password-input">Password</label>
+                                <a id="forgot-password" href="/forgot-password">Forgot password?</a>
                             </div>
-
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="auth-remember-check">
-                                <label class="form-check-label" for="auth-remember-check">Remember me</label>
+                            <div class="einv-input auth-pass-inputgroup mt-1">
+                                <i class="einv-input-ic ri-lock-2-line" aria-hidden="true"></i>
+                                <input type="password" asp-for="Input.Password" class="form-control pe-5 password-input" autocomplete="current-password" aria-required="true" placeholder="Enter your password" id="password-input" />
+                                <button class="btn btn-link password-addon" type="button" id="password-addon" aria-label="Show password"><i class="ri-eye-fill align-middle"></i></button>
                             </div>
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="" id="auth-remember-check">
+                            <label class="form-check-label" for="auth-remember-check">Remember me</label>
+                        </div>
 
                         <partial name="_TurnstilePartial" />
 
-                            <div class="mt-4">
-                                <button id="login-submit" type="submit" class="w-100 btn btn-primary btn-icon waves-effect waves-light">Login</button>
-
-                            </div>
-
-                            @* <div class="mt-4 text-center">
-                                <div class="signin-other-title">
-                                    <h5 class="fs-13 mb-4 title">Sign In with</h5>
-                                </div>
-                                <div>
-                                    <button type="button" class="btn btn-primary btn-icon waves-effect waves-light"><i class="ri-facebook-fill fs-16"></i></button>
-                                    <button type="button" class="btn btn-danger btn-icon waves-effect waves-light"><i class="ri-google-fill fs-16"></i></button>
-                                    <button type="button" class="btn btn-dark btn-icon waves-effect waves-light"><i class="ri-github-fill fs-16"></i></button>
-                                    <button type="button" class="btn btn-info btn-icon waves-effect waves-light"><i class="ri-twitter-fill fs-16"></i></button>
-                                </div>
-                            </div> *@
-                        </form>
-                    </div>
+                        <div class="mt-3">
+                            <button id="login-submit" type="submit" class="w-100 btn btn-primary">Login</button>
+                        </div>
+                    </form>
                 </div>
-                <!-- end card body -->
             </div>
-            <!-- end card --> 
+            <!-- end card -->
 
-            <div class="mt-4 text-center">
-                    <p class="mb-0">Don't have an account ? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold text-primary text-decoration-underline"> Register as a new user </a> </p>
-                    <p class="mb-0"><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="fw-semibold text-primary text-decoration-underline"> Resend email confirmation </a> </p>
+            <div class="mt-3 text-center">
+                <p class="mb-1 text-white">Don't have an account? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold">Register as a new user</a></p>
+                <p class="mb-0"><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="fw-semibold">Resend email confirmation</a></p>
             </div>
-
         </div>
     </div>
     <!-- end row -->
