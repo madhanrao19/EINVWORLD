@@ -26,6 +26,16 @@ bottom; stop and investigate on the first ❌.
 - [ ] IDOR check: a Supplier tries to open another company's invoice by URL/id. ✅ blocked (per-TIN ownership).
 - [ ] Anonymous access to public pages (home, about, contact, register). ✅ allowed; everything else redirects to login.
 
+## 2a. UI theme (Tabler migration)
+- [ ] Authenticated pages render the **Tabler** layout (dark vertical sidebar, top search + user menu),
+      not the old Velzon chrome. ✅ consistent across Admin/Supplier/Buyer; brand logo is correctly sized;
+      no invisible/low-contrast text; the invoice list is usable on mobile.
+- [ ] Public pages (home/about/contact/resources) still use the **marketing** layout; error pages are
+      standalone. ✅
+- [ ] (Automated) With Turnstile **test** keys + `Security__EnforceAdminMfa=false` set temporarily, run
+      `tests/playwright/10-tabler-modules.spec.js` — ✅ all module pages pass; then revert those env vars.
+      (See DEPLOY-NOTES / `docs/TABLER-MIGRATION-AUDIT.md`.)
+
 ## 3. Invoice lifecycle (the core money path)
 - [ ] Create a **standard invoice (01)** with ≥2 lines + tax. ✅ totals correct (line extension / tax-exclusive / tax-inclusive / payable); draft saved with a `.json` file.
 - [ ] Create one of each remaining type used: **02 credit, 03 debit, 04 refund**, and **11–14 self-billed**. ✅ each maps and the `BillingReference` shape is right (01 = additional ref; 02–04 = invoice ref; 11–14 = both).
