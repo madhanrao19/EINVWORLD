@@ -1,0 +1,140 @@
+/* EINVWORLD auth pages — "Forest Tech Precision" design (login).
+ * Scoped under .einv-auth (set on the auth <body>) so it only affects the sign-in area and never the
+ * app UI. Loaded by _LoginLayoutTabler. Colours from the approved design: Forest Green #0C5434 /
+ * #003b22, Lime accents, charcoal text #1D2939, white cards on a green gradient hero.
+ * Font: Hanken Grotesk (CSP already allows Google Fonts) with a system fallback for offline.
+ */
+:root {
+  --einv-forest: #0c5434;
+  --einv-forest-deep: #003b22;
+  --einv-lime: #9be15d;
+  --einv-ink: #1d2939;
+  --einv-muted: #667085;
+  --einv-line: #d7dde3;
+  --einv-field-bg: #f8f9fb;
+}
+
+.einv-auth {
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--einv-ink);
+  background: linear-gradient(160deg, #062f1c 0%, #0c5434 55%, #14663f 100%);
+  background-attachment: fixed;
+}
+
+/* Centre the auth content vertically with breathing room. */
+.einv-auth .auth-page-content {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+}
+.einv-auth .auth-page-content > .container { width: 100%; }
+
+/* Brand logo above the card (existing logo image, responsive height). */
+.einv-auth-brand { text-align: center; margin-bottom: 1.5rem; }
+.einv-auth-brand .einv-auth-logo {
+  height: 48px;
+  width: auto;
+  max-width: 80%;
+}
+.einv-auth-brand .einv-tagline {
+  margin-top: .6rem;
+  font-size: .95rem;
+  color: rgba(255, 255, 255, .8);
+}
+@media (max-width: 575.98px) {
+  .einv-auth-brand .einv-auth-logo { height: 40px; }
+}
+
+/* The card. */
+.einv-auth .card {
+  max-width: 460px;
+  margin: 0 auto;
+  border: 1px solid rgba(16, 28, 44, .06);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+  background: #fff;
+}
+.einv-auth .card-body { padding: 2rem; }
+.einv-auth .card .text-primary,
+.einv-auth h5.text-primary { color: var(--einv-forest) !important; }
+.einv-auth .card > .card-body > .text-center h5 { font-size: 1.6rem; font-weight: 700; color: var(--einv-ink); }
+
+/* Labels + inputs. */
+.einv-auth .form-label { font-weight: 600; font-size: .9rem; color: var(--einv-ink); margin-bottom: .4rem; }
+.einv-auth .form-control {
+  background: var(--einv-field-bg);
+  border: 1px solid var(--einv-line);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  font-size: 1rem;
+  color: var(--einv-ink);
+}
+.einv-auth .form-control:focus {
+  border-color: var(--einv-forest);
+  box-shadow: 0 0 0 .2rem rgba(12, 84, 52, .12);
+  background: #fff;
+}
+.einv-auth .form-control::placeholder { color: #98a2b3; }
+
+/* Input with a left icon. Wrap: <div class="einv-input"><i class="einv-input-ic ..."></i><input …></div> */
+.einv-auth .einv-input { position: relative; }
+.einv-auth .einv-input > .einv-input-ic {
+  position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--einv-muted); font-size: 1.05rem; pointer-events: none;
+}
+.einv-auth .einv-input > .form-control { padding-left: 2.5rem; }
+
+/* Password eye toggle stays clickable on the right. */
+.einv-auth .auth-pass-inputgroup .password-addon {
+  position: absolute; top: 50%; right: .4rem; transform: translateY(-50%);
+  border: 0; background: transparent; color: var(--einv-muted); z-index: 5;
+}
+
+/* Forgot-password link (right of the password label). */
+.einv-auth a#forgot-password,
+.einv-auth .card a.text-primary { color: var(--einv-forest); text-decoration: none; font-weight: 600; }
+.einv-auth a#forgot-password:hover,
+.einv-auth .card a.text-primary:hover { text-decoration: underline; }
+
+/* Remember-me. */
+.einv-auth .form-check-input:checked { background-color: var(--einv-forest); border-color: var(--einv-forest); }
+.einv-auth .form-check-input:focus { box-shadow: 0 0 0 .2rem rgba(12, 84, 52, .12); }
+
+/* Turnstile widget spacing. */
+.einv-auth .cf-turnstile, .einv-auth .einv-turnstile { margin: 1rem 0 .25rem; display: flex; justify-content: center; }
+
+/* Primary (Login) button — deep forest green. */
+.einv-auth .btn-primary {
+  --bs-btn-bg: var(--einv-forest-deep);
+  --bs-btn-border-color: var(--einv-forest-deep);
+  --bs-btn-hover-bg: #0c5434;
+  --bs-btn-hover-border-color: #0c5434;
+  --bs-btn-active-bg: #0c5434;
+  background-color: var(--einv-forest-deep);
+  border-color: var(--einv-forest-deep);
+  border-radius: 8px;
+  padding: .8rem 1rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.einv-auth .btn-primary:hover { background-color: var(--einv-forest); border-color: var(--einv-forest); }
+
+/* Links under the card (Register / Resend) sit on the dark-green background — keep them light/lime. */
+.einv-auth .card ~ .text-center { color: rgba(255, 255, 255, .85); }
+.einv-auth .card ~ .text-center a { color: var(--einv-lime) !important; font-weight: 600; text-decoration: none; }
+.einv-auth .card ~ .text-center a:hover { text-decoration: underline; }
+
+/* Keep the footer readable on the green background (footer content is minimal per request). */
+.einv-auth .footer, .einv-auth footer { color: rgba(255, 255, 255, .75); }
+.einv-auth .footer a { color: rgba(255, 255, 255, .9); }
+
+@media (max-width: 575.98px) {
+  .einv-auth .card-body { padding: 1.5rem; }
+  .einv-auth-brand .einv-wordmark { font-size: 2rem; }
+}
