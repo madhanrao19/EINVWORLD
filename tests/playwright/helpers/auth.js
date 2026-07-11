@@ -14,14 +14,14 @@ const USERS = {
 async function submitCredentials(page, role) {
   const user = USERS[role];
   if (!user) throw new Error(`Unknown role: ${role}`);
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'commit', timeout: 60000 });
   await page.fill('#username', user.email);
   await page.fill('#password-input', user.password);
   // Wait for the Turnstile test widget to inject its token before submitting.
   await page.waitForFunction(() => {
     const el = document.querySelector('[name="cf-turnstile-response"]');
     return !!(el && el.value && el.value.length > 0);
-  }, { timeout: 20000 });
+  }, { timeout: 35000 });
   await page.evaluate(() => document.getElementById('account').requestSubmit());
 }
 
@@ -31,13 +31,13 @@ async function submitCredentials(page, role) {
 async function login(page, role) {
   const user = USERS[role];
   if (!user) throw new Error(`Unknown role: ${role}`);
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'commit', timeout: 60000 });
   await page.fill('#username', user.email);
   await page.fill('#password-input', user.password);
   await page.waitForFunction(() => {
     const el = document.querySelector('[name="cf-turnstile-response"]');
     return !!(el && el.value && el.value.length > 0);
-  }, { timeout: 20000 });
+  }, { timeout: 35000 });
   await Promise.all([
     // 'commit' (not the default 'load') because a blocked external CDN/analytics host can
     // stall the window 'load' event for ~20s even after the app HTML has fully arrived.
