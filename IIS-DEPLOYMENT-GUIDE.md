@@ -443,13 +443,16 @@ Confirm the core things work:
 
 1. **Health:** open **Admin → System Health** (left menu). Everything should look OK — database,
    background jobs, DataProtection keys, disk space, signing cert (if enabled).
-2. **Login/roles:** the menu shows the admin options.
+2. **Login/roles:** the menu shows the admin options. The authenticated UI renders the **Tabler** theme
+   (dark vertical sidebar, top search + user menu, correctly-sized logo); public pages use the marketing
+   layout. If a page looks like the old theme, that folder's `_ViewStart.cshtml` may be missing (see the
+   Tabler runbook in `RUNBOOKS.md` / `docs/TABLER-MIGRATION-AUDIT.md`).
 3. **Create a test invoice** and **submit it to LHDN**.
    - Production: it goes to the real MyInvois — use a genuine test invoice your team agreed on.
    - Staging: it goes to the **PREPROD sandbox**.
    ✅ Expected: status moves to **Submitted → Valid** and a **QR code** appears.
 4. **Email:** trigger an action that sends mail (e.g. validated-invoice notification) and confirm it
-   arrives. (If not, check the SMTP password env var.)
+   arrives. (If not, check the SMTP env vars — **both** `SmtpUsername` and `SmtpPassword` must be set.)
 5. **PDF:** open an invoice and download its PDF.
 
 ✅ If all five pass, the deployment is good.

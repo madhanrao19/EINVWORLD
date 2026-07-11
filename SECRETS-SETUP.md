@@ -57,8 +57,13 @@ dotnet user-secrets set "LHDNApiConfig:ClientSecret2" "your-preprod-client-secre
 
 # Cloudflare Turnstile
 dotnet user-secrets set "Turnstile:SecretKey" "your-turnstile-secret"
+# QA only (Playwright): to bypass the challenge, temporarily use Cloudflare's always-pass TEST keys —
+#   Turnstile:SiteKey=1x00000000000000000000AA   Turnstile:SecretKey=1x0000000000000000000000000000000AA
+# NEVER use test keys in production (they disable bot protection). See docs/TABLER-MIGRATION-AUDIT.md.
 
-# SMTP
+# SMTP — set BOTH username and password. A blank SmtpUsername fails with a clear
+#        "SMTP not configured" error (v1.9.9) and no email is sent.
+dotnet user-secrets set "EmailConfiguration:Default:SmtpUsername" "your-smtp-username"
 dotnet user-secrets set "EmailConfiguration:Default:SmtpPassword" "your-smtp-password"
 
 # Only if you enable v1.1 signing in dev:
@@ -93,6 +98,8 @@ Example (PowerShell, machine-level — adjust scope to your policy):
 [Environment]::SetEnvironmentVariable("LHDNApiConfig__ClientSecret",  "prod-secret",   "Machine")
 [Environment]::SetEnvironmentVariable("LHDNApiConfig__ClientSecret2", "prod-secret-2", "Machine")
 [Environment]::SetEnvironmentVariable("Turnstile__SecretKey", "turnstile-secret", "Machine")
+# SMTP needs BOTH username and password — a blank username sends no mail (v1.9.9 fails it with a clear message).
+[Environment]::SetEnvironmentVariable("EmailConfiguration__Default__SmtpUsername", "smtp-username", "Machine")
 [Environment]::SetEnvironmentVariable("EmailConfiguration__Default__SmtpPassword", "smtp-password", "Machine")
 # Optional — only if you enable the import REST API:
 [Environment]::SetEnvironmentVariable("Api__Key", "a-long-random-key", "Machine")
