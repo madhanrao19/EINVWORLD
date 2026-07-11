@@ -37,14 +37,17 @@ changes are additive and AI/features stay off unless already enabled.
      verified UUID/SubmissionUid rows into the script, then run SECTION 2. Do **not** run it
      verbatim — the fill-in rows are environment-specific (it refuses to run with none filled in).
      It is idempotent and never overwrites an already-recorded submission.
-   - **Tabler UI migration (unreleased, needs validation):** the authenticated UI is being migrated from
-     the Velzon theme to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN).
-     It ships as a normal build — no extra deploy step. The migration is **not yet validated on staging**;
-     after deploying, walk the modules (all roles) and confirm the layout renders before trusting it. To
-     run the automated check, set Cloudflare **test** Turnstile keys and disable admin MFA *temporarily*
-     for QA, then run `tests/playwright/10-tabler-modules.spec.js` (exact env vars in
-     `docs/TABLER-MIGRATION-AUDIT.md`), and **revert** those env vars afterwards. To roll a folder back to Velzon, delete its `Pages/<area>/_ViewStart.cshtml`
-     (or restore the one line in `Areas/Identity/Pages/_ViewStart.cshtml` for the auth pages).
+   - **Tabler UI migration (unreleased):** the authenticated UI is being migrated from the Velzon theme
+     to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It ships as a normal
+     build — no extra deploy step. As of 2026-07-11 **all authenticated pages render Tabler** and the build
+     has been Playwright-verified across all three roles on staging. After any deploy, re-run the automated
+     check: set Cloudflare **test** Turnstile keys and disable admin MFA *temporarily* for QA, run
+     `tests/playwright/10-tabler-modules.spec.js` (exact env vars in `docs/TABLER-MIGRATION-AUDIT.md`), then
+     **revert** those env vars. Known residual: a small AI-Settings mobile overflow. Velzon `_Layout`/
+     `_LoginLayout` remain the fallback until Phase 8; to roll a folder back to Velzon, delete its
+     `Pages/<area>/_ViewStart.cshtml` (or restore the one line in `Areas/Identity/Pages/_ViewStart.cshtml`
+     for the auth pages). **Not Tabler but surfaced during QA — fix separately:** company logos emitted as
+     `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404.
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:
