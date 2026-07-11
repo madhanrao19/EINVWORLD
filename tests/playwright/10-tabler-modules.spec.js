@@ -39,6 +39,7 @@ const MODULES = {
     ['Create invoice', '/Invoices/CreateInvoice'],
     ['Bulk import', '/Invoices/ImportCsv'],
     ['Templates', '/Templates/TemplateLists'],
+    ['E-Invoice Assistant', '/Assistant'],
     ['Recurring invoices', '/RecurringInvoices/Index'],
     ['Items', '/Items/Index'],
     ['Create item', '/Items/Create'],
