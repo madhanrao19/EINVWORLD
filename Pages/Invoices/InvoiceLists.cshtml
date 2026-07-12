@@ -378,6 +378,9 @@
 
                             @if (Model.invoiceDirection == "Draft" && !Model.IsViewOnly)
                             {
+                                <button id="bulkSubmitBtn" class="btn btn-primary d-flex align-items-center gap-1 px-3" title="Submit the selected draft invoices to LHDN">
+                                    <i class="ri-send-plane-fill fs-5"></i> Submit to LHDN
+                                </button>
                                 <button id="bulkDeleteBtn" class="btn btn-danger d-flex align-items-center gap-1 px-3">
                                     <i class="ri-delete-bin-5-fill fs-5"></i> Delete e-Invoice
                                 </button>
@@ -467,6 +470,18 @@
                             </li>
                         }
                     </ul>
+
+                    @if (invoiceDirection == "Draft" && !Model.IsViewOnly)
+                    {
+                        <div class="alert alert-success d-flex align-items-start gap-2 border-0" role="note"
+                             style="background-color:#e9f5ee; color:#0c5434;">
+                            <i class="ri-lightbulb-flash-line fs-5 mt-1"></i>
+                            <div class="small">
+                                <b>Quick Tip:</b> Tick multiple draft rows and use <b>Submit to LHDN</b> to bulk-submit them.
+                                Each invoice is validated individually and, once accepted by LHDN, can only be cancelled within 72 hours.
+                            </div>
+                        </div>
+                    }
                         <div class="tab-content">
                             <!-- All Tab Content -->
                             <div class="tab-pane fade show active" id="allTab" role="tabpanel">
@@ -1435,6 +1450,7 @@
     <script src="~/js/sweetalert2.all.min.js"></script>
     <script type="module" src="~/js/submit-invoice.js"></script>
 
+    <script src="~/js/bulk-submit-invoice.js"></script>
     <script type="module" src="~/js/delete-invoice.js"></script>
     <script type="module" src="~/js/date-picker.js"></script>
     
@@ -2021,7 +2037,7 @@
     //  2) Make the header "select all" checkbox actually select/deselect every row + reflect an
     //     indeterminate state. No PageModel/query/permission/API change.
     (function () {
-        var bulkIds = ['bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn'];
+        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn'];
 
         function rowCheckboxes() { return Array.prototype.slice.call(document.querySelectorAll('.invoice-checkbox')); }
 
