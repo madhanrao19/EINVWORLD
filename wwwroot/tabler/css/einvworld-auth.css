@@ -35,20 +35,12 @@
 }
 .einv-auth .auth-page-content > .container { width: 100%; }
 
-/* Brand logo above the card (existing logo image, responsive height). */
-.einv-auth-brand { text-align: center; margin-bottom: 1.5rem; }
-.einv-auth-brand .einv-auth-logo {
-  height: 48px;
-  width: auto;
-  max-width: 80%;
-}
-.einv-auth-brand .einv-tagline {
-  margin-top: .6rem;
-  font-size: .95rem;
-  color: rgba(255, 255, 255, .8);
-}
+/* Original page-level brand logo (kept from the existing auth pages), made responsive.
+ * Each auth page renders its own .auth-logo block; the layout no longer injects a second logo. */
+.einv-auth .auth-logo img { max-width: 60%; height: auto; }
+.einv-auth .text-white-50 p { color: rgba(255, 255, 255, .8); }
 @media (max-width: 575.98px) {
-  .einv-auth-brand .einv-auth-logo { height: 40px; }
+  .einv-auth .auth-logo img { width: 84px !important; }
 }
 
 /* The card. */
@@ -136,5 +128,4 @@
 
 @media (max-width: 575.98px) {
   .einv-auth .card-body { padding: 1.5rem; }
-  .einv-auth-brand .einv-wordmark { font-size: 2rem; }
 }
