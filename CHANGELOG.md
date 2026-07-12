@@ -1,6 +1,12 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-## 📅 2026-07-12 — Unreleased (Bulk cancel/reject hardening)
+> **Current version: `v1.10.0`** (`AppInfo:Version` in `appsettings.json`). v1.10.0 is a **minor**
+> release (new backward-compatible feature) that consolidates the accumulated post-v1.9.9 work in the
+> three 2026-07-10…12 sections below: the **Tabler UI migration** (all authenticated pages), the
+> **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
+> Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
+
+## 📅 2026-07-12 — v1.10.0 (Bulk cancel/reject hardening)
 
 > Defense-in-depth polish for the existing bulk **Cancel** and **Request-Reject** actions. All three
 > bulk actions (delete/cancel/reject) were already ownership-guarded server-side and not cross-tenant
@@ -15,7 +21,7 @@
   and send the **effective reason** — when "Others" is chosen, the free-text detail is now actually
   transmitted (and persisted) instead of the useless "Others" category.
 
-## 📅 2026-07-12 — Unreleased (Forest Tech Precision reskin + bulk Submit-to-LHDN)
+## 📅 2026-07-12 — v1.10.0 (Forest Tech Precision reskin + bulk Submit-to-LHDN)
 
 > Applying the approved **Forest Tech Precision** green design language (already on the auth pages) to
 > the Supplier **Dashboard** and the **Invoice list**, and adding the bulk action the list was missing.
@@ -39,7 +45,7 @@
   authorisation + idempotency enforced server-side; anti-forgery token required.
 - Forest Tech “Quick Tip” banner on the Draft tab explaining bulk submit.
 
-## 📅 2026-07-10 — Unreleased (Tabler UI migration — ALL authenticated pages migrated; deployed & QA'd on staging)
+## 📅 2026-07-10 — v1.10.0 (Tabler UI migration — ALL authenticated pages migrated; deployed & QA'd on staging)
 
 > Replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on the
 > **authenticated** UI. Server-rendered Razor Pages throughout — **no** SPA framework. **No backend / DB /
