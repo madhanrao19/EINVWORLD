@@ -778,9 +778,29 @@ namespace eInvWorld.Pages.Invoices
                 var cancellationConstraintsCheck = await CheckCancellationConstraints(documentId);
                 if (cancellationConstraintsCheck != null) return cancellationConstraintsCheck;
 
+                // Resolve the issuer TIN from the document server-side — never trust the frontend-supplied
+                // TIN (defense-in-depth; the IDOR guard above already confirmed the caller owns this
+                // document, so the document's own supplier TIN is the correct, safe value to send to LHDN).
+                var issuerTin = await _context.InvoiceHeaders
+                    .Where(i => i.UUID == documentId)
+                    .Select(i => i.Supplier != null ? i.Supplier.TIN : null)
+                    .FirstOrDefaultAsync();
+
+                if (string.IsNullOrWhiteSpace(issuerTin))
+                {
+                    _logger.LogError("❌ Could not resolve issuer TIN for document {DocumentId} during cancellation.", documentId);
+                    return StatusCode(500, "Issuer TIN for the document could not be resolved.");
+                }
+
+                if (!string.Equals(issuerTin, tin, StringComparison.Ordinal))
+                {
+                    _logger.LogInformation("🔑 Using document issuer TIN {IssuerTin} for LHDN cancel (frontend supplied {FrontendTin}).",
+                        EINVWORLD.Helpers.LogSanitizer.MaskTin(issuerTin), EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
+                }
+
                 // Proceed to cancel document in LHDN API first
                 _logger.LogInformation($"📡 Calling LHDN CancelDocument API for document {documentId}...");
-                string response = await _lhdnApiService.CancelDocumentAsync(documentId, cancellationReason, tin);
+                string response = await _lhdnApiService.CancelDocumentAsync(documentId, cancellationReason, issuerTin);
                 _logger.LogInformation($" LHDN API cancellation successful for document {documentId}");
 
                 // Update local database (don't fail if this has issues since LHDN API already succeeded)
