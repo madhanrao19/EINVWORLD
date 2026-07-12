@@ -8,8 +8,9 @@
 
 <style>
     :root {
-        --primary-soft: #eef2ff;
-        --primary-text: #4f46e5;
+        /* Forest Tech Precision palette — aligned to the app's green brand (was indigo). */
+        --primary-soft: #e9f5ee;
+        --primary-text: #0c5434;
         --success-soft: #f0fdf4;
         --success-text: #16a34a;
         --danger-soft: #fef2f2;
@@ -111,7 +112,7 @@
     .btn-primary {
         background-color: var(--primary-text);
         border-color: var(--primary-text);
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        box-shadow: 0 4px 12px rgba(12, 84, 52, 0.2);
     }
 
     .table thead th {
@@ -265,14 +266,14 @@
     </div>
 
     <div class="col-lg-7">
-        <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #4b49ac !important;">
+        <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #0c5434 !important;">
             <h5 class="fw-bold text-dark mb-1">Quick Actions</h5>
             <p class="text-muted mb-4 small">Common administrative tasks</p>
 
             <div class="row g-3 h-100 align-content-start">
                 <div class="col-md-6">
                     <a asp-page="/Suppliers/Index" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
-                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="ri-building-line fs-5"></i>
                         </div>
                         <span class="fw-semibold">Manage Companies</span>
@@ -280,7 +281,7 @@
                 </div>
                 <div class="col-md-6">
                     <a asp-page="/Admin/Users/ManageUser" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
-                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="ri-user-settings-line fs-5"></i>
                         </div>
                         <span class="fw-semibold">Manage Users</span>
@@ -288,7 +289,7 @@
                 </div>
                 <div class="col-md-6">
                     <a asp-page="/Admin/InvoiceSync" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
-                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="ri-refresh-line fs-5"></i>
                         </div>
                         <span class="fw-semibold">Invoice Sync</span>
@@ -296,7 +297,7 @@
                 </div>
                 <div class="col-md-6">
                     <a asp-page="/Admin/Logs/Index" class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover" style="background-color: #f8f9fa; color: #000000;">
-                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <div class="me-3 shadow-sm" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="ri-file-list-3-line fs-5"></i>
                         </div>
                         <span class="fw-semibold">System Audit</span>
@@ -463,7 +464,7 @@ else if (Model.UserType == "Supplier")
 
     <div class="row g-4 mb-4 align-items-stretch">
         <div class="col-lg-7">
-            <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #4b49ac !important;">
+            <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #0c5434 !important;">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <h5 class="fw-bold text-dark mb-0">Action Center</h5>
                 </div>
@@ -472,7 +473,7 @@ else if (Model.UserType == "Supplier")
                 <div class="row g-3 h-100 align-content-start">
                     <div class="col-md-4">
                         <a asp-page="/Invoices/CreateInvoice" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
-                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px;">
                                 <i class="ri-add-box-line fs-5"></i>
                             </div>
                             <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Create Invoice</span>
@@ -482,7 +483,7 @@ else if (Model.UserType == "Supplier")
 
                     <div class="col-md-4">
                         <a href="/PublicCustomer/List" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
-                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px;">
                                 <i class="ri-user-add-line fs-5"></i>
                             </div>
                             <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">Manage Buyers</span>
@@ -492,7 +493,7 @@ else if (Model.UserType == "Supplier")
 
                     <div class="col-md-4">
                         <a href="/Suppliers/Details?id=@Model.PrimaryCompanyId" class="d-flex flex-column p-3 h-100 text-decoration-none rounded-3 border border-light-subtle transition-hover bg-light">
-                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #eef2ff; color: #4b49ac; border-radius: 8px;">
+                            <div class="shadow-sm mb-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #e9f5ee; color: #0c5434; border-radius: 8px;">
                                 <i class="ri-building-line fs-5"></i>
                             </div>
                             <span class="fw-bold text-dark d-block mb-1" style="font-size: 0.95rem;">My Company</span>
