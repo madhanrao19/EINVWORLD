@@ -272,7 +272,7 @@
     <!-- EPPlus removed: v5+ requires a commercial/Polyform license (was being used under NonCommercial,
          a violation for a commercial product). Replaced with ClosedXML (MIT) — see GenerateExcel. -->
     <PackageReference Include="Humanizer" Version="3.0.10" />
-    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.8.0" />
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.8.1" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
