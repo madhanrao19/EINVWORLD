@@ -1446,6 +1446,8 @@ namespace eInvWorld.Pages.Invoices
         }
 
         // Add this handler to InvoiceLists.cshtml.cs
+        // Single-row "Submit to LHDN" action. Delegates to the shared guarded core and maps the outcome
+        // to the page's existing TempData + redirect UX (behaviour unchanged).
         public async Task<IActionResult> OnPostSubmitFromListAsync(string invoiceNo)
         {
             if (string.IsNullOrWhiteSpace(invoiceNo))
@@ -1454,12 +1456,44 @@ namespace eInvWorld.Pages.Invoices
                 return RedirectToPage();
             }
 
+            var wrapperResult = await SubmitDraftCoreAsync(invoiceNo);
+            if (wrapperResult.Ok)
+            {
+                TempData["SuccessMessage"] = wrapperResult.Message;
+                return RedirectToPage(new { invoiceDirection = "Sent" });
+            }
+
+            TempData["ErrorMessage"] = wrapperResult.Message;
+            return RedirectToPage();
+        }
+
+        // JSON sibling of SubmitFromList, used by the bulk "Submit Selected to LHDN" action. The client
+        // (bulk-submit-invoice.js) loops the selected draft rows one request at a time so every invoice is
+        // independently claimed, per-TIN authorised and payload-hash idempotent — then aggregates the
+        // per-invoice outcome (mirroring the bulk-delete pattern). Drafts only.
+        public async Task<IActionResult> OnPostBulkSubmitOneAsync([FromBody] DeleteInvoiceInput input)
+        {
+            if (input == null || string.IsNullOrWhiteSpace(input.InvoiceNo))
+            {
+                return new JsonResult(new { success = false, message = "Invalid invoice number." });
+            }
+
+            var result = await SubmitDraftCoreAsync(input.InvoiceNo);
+            return new JsonResult(new { success = result.Ok, message = result.Message });
+        }
+
+        // Shared, fully-guarded "submit one draft to LHDN" core used by both the single-row redirect
+        // handler and the JSON bulk handler. Performs the IDOR + per-TIN ownership checks, the atomic
+        // double-submit claim (payload-hash idempotency), the LHDN submission, status sync and — on
+        // failure — marks TransmissionError + queues a background retry. Returns the outcome rather than
+        // writing TempData/redirecting so each caller can shape its own response.
+        private async Task<SubmitDraftResult> SubmitDraftCoreAsync(string invoiceNo)
+        {
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
             if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
             {
                 _logger.LogWarning("SubmitFromList denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
-                TempData["ErrorMessage"] = "You are not authorized to submit this invoice.";
-                return RedirectToPage();
+                return SubmitDraftResult.Fail("You are not authorized to submit this invoice.");
             }
 
             // Declared at method scope (not inside the try) so the catch block below can still report
@@ -1474,14 +1508,12 @@ namespace eInvWorld.Pages.Invoices
 
                 if (invoice == null)
                 {
-                    TempData["ErrorMessage"] = $"Invoice {invoiceNo} not found.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail($"Invoice {invoiceNo} not found.");
                 }
 
                 if (invoice.InternalStatusId != "Draft")
                 {
-                    TempData["ErrorMessage"] = $"Invoice {invoiceNo} is not in Draft status.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail($"Invoice {invoiceNo} is not in Draft status.");
                 }
 
                 // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
@@ -1492,15 +1524,13 @@ namespace eInvWorld.Pages.Invoices
                     && !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, submitterTin))
                 {
                     _logger.LogWarning("🚫 User not authorized to submit {InvoiceNo} under issuer TIN {TIN}.", invoiceNo, EINVWORLD.Helpers.LogSanitizer.MaskTin(submitterTin));
-                    TempData["ErrorMessage"] = "You are not authorized to submit this invoice.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail("You are not authorized to submit this invoice.");
                 }
 
                 var jsonPath = _jsonFileService.GetExistingFilePath(invoiceNo);
                 if (string.IsNullOrEmpty(jsonPath) || !System.IO.File.Exists(jsonPath))
                 {
-                    TempData["ErrorMessage"] = $"Draft JSON for invoice {invoiceNo} does not exist.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail($"Draft JSON for invoice {invoiceNo} does not exist.");
                 }
 
                 var invoiceJson = await System.IO.File.ReadAllTextAsync(jsonPath);
@@ -1521,8 +1551,7 @@ namespace eInvWorld.Pages.Invoices
                 var accessToken = HttpContext.Session.GetString("AccessToken");
                 if (string.IsNullOrEmpty(accessToken))
                 {
-                    TempData["ErrorMessage"] = "Access token missing or expired. Please log in again.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail("Access token missing or expired. Please log in again.");
                 }
 
                 // Atomic double-submit guard: only one concurrent request wins this claim; others are
@@ -1530,8 +1559,7 @@ namespace eInvWorld.Pages.Invoices
                 if (!await EINVWORLD.Helpers.InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
                 {
                     _logger.LogWarning("[Guard] Concurrent submit blocked for {InvoiceNo}.", invoiceNo);
-                    TempData["ErrorMessage"] = $"Invoice {invoiceNo} is already being submitted. Please wait a moment and refresh.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail($"Invoice {invoiceNo} is already being submitted. Please wait a moment and refresh.");
                 }
 
                 var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, submitterTin);
@@ -1542,8 +1570,7 @@ namespace eInvWorld.Pages.Invoices
 
                 if (accepted == null || string.IsNullOrEmpty(accepted.uuid))
                 {
-                    TempData["ErrorMessage"] = $"Submission accepted but UUID missing for Invoice {invoiceNo}.";
-                    return RedirectToPage();
+                    return SubmitDraftResult.Fail($"Submission accepted but UUID missing for Invoice {invoiceNo}.");
                 }
 
                 invoice.UUID = accepted.uuid;
@@ -1602,8 +1629,7 @@ namespace eInvWorld.Pages.Invoices
 
                 _jsonFileService.MoveToStatusFolder(invoice.InvoiceNo, invoice.LHDNStatusId);
 
-                TempData["SuccessMessage"] = $"Invoice {invoice.InvoiceNo} submitted successfully. UUID: {accepted.uuid}";
-                return RedirectToPage(new { invoiceDirection = "Sent" });
+                return SubmitDraftResult.Success($"Invoice {invoice.InvoiceNo} submitted successfully. UUID: {accepted.uuid}");
             }
             catch (Exception ex)
             {
@@ -1637,9 +1663,17 @@ namespace eInvWorld.Pages.Invoices
                     User.Identity?.Name ?? "System",
                     SyncJobPayload.CreateForInvoice(invoiceNo));
 
-                TempData["ErrorMessage"] = $"Error submitting invoice {invoiceNo}: {ex.Message} A retry has been queued automatically.";
-                return RedirectToPage();
+                return SubmitDraftResult.Fail($"Error submitting invoice {invoiceNo}: {ex.Message} A retry has been queued automatically.");
             }
+        }
+
+        // Outcome of a single guarded draft submission (see SubmitDraftCoreAsync).
+        private sealed class SubmitDraftResult
+        {
+            public bool Ok { get; private init; }
+            public string Message { get; private init; } = string.Empty;
+            public static SubmitDraftResult Success(string message) => new() { Ok = true, Message = message };
+            public static SubmitDraftResult Fail(string message) => new() { Ok = false, Message = message };
         }
 
 
