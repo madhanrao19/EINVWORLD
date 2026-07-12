@@ -142,7 +142,10 @@
 
         for (let invoice of invoices) {
             try {
-                let response = await fetch(`/Invoices/InvoiceLists?handler=CancelDocument&documentId=${invoice.uuid}&cancellationReason=${reason}&tin=${invoice.tin}`, {
+                // Send the effective reason (the free-text detail when "Others" was chosen) and URL-encode
+                // every value so reasons/UUIDs containing spaces or special characters are transmitted safely.
+                const effectiveReason = (reason === "Others" && details) ? details : reason;
+                let response = await fetch(`/Invoices/InvoiceLists?handler=CancelDocument&documentId=${encodeURIComponent(invoice.uuid)}&cancellationReason=${encodeURIComponent(effectiveReason)}&tin=${encodeURIComponent(invoice.tin || "")}`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",

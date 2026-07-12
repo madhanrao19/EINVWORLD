@@ -1,5 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-12 — Unreleased (Bulk cancel/reject hardening)
+
+> Defense-in-depth polish for the existing bulk **Cancel** and **Request-Reject** actions. All three
+> bulk actions (delete/cancel/reject) were already ownership-guarded server-side and not cross-tenant
+> exploitable; this removes remaining smells. No schema/migration change.
+
+- **Cancel (`OnPutCancelDocumentAsync`):** resolve the issuer TIN from the document **server-side**
+  (the document's supplier TIN) instead of trusting the frontend-supplied `tin`. The IDOR guard already
+  proved ownership, so behaviour is unchanged for legitimate users — the client value can no longer
+  influence the LHDN call. (Reject already ignored the frontend TIN.)
+- **`cancel-invoice.js` / `request-rejection.js`:** URL-encode `documentId`, reason and `tin`
+  (`encodeURIComponent`) so reasons/UUIDs with spaces or special characters can't corrupt the request;
+  and send the **effective reason** — when "Others" is chosen, the free-text detail is now actually
+  transmitted (and persisted) instead of the useless "Others" category.
+
 ## 📅 2026-07-12 — Unreleased (Forest Tech Precision reskin + bulk Submit-to-LHDN)
 
 > Applying the approved **Forest Tech Precision** green design language (already on the auth pages) to

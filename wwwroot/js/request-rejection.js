@@ -147,7 +147,10 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-                let response = await fetch(`/Invoices/InvoiceLists?handler=RejectDocument&documentId=${invoice.uuid}&rejectionReason=${reason}&tin=${invoice.tin}`, {
+                // Send the effective reason (the free-text detail when "Others" was chosen) and URL-encode
+                // every value so reasons/UUIDs containing spaces or special characters are transmitted safely.
+                const effectiveReason = (reason === "Others" && details) ? details : reason;
+                let response = await fetch(`/Invoices/InvoiceLists?handler=RejectDocument&documentId=${encodeURIComponent(invoice.uuid)}&rejectionReason=${encodeURIComponent(effectiveReason)}&tin=${encodeURIComponent(invoice.tin || "")}`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
