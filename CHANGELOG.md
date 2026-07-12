@@ -1,5 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
+## 📅 2026-07-12 — Unreleased (Forest Tech Precision reskin + bulk Submit-to-LHDN)
+
+> Applying the approved **Forest Tech Precision** green design language (already on the auth pages) to
+> the Supplier **Dashboard** and the **Invoice list**, and adding the bulk action the list was missing.
+> No schema/migration change.
+
+### Supplier Dashboard (`Pages/Dashboard/Dashboard.cshtml`) — presentational only
+- Reskinned from the hardcoded **indigo** palette (`#4f46e5` / `#4b49ac` / `#eef2ff`) to Forest Tech
+  green (`#0c5434` / `#e9f5ee`), aligned to the app brand (`--tblr-primary #3AA564`). CSS-only — no
+  markup, chart, data, handler, role-gating or JS change. Admin/Supplier/Buyer variants untouched.
+
+### Invoice list (`Pages/Invoices/InvoiceLists.cshtml`) — bulk Submit-to-LHDN
+- New **Submit to LHDN** bulk action on the Draft tab (the list already had bulk Delete/Cancel/Reject).
+  Hidden until rows are selected; confirms, then submits each selected **Draft** one request at a time.
+- Server: extracted the fully-guarded single-submit logic into a shared **`SubmitDraftCoreAsync`**
+  (IDOR + per-TIN ownership, **atomic double-submit claim / payload-hash idempotency**, status sync, and
+  on failure `TransmissionError` + background retry). `OnPostSubmitFromListAsync` now delegates to it
+  (single-row UX unchanged); new `OnPostBulkSubmitOneAsync` JSON handler reuses the same core — **no
+  duplication of the LHDN critical path**.
+- Client `wwwroot/js/bulk-submit-invoice.js` mirrors `delete-invoice.js`: a failure never aborts the
+  batch (server queues a retry) and the user gets an aggregated per-invoice summary. Drafts-only;
+  authorisation + idempotency enforced server-side; anti-forgery token required.
+- Forest Tech “Quick Tip” banner on the Draft tab explaining bulk submit.
+
 ## 📅 2026-07-10 — Unreleased (Tabler UI migration — ALL authenticated pages migrated; deployed & QA'd on staging)
 
 > Replacing the Velzon admin theme with the free MIT **Tabler** Bootstrap 5 template on the
