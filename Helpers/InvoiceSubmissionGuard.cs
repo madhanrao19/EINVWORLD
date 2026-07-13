@@ -48,13 +48,16 @@ WHERE [InvoiceNo] = {invoiceNo}
 
             if (affected <= 0) return false;
 
-            // Refresh the concurrency token of any already-tracked instance so the caller's
-            // post-submission SaveChanges succeeds (see XML doc above).
-            // Case-insensitive to match SQL Server's default collation — the claim UPDATE above
-            // matches the row regardless of casing, so the reload must find the same entity.
-            var tracked = db.ChangeTracker.Entries<InvoiceHeader>()
-                .Where(e => string.Equals(e.Entity.InvoiceNo, invoiceNo, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            // Refresh the concurrency token of the tracked InvoiceHeader(s) so the caller's
+            // post-submission SaveChanges succeeds (see XML doc above): the claim UPDATE bumped the row's
+            // rowversion, so any instance loaded before the claim holds a stale RowVersion and its next
+            // SaveChanges would always throw DbUpdateConcurrencyException.
+            //
+            // A submission flow only ever tracks the single invoice being submitted, so reload EVERY
+            // tracked InvoiceHeader. The previous InvoiceNo string match was brittle — a CHAR/padded or
+            // otherwise non-identical stored value would fail the exact-string comparison, silently skip
+            // the reload, and let the stale token surface as a false concurrency conflict on submit.
+            var tracked = db.ChangeTracker.Entries<InvoiceHeader>().ToList();
             foreach (var entry in tracked)
             {
                 await entry.ReloadAsync(ct);
