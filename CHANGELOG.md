@@ -6,6 +6,28 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-13 — Status-sync fixes: half-synced "instant Valid" + poller 429/starvation
+
+> Root-caused from a live 3-invoice submit where one invoice went Valid instantly but sat without its
+> QR/PDF/email for 80 minutes, and two stayed "Submitted" (reconciled only when the app next ran —
+> locally the background poller stops with the F5 session). No schema/migration change.
+
+- **Post-submit sync now persists the full validation result.** The inline poll after a submit copied
+  only `status` into the DB, discarding the `longId` and `dateTimeValidated` LHDN returned in the same
+  response. An instantly-validated invoice was therefore "Valid" with no QR LongId, and the PDF/email
+  finalizer (which requires `DateTimeValidated`) stayed blocked until a later full sync. The
+  `ExecuteUpdate` now also writes `LongId`/`DateTimeValidated`, null-coalesced against the current
+  column so missing values never overwrite a concurrent sync's write.
+- **`InvoiceStatusUpdater` honours the 429 batch-abort contract.** `GetDocumentDetailsWithRetryAsync`
+  re-throws 429 (after its own penalty waits) expecting the batch to stop, but the poller caught it as
+  a generic per-invoice error and kept calling the rate-limited API. A persisted 429 now aborts the
+  poll cycle; the queue retries next cycle.
+- **Queue fairness.** An invoice whose document details aren't available yet (e.g. 404 on a
+  just-submitted document) now gets its `LastUpdated` bumped, so it moves to the back of the sync
+  queue instead of permanently occupying a front slot of every 10-item batch and starving newer ones.
+- **Clean shutdown:** a cancellation mid-batch stops the loop quietly instead of being logged as a
+  sync error.
+
 ## 📅 2026-07-13 — Submit-to-LHDN hotfixes (found in local F5 testing)
 
 > Three defects in the draft → LHDN submission path (single row + bulk), each masking the next. No

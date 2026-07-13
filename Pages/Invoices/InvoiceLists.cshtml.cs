@@ -1672,11 +1672,24 @@ namespace eInvWorld.Pages.Invoices
                         finalStatus = documentStatus.status;
                         var syncedAt = GetMYTime();
 
+                        // Persist the validation artifacts LHDN returned alongside the status, not just the
+                        // status itself. When LHDN validates instantly, dropping longId/dateTimeValidated
+                        // here left the invoice "Valid" but without its QR LongId — and the PDF/email
+                        // finalizer (which requires DateTimeValidated) stayed blocked until a later full
+                        // sync. Null-coalesce against the current column so a not-yet-available value never
+                        // overwrites one written by a concurrent sync.
+                        var longId = string.IsNullOrWhiteSpace(documentStatus.longId) ? null : documentStatus.longId;
+                        DateTime? validatedAt = documentStatus.dateTimeValidated.HasValue
+                            ? eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(documentStatus.dateTimeValidated.Value)
+                            : null;
+
                         await _context.InvoiceHeaders
                             .Where(i => i.InvoiceNo == invoiceNo)
                             .ExecuteUpdateAsync(s => s
                                 .SetProperty(i => i.LHDNStatusId, finalStatus)
                                 .SetProperty(i => i.InternalStatusId, finalStatus)
+                                .SetProperty(i => i.LongId, i => longId ?? i.LongId)
+                                .SetProperty(i => i.DateTimeValidated, i => validatedAt ?? i.DateTimeValidated)
                                 .SetProperty(i => i.LastUpdated, syncedAt));
 
                         _context.InvoiceHistories.Add(new InvoiceHistory
