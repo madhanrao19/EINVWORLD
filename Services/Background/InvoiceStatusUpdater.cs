@@ -258,7 +258,12 @@ public class InvoiceStatusUpdater : BackgroundService
 
                 if (summary == null)
                 {
-                    _logger.LogInformation("Batch aborted: API unavailable for {InvoiceNo}", invoice.InvoiceNo);
+                    // Not available yet (e.g. LHDN hasn't indexed a just-submitted document — 404).
+                    // Bump LastUpdated so this invoice moves to the back of the queue instead of
+                    // permanently occupying a slot at the front of every batch and starving newer ones.
+                    _logger.LogInformation("Document details not available yet for {InvoiceNo}; will retry next cycle.", invoice.InvoiceNo);
+                    invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
+                    await TrySaveAsync(dbContext, invoice.InvoiceNo);
                     continue;
                 }
 
@@ -266,6 +271,22 @@ public class InvoiceStatusUpdater : BackgroundService
 
                 invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
                 await TrySaveAsync(dbContext, invoice.InvoiceNo);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // App shutting down mid-batch — stop quietly, don't log it as a sync error.
+                break;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+            {
+                // GetDocumentDetailsWithRetryAsync re-throws 429 after exhausting its own penalty waits,
+                // expecting the batch to stop. Honouring that here — instead of moving on to the next
+                // invoice — avoids hammering an API that just rate-limited us; the whole queue retries
+                // next cycle.
+                _logger.LogWarning("LHDN rate limit (429) persisted while syncing {InvoiceNo}; aborting this poll cycle. Remaining invoices retry next cycle.", invoice.InvoiceNo);
+                invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
+                await TrySaveAsync(dbContext, invoice.InvoiceNo);
+                break;
             }
             catch (Exception ex)
             {
