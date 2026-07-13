@@ -449,6 +449,45 @@ namespace EINVWORLD.Tests.Integration
             Assert.False(await InvoiceSubmissionGuard.TryClaimAsync(loserCtx, invoiceNo));
         }
 
+        [Fact]
+        public async Task SubmissionGuard_Claim_ReloadsTrackedEntity_EvenWhenInvoiceNoDoesNotStringMatch()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-RV-{Guid.NewGuid():N}".Substring(0, 16);
+            ctx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = status,
+            });
+            await ctx.SaveChangesAsync();
+            ctx.ChangeTracker.Clear();
+
+            // Load the tracked entity, then claim with a value SQL Server still matches (its '=' ignores
+            // trailing spaces) but that an exact C# string comparison would NOT — this stands in for the
+            // real CHAR/padded or legacy invoice numbers that made the old InvoiceNo-string-matched reload
+            // silently skip, leaving a stale RowVersion. The guard must reload the tracked entity anyway,
+            // so the post-claim save below must succeed rather than throw DbUpdateConcurrencyException.
+            var invoice = await ctx.InvoiceHeaders.SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.True(await InvoiceSubmissionGuard.TryClaimAsync(ctx, invoiceNo + "  "));
+
+            invoice.UUID = "IT-UUID-MISMATCH";
+            invoice.LHDNStatusId = "Submitted";
+            await ctx.SaveChangesAsync(); // must not throw
+
+            await using var verifyCtx = _fx.CreateContext();
+            var final = await verifyCtx.InvoiceHeaders.AsNoTracking().SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.Equal("IT-UUID-MISMATCH", final.UUID);
+            Assert.Equal("Submitted", final.LHDNStatusId);
+        }
+
         private static async Task<string> SeedStatusAsync(ApplicationDbContext ctx)
         {
             var existing = await ctx.Set<eInvWorld.Models.Status>().Select(s => s.StatusCode).FirstOrDefaultAsync();

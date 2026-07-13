@@ -1571,7 +1571,27 @@ namespace eInvWorld.Pages.Invoices
                 var accessToken = HttpContext.Session.GetString("AccessToken");
                 if (string.IsNullOrEmpty(accessToken))
                 {
-                    return SubmitDraftResult.Fail("Access token missing or expired. Please log in again.");
+                    // The token is stored in the (in-memory) session at login, but that can be lost while
+                    // the auth cookie survives — e.g. an app restart / hot-reload in local F5 dev, or the
+                    // token simply expiring mid-session. Re-acquire it on demand (the same call the login
+                    // flow makes) instead of forcing a re-login, so submission stays resilient.
+                    try
+                    {
+                        accessToken = await _tokenService.GetAccessToken();
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            HttpContext.Session.SetString("AccessToken", accessToken);
+                        }
+                    }
+                    catch (Exception tokenEx)
+                    {
+                        _logger.LogError(tokenEx, "Failed to re-acquire LHDN access token during submit for {InvoiceNo}.", invoiceNo);
+                    }
+
+                    if (string.IsNullOrEmpty(accessToken))
+                    {
+                        return SubmitDraftResult.Fail("Access token missing or expired. Please log in again.");
+                    }
                 }
 
                 // Atomic double-submit guard: only one concurrent request wins this claim; others are
