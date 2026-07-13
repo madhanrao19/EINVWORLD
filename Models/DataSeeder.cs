@@ -29,6 +29,7 @@ public class DataSeeder
         {
             _logger.LogInformation("Starting data seeding process.");
 
+            await SeedStatusesAsync();
             await SeedStateCodesAsync();
             await SeedCountryCodesAsync();
             await SeedCurrencyCodesAsync();
@@ -45,6 +46,41 @@ public class DataSeeder
         {
             _logger.LogError(ex, "An error occurred during the data seeding process.");
             throw;
+        }
+    }
+
+    // Reference statuses that InvoiceHeaders.InternalStatusId / LHDNStatusId (both FK -> Statuses.StatusCode)
+    // can hold. Most are seeded once via HasData, but "TransmissionError" (written when an LHDN submission
+    // fails) was never seeded, so a submit-failure UPDATE violated the FK. Ensure the full set exists
+    // idempotently on every startup so the reference data self-heals — including databases created before a
+    // status was introduced. Additive only: existing rows (and any admin edits to Name/Description) are left
+    // untouched. Public so an integration test can exercise it directly (it touches only the Statuses table).
+    public async Task SeedStatusesAsync()
+    {
+        var required = new[]
+        {
+            new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft", Description = "Invoice is in draft state" },
+            new Status { StatusCode = "Submitted", StatusType = "LHDN", Name = "Submitted", Description = "Invoice has been submitted to LHDN" },
+            new Status { StatusCode = "Valid", StatusType = "LHDN", Name = "Valid", Description = "Invoice has been validated successfully by LHDN" },
+            new Status { StatusCode = "Invalid", StatusType = "LHDN", Name = "Invalid", Description = "Invoice was rejected by LHDN" },
+            new Status { StatusCode = "Cancelled", StatusType = "LHDN", Name = "Cancelled", Description = "Invoice has been cancelled" },
+            new Status { StatusCode = "RequestReject", StatusType = "Internal", Name = "Request Reject", Description = "Invoice is flagged for resubmission" },
+            new Status { StatusCode = "Completed", StatusType = "Internal", Name = "Completed", Description = "Invoice process is completed" },
+            new Status { StatusCode = "TransmissionError", StatusType = "Internal", Name = "Transmission Error", Description = "Submission to LHDN failed to transmit; a retry has been queued" },
+        };
+
+        var existingCodes = await _context.Set<Status>()
+            .Select(s => s.StatusCode)
+            .ToListAsync();
+        var existing = new HashSet<string>(existingCodes, StringComparer.OrdinalIgnoreCase);
+
+        var toAdd = required.Where(s => !existing.Contains(s.StatusCode)).ToList();
+        if (toAdd.Count > 0)
+        {
+            await _context.Set<Status>().AddRangeAsync(toAdd);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Seeded {Count} missing status code(s): {Codes}",
+                toAdd.Count, string.Join(", ", toAdd.Select(s => s.StatusCode)));
         }
     }
 
