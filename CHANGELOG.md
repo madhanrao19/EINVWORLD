@@ -6,6 +6,26 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-13 — Complete the submit flow inline: PDF + validation email on instant Valid
+
+> Follow-up to the status-sync fixes below: an invoice that LHDN validates during submit now finishes
+> the whole flow (Valid → QR LongId → PDF → email to Supplier/Buyer/BCC) in the same request instead
+> of waiting up to 10 minutes for a background finalizer cycle. No schema/migration change.
+
+- **New shared `IInvoiceFinalizer` / `InvoiceFinalizer` service** — the single per-invoice
+  PDF-generation + validation-email implementation. The email send is guarded by an **atomic claim**
+  (`UPDATE … WHERE IsValidationEmailSent = 0`), so concurrent finalizers can never double-send; a
+  failed send releases the claim for retry. Flag writes use `ExecuteUpdate` (no rowversion friction).
+- **Submit flow (`InvoiceLists`)**: after the post-submit status sync, a `Valid` result triggers the
+  finalizer inline (best-effort — a failure never affects the submission itself).
+- **Deduplicated three copy-pasted finalizer loops** — `InvoiceStatusUpdater.RunFinalizerAsync`,
+  the hosted `InvoiceFinalizerService` sweep (10-min grace), and `InvoiceSyncHelper.RunFinalizerAsync`
+  (manual/job trigger) now all select candidates and delegate to the shared service. None of them had
+  a duplicate-send guard before. Removed the unused `RunManuallyAsync` and dead `InvoiceSyncResult`.
+- Side effect worth noting: the `InvoiceStatusUpdater` copy used to re-convert the (already
+  Malaysia-time) `IssueDate`/`DateTimeValidated` from UTC for the email body (+8 h skew); the shared
+  implementation passes the stored values as-is, matching the other two loops.
+
 ## 📅 2026-07-13 — Status-sync fixes: half-synced "instant Valid" + poller 429/starvation
 
 > Root-caused from a live 3-invoice submit where one invoice went Valid instantly but sat without its
