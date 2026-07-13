@@ -67,6 +67,11 @@ public class DataSeeder
             new Status { StatusCode = "RequestReject", StatusType = "Internal", Name = "Request Reject", Description = "Invoice is flagged for resubmission" },
             new Status { StatusCode = "Completed", StatusType = "Internal", Name = "Completed", Description = "Invoice process is completed" },
             new Status { StatusCode = "TransmissionError", StatusType = "Internal", Name = "Transmission Error", Description = "Submission to LHDN failed to transmit; a retry has been queued" },
+            // Written by the status-sync path: InvoiceStatusSyncHelper.MapLHDNStatusToInternal maps an
+            // LHDN "Rejected" document status straight through, and falls back to "Unknown" for any status
+            // it doesn't recognise. Seed both so a status sync can never violate the FK.
+            new Status { StatusCode = "Rejected", StatusType = "LHDN", Name = "Rejected", Description = "Document was rejected by LHDN" },
+            new Status { StatusCode = "Unknown", StatusType = "Internal", Name = "Unknown", Description = "Unrecognised LHDN status (fallback so status sync never fails)" },
         };
 
         var existingCodes = await _context.Set<Status>()
