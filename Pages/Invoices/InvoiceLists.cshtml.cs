@@ -1613,26 +1613,39 @@ namespace eInvWorld.Pages.Invoices
                     return SubmitDraftResult.Fail($"Submission accepted but UUID missing for Invoice {invoiceNo}.");
                 }
 
-                invoice.UUID = accepted.uuid;
-                invoice.SubmissionID = apiResponse?.submissionUID;
-                invoice.LHDNStatusId = "Submitted";
-                invoice.InternalStatusId = "Submitted";
-                invoice.DateTimeReceived = GetMYTime();
-                invoice.LastUpdated = GetMYTime();
-                invoice.UpdatedBy = User.Identity?.Name ?? "System";
+                var submittedAt = GetMYTime();
+                var performedBy = User.Identity?.Name ?? "System";
+                var submissionId = apiResponse?.submissionUID;
 
-                _context.InvoiceHeaders.Update(invoice);
+                // Persist the submission result with a direct UPDATE rather than the tracked entity. The
+                // atomic claim above already guarantees a single writer, so the InvoiceHeader.RowVersion
+                // optimistic-concurrency check is redundant here — and the claim's own UPDATE bumped that
+                // rowversion out from under the entity loaded before it, so a tracked SaveChanges throws a
+                // false DbUpdateConcurrencyException. ExecuteUpdate writes straight to the row and cannot
+                // conflict.
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.UUID, accepted.uuid)
+                        .SetProperty(i => i.SubmissionID, submissionId)
+                        .SetProperty(i => i.LHDNStatusId, "Submitted")
+                        .SetProperty(i => i.InternalStatusId, "Submitted")
+                        .SetProperty(i => i.DateTimeReceived, submittedAt)
+                        .SetProperty(i => i.LastUpdated, submittedAt)
+                        .SetProperty(i => i.UpdatedBy, performedBy));
 
                 _context.InvoiceHistories.Add(new InvoiceHistory
                 {
                     InvoiceNo = invoiceNo,
                     Action = "Submitted",
-                    Timestamp = GetMYTime(),
-                    PerformedBy = User.Identity?.Name ?? "System",
+                    Timestamp = submittedAt,
+                    PerformedBy = performedBy,
                     Remarks = $"Submitted from Invoice List. UUID: {accepted.uuid}"
                 });
 
                 await _context.SaveChangesAsync();
+
+                var finalStatus = "Submitted";
 
                 DocumentSummary? documentStatus = null;
                 for (int attempt = 1; attempt <= 5; attempt++)
@@ -1650,48 +1663,58 @@ namespace eInvWorld.Pages.Invoices
 
                 if (documentStatus != null)
                 {
-                    invoice.LHDNStatusId = documentStatus.status;
-                    invoice.InternalStatusId = documentStatus.status;
-                    invoice.LastUpdated = GetMYTime();
+                    finalStatus = documentStatus.status;
+                    var syncedAt = GetMYTime();
 
-                    _context.InvoiceHeaders.Update(invoice);
+                    await _context.InvoiceHeaders
+                        .Where(i => i.InvoiceNo == invoiceNo)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(i => i.LHDNStatusId, finalStatus)
+                            .SetProperty(i => i.InternalStatusId, finalStatus)
+                            .SetProperty(i => i.LastUpdated, syncedAt));
+
                     _context.InvoiceHistories.Add(new InvoiceHistory
                     {
                         InvoiceNo = invoiceNo,
                         Action = "StatusSync",
-                        Timestamp = GetMYTime(),
-                        PerformedBy = User.Identity?.Name ?? "System",
-                        Remarks = $"Fetched LHDN status: {documentStatus.status}"
+                        Timestamp = syncedAt,
+                        PerformedBy = performedBy,
+                        Remarks = $"Fetched LHDN status: {finalStatus}"
                     });
 
                     await _context.SaveChangesAsync();
                 }
 
-                _jsonFileService.MoveToStatusFolder(invoice.InvoiceNo, invoice.LHDNStatusId);
+                _jsonFileService.MoveToStatusFolder(invoiceNo, finalStatus);
 
-                return SubmitDraftResult.Success($"Invoice {invoice.InvoiceNo} submitted successfully. UUID: {accepted.uuid}");
+                return SubmitDraftResult.Success($"Invoice {invoiceNo} submitted successfully. UUID: {accepted.uuid}");
             }
             catch (Exception ex)
             {
                 await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
                 _logger.LogError(ex, $"❌ Error submitting invoice {invoiceNo} from list.");
 
-                var failedInvoice = await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);
-                if (failedInvoice != null)
-                {
-                    failedInvoice.InternalStatusId = "TransmissionError";
-                    failedInvoice.LastUpdated = GetMYTime();
+                // Mark the failure with a direct UPDATE too — the tracked entity's rowversion is stale
+                // (the claim/release UPDATEs bumped it), so a tracked SaveChanges here would itself throw
+                // a false concurrency conflict and mask the original error.
+                var failedAt = GetMYTime();
+                var failedAffected = await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.InternalStatusId, "TransmissionError")
+                        .SetProperty(i => i.LastUpdated, failedAt));
 
+                if (failedAffected > 0)
+                {
                     _context.InvoiceHistories.Add(new InvoiceHistory
                     {
                         InvoiceNo = invoiceNo,
                         Action = "Transmission Failed",
-                        Timestamp = GetMYTime(),
+                        Timestamp = failedAt,
                         PerformedBy = User.Identity?.Name ?? "System",
                         Remarks = $"API Submission failed: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 200))}"
                     });
 
-                    _context.InvoiceHeaders.Update(failedInvoice);
                     await _context.SaveChangesAsync();
                 }
 
