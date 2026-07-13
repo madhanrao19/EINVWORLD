@@ -6,6 +6,27 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-13 — Submit-to-LHDN hotfixes (found in local F5 testing)
+
+> Three defects in the draft → LHDN submission path (single row + bulk), each masking the next. No
+> schema/migration change.
+
+- **False `DbUpdateConcurrencyException`.** The atomic submission claim bumps `InvoiceHeader.RowVersion`
+  via raw SQL; the code then updated the pre-loaded tracked entity, whose stale rowversion made the write
+  match 0 rows. Now the submission result / status-sync / failure state are written with **`ExecuteUpdate`**
+  (direct UPDATE, no change-tracker / rowversion check) — the claim already guarantees a single writer.
+- **`FK_InvoiceHeaders_Statuses_InternalStatusId` violation.** The submit-failure path writes
+  `InternalStatusId = "TransmissionError"`, but that status was **never seeded** (missing from `HasData`) —
+  the old stale-rowversion UPDATE matched 0 rows so the FK was never exercised. `DataSeeder` now ensures the
+  full status set (incl. `TransmissionError`) exists idempotently on every startup — self-healing on existing
+  databases, no migration. (+ integration regression test.)
+- **Post-submit failure downgraded a submitted invoice.** A failure *after* the invoice was submitted
+  (status poll / file move) fell into the failure catch, wrongly flipping it to `TransmissionError` and
+  queuing a duplicate resubmit. Post-submission steps are now best-effort (log-and-continue); the background
+  poller reconciles the LHDN status.
+- **Access-token resilience:** submit re-acquires a lost session token via `ITokenService` instead of
+  forcing a re-login (e.g. after an F5 app restart).
+
 ## 📅 2026-07-12 — v1.10.0 (Bulk cancel/reject hardening)
 
 > Defense-in-depth polish for the existing bulk **Cancel** and **Request-Reject** actions. All three

@@ -14,6 +14,7 @@ using EINVWORLD.Helpers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -486,6 +487,46 @@ namespace EINVWORLD.Tests.Integration
             var final = await verifyCtx.InvoiceHeaders.AsNoTracking().SingleAsync(i => i.InvoiceNo == invoiceNo);
             Assert.Equal("IT-UUID-MISMATCH", final.UUID);
             Assert.Equal("Submitted", final.LHDNStatusId);
+        }
+
+        // Regression: "TransmissionError" was written by the submit-failure path but never seeded, so the
+        // UPDATE violated FK_InvoiceHeaders_Statuses_InternalStatusId. DataSeeder.SeedStatusesAsync now
+        // ensures it (and the rest) exist idempotently.
+        [Fact]
+        public async Task DataSeeder_SeedsTransmissionErrorStatus_AndInvoiceCanUseIt()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var seeder = new DataSeeder(ctx, new ConfigurationBuilder().Build(), NullLogger<DataSeeder>.Instance);
+            await seeder.SeedStatusesAsync();
+
+            Assert.True(await ctx.Set<eInvWorld.Models.Status>().AnyAsync(s => s.StatusCode == "TransmissionError"));
+
+            // Idempotent: a second run must not throw (duplicate key) or add duplicates.
+            await seeder.SeedStatusesAsync();
+            Assert.Equal(1, await ctx.Set<eInvWorld.Models.Status>().CountAsync(s => s.StatusCode == "TransmissionError"));
+
+            // And an invoice can be moved to it without violating the FK.
+            var invoiceNo = $"INV-TE-{Guid.NewGuid():N}".Substring(0, 18);
+            ctx.InvoiceHeaders.Add(new eInvWorld.Models.InputModel.InvoiceHeader
+            {
+                InvoiceNo = invoiceNo,
+                PrefixedID = invoiceNo,
+                DocTypeCode = "01",
+                Currency = "MYR",
+                CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test",
+                InternalStatusId = "Draft",
+            });
+            await ctx.SaveChangesAsync();
+
+            await ctx.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo)
+                .ExecuteUpdateAsync(s => s.SetProperty(i => i.InternalStatusId, "TransmissionError"));
+
+            var stored = await ctx.InvoiceHeaders.AsNoTracking().SingleAsync(i => i.InvoiceNo == invoiceNo);
+            Assert.Equal("TransmissionError", stored.InternalStatusId);
         }
 
         private static async Task<string> SeedStatusAsync(ApplicationDbContext ctx)
