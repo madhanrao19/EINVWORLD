@@ -53,6 +53,7 @@ namespace eInvWorld.Pages.Invoices
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly InvoiceSyncHelper _invoiceSyncHelper;
         private readonly ISyncJobTracker _jobTracker;
+        private readonly IInvoiceFinalizer _invoiceFinalizer;
 
         public List<InvoiceHeader> DraftInvoices { get; set; } = new List<InvoiceHeader>();
         public List<InvoiceHeader> Invoices { get; set; } = new List<InvoiceHeader>();
@@ -91,7 +92,8 @@ namespace eInvWorld.Pages.Invoices
                                  IPdfGeneratorService pdfGeneratorService,
                                  IHttpClientFactory httpClientFactory,
                                  InvoiceSyncHelper invoiceSyncHelper,
-                                 ISyncJobTracker jobTracker)
+                                 ISyncJobTracker jobTracker,
+                                 IInvoiceFinalizer invoiceFinalizer)
         {
             _context = context;
             _configuration = configuration;
@@ -106,6 +108,7 @@ namespace eInvWorld.Pages.Invoices
             _httpClientFactory = httpClientFactory;
             _invoiceSyncHelper = invoiceSyncHelper;
             _jobTracker = jobTracker;
+            _invoiceFinalizer = invoiceFinalizer;
         }
         public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
         {
@@ -1705,6 +1708,16 @@ namespace eInvWorld.Pages.Invoices
                     }
 
                     _jsonFileService.MoveToStatusFolder(invoiceNo, finalStatus);
+
+                    // Complete the flow in the same request when LHDN validated instantly: generate the
+                    // PDF (with QR) and send the validation email now instead of waiting for the next
+                    // background finalizer cycle. No-ops unless the invoice is Valid with LongId +
+                    // DateTimeValidated persisted above; the atomic claim inside the finalizer prevents a
+                    // double-send if a background cycle picks the invoice up at the same moment.
+                    if (finalStatus == "Valid")
+                    {
+                        await _invoiceFinalizer.FinalizeInvoiceAsync(invoiceNo, performedBy);
+                    }
                 }
                 catch (Exception postEx)
                 {
