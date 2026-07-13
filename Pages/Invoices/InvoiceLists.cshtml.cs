@@ -1645,47 +1645,60 @@ namespace eInvWorld.Pages.Invoices
 
                 await _context.SaveChangesAsync();
 
+                // The invoice is now submitted (UUID persisted above). Everything below is best-effort
+                // post-processing — polling the LHDN status and filing the document. A failure here must NOT
+                // downgrade the invoice to TransmissionError or queue a duplicate resubmit; the background
+                // status poller reconciles the LHDN status regardless. So log-and-continue rather than let it
+                // fall through to the submission-failure catch below.
                 var finalStatus = "Submitted";
-
-                DocumentSummary? documentStatus = null;
-                for (int attempt = 1; attempt <= 5; attempt++)
+                try
                 {
-                    try
+                    DocumentSummary? documentStatus = null;
+                    for (int attempt = 1; attempt <= 5; attempt++)
                     {
-                        documentStatus = await _lhdnApiService.GetDocumentDetailsAsync(accepted.uuid, accessToken);
-                        if (documentStatus != null) break;
+                        try
+                        {
+                            documentStatus = await _lhdnApiService.GetDocumentDetailsAsync(accepted.uuid, accessToken);
+                            if (documentStatus != null) break;
+                        }
+                        catch (HttpRequestException ex) when (ex.Message.Contains("422") || ex.Message.Contains("404"))
+                        {
+                            await Task.Delay(2000);
+                        }
                     }
-                    catch (HttpRequestException ex) when (ex.Message.Contains("422") || ex.Message.Contains("404"))
-                    {
-                        await Task.Delay(2000);
-                    }
-                }
 
-                if (documentStatus != null)
+                    if (documentStatus != null)
+                    {
+                        finalStatus = documentStatus.status;
+                        var syncedAt = GetMYTime();
+
+                        await _context.InvoiceHeaders
+                            .Where(i => i.InvoiceNo == invoiceNo)
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(i => i.LHDNStatusId, finalStatus)
+                                .SetProperty(i => i.InternalStatusId, finalStatus)
+                                .SetProperty(i => i.LastUpdated, syncedAt));
+
+                        _context.InvoiceHistories.Add(new InvoiceHistory
+                        {
+                            InvoiceNo = invoiceNo,
+                            Action = "StatusSync",
+                            Timestamp = syncedAt,
+                            PerformedBy = performedBy,
+                            Remarks = $"Fetched LHDN status: {finalStatus}"
+                        });
+
+                        await _context.SaveChangesAsync();
+                    }
+
+                    _jsonFileService.MoveToStatusFolder(invoiceNo, finalStatus);
+                }
+                catch (Exception postEx)
                 {
-                    finalStatus = documentStatus.status;
-                    var syncedAt = GetMYTime();
-
-                    await _context.InvoiceHeaders
-                        .Where(i => i.InvoiceNo == invoiceNo)
-                        .ExecuteUpdateAsync(s => s
-                            .SetProperty(i => i.LHDNStatusId, finalStatus)
-                            .SetProperty(i => i.InternalStatusId, finalStatus)
-                            .SetProperty(i => i.LastUpdated, syncedAt));
-
-                    _context.InvoiceHistories.Add(new InvoiceHistory
-                    {
-                        InvoiceNo = invoiceNo,
-                        Action = "StatusSync",
-                        Timestamp = syncedAt,
-                        PerformedBy = performedBy,
-                        Remarks = $"Fetched LHDN status: {finalStatus}"
-                    });
-
-                    await _context.SaveChangesAsync();
+                    _logger.LogWarning(postEx,
+                        "Invoice {InvoiceNo} was submitted to LHDN (UUID {Uuid}) but post-submit status sync / file move failed; the background poller will reconcile the status.",
+                        invoiceNo, accepted.uuid);
                 }
-
-                _jsonFileService.MoveToStatusFolder(invoiceNo, finalStatus);
 
                 return SubmitDraftResult.Success($"Invoice {invoiceNo} submitted successfully. UUID: {accepted.uuid}");
             }
