@@ -91,7 +91,9 @@ public class InvoiceStatusUpdater : BackgroundService
                 var syncHelper = new InvoiceStatusSyncHelper(dbContext, syncLogger);
 
                 await UpdateInvoiceStatuses(dbContext, lhdnApiService, tokenService, pdfService, notificationService, syncHelper, stoppingToken);
-                await RunFinalizerAsync(dbContext, pdfService, notificationService);
+
+                var finalizer = scope.ServiceProvider.GetRequiredService<IInvoiceFinalizer>();
+                await RunFinalizerAsync(dbContext, finalizer, stoppingToken);
 
                 // Enqueue outbound webhooks for invoices that reached a terminal LHDN status (no-op unless
                 // Webhooks:Enabled and at least one enabled subscription exists).
@@ -114,73 +116,22 @@ public class InvoiceStatusUpdater : BackgroundService
         }
     }
 
-    private async Task RunFinalizerAsync(ApplicationDbContext dbContext, IPdfGeneratorService pdfService, IEInvoiceNotificationService notificationService)
+    // PDF/email finalization for validated invoices. The per-invoice work lives in the shared
+    // IInvoiceFinalizer (also called inline by the submit flow); this loop is the safety net for
+    // invoices that validated while no interactive request was around to finalize them.
+    private async Task RunFinalizerAsync(ApplicationDbContext dbContext, IInvoiceFinalizer finalizer, CancellationToken stoppingToken)
     {
-        var invoices = dbContext.InvoiceHeaders
-            .Include(i => i.Customer)
-            .Include(i => i.Supplier)
-            .Include(i => i.PublicCustomer)
+        var invoiceNos = await dbContext.InvoiceHeaders
+            .AsNoTracking()
             .Where(i => i.LHDNStatusId == "Valid" && !string.IsNullOrWhiteSpace(i.LongId) && i.DateTimeValidated != null
                         && (!i.IsPdfGenerated || !i.IsValidationEmailSent))
-            .ToList();
+            .Select(i => i.InvoiceNo)
+            .ToListAsync(stoppingToken);
 
-        foreach (var invoice in invoices)
+        foreach (var invoiceNo in invoiceNos)
         {
-            bool changesMade = false;
-            string pdfPath = Path.Combine(_filePathConfig.GeneratedPdfFolder, $"{invoice.InvoiceNo}.pdf");
-
-            // 1. ONLY generate PDF if it is missing (Prevents background crash)
-            if (!invoice.IsPdfGenerated || !File.Exists(pdfPath))
-            {
-                try
-                {
-                    await pdfService.GeneratePdfAsync(invoice.InvoiceNo);
-                    invoice.IsPdfGenerated = true;
-                    invoice.PdfGeneratedAt = DateTime.Now;
-                    changesMade = true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "PDF generation failed for {InvoiceNo}", invoice.InvoiceNo);
-                }
-            }
-
-            // 2. Send email ONLY if PDF exists and hasn't been sent
-            if (!invoice.IsValidationEmailSent && File.Exists(pdfPath))
-            {
-                try
-                {
-                    // Convert dates to Malaysia time for email display
-                    var issueDate = invoice.IssueDate.HasValue
-                        ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(invoice.IssueDate.Value, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"))
-                        : DateTime.Now;
-                    var validatedDate = invoice.DateTimeValidated.HasValue
-                        ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(invoice.DateTimeValidated.Value, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"))
-                        : DateTime.Now;
-
-                    // Send the email with the freshly generated PDF attached
-                    await notificationService.SendValidatedNotificationEmail(
-                        invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
-                        invoice.Customer,
-                        invoice.Supplier,
-                        invoice.InvoiceNo,
-                        issueDate,
-                        validatedDate,
-                        invoice.PublicCustomer);
-
-                    invoice.IsValidationEmailSent = true;
-                    invoice.ValidationEmailSentAt = DateTime.Now;
-                    invoice.ValidationEmailSentTo = string.Join(", ", new[] { invoice.Customer?.Email ?? invoice.PublicCustomer?.Email, invoice.Supplier?.Email }.Where(e => !string.IsNullOrWhiteSpace(e)));
-                    changesMade = true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Email send failed for {InvoiceNo}", invoice.InvoiceNo);
-                }
-            }
-
-            if (changesMade)
-                await TrySaveAsync(dbContext, invoice.InvoiceNo);
+            if (stoppingToken.IsCancellationRequested) break;
+            await finalizer.FinalizeInvoiceAsync(invoiceNo, "BackgroundService", stoppingToken);
         }
     }
 
@@ -331,7 +282,8 @@ public class InvoiceStatusUpdater : BackgroundService
 
             var invoiceSyncHelper = new InvoiceSyncHelper(
                 dbContext, lhdnApiService, pdfService, notificationService,
-                tokenService, statusSyncHelper, fullSyncHelper, syncLogger, filePathConfig);
+                tokenService, statusSyncHelper, fullSyncHelper, syncLogger, filePathConfig,
+                scope.ServiceProvider.GetRequiredService<IInvoiceFinalizer>());
 
             foreach (var tin in userCompanyTINs)
             {
