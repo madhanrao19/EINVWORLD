@@ -1656,13 +1656,35 @@ namespace eInvWorld.Pages.Invoices
                 var finalStatus = "Submitted";
                 try
                 {
+                    // Bounded best-effort poll. GetDocumentDetailsAsync can sleep for MINUTES inside the
+                    // shared 429 penalty handler when LHDN rate-limits, and this runs inside the user's
+                    // submit request — unbounded, a bulk submit left the "Submitting…" modal hanging for
+                    // 15+ minutes. The budget caps the total wait; anything unresolved is reconciled by
+                    // the background status poller.
                     DocumentSummary? documentStatus = null;
-                    for (int attempt = 1; attempt <= 5; attempt++)
+                    var pollBudget = Task.Delay(TimeSpan.FromSeconds(20));
+                    for (int attempt = 1; attempt <= 5 && !pollBudget.IsCompleted; attempt++)
                     {
+                        var pollTask = _lhdnApiService.GetDocumentDetailsAsync(accepted.uuid, accessToken);
+                        if (await Task.WhenAny(pollTask, pollBudget) != pollTask)
+                        {
+                            // Budget exhausted mid-call: abandon the read-only poll (observe its fault so
+                            // it can't surface as an unobserved task exception) and move on.
+                            _ = pollTask.ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+                            _logger.LogInformation("Post-submit status poll for {InvoiceNo} exceeded its time budget; the background poller will reconcile.", invoiceNo);
+                            break;
+                        }
+
                         try
                         {
-                            documentStatus = await _lhdnApiService.GetDocumentDetailsAsync(accepted.uuid, accessToken);
+                            documentStatus = await pollTask;
                             if (documentStatus != null) break;
+                        }
+                        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+                        {
+                            // Rate limited even after the handler's own waits — stop polling entirely.
+                            _logger.LogInformation("Post-submit status poll for {InvoiceNo} rate-limited by LHDN; the background poller will reconcile.", invoiceNo);
+                            break;
                         }
                         catch (HttpRequestException ex) when (ex.Message.Contains("422") || ex.Message.Contains("404"))
                         {
