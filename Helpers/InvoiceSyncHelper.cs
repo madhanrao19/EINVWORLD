@@ -25,6 +25,7 @@ namespace EINVWORLD.Helpers
         private readonly ILogger<InvoiceSyncHelper> _logger;
         private readonly FilePathConfig _filePathConfig;
         private readonly InvoiceFullSyncHelper _fullSyncHelper;
+        private readonly IInvoiceFinalizer _invoiceFinalizer;
 
 
 
@@ -37,7 +38,8 @@ namespace EINVWORLD.Helpers
             InvoiceStatusSyncHelper statusSyncHelper,
             InvoiceFullSyncHelper fullSyncHelper,
             ILogger<InvoiceSyncHelper> logger,
-             IOptions<FilePathConfig> filePathConfig)
+            IOptions<FilePathConfig> filePathConfig,
+            IInvoiceFinalizer invoiceFinalizer)
         {
             _context = context;
             _lhdnService = lhdnService;
@@ -48,6 +50,7 @@ namespace EINVWORLD.Helpers
             _fullSyncHelper = fullSyncHelper;
             _logger = logger;
             _filePathConfig = filePathConfig.Value;
+            _invoiceFinalizer = invoiceFinalizer;
         }
 
         // Manual trigger for LHDN sync (status update)
@@ -213,76 +216,30 @@ namespace EINVWORLD.Helpers
 
 
 
-        // Manual trigger for PDF/email finalization
+        // Manual trigger for PDF/email finalization. Per-invoice work (PDF, email, duplicate-send
+        // guard) lives in the shared IInvoiceFinalizer; this only selects the recent candidates.
         public async Task<string> RunFinalizerAsync(string? triggeredBy = "System")
         {
             int pdfsGenerated = 0, emailsSent = 0;
 
-            // 1. Define the 72-hour cutoff time
+            // 72-hour cutoff on CreatedDate so a manual run doesn't sweep the whole table.
             var cutoffTime = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow).AddHours(-72);
 
-            // 2. Add the cutoff filter to the query. Include the parties so the validated email has its
-            //    recipients (Customer/Supplier), and PublicCustomer so B2C invoices reach the buyer too.
-            var invoices = _context.InvoiceHeaders
-                .Include(i => i.Customer)
-                .Include(i => i.Supplier)
-                .Include(i => i.PublicCustomer)
+            var invoiceNos = await _context.InvoiceHeaders
+                .AsNoTracking()
                 .Where(i => i.LHDNStatusId == "Valid" && !string.IsNullOrWhiteSpace(i.LongId) && i.DateTimeValidated != null
                             && (!i.IsPdfGenerated || !i.IsValidationEmailSent))
-                // ONLY rely on CreatedDate
                 .Where(i => i.CreatedDate >= cutoffTime)
-                .ToList();
+                .Select(i => i.InvoiceNo)
+                .ToListAsync();
 
-            foreach (var invoice in invoices)
+            foreach (var invoiceNo in invoiceNos)
             {
-                bool changesMade = false;
-                string pdfPath = Path.Combine(_filePathConfig.GeneratedPdfFolder, $"{invoice.InvoiceNo}.pdf");
-
-                // Generate PDF if missing
-                if (!invoice.IsPdfGenerated || !File.Exists(pdfPath))
-                {
-                    try
-                    {
-                        await _pdfService.GeneratePdfAsync(invoice.InvoiceNo);
-                        invoice.IsPdfGenerated = true;
-                        invoice.PdfGeneratedAt = DateTime.Now;
-                        pdfsGenerated++;
-                        changesMade = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Failed to generate PDF for {invoice.InvoiceNo}");
-                    }
-                }
-
-                // Send email if PDF exists and not sent
-                if (!invoice.IsValidationEmailSent && File.Exists(pdfPath))
-                {
-                    try
-                    {
-                        await _notificationService.SendValidatedNotificationEmail(
-                            invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
-                            invoice.Customer,
-                            invoice.Supplier,
-                            invoice.InvoiceNo,
-                            invoice.IssueDate ?? DateTime.Now,
-                            invoice.DateTimeValidated ?? DateTime.Now,
-                            invoice.PublicCustomer);
-
-                        invoice.IsValidationEmailSent = true;
-                        invoice.ValidationEmailSentAt = DateTime.Now;
-                        emailsSent++;
-                        changesMade = true;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Failed to send email for {invoice.InvoiceNo}");
-                    }
-                }
-
-                if (changesMade)
-                    await _context.SaveChangesAsync();
+                var result = await _invoiceFinalizer.FinalizeInvoiceAsync(invoiceNo, triggeredBy ?? "System");
+                if (result.PdfGenerated) pdfsGenerated++;
+                if (result.EmailSent) emailsSent++;
             }
+
             return $"📄 PDFs generated: <strong>{pdfsGenerated}</strong><br/>📧 Emails sent: <strong>{emailsSent}</strong>";
         }
 
