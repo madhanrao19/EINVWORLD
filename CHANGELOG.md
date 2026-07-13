@@ -6,6 +6,24 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-13 — Validation emails were silently never sent + submit modal hung on 429
+
+> Found in local F5 testing: invoices showed "email sent" but nothing arrived, and a bulk submit
+> left the "Submitting to LHDN…" modal hanging for 15+ minutes. No schema/migration change.
+
+- **Validated email: empty `GlobalBccEmail` no longer kills the send.** The service threw when the
+  BCC wasn't configured (it is deliberately blank in the repo config), and because the method also
+  swallowed every exception, **no Supplier/Buyer email was ever sent while callers still flagged
+  `IsValidationEmailSent = true`**. Now: missing BCC → warn and send without it; and send failures
+  **propagate** to the caller so the finalizer's atomic claim rolls back and the email is retried.
+- **Post-submit status poll is now time-boxed (20 s).** `GetDocumentDetailsAsync` can sleep for
+  minutes inside the shared 429 penalty handler; polling up to 5× inside the user's submit request
+  produced a 16-minute `POST` (seen live: 974 s). The poll now stops at the budget / on a persisted
+  429 and defers to the background poller.
+- Operator note: invoices finalized while the bug was active have `IsValidationEmailSent = 1` with
+  no email actually delivered — reset the flag (`IsValidationEmailSent = 0`, `ValidationEmailSentAt/
+  To = NULL`) for the affected rows and the finalizer resends within a cycle.
+
 ## 📅 2026-07-13 — Complete the submit flow inline: PDF + validation email on instant Valid
 
 > Follow-up to the status-sync fixes below: an invoice that LHDN validates during submit now finishes
