@@ -77,14 +77,16 @@ namespace eInvWorld.Services
                 var emailGeneratedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 string subject = $"{baseSubject} | {documentId} | {emailGeneratedTime:dd-MM-yyyy hh:mm tt}";
 
-                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"]
-                    ?? throw new InvalidOperationException("Missing configuration: EmailConfiguration:Default:GlobalBccEmail");
-
-                if (string.IsNullOrWhiteSpace(adminEmailRaw))
-                    throw new InvalidOperationException("❌ GlobalBccEmail is empty. Please configure a valid BCC email.");
-
-                // ✅ Use normal .Split because it's guaranteed non-null and non-empty
+                // An unset GlobalBccEmail (blank on purpose in the repo config; a per-server deploy
+                // step) must not block the Supplier/Buyer emails — send without the BCC and warn.
+                // Previously this THREW, and because the whole method swallowed exceptions the
+                // validated email was silently never sent while callers still flagged it as sent.
+                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"] ?? string.Empty;
                 string[] adminEmails = adminEmailRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (adminEmails.Length == 0)
+                {
+                    _logger.LogWarning("GlobalBccEmail is not configured; sending validated email for {DocumentId} without the admin BCC.", documentId);
+                }
 
                 string invoiceLink = InvoiceLink(documentId);
                 string accountLink = AccountLink;
@@ -120,7 +122,11 @@ namespace eInvWorld.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while sending validated invoice email.");
+                // Propagate: the caller (InvoiceFinalizer) uses the outcome to decide whether the
+                // invoice is really "email sent" — swallowing here made a failed send look successful,
+                // so IsValidationEmailSent was set and the email was never retried.
+                _logger.LogError(ex, "Error occurred while sending validated invoice email for {DocumentId}.", documentId);
+                throw;
             }
         }
 
