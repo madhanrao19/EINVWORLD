@@ -89,6 +89,87 @@
   background-color: var(--einv-page-bg);
 }
 
+/* ── "EinvWorld Professional" signature elements (Stitch design system) ─────────────────── */
+
+/* Self-hosted Inter (variable, latin subset, OFL licence — wwwroot/tabler/fonts). Tabler's font
+ * stack already prefers "Inter Var"/Inter, so providing the face makes the whole app render the
+ * design's typeface with zero markup changes and no font CDN. */
+@font-face {
+  font-family: "Inter Var";
+  src: url("../fonts/inter-latin-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-latin-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Status pills in tables: 10-12% tinted background of the semantic colour + solid darker text +
+ * a leading semantic icon (Remix glyph via ::before, skipped when the badge already carries its
+ * own <i> icon). !important is required to beat Bootstrap's bg-*/text-* utilities; the darker text
+ * shades keep AA contrast on the tints. Scoped to table cells so tiny counter/dot badges keep
+ * their solid look. */
+td .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  border-radius: 9999px;
+  padding: .3rem .6rem;
+  font-weight: 600;
+}
+td .badge:not(:has(i))::before {
+  font-family: remixicon;
+  font-weight: 400;
+  line-height: 1;
+}
+td .badge.bg-success { background-color: rgba(16, 185, 129, .12) !important; color: #047857 !important; }
+td .badge.bg-success:not(:has(i))::before { content: "\eb81"; } /* ri-checkbox-circle-line */
+td .badge.bg-danger { background-color: rgba(239, 68, 68, .12) !important; color: #b91c1c !important; }
+td .badge.bg-danger:not(:has(i))::before { content: "\eca1"; } /* ri-error-warning-line */
+td .badge.bg-warning { background-color: rgba(245, 158, 11, .15) !important; color: #b45309 !important; }
+td .badge.bg-warning:not(:has(i))::before { content: "\f20f"; } /* ri-time-line */
+td .badge.bg-info { background-color: rgba(14, 165, 233, .12) !important; color: #0369a1 !important; }
+td .badge.bg-info:not(:has(i))::before { content: "\f0da"; } /* ri-send-plane-line */
+td .badge.bg-dark,
+td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; color: #3d4a42 !important; }
+
+/* Table headers: subtle green-tinted fill with tracking-heavy uppercase labels (DESIGN.md). */
+.table thead th {
+  background-color: #e9efe9 !important;
+  color: var(--einv-text-muted);
+  font-size: .72rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* Topbar search: quiet rounded pill with an inline magnifier, brand focus ring. */
+.app-search .form-control {
+  background: #f1f5f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236d7a72' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat .75rem center;
+  background-size: 1rem;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+  padding-left: 2.4rem;
+  min-width: 16rem;
+}
+.app-search .form-control:focus {
+  background-color: #fff;
+  border-color: var(--einv-primary);
+  box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .10);
+}
+
+/* KPI metric cards: 4px semantic left-accent (Stitch dashboard). Cards opt in via einv-kpi-*.
+ * .card.einv-kpi (not bare .einv-kpi) so this outranks the dashboard page's own
+ * `.card { border … !important }` style block regardless of cascade order. */
+.card.einv-kpi { border-left: 4px solid var(--einv-border) !important; }
+.card.einv-kpi-primary { border-left-color: var(--einv-primary) !important; }
+.card.einv-kpi-info { border-left-color: var(--einv-info) !important; }
+.card.einv-kpi-warning { border-left-color: var(--einv-warning) !important; }
+
 /* Tabs: quiet underline style (Stitch) — muted labels, brand-green active underline. */
 .nav-tabs .nav-link {
   color: var(--einv-text-muted);
