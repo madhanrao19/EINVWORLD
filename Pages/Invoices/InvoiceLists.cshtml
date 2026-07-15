@@ -358,7 +358,7 @@
                     <div class="col-sm-auto">
                         <div class="d-flex gap-2 flex-wrap">
                             <!-- Filter Button -->
-                            <button class="btn btn-dark d-flex align-items-center gap-1 px-3" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
                                 <i class="ri-filter-line"></i> Filter
                             </button>
 
@@ -369,8 +369,7 @@
                                asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
                                asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
                                asp-route-refresh="true"
-                               class="btn btn-info d-flex align-items-center gap-1 px-3"
-                               style="background-color:#187447; border-color:#187447;"
+                               class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3"
                                title="Refresh invoices from LHDN API"
                                onclick="document.getElementById('refreshApiOverlay').style.display='flex';">
                                 <i class="ri-refresh-line fs-5"></i> Refresh from API
@@ -404,17 +403,17 @@
                             <!-- Create Invoice Button -->
                             @if (Model.UserType == "Supplier" && !Model.IsViewOnly)
                             {
-                                <a href="/Invoices/CreateInvoice" class="btn btn-success d-flex align-items-center gap-1 px-3">
+                                <a href="/Invoices/CreateInvoice" class="btn btn-primary d-flex align-items-center gap-1 px-3">
                                     <i class="ri-add-line align-bottom"></i> Create e-Invoice
                                 </a>
                             }
 
-                            <a class="btn btn-primary d-flex align-items-center gap-1 px-3" data-bs-toggle="modal" data-bs-target="#exportModal">
+                            <a class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="modal" data-bs-target="#exportModal">
                                 <i class="ri-file-download-line align-bottom me-1"></i> Export e-Invoice
                             </a>
 
                             <!-- Customize Columns Button -->
-                            <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-1 px-3 position-relative" 
+                            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3 position-relative"
                                     data-bs-toggle="modal" data-bs-target="#columnSettingsModal" 
                                     title="Customize column display" id="columnSettingsBtnMoved">
                                 <i class="ri-settings-3-line"></i> Customize
@@ -433,15 +432,15 @@
 
             <div class="card-body pt-0">
                 <div>
-                    <!-- 🔹 Main Navigation Tabs (Draft → Sent → Received) -->
-                    <ul class="nav nav-pills nav-fill mb-3">
+                    <!-- 🔹 Main Navigation Tabs (Draft → Sent → Received) — Stitch underline-tab style -->
+                    <ul class="nav nav-tabs nav-fill mb-3">
                         @foreach (var tab in mainTabs)
                         {
                             var isActive = invoiceDirection == tab.Key;
-                            var activeClass = isActive ? "active bg-primary text-white shadow-sm" : "text-dark";
+                            var activeClass = isActive ? "active" : "";
 
                             <li class="nav-item">
-                                <a class="nav-link py-3 fw-bold @activeClass"
+                                <a class="nav-link fw-semibold @activeClass"
                                    asp-page="./InvoiceLists"
                                    asp-route-invoiceDirection="@tab.Key"
                                    asp-route-LHDNStatus="@(tab.Key == "Draft" ? null : (validStatuses.Contains(invoiceStatus) ? invoiceStatus : null))"
