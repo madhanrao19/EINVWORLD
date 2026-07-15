@@ -170,6 +170,35 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
 .card.einv-kpi-info { border-left-color: var(--einv-info) !important; }
 .card.einv-kpi-warning { border-left-color: var(--einv-warning) !important; }
 
+/* Floating dark bulk-action bar (Stitch): appears bottom-center while table rows are selected. */
+.einv-bulk-bar {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1045; /* above content, below modals (1055) */
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  max-width: calc(100vw - 2rem);
+  flex-wrap: wrap;
+  background: #1f2937;
+  color: #e5e7eb;
+  border-radius: .5rem;
+  padding: .6rem 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .30);
+}
+.einv-bulk-bar .einv-bulk-count {
+  background: var(--einv-primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: .8rem;
+  border-radius: .375rem;
+  padding: .25rem .6rem;
+  white-space: nowrap;
+}
+.einv-bulk-bar .einv-bulk-hint { font-size: .85rem; color: #9ca3af; }
+
 /* Tabs: quiet underline style (Stitch) — muted labels, brand-green active underline. */
 .nav-tabs .nav-link {
   color: var(--einv-text-muted);
@@ -224,6 +253,7 @@ pre { overflow-x: auto; max-width: 100%; }
   #invoiceTable .col-rejected-date,
   #invoiceTable .col-last-updated,
   #invoiceTable .col-internal-status,
+  #invoiceTable .col-created-by,
   #invoiceTable .col-supplier { display: none !important; }
 }
 

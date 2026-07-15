@@ -6,6 +6,30 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-15 — Stitch parity batch: inline filters, bulk bar, Created By, chart palette
+
+> Follow-up to the restyle: closes the structural gaps against the Stitch references on the invoice
+> list and dashboard. Same GET/handler semantics everywhere — no route, permission, or query changes
+> beyond one new displayed column. No schema change.
+
+- **Inline filter bar (invoice list):** the offcanvas filter panel is now an always-visible filter
+  row (Search / Date Range / Document Type multi-select / LHDN Status / Internal Status / Apply /
+  "Clear all filters"), collapsible via the Filter button. Same form, same field names/ids
+  (`date-picker.js` keys on `#submissionDateRange`), same GET submit; selects now reflect the
+  currently-applied filters; the current sort is carried through as hidden fields.
+- **Floating bulk-action bar:** the contextual bulk buttons (Submit/Delete/Cancel/Request Reject)
+  moved from the header into a dark bottom-center bar that appears with an "N Selected" count while
+  rows are ticked — button ids unchanged, all existing handlers intact.
+- **Created By column** on the invoice list (data already on `InvoiceHeader`), integrated with the
+  Customize column preferences (client + server defaults) and hidden on phones like other
+  secondary columns.
+- **Chart palette aligned to the brand:** categorical palette now leads with the compliance green;
+  the Status Breakdown donut colours are keyed by status *name* (the previous positional array
+  painted whichever status came first red). `dashboard.js` now cache-busted via
+  `asp-append-version`.
+- Note: the Stitch dashboard's "Recent Documents" table and "Status Breakdown" donut already
+  existed on the dashboard below the fold — no structural change was needed there.
+
 ## 📅 2026-07-15 — "EinvWorld Professional" UI restyle (Stitch design system)
 
 > System-wide visual refresh to the approved Stitch design direction, applied through the central

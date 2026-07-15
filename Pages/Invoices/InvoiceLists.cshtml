@@ -215,138 +215,89 @@
 <div class="row">
     <div class="col-lg-12">
         <div class="card" id="documentList">
-            <!-- Offcanvas for Filters -->
-            <div class="offcanvas offcanvas-end" tabindex="-1" id="filterOffcanvas" aria-labelledby="filterOffcanvasLabel">
-                <div class="offcanvas-header">
-                    <h5 class="offcanvas-title" id="filterOffcanvasLabel">Filter Invoices</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                </div>
-                <div class="offcanvas-body">
-                    <form method="get" action="./InvoiceLists">
-                        <input type="hidden" name="invoiceDirection" value="@invoiceDirection" />
-                        <input type="hidden" name="status" value="@invoiceStatus" />
-                        <input type="hidden" name="lhdnStatus" value="@invoiceStatus" />
+            <!-- Inline filter bar (Stitch design) — same GET form + field names/ids the previous
+                 offcanvas carried (date-picker.js keys on #submissionDateRange), rendered as an
+                 always-visible row that the Filter button collapses/expands. -->
+            <div class="collapse show" id="filterOffcanvas">
+                <div class="card mb-0 border-0 shadow-none">
+                    <div class="card-body pb-0">
+                        <form method="get" action="./InvoiceLists">
+                            <input type="hidden" name="invoiceDirection" value="@invoiceDirection" />
+                            <input type="hidden" name="status" value="@invoiceStatus" />
+                            <input type="hidden" name="lhdnStatus" value="@invoiceStatus" />
+                            <input type="hidden" id="submissionDateFrom" name="submissionDateFrom" value="@Request.Query["submissionDateFrom"]">
+                            <input type="hidden" id="submissionDateTo" name="submissionDateTo" value="@Request.Query["submissionDateTo"]">
+                            @* Column-header links drive sorting; carry the current sort through the filter form. *@
+                            <input type="hidden" id="sortBy" name="sortBy" value="@Model.SortBy" />
+                            <input type="hidden" id="sortOrder" name="sortOrder" value="@Model.SortOrder" />
 
-                        <div class="row gy-3">
-                            <!-- Search Box -->
-                            <div class="col-12 position-relative">
-                                <label for="searchQuery" class="form-label fw-bold">Search e-Invoice:</label>
-                                <div class="position-relative">
-                                    <input type="text" id="searchQuery" name="searchQuery" class="form-control pe-5"
-                                    placeholder="Invoice No, Supplier, Buyer, UUID, etc"
-                                    value="@Model.SearchInput?.searchQuery">
-                                    <i class="ri-search-line position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-6 col-xl-3">
+                                    <label for="searchQuery" class="form-label mb-1">Search</label>
+                                    <input type="text" id="searchQuery" name="searchQuery" class="form-control"
+                                           placeholder="Invoice No, Supplier, Buyer, UUID..."
+                                           value="@Model.SearchInput?.searchQuery">
                                 </div>
-                            </div>
-
-                            <!-- Date Range -->
-                            <div class="col-12">
-                                <label class="form-label fw-bold">Submission Date Range:</label>
-                                <div class="input-group" onclick="document.getElementById('submissionDateRange').click()">
+                                <div class="col-12 col-md-6 col-xl-2">
+                                    <label for="submissionDateRange" class="form-label mb-1">Date Range</label>
                                     <input type="text" id="submissionDateRange" class="form-control" placeholder="Select date range" readonly>
-                                    <span class="input-group-text bg-primary text-white"><i class="ri-calendar-event-line"></i></span>
                                 </div>
-                                <input type="hidden" id="submissionDateFrom" name="submissionDateFrom" value="@Request.Query["submissionDateFrom"]">
-                                <input type="hidden" id="submissionDateTo" name="submissionDateTo" value="@Request.Query["submissionDateTo"]">
-                            </div>
-                        </div>
-
-                        <!-- Collapsible Sections -->
-                        <div class="accordion mt-3" id="filterAccordionDocType">
-                            <!-- Document Type -->
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingDocType">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDocType" aria-expanded="false" aria-controls="collapseDocType">
-                                        <i class="ri-file-list-line me-2"></i> Document Type
-                                    </button>
-                                </h2>
-                                <div id="collapseDocType" class="accordion-collapse collapse" aria-labelledby="headingDocType" data-bs-parent="#filterAccordion">
-                                    <div class="accordion-body">
-                                        @foreach (var documentType in Enum.GetValues(typeof(EInvoiceDocumentType)).Cast<EInvoiceDocumentType>())
-                                        {
-                                            var docTypeValue = ((int)documentType).ToString("D2");
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="docType_@docTypeValue" name="documentType" value="@docTypeValue"
-                                                @(Request.Query["documentType"].Contains(docTypeValue) ? "checked" : "")>
-                                                <label class="form-check-label" for="docType_@docTypeValue">
-                                                    @DocumentTypeDisplay.GetDisplayNames()[documentType]
-                                                </label>
-                                            </div>
-                                        }
+                                <div class="col-6 col-md-4 col-xl-2">
+                                    <label class="form-label mb-1 d-block">Document Type</label>
+                                    <div class="dropdown w-100">
+                                        <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" type="button"
+                                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                            @(Request.Query["documentType"].Count > 0 ? $"{Request.Query["documentType"].Count} selected" : "All Types")
+                                        </button>
+                                        <div class="dropdown-menu p-3" style="min-width: 260px;">
+                                            @foreach (var documentType in Enum.GetValues(typeof(EInvoiceDocumentType)).Cast<EInvoiceDocumentType>())
+                                            {
+                                                var docTypeValue = ((int)documentType).ToString("D2");
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="docType_@docTypeValue" name="documentType" value="@docTypeValue"
+                                                    @(Request.Query["documentType"].Contains(docTypeValue) ? "checked" : "")>
+                                                    <label class="form-check-label" for="docType_@docTypeValue">
+                                                        @DocumentTypeDisplay.GetDisplayNames()[documentType]
+                                                    </label>
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Status Filters -->
-                        <div class="accordion mt-3" id="filterAccordionStatus">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingStatus">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStatus" aria-expanded="false" aria-controls="collapseStatus">
-                                        <i class="ri-list-check me-2"></i> Status Filters
+                                <div class="col-6 col-md-4 col-xl-2">
+                                    <label for="LHDNStatusFilter" class="form-label mb-1">LHDN Status</label>
+                                    <select id="LHDNStatusFilter" name="LHDNStatus" class="form-select">
+                                        @{ var lhdnSel = Request.Query["LHDNStatus"].ToString(); }
+                                        <option value="">All</option>
+                                        <option value="Valid" selected="@(lhdnSel == "Valid")">Valid</option>
+                                        <option value="Cancelled" selected="@(lhdnSel == "Cancelled")">Cancelled</option>
+                                        <option value="Invalid" selected="@(lhdnSel == "Invalid")">Invalid</option>
+                                        <option value="Submitted" selected="@(lhdnSel == "Submitted")">Submitted</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4 col-xl-2">
+                                    <label for="InternalStatusFilter" class="form-label mb-1">Internal Status</label>
+                                    <select id="InternalStatusFilter" name="InternalStatus" class="form-select">
+                                        @{ var internalSel = Request.Query["InternalStatus"].ToString(); }
+                                        <option value="">All</option>
+                                        <option value="Valid" selected="@(internalSel == "Valid")">Valid</option>
+                                        <option value="Completed" selected="@(internalSel == "Completed")">Completed</option>
+                                        <option value="Draft" selected="@(internalSel == "Draft")">Draft</option>
+                                        <option value="RequestReject" selected="@(internalSel == "RequestReject")">Request Reject</option>
+                                        <option value="CancelledInternal" selected="@(internalSel == "CancelledInternal")">Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4 col-xl-1 d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">
+                                        <i class="ri-search-line"></i> Apply
                                     </button>
-                                </h2>
-                                <div id="collapseStatus" class="accordion-collapse collapse" aria-labelledby="headingStatus" data-bs-parent="#filterAccordion">
-                                    <div class="accordion-body">
-                                        <label for="LHDNStatusFilter" class="form-label">LHDN Status:</label>
-                                        <select id="LHDNStatusFilter" name="LHDNStatus" class="form-select">
-                                            <option value="">All</option>
-                                            <option value="Valid">Valid</option>
-                                            <option value="Cancelled">Cancelled</option>
-                                            <option value="Invalid">Invalid</option>
-                                            <option value="Submitted">Submitted</option>
-                                        </select>
-                                        <label for="InternalStatusFilter" class="form-label mt-2">Internal Status:</label>
-                                        <select id="InternalStatusFilter" name="InternalStatus" class="form-select">
-                                            <option value="">All</option>
-                                            <option value="Valid">Valid</option>
-                                            <option value="Completed">Completed</option>
-                                            <option value="Draft">Draft</option>
-                                            <option value="RequestReject">Request Reject</option>
-                                            <option value="CancelledInternal">Cancelled</option>
-                                        </select>
-                                    </div>
+                                </div>
+                                <div class="col-12 text-end">
+                                    <a class="small fw-semibold text-decoration-none" href="./InvoiceLists?invoiceDirection=@invoiceDirection">Clear all filters</a>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Sorting Options -->
-                        <div class="accordion mt-3" id="filterAccordionSort">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingSorting">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSorting" aria-expanded="false" aria-controls="collapseSorting">
-                                        <i class="ri-sort-desc me-2"></i> Sorting Options
-                                    </button>
-                                </h2>
-                                <div id="collapseSorting" class="accordion-collapse collapse" aria-labelledby="headingSorting" data-bs-parent="#filterAccordion">
-                                    <div class="accordion-body">
-                                        <label for="sortBy" class="form-label">Sort By:</label>
-                                        <select id="sortBy" name="sortBy" class="form-select">
-                                            <option value="InvoiceNo">Invoice No</option>
-                                            <option value="SubmissionDate">Submission Date</option>
-                                            <option value="SupplierName">Supplier</option>
-                                            <option value="BuyerName">Buyer</option>
-                                        </select>
-                                        <label for="sortOrder" class="form-label mt-2">Sort Order:</label>
-                                        <select id="sortOrder" name="sortOrder" class="form-select">
-                                            <option value="DESC">Descending</option>
-                                            <option value="ASC">Ascending</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="ri-search-line"></i> Search
-                            </button>
-                            <button type="button" class="btn btn-secondary" onclick="window.location.href = './InvoiceLists'">
-                                <i class="ri-close-circle-line"></i> Clear
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -357,8 +308,9 @@
                     </div>
                     <div class="col-sm-auto">
                         <div class="d-flex gap-2 flex-wrap">
-                            <!-- Filter Button -->
-                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
+                            <!-- Filter Button (collapses/expands the inline filter bar) -->
+                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="collapse"
+                                    data-bs-target="#filterOffcanvas" aria-expanded="true" aria-controls="filterOffcanvas">
                                 <i class="ri-filter-line"></i> Filter
                             </button>
 
@@ -374,31 +326,6 @@
                                onclick="document.getElementById('refreshApiOverlay').style.display='flex';">
                                 <i class="ri-refresh-line fs-5"></i> Refresh from API
                             </a>
-
-                            @if (Model.invoiceDirection == "Draft" && !Model.IsViewOnly)
-                            {
-                                <button id="bulkSubmitBtn" class="btn btn-primary d-flex align-items-center gap-1 px-3" title="Submit the selected draft invoices to LHDN">
-                                    <i class="ri-send-plane-fill fs-5"></i> Submit to LHDN
-                                </button>
-                                <button id="bulkDeleteBtn" class="btn btn-danger d-flex align-items-center gap-1 px-3">
-                                    <i class="ri-delete-bin-5-fill fs-5"></i> Delete e-Invoice
-                                </button>
-                            }
-
-                            @if (Model.invoiceDirection == "Sent" && !Model.IsViewOnly)
-                            {
-                                <button id="bulkCancelBtn" class="btn btn-warning d-flex align-items-center gap-1 px-3">
-                                    <i class="ri-close-circle-line fs-5"></i> Cancel e-Invoice
-                                </button>
-                            }
-
-                            @if (Model.invoiceDirection == "Received" && !Model.IsViewOnly)
-                            {
-                                <!-- Request Reject Button -->
-                                <button id="bulkRejectBtn" class="btn btn-danger d-flex align-items-center gap-1 px-3">
-                                    <i class="ri-close-circle-line fs-5"></i> Request Reject e-Invoice
-                                </button>
-                            }
 
                             <!-- Create Invoice Button -->
                             @if (Model.UserType == "Supplier" && !Model.IsViewOnly)
@@ -427,6 +354,38 @@
                 </div>
 
                 <input type="hidden" id="rejectionReasons" value='@Json.Serialize(rejectionReasons)' />
+
+                @* Bulk actions: floating dark bar shown while rows are selected (Stitch). The button
+                   ids are unchanged — all existing bulk handlers keep working; visibility is driven
+                   by the same refreshBulkVisibility() script as before. *@
+                @if (!Model.IsViewOnly && (Model.invoiceDirection == "Draft" || Model.invoiceDirection == "Sent" || Model.invoiceDirection == "Received"))
+                {
+                    <div id="bulkActionBar" class="einv-bulk-bar d-none" role="toolbar" aria-label="Bulk actions for selected invoices">
+                        <span class="einv-bulk-count" id="bulkSelectedCount">0 Selected</span>
+                        <span class="einv-bulk-hint d-none d-sm-inline">Bulk actions for selected invoices</span>
+                        @if (Model.invoiceDirection == "Draft")
+                        {
+                            <button id="bulkSubmitBtn" class="btn btn-primary btn-sm d-none" title="Submit the selected draft invoices to LHDN">
+                                <i class="ri-send-plane-fill"></i> Submit to LHDN
+                            </button>
+                            <button id="bulkDeleteBtn" class="btn btn-danger btn-sm d-none">
+                                <i class="ri-delete-bin-5-fill"></i> Delete e-Invoice
+                            </button>
+                        }
+                        @if (Model.invoiceDirection == "Sent")
+                        {
+                            <button id="bulkCancelBtn" class="btn btn-warning btn-sm d-none">
+                                <i class="ri-close-circle-line"></i> Cancel e-Invoice
+                            </button>
+                        }
+                        @if (Model.invoiceDirection == "Received")
+                        {
+                            <button id="bulkRejectBtn" class="btn btn-danger btn-sm d-none">
+                                <i class="ri-close-circle-line"></i> Request Reject e-Invoice
+                            </button>
+                        }
+                    </div>
+                }
 
             </div>
 
@@ -694,6 +653,7 @@
                                     #invoiceTable .col-internal-status { width: 160px; }
                                     #invoiceTable .col-rejected-date { width: 160px; }
                                     #invoiceTable .col-last-updated { width: 160px; }
+                                    #invoiceTable .col-created-by { width: 140px; }
                                     #invoiceTable .col-action { width: 80px; }
 
                                     /* Fix Sticky Column Positioning */
@@ -861,6 +821,9 @@
                                                     <i class="ri-arrow-@(Model.SortBy == "UpdatedDate" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
                                                 </a>
                                             </th>
+
+                                            @* Created By *@
+                                            <th class="col-created-by d-none d-xl-table-cell">Created By</th>
                                             @if (!Model.IsViewOnly)
                                             {
                                                 <th class="col-action">Action</th>
@@ -971,6 +934,7 @@
                                                             @invoice.LastUpdated?.ToString("yyyy-MM-dd") <small>@invoice.LastUpdated?.ToString("hh:mm tt")</small>
                                                         }
                                                     </td>
+                                                    <td class="col-created-by d-none d-xl-table-cell truncate" title="@invoice.CreatedBy">@invoice.CreatedBy</td>
                                                     @if (!Model.IsViewOnly)
                                                     {
                                                     <td class="col-action text-end">
@@ -1366,6 +1330,10 @@
                             <input class="form-check-input column-toggle" type="checkbox" value="col-last-updated" id="toggle-last-updated" checked>
                             <label class="form-check-label" for="toggle-last-updated">Last Updated</label>
                         </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input column-toggle" type="checkbox" value="col-created-by" id="toggle-created-by" checked>
+                            <label class="form-check-label" for="toggle-created-by">Created By</label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1731,6 +1699,7 @@
             'col-internal-status': true,
             'col-rejected-date': true,
             'col-last-updated': true,
+            'col-created-by': true,
             'col-action': true
         };
 
@@ -2057,6 +2026,10 @@
                 var btn = document.getElementById(id);
                 if (btn) { btn.classList.toggle('d-none', checked === 0); }
             });
+            var bar = document.getElementById('bulkActionBar');
+            if (bar) { bar.classList.toggle('d-none', checked === 0); }
+            var count = document.getElementById('bulkSelectedCount');
+            if (count) { count.textContent = checked + ' Selected'; }
             var selectAll = document.getElementById('selectAll');
             if (selectAll) {
                 var total = rowCheckboxes().length;
