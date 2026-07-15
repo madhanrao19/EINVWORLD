@@ -32,7 +32,7 @@ public class InvoiceFinalizerService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Invoice Finalizer Service started...");
-        _logger.LogWarning("InvoiceFinalizerService heartbeat at {Time}", DateTime.Now);
+        _logger.LogDebug("InvoiceFinalizerService heartbeat at {Time}", DateTime.Now);
 
         while (!stoppingToken.IsCancellationRequested)
         {

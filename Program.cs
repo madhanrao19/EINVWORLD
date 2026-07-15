@@ -65,11 +65,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
         sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
         sqlOptions.CommandTimeout(dbCommandTimeout);
-    }));
+    })
+    // The connection string enables MARS, so EF logs "savepoints are disabled" on every transaction —
+    // hundreds of identical warnings per day. The underlying behaviour (no savepoint rollback on a failed
+    // SaveChanges) is unchanged and already handled by app-level catch/reload paths, so silence the noise.
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.SqlServerEventId.SavepointsDisabledBecauseOfMARS)));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDbContext<WebsiteDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("WebsiteDb")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("WebsiteDb"))
+    // Same MARS savepoint-warning suppression as ApplicationDbContext above.
+    .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.SqlServerEventId.SavepointsDisabledBecauseOfMARS)));
 
 
 // Identity services
