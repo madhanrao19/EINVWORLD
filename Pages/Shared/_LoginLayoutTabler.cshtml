@@ -63,15 +63,13 @@
     @await Html.PartialAsync("_Favicons")
 
     <!-- Tabler CSS + brand tokens (tokens carry the auth-page shims) -->
-    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css">
-    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css">
+    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css" asp-append-version="true">
+    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css" asp-append-version="true">
     <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
 
-    <!-- Auth page design ("Forest Tech Precision") + Hanken Grotesk (CSP allows Google Fonts) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="~/tabler/css/einvworld-auth.css" rel="stylesheet" type="text/css">
+    <!-- Auth page design ("EinvWorld Professional"). Inter-first with the system fallback —
+         self-hosted policy, no font CDN (the previous Google Fonts dependency was removed). -->
+    <link href="~/tabler/css/einvworld-auth.css" rel="stylesheet" type="text/css" asp-append-version="true">
 
     <link href="~/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">

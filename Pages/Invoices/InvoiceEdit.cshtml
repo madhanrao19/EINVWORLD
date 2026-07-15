@@ -11,21 +11,21 @@
 <style>
     /* eInvWorld Brand Colors - Override Velzon Defaults */
     .btn-primary {
-        background-color: #3AA564 !important;
-        border-color: #3AA564 !important;
+        background-color: #006948 !important;
+        border-color: #006948 !important;
     }
     
     .btn-primary:hover, .btn-primary:focus {
-        background-color: #055332 !important;
-        border-color: #055332 !important;
+        background-color: #005137 !important;
+        border-color: #005137 !important;
     }
     
     .avatar-title.bg-primary {
-        background-color: #3AA564 !important;
+        background-color: #006948 !important;
     }
     
     .progress-bar.bg-primary {
-        background-color: #3AA564 !important;
+        background-color: #006948 !important;
     }
     /* Optimized Table Column Widths (Copied from CreateInvoice) */
     #lineItemsTable {
@@ -79,7 +79,7 @@
         padding: 8px;
         background: white;
         border-radius: 5px;
-        border-left: 3px solid #3AA564;  /* eInvWorld brand primary green */
+        border-left: 3px solid #006948;  /* eInvWorld brand primary green */
     }
     
     .swal-submission-success .detail-item:last-child {
@@ -88,7 +88,7 @@
     
     /* Specific border colors for different detail item types */
     .swal-submission-success .detail-item:has(code.text-primary) {
-        border-left-color: #3AA564 !important;  /* Green for Submission UID */
+        border-left-color: #006948 !important;  /* Green for Submission UID */
     }
     
     .swal-submission-success .detail-item:has(code.text-info) {
@@ -136,7 +136,7 @@
     }
     .swal-submission-success .detail-item code.text-primary {
         background-color: rgba(58, 165, 100, 0.1) !important;  /* eInvWorld brand primary green background */
-        color: #3AA564 !important;  /* eInvWorld brand primary green text */
+        color: #006948 !important;  /* eInvWorld brand primary green text */
         border: 1px solid rgba(58, 165, 100, 0.3) !important;
         border-radius: 0.25rem !important;
         padding: 0.25rem 0.5rem !important;
@@ -991,7 +991,7 @@
             icon: 'success',
             title: '@title',
             text: '@msg',
-            confirmButtonColor: '#3AA564',  // eInvWorld brand primary green
+            confirmButtonColor: '#006948',  // eInvWorld brand primary green
             timer: 2500,
             timerProgressBar: true
         });
@@ -1886,7 +1886,7 @@
                                     icon: 'success',
                                     title: successTitle,
                                     text: `Draft saved for Invoice ${response.invoiceNo || 'N/A'}`,
-                                    confirmButtonColor: '#3AA564',  // eInvWorld brand primary green
+                                    confirmButtonColor: '#006948',  // eInvWorld brand primary green
                                     timer: 2500,
                                     timerProgressBar: true
                                 });
@@ -2000,7 +2000,7 @@
                                     icon: 'success',
                                     title: 'Submission Successful!',
                                     html: htmlMessage,
-                                    confirmButtonColor: '#3AA564',  // eInvWorld brand primary green
+                                    confirmButtonColor: '#006948',  // eInvWorld brand primary green
                                     confirmButtonText: 'Continue',
                                     timer: 5000,
                                     timerProgressBar: true,
@@ -2525,7 +2525,7 @@
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: #3AA564;  /* eInvWorld brand primary green */
+                    background: #006948;  /* eInvWorld brand primary green */
                     color: white;
                     padding: 8px 12px;
                     border-radius: 4px;
@@ -2567,7 +2567,7 @@
                 const config = {
                     error: { icon: 'error', title: 'Error', color: '#d33' },
                     warning: { icon: 'warning', title: 'Warning', color: '#ffc107' },
-                    success: { icon: 'success', title: 'Success', color: '#3AA564' },  // eInvWorld brand primary green
+                    success: { icon: 'success', title: 'Success', color: '#006948' },  // eInvWorld brand primary green
                     info: { icon: 'info', title: 'Information', color: '#0dcaf0' }
                 };
 
@@ -2635,7 +2635,7 @@
                             icon: type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info',
                             title: type.charAt(0).toUpperCase() + type.slice(1),
                             text: message,
-                            confirmButtonColor: '#3AA564'  // eInvWorld brand primary green
+                            confirmButtonColor: '#006948'  // eInvWorld brand primary green
                         });
                     } else {
                         alert(`${type.toUpperCase()}: ${message}`);

@@ -23,9 +23,9 @@
     <!-- Chart.js (self-hosted) -->
     <script src="~/assets/libs/chart.js/chart.umd.js"></script>
 
-    <!-- Tabler core CSS (self-hosted, MIT) + EINVWORLD brand tokens -->
-    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css">
-    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css">
+    <!-- Tabler core CSS (self-hosted, MIT) + EINVWORLD brand tokens (versioned for cache-busting) -->
+    <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css" asp-append-version="true">
+    <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css" asp-append-version="true">
     <!-- Icon fonts (Remix + tail), kept from the current bundle during migration -->
     <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
 
