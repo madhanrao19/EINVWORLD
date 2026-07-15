@@ -1886,6 +1886,7 @@ namespace eInvWorld.Pages.Invoices
                     { "col-internal-status", true },
                     { "col-rejected-date", true },
                     { "col-last-updated", true },
+                    { "col-created-by", true },
                     { "col-action", true }
                 };
 
