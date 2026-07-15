@@ -14,6 +14,7 @@
 > | Consistency audit — orphans | ✅ merged | Templates + Assistant were the last 2 on Velzon → migrated. **All authenticated pages now Tabler.** |
 > | Post-deploy staging QA + fixes | ✅ merged | logo size, code/pre overflow, invoice-list mobile columns; text verified on all Admin pages |
 > | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | ⛔ **deferred** | destructive; do only after a fully-green re-verification |
+> | Restyle — "EinvWorld Professional" (Stitch, 2026-07-15) | ✅ done | token-level rebrand `#3AA564`→`#006948`, light sidebar, light auth cards, Google-Fonts CDN removed, CSS links versioned; see CHANGELOG 2026-07-15 |
 >
 > **Status (2026-07-11): deployed to staging and Playwright-verified across Supplier/Buyer/Admin.** Every
 > authenticated page renders Tabler; only public marketing/Home/Resources (`_HomeLayout`) and Error pages

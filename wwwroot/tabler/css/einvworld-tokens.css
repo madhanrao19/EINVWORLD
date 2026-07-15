@@ -5,33 +5,88 @@
  * that opt into _LayoutTabler load this file).
  */
 :root {
-  /* Brand palette (matches the current Velzon accent) */
-  --einv-primary: #3AA564;
-  --einv-primary-dark: #055332;
-  --einv-primary-rgb: 58, 165, 100;
-  --einv-accent: #2f8f56;
+  /* Brand palette — "EinvWorld Professional" (Stitch design direction, 2026-07).
+   * Deep compliance green; hover is one step darker, container one step lighter. */
+  --einv-primary: #006948;
+  --einv-primary-hover: #005137;
+  --einv-primary-container: #00855d;
+  --einv-primary-rgb: 0, 105, 72;
+  --einv-accent: #00855d;
+  /* Legacy alias — older rules/pages reference --einv-primary-dark for the darker brand tone. */
+  --einv-primary-dark: #005137;
 
-  /* Map Tabler's primary onto the brand so buttons/links/active states are green */
+  /* Canvas + surfaces: cool gray-blue page canvas vs pure-white component cards. */
+  --einv-page-bg: #f6f8fb;
+  --einv-surface: #ffffff;
+  --einv-text: #171d19;
+  --einv-text-muted: #3d4a42;
+  --einv-border: #e6e8eb;
+
+  /* Semantic states (status badges, alerts, validation). */
+  --einv-success: #10b981;
+  --einv-warning: #f59e0b;
+  --einv-error: #ef4444;
+  --einv-info: #0ea5e9;
+
+  /* Map Tabler's tokens onto the brand so buttons/links/tabs/active states inherit everywhere. */
   --tblr-primary: var(--einv-primary);
   --tblr-primary-rgb: var(--einv-primary-rgb);
   --tblr-primary-fg: #ffffff;
-  --tblr-link-color: var(--einv-primary-dark);
-  --tblr-link-hover-color: var(--einv-primary);
+  --tblr-link-color: var(--einv-primary);
+  --tblr-link-hover-color: var(--einv-primary-hover);
+  --tblr-body-bg: var(--einv-page-bg);
+  --tblr-border-color: var(--einv-border);
+  --tblr-success: var(--einv-success);
+  --tblr-success-rgb: 16, 185, 129;
+  --tblr-warning: var(--einv-warning);
+  --tblr-warning-rgb: 245, 158, 11;
+  --tblr-danger: var(--einv-error);
+  --tblr-danger-rgb: 239, 68, 68;
+  --tblr-info: var(--einv-info);
+  --tblr-info-rgb: 14, 165, 233;
 }
 
-/* Ensure the vertical navbar active/hover state reads as brand green in the dark sidebar. */
-.navbar-vertical .navbar-nav .nav-link.active,
-.navbar-vertical .navbar-nav .nav-item.show > .nav-link {
-  color: #ffffff;
-  background-color: rgba(var(--einv-primary-rgb), 0.22);
+/* Primary buttons: explicit hover/active so the darker brand step is used instead of a derived tint. */
+.btn-primary:hover, .btn-primary:focus-visible, .btn-primary:active,
+.btn-primary.active, .btn-primary.show {
+  background-color: var(--einv-primary-hover);
+  border-color: var(--einv-primary-hover);
+}
+
+/* Cards: 1px subtle border + very soft ambient shadow (flat, professional). */
+.card {
+  border-color: var(--einv-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
+}
+
+/* Light sidebar (Navigation Master): white surface, subtle divider, green active states. */
+.navbar-vertical.navbar-expand-lg {
+  background: var(--einv-surface);
+  border-right: 1px solid var(--einv-border);
+}
+.navbar-vertical .navbar-nav .nav-link {
+  color: var(--einv-text-muted);
 }
 .navbar-vertical .navbar-nav .nav-link:hover {
-  color: #ffffff;
+  color: var(--einv-primary);
+}
+.navbar-vertical .navbar-nav .nav-link.active,
+.navbar-vertical .navbar-nav .nav-item.show > .nav-link {
+  color: var(--einv-primary);
+  background-color: rgba(var(--einv-primary-rgb), 0.08);
+  font-weight: 600;
+  border-radius: .25rem;
 }
 .navbar-vertical .navbar-nav .dropdown-menu .dropdown-item.active,
 .navbar-vertical .navbar-nav .dropdown-menu .dropdown-item[aria-current="page"] {
   color: var(--einv-primary);
   font-weight: 600;
+}
+
+/* Invoice list: subtle zebra striping (scoped to the invoice table only — the page canvas tone
+ * keeps rows readable without fighting row selection or status colouring). */
+#invoiceTable tbody tr:nth-child(even) > td {
+  background-color: var(--einv-page-bg);
 }
 
 /* Brand avatar ring reused across topbar + sidebar. */
