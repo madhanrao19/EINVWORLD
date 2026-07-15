@@ -35,6 +35,28 @@
                         @await Html.PartialAsync("_BuyerNavigation")
                     }
                 </nav>
+
+                @* Bottom-pinned utility links (Navigation Master): profile + sign out. The logout is
+                   the same POST form the user menu uses — no new endpoints. *@
+                <div class="einv-nav-bottom" role="navigation" aria-label="Account">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Profile/Index">
+                                <span class="nav-link-icon" aria-hidden="true"><i class="ri-settings-3-line"></i></span>
+                                <span class="nav-link-title">Profile &amp; Settings</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post" class="m-0">
+                                <input type="hidden" name="logoutReason" value="manual" />
+                                <button type="submit" class="nav-link w-100 border-0 bg-transparent text-start">
+                                    <span class="nav-link-icon" aria-hidden="true"><i class="ri-logout-box-line"></i></span>
+                                    <span class="nav-link-title">Logout</span>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </aside>

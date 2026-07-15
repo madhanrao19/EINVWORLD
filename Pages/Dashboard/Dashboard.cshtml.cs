@@ -29,6 +29,8 @@ namespace eInvWorld.Pages.Invoices
         public int CancelledInvoices { get; set; }
         public int DraftInvoices { get; set; }
         public string UserType { get; set; } = null!;
+        /// <summary>Signed-in user's full name for the welcome header (falls back to empty).</summary>
+        public string DisplayName { get; set; } = string.Empty;
         public int TotalCompaniesCount { get; set; }
         public int TotalUsersCount { get; set; }
         public int TotalBuyerCount { get; set; }
@@ -81,6 +83,7 @@ namespace eInvWorld.Pages.Invoices
                 {
                     var appUser = _context.Users.OrderBy(u => u.Id).FirstOrDefault(u => u.UserName == user.Identity!.Name);
                     UserType = appUser?.UserType ?? "Unknown";
+                    DisplayName = appUser?.FullName ?? string.Empty;
 
                     var companyIds = user.GetUserCompanyIds(_context);
                     if (!companyIds.Any()) return;
