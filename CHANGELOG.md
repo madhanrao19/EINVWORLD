@@ -6,6 +6,46 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-15 — Fix the staging 429 storm (session auto-refresh) + log noise
+
+> Root-caused from the 14–15 Jul staging logs: 567 of 644 warnings on 15 Jul were LHDN
+> `429 Too Many Requests`, with the same Valid invoice polled by 8+ concurrent request contexts.
+> No schema/migration change.
+
+- **Poll cooldowns now actually engage for unchanged Valid invoices.** The cooldown in
+  `InvoiceSyncRules.ShouldSkipValidRefresh` was keyed on `InvoiceHeader.LastUpdated`, which only
+  advances when LHDN data *changed* — so a long-unchanged Valid invoice was re-polled on every
+  30-second UI tick. New in-memory `InvoicePollAttemptTracker` records each poll *attempt* (before
+  the call, so a 429-failed attempt also cools down) and the cooldown uses the later of the persisted
+  and attempt times, composed in one place (`InvoiceSyncHelper.TryBeginDetailsPoll`) for both the
+  batch and single-invoice paths. No extra DB writes (avoids rowversion churn that was also producing
+  "concurrency conflict" warnings). Deliberately unchanged: manual/admin-triggered syncs still always
+  poll (no cooldown, as before — an explicit "sync now" should sync), and `InvoiceStatusUpdater`
+  already self-heals its queue by bumping `LastUpdated` each poll. (+ unit tests)
+- **`SyncActiveSession` (InvoiceLists auto-refresh) hardened:**
+  - **Per-TIN scoping (IDOR fix):** the handler accepted arbitrary invoice numbers from the browser
+    and synced any Valid invoice with no company check — any authenticated user could probe other
+    tenants' invoice numbers and burn the shared LHDN rate budget. Now scoped to invoices where one
+    of the caller's company TINs is the supplier or (public) customer.
+  - **Single-flight (per user):** overlapping session syncs (every open tab posts every 30 s, and a
+    rate-limited pass can run minutes) now return immediately instead of stacking. The gate is
+    per-user so one user's slow pass can't starve other users' refresh.
+  - **Cancellation + 429 abort:** the loop stops when the browser gives up
+    (`HttpContext.RequestAborted`, now also cancelling the helper's internal 15 s LongId-retry wait)
+    and aborts the pass when LHDN's rate limit persists through the helper's retries (the helper now
+    rethrows the exhausted 429 as a clean warning instead of an ERROR + stack trace per invoice).
+    Removed the 250 ms manual delay (`LhdnRateLimitHandler` paces). Known limit: the retry sleeps
+    inside `LHDNApiService.SendWithRetryAsync` are not yet cancellable mid-wait.
+  - **Client:** the 30-second timer skips a tick while the previous sync request is still in flight.
+- **Log noise:** EF Core's "Savepoints are disabled because MARS is enabled" warning (hundreds of
+  identical lines/day) is suppressed via `ConfigureWarnings` — the underlying behaviour is unchanged
+  and already handled by app-level catch/reload paths; `InvoiceFinalizerService` heartbeat demoted
+  from Warning to Debug.
+- Operator notes: consider removing `MultipleActiveResultSets=true` from the server connection
+  strings if nothing depends on MARS (would re-enable transaction savepoints); the startup warning
+  about `MaxRequestBodySize` vs IIS `maxAllowedContentLength` needs the IIS request-filtering limit
+  raised to match (`web.config`/IIS Manager), not an app change.
+
 ## 📅 2026-07-13 — Validation emails were silently never sent + submit modal hung on 429
 
 > Found in local F5 testing: invoices showed "email sent" but nothing arrived, and a bulk submit

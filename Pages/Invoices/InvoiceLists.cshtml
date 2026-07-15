@@ -1996,10 +1996,17 @@
 </script>
 <script>
     $(document).ready(function () {
+        // Guard so interval ticks never stack: a rate-limited sync can take minutes server-side,
+        // and firing another request on top multiplies the LHDN polling load.
+        let sessionSyncInFlight = false;
+
         // Runs every 30 seconds
         setInterval(function () {
             // Stop running if the user switches to another browser tab (Saves API calls!)
             if (document.hidden) return;
+
+            // Skip this tick if the previous sync request hasn't finished yet
+            if (sessionSyncInFlight) return;
 
             // Gather the Invoice Numbers currently visible on the table
             let visibleInvoices = [];
@@ -2011,6 +2018,7 @@
             });
 
             if (visibleInvoices.length > 0) {
+                sessionSyncInFlight = true;
                 $.ajax({
                     url: '?handler=SyncActiveSession',
                     type: 'POST',
@@ -2023,8 +2031,11 @@
                         // If the backend found updates (e.g., a buyer rejected it!), reload the page to show it.
                         if (response.success && response.updatedCount > 0) {
                             console.log("Updates found from LHDN! Refreshing data...");
-                            location.reload(); 
+                            location.reload();
                         }
+                    },
+                    complete: function () {
+                        sessionSyncInFlight = false;
                     }
                 });
             }

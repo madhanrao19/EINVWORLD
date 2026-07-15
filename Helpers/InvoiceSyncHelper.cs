@@ -138,10 +138,7 @@ namespace EINVWORLD.Helpers
                             continue;
                         }
 
-                        // For a Valid doc, honour the per-caller cooldown before re-polling.
-                        var lastChecked = invoice.LastUpdated ?? invoice.CreatedDate;
-                        var myTimeNow = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
-                        if (InvoiceSyncRules.ShouldSkipValidRefresh(invoice.LHDNStatusId, !string.IsNullOrWhiteSpace(invoice.LongId), lastChecked, myTimeNow, triggeredBy))
+                        if (!TryBeginDetailsPoll(invoice, triggeredBy))
                         {
                             _logger.LogDebug("⏳ Refresh skipped for {InvoiceNo} (cooldown, {TriggeredBy}).", invoice.InvoiceNo, triggeredBy);
                             continue;
@@ -246,7 +243,8 @@ namespace EINVWORLD.Helpers
 
         public async Task<bool> SyncLhdnInvoiceStatusAsync(
             InvoiceHeader invoice, // the invoice to update
-            string updatedBy = "System")
+            string updatedBy = "System",
+            CancellationToken cancellationToken = default)
         {
             bool updated = false;
 
@@ -297,10 +295,7 @@ namespace EINVWORLD.Helpers
                     return updated; // Exit early
                 }
 
-                // For a Valid doc, honour the per-caller cooldown before re-polling.
-                var lastChecked = invoice.LastUpdated ?? invoice.CreatedDate;
-                var myTimeNow = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
-                if (InvoiceSyncRules.ShouldSkipValidRefresh(invoice.LHDNStatusId, !string.IsNullOrWhiteSpace(invoice.LongId), lastChecked, myTimeNow, updatedBy))
+                if (!TryBeginDetailsPoll(invoice, updatedBy))
                 {
                     _logger.LogDebug("⏳ Refresh skipped for {InvoiceNo} (cooldown, {TriggeredBy}).", invoice.InvoiceNo, updatedBy);
                     return updated;
@@ -315,7 +310,7 @@ namespace EINVWORLD.Helpers
                     if (summary != null && summary.status == "Valid" && string.IsNullOrWhiteSpace(summary.longId))
                     {
                         _logger.LogInformation("⏳ Invoice {InvoiceNo} is Valid but LongId missing. Waiting 15 seconds for a quick retry...", invoice.InvoiceNo);
-                        await Task.Delay(15000); // Wait 15 seconds
+                        await Task.Delay(15000, cancellationToken); // cancellable: don't hold an abandoned request open
                         summary = await _lhdnService.GetDocumentDetailsAsync(invoice.UUID, accessToken); // Ask one more time
                     }
 
@@ -337,6 +332,14 @@ namespace EINVWORLD.Helpers
                     // Log clean at Warning — an ERROR + stack trace here fired every sync cycle and buried the log.
                     _logger.LogWarning("[LHDN Sync] Document not found on LHDN (404) for {InvoiceNo}; skipping this cycle.", invoice.InvoiceNo);
                 }
+                catch (System.Net.Http.HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+                {
+                    // Rate limit persisted through all retries. Log clean (an ERROR + stack trace per invoice
+                    // was burying the log) and rethrow so callers looping over invoices abort the pass instead
+                    // of hammering an API that just rate-limited us. The next cycle retries naturally.
+                    _logger.LogWarning("[LHDN Sync] LHDN rate limit (429) persisted while polling {InvoiceNo}; aborting this sync pass.", invoice.InvoiceNo);
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"[LHDN Sync] Details polling error for {invoice.InvoiceNo}");
@@ -345,6 +348,32 @@ namespace EINVWORLD.Helpers
             _logger.LogInformation("[SYNC] SyncLhdnInvoiceStatusAsync END for InvoiceNo: {InvoiceNo}, Updated: {Updated}", invoice.InvoiceNo, updated);
 
             return updated;
+        }
+
+        /// <summary>
+        /// Cooldown gate for a DocumentDetails poll. Returns <c>false</c> (skip) when the per-caller
+        /// cooldown for a Valid document has not elapsed; otherwise records the poll attempt — BEFORE
+        /// the actual LHDN call, so a failed (e.g. 429) attempt also starts the cooldown — and returns
+        /// <c>true</c>. <c>LastUpdated</c> only advances when LHDN data changed, so the in-memory
+        /// last-attempt time is folded in; without it, long-unchanged invoices are re-polled on every
+        /// pass and trip the LHDN 429 limit. Only "BackgroundService"/"UISession" triggers have a
+        /// cooldown (see <see cref="InvoiceSyncRules.ShouldSkipValidRefresh"/>); manual/job triggers
+        /// always poll, but their attempts still feed the other triggers' cooldowns.
+        /// </summary>
+        private static bool TryBeginDetailsPoll(InvoiceHeader invoice, string? triggeredBy)
+        {
+            var lastChecked = InvoicePollAttemptTracker.GetEffectiveLastChecked(
+                invoice.InvoiceNo, invoice.LastUpdated ?? invoice.CreatedDate);
+            var nowMyt = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
+
+            if (InvoiceSyncRules.ShouldSkipValidRefresh(
+                    invoice.LHDNStatusId, !string.IsNullOrWhiteSpace(invoice.LongId), lastChecked, nowMyt, triggeredBy))
+            {
+                return false;
+            }
+
+            InvoicePollAttemptTracker.RecordAttempt(invoice.InvoiceNo, nowMyt);
+            return true;
         }
 
         public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3)

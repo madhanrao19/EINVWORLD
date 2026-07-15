@@ -1920,32 +1920,79 @@ namespace eInvWorld.Pages.Invoices
             }
         }
 
+        // Per-user single-flight gates for the session auto-refresh: every open InvoiceLists tab posts
+        // here every 30s, and a rate-limited pass can run for minutes — letting those requests stack
+        // multiplied the LHDN polling load (429 storm). One pass at a time per user is plenty for a
+        // best-effort freshness poke; that user's other tabs return immediately and the next tick picks
+        // up any changes. Per-user (not global) so one user's slow pass can't starve everyone else's
+        // refresh; overall LHDN pacing stays with LhdnRateLimitHandler and the per-invoice cooldown.
+        // Bounded by the number of distinct users since the last app restart.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _sessionSyncGates = new();
+
         public async Task<JsonResult> OnPostSyncActiveSessionAsync([FromBody] List<string> visibleInvoiceNos)
         {
             if (visibleInvoiceNos == null || !visibleInvoiceNos.Any())
                 return new JsonResult(new { success = true, updatedCount = 0 });
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, updatedCount = 0 });
+
+            var gate = _sessionSyncGates.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+            if (!await gate.WaitAsync(0))
+                return new JsonResult(new { success = true, updatedCount = 0 });
+
             int updatedCount = 0;
-
-            // Only get invoices that are "Valid" (meaning we are waiting to see if the buyer rejects/cancels them)
-            var invoicesToSync = await _context.InvoiceHeaders
-                .Include(i => i.Supplier)
-                .Include(i => i.Customer)
-                .Where(i => visibleInvoiceNos.Contains(i.InvoiceNo) && i.LHDNStatusId == "Valid")
-                .ToListAsync();
-
-            foreach (var invoice in invoicesToSync)
+            try
             {
-                // Pass "UISession" to tell the helper to use the fast 60-second cooldown
-                bool wasUpdated = await _invoiceSyncHelper.SyncLhdnInvoiceStatusAsync(invoice, "UISession");
+                // Scope to the caller's companies (supplier or buyer side, incl. public customers) so a
+                // user can neither probe other tenants' invoice numbers nor burn the shared LHDN rate
+                // budget on invoices they can't see.
+                var userTINs = await _context.UserCompanies
+                    .Where(uc => uc.UserId == user.Id)
+                    .Select(uc => uc.PartyInfo.TIN)
+                    .Distinct()
+                    .ToListAsync(HttpContext.RequestAborted);
 
-                if (wasUpdated)
+                if (!userTINs.Any())
+                    return new JsonResult(new { success = true, updatedCount = 0 });
+
+                // Only invoices that are "Valid" (waiting to see if the buyer rejects/cancels them)
+                var invoicesToSync = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .Where(i => visibleInvoiceNos.Contains(i.InvoiceNo) && i.LHDNStatusId == "Valid" &&
+                                (userTINs.Contains(i.Supplier.TIN) ||
+                                 (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                                 (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                    .ToListAsync(HttpContext.RequestAborted);
+
+                foreach (var invoice in invoicesToSync)
                 {
-                    updatedCount++;
-                }
+                    // The browser gave up (tab closed / page navigated) — stop polling on its behalf.
+                    if (HttpContext.RequestAborted.IsCancellationRequested)
+                        break;
 
-                // Tiny speed bump to protect against 429s during session refresh
-                await Task.Delay(250);
+                    try
+                    {
+                        // "UISession" selects the fast 60-second cooldown in the helper.
+                        bool wasUpdated = await _invoiceSyncHelper.SyncLhdnInvoiceStatusAsync(invoice, "UISession", HttpContext.RequestAborted);
+                        if (wasUpdated)
+                        {
+                            updatedCount++;
+                        }
+                    }
+                    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+                    {
+                        // LHDN rate limit persisted through the helper's retries — abort the whole pass
+                        // rather than hammering the next invoice; the next 30s tick retries naturally.
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                gate.Release();
             }
 
             return new JsonResult(new { success = true, updatedCount = updatedCount });
