@@ -51,7 +51,16 @@
 
     // --- 3. Chart Rendering & Empty State Logic ---
     let monthlyChartInstance = null;
-    const modernColors = ['#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6', '#06b6d4'];
+    // Brand-anchored categorical palette (EinvWorld Professional): compliance green first, then the
+    // semantic accents, kept distinguishable for up to 8 series (the 8 LHDN document types).
+    const modernColors = ['#006948', '#0ea5e9', '#f59e0b', '#ef4444', '#00855d', '#8b5cf6', '#14b8a6', '#6b7280'];
+
+    // Status → semantic colour, keyed by name so donut segments stay correct however the API orders
+    // them (the previous positional array painted whichever status came first red).
+    const statusColors = {
+        'Valid': '#10b981', 'Submitted': '#0ea5e9', 'Draft': '#f59e0b', 'Pending': '#f59e0b',
+        'Rejected': '#ef4444', 'Invalid': '#b91c1c', 'RequestReject': '#f97316', 'Cancelled': '#6b7280'
+    };
 
     const doughnutOptions = {
         responsive: true, maintainAspectRatio: false, cutout: '78%',
@@ -114,7 +123,7 @@
                             labels: data.statusCounts.map(item => item.status),
                             datasets: [{
                                 data: data.statusCounts.map(item => item.count),
-                                backgroundColor: ['#f43f5e', '#10b981', '#f59e0b']
+                                backgroundColor: data.statusCounts.map((item, i) => statusColors[item.status] || modernColors[i % modernColors.length])
                             }]
                         },
                         options: doughnutOptions
