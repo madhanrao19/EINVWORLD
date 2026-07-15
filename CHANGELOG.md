@@ -6,6 +6,32 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-15 — "EinvWorld Professional" UI restyle (Stitch design system)
+
+> System-wide visual refresh to the approved Stitch design direction, applied through the central
+> Tabler token file so every authenticated page + the auth pages inherit one consistent look.
+> CSS/markup-attribute changes only — no logic, menu, column, action, or route changes. No schema change.
+
+- **Brand tokens** (`wwwroot/tabler/css/einvworld-tokens.css`): primary rebranded from the bright
+  `#3AA564` to the deep compliance green `#006948` (hover `#005137`, container `#00855d`); semantic
+  set standardized (success `#10b981`, warning `#f59e0b`, error `#ef4444`, info `#0ea5e9`); page
+  canvas `#F6F8FB` vs white cards; subtle borders `#E6E8EB`; soft card shadows; invoice-table-scoped
+  zebra striping. All Tabler-derived buttons/links/tabs/badges inherit automatically.
+- **Sidebar** (`_TablerSidebar`): dark → **light** per the Navigation Master reference (white surface,
+  subtle divider, green active states) with the dark-text logo variant (the white-text logo would be
+  invisible on white). Role-based menus, links, collapse behaviour unchanged.
+- **Auth pages** (`einvworld-auth.css` + `_LoginLayoutTabler`): "Forest Tech Precision" dark-gradient
+  look replaced by the Stitch light centered-card design (dotted cool-gray canvas, colour logo above
+  the card, deep green primary action). **Removed the Google Fonts CDN dependency** (Hanken Grotesk)
+  — policy: self-hosted only; the stack is now Inter-first with the system fallback. All form ids,
+  Turnstile, validation, and antiforgery markup untouched. Auth pages now use the colour logo with
+  proper alt text.
+- **Cache-busting:** `asp-append-version="true"` on the Tabler/token/auth CSS links in both layouts so
+  a deploy can't serve stale styles.
+- **Hard-coded brand colours** in page markup/JS (`#3AA564`/`#055332`/`#2f8f56` in CreateInvoice,
+  InvoiceEdit, InvoiceLists, InvoiceDetails2, Profile, _UserMenu, 3 Identity pages) updated to the new
+  palette so no page shows the old green. (Velzon fallback layouts intentionally untouched — Phase 8.)
+
 ## 📅 2026-07-15 — Fix the staging 429 storm (session auto-refresh) + log noise
 
 > Root-caused from the 14–15 Jul staging logs: 567 of 644 warnings on 15 Jul were LHDN

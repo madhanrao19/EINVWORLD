@@ -129,7 +129,7 @@
                     title: 'Notice',
                     text: @Json.Serialize(TempData["ErrorMessage"]),
                     showConfirmButton: true,
-                    confirmButtonColor: '#3AA564'
+                    confirmButtonColor: '#006948'
                 });
             });
         </script>
@@ -490,8 +490,8 @@
                                 <style>
                                     #columnSettingsBtn {
                                         background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-                                        border: 1.5px solid #3AA564;
-                                        color: #3AA564;
+                                        border: 1.5px solid #006948;
+                                        color: #006948;
                                         font-weight: 500;
                                         padding: 0.5rem 1rem;
                                         border-radius: 8px;
@@ -502,7 +502,7 @@
                                     }
 
                                     #columnSettingsBtn:hover {
-                                        background: linear-gradient(135deg, #3AA564 0%, #187447 100%);
+                                        background: linear-gradient(135deg, #006948 0%, #187447 100%);
                                         border-color: #187447;
                                         color: #ffffff;
                                         transform: translateY(-1px);
@@ -531,7 +531,7 @@
 
                                     #columnSettingsBtn .badge {
                                         animation: pulse 2s infinite;
-                                        background: linear-gradient(45deg, #3AA564, #187447) !important;
+                                        background: linear-gradient(45deg, #006948, #187447) !important;
                                     }
 
                                     @@keyframes pulse {
@@ -552,12 +552,12 @@
 
                                     /* Enhanced Modal Styles */
                                     .custom-checkbox:checked {
-                                        background-color: #3AA564;
-                                        border-color: #3AA564;
+                                        background-color: #006948;
+                                        border-color: #006948;
                                     }
 
                                     .custom-checkbox:focus {
-                                        border-color: #3AA564;
+                                        border-color: #006948;
                                         box-shadow: 0 0 0 0.2rem rgba(58, 165, 100, 0.25);
                                     }
 
@@ -571,7 +571,7 @@
                                     }
 
                                     #columnSettingsModal .form-check-label:hover {
-                                        color: #3AA564 !important;
+                                        color: #006948 !important;
                                     }
 
                                     #columnSettingsModal .modal-content {
@@ -680,7 +680,7 @@
                                         transition: background-color 0.2s;
                                     }
                                     .col-resizer:hover, .col-resizer.resizing {
-                                        background-color: #3AA564; /* Highlight line when dragging */
+                                        background-color: #006948; /* Highlight line when dragging */
                                     }
                                     #invoiceTable .col-checkbox { width: 40px; }
                                     #invoiceTable .col-invoice-no { width: 120px; }
@@ -933,7 +933,7 @@
                                                         }
                                                         else
                                                         {
-                                                            <span class="badge @(invoice.LHDNStatusId == "Valid" ? "bg-success text-white" : invoice.LHDNStatusId == "Cancelled" ? "bg-warning text-dark" : invoice.LHDNStatusId == "Submitted" ? "bg-info text-white" : "bg-dark text-white")" style="@(invoice.LHDNStatusId == "Valid" ? "background-color: #3AA564 !important" : invoice.LHDNStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
+                                                            <span class="badge @(invoice.LHDNStatusId == "Valid" ? "bg-success text-white" : invoice.LHDNStatusId == "Cancelled" ? "bg-warning text-dark" : invoice.LHDNStatusId == "Submitted" ? "bg-info text-white" : "bg-dark text-white")" style="@(invoice.LHDNStatusId == "Valid" ? "background-color: #006948 !important" : invoice.LHDNStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.LHDNStatusId, out var lhdnStatus) ? EnumHelper.GetEnumDescription(lhdnStatus) : invoice.LHDNStatusId)
                                                             </span>
                                                         }
@@ -955,7 +955,7 @@
                                                         }
                                                         else
                                                         {
-                                                            <span class="badge @(invoice.InternalStatusId == "Valid" ? "bg-success text-white" : invoice.InternalStatusId == "ValidInternal" ? "bg-info text-white" : invoice.InternalStatusId == "Draft" ? "bg-warning text-dark" : invoice.InternalStatusId == "Completed" ? "bg-success text-white" : invoice.InternalStatusId == "Submitted" ? "bg-info text-white" : invoice.InternalStatusId == "Cancelled" ? "bg-warning text-dark" : "bg-secondary text-white")" style="@(invoice.InternalStatusId == "Valid" ? "background-color: #3AA564 !important" : invoice.InternalStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
+                                                            <span class="badge @(invoice.InternalStatusId == "Valid" ? "bg-success text-white" : invoice.InternalStatusId == "ValidInternal" ? "bg-info text-white" : invoice.InternalStatusId == "Draft" ? "bg-warning text-dark" : invoice.InternalStatusId == "Completed" ? "bg-success text-white" : invoice.InternalStatusId == "Submitted" ? "bg-info text-white" : invoice.InternalStatusId == "Cancelled" ? "bg-warning text-dark" : "bg-secondary text-white")" style="@(invoice.InternalStatusId == "Valid" ? "background-color: #006948 !important" : invoice.InternalStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusStr) ? EnumHelper.GetEnumDescription(internalStatusStr) : invoice.InternalStatusId)
                                                             </span>
                                                         }
@@ -1290,9 +1290,9 @@
 <div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <div class="modal-header p-3" style="background: linear-gradient(135deg, rgba(58, 165, 100, 0.1) 0%, rgba(24, 116, 71, 0.1) 100%); border-bottom: 2px solid #3AA564;">
-                <h5 class="modal-title d-flex align-items-center" id="columnSettingsModalLabel" style="color: #055332; font-weight: 600;">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: linear-gradient(135deg, #3AA564, #187447); border-radius: 50%; color: white;">
+            <div class="modal-header p-3" style="background: linear-gradient(135deg, rgba(58, 165, 100, 0.1) 0%, rgba(24, 116, 71, 0.1) 100%); border-bottom: 2px solid #006948;">
+                <h5 class="modal-title d-flex align-items-center" id="columnSettingsModalLabel" style="color: #005137; font-weight: 600;">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: linear-gradient(135deg, #006948, #187447); border-radius: 50%; color: white;">
                         <i class="ri-settings-3-line" style="font-size: 1.2rem;"></i>
                     </div>
                     <div>
@@ -1303,7 +1303,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none; opacity: 0.7;"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: rgba(58, 165, 100, 0.05); border-left: 4px solid #3AA564;">
+                <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: rgba(58, 165, 100, 0.05); border-left: 4px solid #006948;">
                     <i class="ri-information-line text-primary me-2" style="font-size: 1.2rem;"></i>
                     <div>
                         <strong>Personalized Display:</strong> Choose which columns to show in your invoice list. Your preferences are saved automatically.
@@ -1375,7 +1375,7 @@
                     <i class="ri-close-line me-1"></i>Cancel
                 </button>
                 <button type="button" class="btn waves-effect waves-light position-relative" onclick="applyColumnSettings()" 
-                        style="background: linear-gradient(135deg, #3AA564 0%, #187447 100%); border: none; color: white; border-radius: 8px; padding: 0.5rem 2rem; font-weight: 500; box-shadow: 0 2px 8px rgba(58, 165, 100, 0.3);">
+                        style="background: linear-gradient(135deg, #006948 0%, #187447 100%); border: none; color: white; border-radius: 8px; padding: 0.5rem 2rem; font-weight: 500; box-shadow: 0 2px 8px rgba(58, 165, 100, 0.3);">
                     <i class="ri-save-3-line me-2"></i>Save My Preferences
                     <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="saveSpinner">
                         <span class="visually-hidden">Loading...</span>
@@ -1820,7 +1820,7 @@
                         title: 'Saved Successfully!',
                         text: 'Your personalized column preferences have been saved.',
                         icon: 'success',
-                        confirmButtonColor: '#3AA564',
+                        confirmButtonColor: '#006948',
                         timer: 2500,
                         timerProgressBar: true,
                         showClass: {
@@ -1844,7 +1844,7 @@
                     title: 'Oops! Something went wrong',
                     text: 'Failed to save your column preferences. Please try again.',
                     icon: 'error',
-                    confirmButtonColor: '#3AA564',
+                    confirmButtonColor: '#006948',
                     confirmButtonText: 'Try Again'
                 });
             } else {

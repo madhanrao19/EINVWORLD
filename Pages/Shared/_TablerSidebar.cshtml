@@ -8,14 +8,16 @@
 *@
 @if (SignInManager.IsSignedIn(User))
 {
-    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
+    @* Light sidebar (Stitch "Navigation Master"): white surface + green active states, styled in
+       einvworld-tokens.css. The dark-text logo variant is required on the light background. *@
+    <aside class="navbar navbar-vertical navbar-expand-lg">
         <div class="container-fluid">
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#einv-sidebar-menu"
                     aria-controls="einv-sidebar-menu" aria-expanded="false" aria-label="Toggle navigation menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a href="/Dashboard/Dashboard" class="navbar-brand navbar-brand-autodark" aria-label="EINVWORLD home">
-                <img src="~/assets/images/einvworld-logo-light.png" height="26" alt="eInvWorld">
+            <a href="/Dashboard/Dashboard" class="navbar-brand" aria-label="EINVWORLD home">
+                <img src="~/assets/images/einvworld-logo-dark.png" height="26" alt="eInvWorld">
             </a>
 
             <div class="collapse navbar-collapse" id="einv-sidebar-menu">
