@@ -89,6 +89,24 @@
   background-color: var(--einv-page-bg);
 }
 
+/* Tabs: quiet underline style (Stitch) — muted labels, brand-green active underline. */
+.nav-tabs .nav-link {
+  color: var(--einv-text-muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+}
+.nav-tabs .nav-link:hover {
+  color: var(--einv-primary);
+  border-bottom-color: var(--einv-border);
+}
+.nav-tabs .nav-link.active {
+  color: var(--einv-primary);
+  background: transparent;
+  border-bottom: 2px solid var(--einv-primary);
+  font-weight: 600;
+}
+
 /* Brand avatar ring reused across topbar + sidebar. */
 .einv-avatar-ring {
   border: 2px solid var(--einv-primary);
