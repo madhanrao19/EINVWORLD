@@ -932,7 +932,7 @@
                                                         }
                                                         else
                                                         {
-                                                            <span class="badge @(invoice.LHDNStatusId == "Valid" ? "bg-success text-white" : invoice.LHDNStatusId == "Cancelled" ? "bg-warning text-dark" : invoice.LHDNStatusId == "Submitted" ? "bg-info text-white" : "bg-dark text-white")" style="@(invoice.LHDNStatusId == "Valid" ? "background-color: #006948 !important" : invoice.LHDNStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
+                                                            <span class="badge @(invoice.LHDNStatusId == "Valid" ? "bg-success" : invoice.LHDNStatusId == "Cancelled" ? "bg-warning" : invoice.LHDNStatusId == "Submitted" ? "bg-info" : "bg-dark")">
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.LHDNStatusId, out var lhdnStatus) ? EnumHelper.GetEnumDescription(lhdnStatus) : invoice.LHDNStatusId)
                                                             </span>
                                                         }
@@ -954,7 +954,7 @@
                                                         }
                                                         else
                                                         {
-                                                            <span class="badge @(invoice.InternalStatusId == "Valid" ? "bg-success text-white" : invoice.InternalStatusId == "ValidInternal" ? "bg-info text-white" : invoice.InternalStatusId == "Draft" ? "bg-warning text-dark" : invoice.InternalStatusId == "Completed" ? "bg-success text-white" : invoice.InternalStatusId == "Submitted" ? "bg-info text-white" : invoice.InternalStatusId == "Cancelled" ? "bg-warning text-dark" : "bg-secondary text-white")" style="@(invoice.InternalStatusId == "Valid" ? "background-color: #006948 !important" : invoice.InternalStatusId == "Submitted" ? "background-color: #6f42c1 !important" : "")">
+                                                            <span class="badge @(invoice.InternalStatusId == "Valid" ? "bg-success" : invoice.InternalStatusId == "ValidInternal" ? "bg-info" : invoice.InternalStatusId == "Draft" ? "bg-warning" : invoice.InternalStatusId == "Completed" ? "bg-success" : invoice.InternalStatusId == "Submitted" ? "bg-info" : invoice.InternalStatusId == "Cancelled" ? "bg-warning" : "bg-secondary")">
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusStr) ? EnumHelper.GetEnumDescription(internalStatusStr) : invoice.InternalStatusId)
                                                             </span>
                                                         }
