@@ -16,40 +16,32 @@
     var rejectionReasons = eInvWorld.Models.Document.RejectDocumentInput.GetReasons();
     var invoiceStatus = string.IsNullOrEmpty(Request.Query["LHDNStatus"]) ? "" : Request.Query["LHDNStatus"].ToString();
 
+    // Single Stitch-style tab row: All / Draft / Sent / Received (Buyers see only Received).
     var mainTabs = new List<(string Key, string Label)>();
 
     if (Model.UserType == "Buyer")
     {
-        // Buyer can only see "Received" invoices
-        mainTabs.Add(("Received", "Received e-Invoices"));
+        mainTabs.Add(("Received", "Received"));
     }
     else
     {
-        // Other users (e.g., Supplier) can see all tabs
         mainTabs = new List<(string Key, string Label)>
         {
-            ("Draft", "Draft e-Invoices"),
-            ("Sent", "Sent e-Invoices"),
-            ("Received", "Received e-Invoices")
+            ("All", "All Invoices"),
+            ("Draft", "Draft"),
+            ("Sent", "Sent"),
+            ("Received", "Received")
         };
-
     }
 
-    // 🔹 Define status filters dynamically
-    var statusFilters = new Dictionary<string, (string Icon, string Text, string Color)>
-    {
-        { "All", ("ri-store-2-fill", "All", "text-info") },
-        { "Submitted", ("ri-send-plane-line", "Submitted", "text-primary") },
-        { "Valid", ("ri-check-double-line", "Valid", "text-success") },
-        { "Invalid", ("ri-error-warning-line", "Invalid", "text-danger") },
-        { "Cancelled", ("ri-close-circle-line", "Cancelled", "text-warning") }
-    };
-
+    // LHDN statuses that make sense as a filter for the current tab — used to validate the
+    // LHDNStatus query value carried across tab switches (the filter itself lives in the filter card).
     var validStatuses = invoiceDirection switch
     {
-        "Sent" => new[] {"Submitted", "Valid", "Invalid", "Cancelled" }, // Sent: all statuses
-        "Received" => new[] {"Valid", "Cancelled" }, // Received: all, valid, cancelled
-        _ => new[] { "All" } // Default to "All" if other cases appear
+        "Sent" => new[] { "Submitted", "Valid", "Invalid", "Cancelled" },
+        "All" => new[] { "Submitted", "Valid", "Invalid", "Cancelled" },
+        "Received" => new[] { "Valid", "Cancelled" },
+        _ => Array.Empty<string>()
     };
 
     // Ensure status is valid for the selected invoiceDirection
@@ -83,14 +75,86 @@
             };
         }
 
-         string GetSortIcon(string columnName)
+        // Sort link that preserves every active filter (direction, search, dates, doc types,
+        // statuses, page size) and resets to page 1 — clicking a header no longer drops filters.
+        string SortUrl(string column)
         {
-            if (Model.SortBy == columnName)
+            var sb = new System.Text.StringBuilder("./InvoiceLists");
+            var sep = '?';
+            void Add(string key, string? value)
             {
-                return Model.SortOrder == "asc" ? "mdi mdi-arrow-up" : "mdi mdi-arrow-down";
+                if (string.IsNullOrEmpty(value)) return;
+                sb.Append(sep).Append(Uri.EscapeDataString(key)).Append('=').Append(Uri.EscapeDataString(value));
+                sep = '&';
             }
-            return "mdi mdi-swap-vertical"; // neutral icon
+            Add("invoiceDirection", Request.Query["invoiceDirection"]);
+            Add("searchQuery", Request.Query["searchQuery"]);
+            Add("submissionDateFrom", Request.Query["submissionDateFrom"]);
+            Add("submissionDateTo", Request.Query["submissionDateTo"]);
+            foreach (var docType in Request.Query["documentType"]) { Add("documentType", docType); }
+            Add("LHDNStatus", Request.Query["LHDNStatus"]);
+            Add("InternalStatus", Request.Query["InternalStatus"]);
+            Add("status", Request.Query["status"]);
+            Add("pageSize", Request.Query["pageSize"]);
+            Add("pageNo", "1");
+            Add("sortBy", column);
+            Add("sortOrder", Model.SortBy == column && Model.SortOrder == "asc" ? "desc" : "asc");
+            return sb.ToString();
         }
+
+        // Pager link that preserves every active filter and the current sort.
+        string PageUrl(int pageNo)
+        {
+            var sb = new System.Text.StringBuilder("./InvoiceLists");
+            var sep = '?';
+            void Add(string key, string? value)
+            {
+                if (string.IsNullOrEmpty(value)) return;
+                sb.Append(sep).Append(Uri.EscapeDataString(key)).Append('=').Append(Uri.EscapeDataString(value));
+                sep = '&';
+            }
+            Add("invoiceDirection", Request.Query["invoiceDirection"]);
+            Add("searchQuery", Request.Query["searchQuery"]);
+            Add("submissionDateFrom", Request.Query["submissionDateFrom"]);
+            Add("submissionDateTo", Request.Query["submissionDateTo"]);
+            foreach (var docType in Request.Query["documentType"]) { Add("documentType", docType); }
+            Add("LHDNStatus", Request.Query["LHDNStatus"]);
+            Add("InternalStatus", Request.Query["InternalStatus"]);
+            Add("status", Request.Query["status"]);
+            Add("sortBy", Request.Query["sortBy"]);
+            Add("sortOrder", Request.Query["sortOrder"]);
+            Add("pageSize", Request.Query["pageSize"]);
+            Add("pageNo", pageNo.ToString());
+            return sb.ToString();
+        }
+
+        string SortIcon(string column)
+        {
+            if (Model.SortBy == column)
+            {
+                return Model.SortOrder == "asc" ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line";
+            }
+            return "ri-arrow-up-down-line";
+        }
+
+        // Compact Stitch status badge classes: soft tinted background + solid semantic text.
+        string LhdnBadgeClass(string? statusId) => statusId switch
+        {
+            "Valid" => "einv-badge einv-badge-success",
+            "Submitted" => "einv-badge einv-badge-warning",
+            "Invalid" => "einv-badge einv-badge-danger",
+            "Cancelled" => "einv-badge einv-badge-danger",
+            _ => "einv-badge einv-badge-neutral"
+        };
+
+        string InternalBadgeClass(string? statusId) => statusId switch
+        {
+            "Valid" or "Completed" => "einv-badge einv-badge-success",
+            "Submitted" or "ValidInternal" => "einv-badge einv-badge-warning",
+            "Invalid" or "RequestReject" or "TransmissionError" => "einv-badge einv-badge-danger",
+            "Cancelled" or "CancelledInternal" => "einv-badge einv-badge-danger",
+            _ => "einv-badge einv-badge-neutral" // Draft & informational states
+        };
     }
 @if (TempData["DeleteMessage"] != null)
     {
@@ -147,87 +211,119 @@
     <p>Please wait while we fetch the latest updates. Do not close this page.</p>
 </div>
 
-<!-- Start page title (Stitch header: breadcrumb above, large title + description left) -->
+@{
+    var pageTitle = invoiceDirection switch
+    {
+        "Draft" => "Draft Invoices",
+        "Sent" => "Sent Invoices",
+        "Received" => "Received Invoices",
+        _ => "All Invoices"
+    };
+    var pageDescription = invoiceDirection switch
+    {
+        "Draft" => "Manage, validate and submit your pending documents.",
+        "Sent" => "Manage and track your outgoing documents delivered to buyers.",
+        "Received" => "Manage and track incoming documents from your suppliers.",
+        _ => "Track every document across drafts, sent and received in one place."
+    };
+    // Page actions per tab (Stitch): Refresh syncs from LHDN, so it is not shown on the
+    // local-only Draft tab; Create Invoice appears where new documents are started (All/Draft).
+    var showRefreshAction = invoiceDirection != "Draft";
+    var showCreateAction = Model.UserType == "Supplier" && !Model.IsViewOnly
+                           && (invoiceDirection == "All" || invoiceDirection == "Draft");
+    // Row selection exists where bulk actions exist (Draft/Sent/Received). The mixed-status All
+    // tab has no bulk actions, so it renders without the checkbox column.
+    var showSelection = !Model.IsViewOnly
+                        && (invoiceDirection == "Draft" || invoiceDirection == "Sent" || invoiceDirection == "Received");
+}
+
+<!-- Stitch page header: breadcrumb + title + description left, page actions right -->
 <div class="row">
     <div class="col-12">
-        <div class="page-title-box mb-3">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb m-0 mb-1">
-                    <li class="breadcrumb-item"><a href="/Dashboard/Dashboard">Dashboard</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Invoices</li>
-                </ol>
-            </nav>
-            <h1 class="einv-page-title mb-1">
-                @(Model.invoiceDirection == "Draft" ? "Draft Invoices" : Model.invoiceDirection == "Received" ? "Received Invoices" : Model.invoiceDirection == "Sent" ? "Sent Invoices" : "All Invoices")
-            </h1>
-            <p class="text-muted mb-0">
-                @(Model.invoiceDirection == "Received"
-                    ? "Manage and track incoming documents from your suppliers."
-                    : "Manage, track, and submit your e-invoices to LHDN MyInvois.")
-            </p>
+        <div class="page-title-box mb-3 d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
+            <div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb m-0 mb-1">
+                        <li class="breadcrumb-item"><a href="/Dashboard/Dashboard">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a asp-page="./InvoiceLists">Invoices</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">@pageTitle</li>
+                    </ol>
+                </nav>
+                <h1 class="einv-page-title mb-1">@pageTitle</h1>
+                <p class="text-muted mb-0">@pageDescription</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <!-- Filter Button (collapses/expands the inline filter card) -->
+                <button class="btn btn-outline-secondary d-flex align-items-center gap-1" data-bs-toggle="collapse"
+                        data-bs-target="#filterOffcanvas" aria-expanded="true" aria-controls="filterOffcanvas">
+                    <i class="ri-filter-line"></i> Filter
+                </button>
+
+                @if (showRefreshAction)
+                {
+                    <a asp-page="./InvoiceLists"
+                       asp-route-status="@Request.Query["status"]"
+                       asp-route-invoiceDirection="@Model.invoiceDirection"
+                       asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
+                       asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
+                       asp-route-refresh="true"
+                       class="btn btn-outline-secondary d-flex align-items-center gap-1"
+                       title="Refresh invoices from LHDN API"
+                       onclick="document.getElementById('refreshApiOverlay').style.display='flex';">
+                        <i class="ri-refresh-line"></i> Refresh from API
+                    </a>
+                }
+
+                <a class="btn btn-outline-secondary d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#exportModal">
+                    <i class="ri-file-download-line"></i> Export
+                </a>
+
+                <!-- Customize Columns Button -->
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1"
+                        data-bs-toggle="modal" data-bs-target="#columnSettingsModal"
+                        title="Customize column display" id="columnSettingsBtnMoved">
+                    <i class="ri-settings-3-line"></i> Customize
+                </button>
+
+                @if (showCreateAction)
+                {
+                    <a href="/Invoices/CreateInvoice" class="btn btn-primary d-flex align-items-center gap-1">
+                        <i class="ri-add-line align-bottom"></i> Create Invoice
+                    </a>
+                }
+            </div>
         </div>
     </div>
 </div>
 
-@await Html.PartialAsync("_HelpInstructions")
 
 
-<!-- Instructional Section (Collapsible) -->
-<!--<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">
-            <i class="ri-lightbulb-flash-line me-2"></i>How to Use the e-Invoice Actions
-        </h5>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#instructionCollapse">
-            <i class="ri-eye-off-line me-1"></i> Show Instructions
-        </button>
-    </div>
-    <div class="collapse" id="instructionCollapse">
-        <div class="card-body">
-            <ul class="mb-2">
-                <li>
-                    <b>Draft:</b> You can
-                    <i class="ri-pencil-fill text-primary me-1"></i><b>Edit</b>,
-                    <i class="ri-delete-bin-5-fill text-danger me-1"></i><b>Delete</b>,
-                    <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b>, or
-                    <i class="ri-send-plane-fill text-success me-1"></i><b>Submit</b> the e-invoice.
-                </li>
-                <li>
-                    <b>Valid:</b> You can
-                    <i class="ri-eye-fill text-primary me-1"></i><b>View</b>,
-                    <i class="ri-close-circle-fill text-danger me-1"></i><b>Cancel</b>,
-                    <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b>, or
-                    <i class="ri-download-2-line text-secondary me-1"></i><b>Download</b> the e-invoice.
-                </li>
-                <li>
-                    <b>Invalid:</b> You can
-                    <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b> the e-invoice after correction.
-                </li>
-                <li>
-                    <b>Cancelled:</b> You can
-                    <i class="ri-mail-send-fill text-info me-1"></i><b>Resend</b> the e-invoice if necessary.
-                </li>
-                <li>
-                    <b>Submitted:</b>
-                    <i class="ri-eye-fill text-primary me-1"></i>The e-invoice is <b>view-only</b>; no further actions can be taken.
-                </li>
-            </ul>
-            <p class="mb-0">Hover over action icons for quick tips, and check the <b>Status</b> column for more context.</p>
-        </div>
-    </div>
-</div>-->
-
-
+<!-- Main invoice tabs — single Stitch underline row (green underline on the active tab) -->
+<ul class="nav nav-tabs einv-invoice-tabs mb-3">
+    @foreach (var tab in mainTabs)
+    {
+        var isTabActive = invoiceDirection == tab.Key;
+        <li class="nav-item">
+            <a class="nav-link fw-semibold @(isTabActive ? "active" : "")"
+               asp-page="./InvoiceLists"
+               asp-route-invoiceDirection="@tab.Key"
+               asp-route-LHDNStatus="@(tab.Key == "Draft" ? null : (validStatuses.Contains(invoiceStatus) ? invoiceStatus : null))"
+               asp-route-status="@(tab.Key == "Draft" ? null : (validStatuses.Contains(invoiceStatus) ? invoiceStatus : null))">
+                @tab.Label
+            </a>
+        </li>
+    }
+</ul>
 
 <div class="row">
     <div class="col-lg-12">
-        <div class="card" id="documentList">
-            <!-- Inline filter bar (Stitch design) — same GET form + field names/ids the previous
+        <div id="documentList">
+            <!-- Inline filter card (Stitch design) — same GET form + field names/ids the previous
                  offcanvas carried (date-picker.js keys on #submissionDateRange), rendered as an
-                 always-visible row that the Filter button collapses/expands. -->
+                 always-visible card that the header Filter button collapses/expands. -->
             <div class="collapse show" id="filterOffcanvas">
-                <div class="card mb-0 border-0 shadow-none">
-                    <div class="card-body pb-0">
+                <div class="card mb-3">
+                    <div class="card-body pb-2">
                         <form method="get" action="./InvoiceLists">
                             <input type="hidden" name="invoiceDirection" value="@invoiceDirection" />
                             <input type="hidden" name="status" value="@invoiceStatus" />
@@ -308,59 +404,7 @@
                 </div>
             </div>
 
-            <div class="card-header border-0">
-                <div class="row align-items-center gy-3">
-                    <div class="col-sm">
-                        <h5 class="card-title mb-0"></h5>
-                    </div>
-                    <div class="col-sm-auto">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <!-- Filter Button (collapses/expands the inline filter bar) -->
-                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="collapse"
-                                    data-bs-target="#filterOffcanvas" aria-expanded="true" aria-controls="filterOffcanvas">
-                                <i class="ri-filter-line"></i> Filter
-                            </button>
-
-                            <!-- Refresh Button -->
-                            <a asp-page="./InvoiceLists"
-                               asp-route-status="@Request.Query["status"]"
-                               asp-route-invoiceDirection="@Model.invoiceDirection"
-                               asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
-                               asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
-                               asp-route-refresh="true"
-                               class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3"
-                               title="Refresh invoices from LHDN API"
-                               onclick="document.getElementById('refreshApiOverlay').style.display='flex';">
-                                <i class="ri-refresh-line fs-5"></i> Refresh from API
-                            </a>
-
-                            <!-- Create Invoice Button -->
-                            @if (Model.UserType == "Supplier" && !Model.IsViewOnly)
-                            {
-                                <a href="/Invoices/CreateInvoice" class="btn btn-primary d-flex align-items-center gap-1 px-3">
-                                    <i class="ri-add-line align-bottom"></i> Create e-Invoice
-                                </a>
-                            }
-
-                            <a class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3" data-bs-toggle="modal" data-bs-target="#exportModal">
-                                <i class="ri-file-download-line align-bottom me-1"></i> Export e-Invoice
-                            </a>
-
-                            <!-- Customize Columns Button -->
-                            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1 px-3 position-relative"
-                                    data-bs-toggle="modal" data-bs-target="#columnSettingsModal" 
-                                    title="Customize column display" id="columnSettingsBtnMoved">
-                                <i class="ri-settings-3-line"></i> Customize
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success" style="font-size: 0.6rem; padding: 0.15rem 0.3rem;">
-                                    <i class="ri-user-line" style="font-size: 0.5rem;"></i>
-                                </span>
-                            </button>
-
-                        </div>
-                    </div>
-                </div>
-
-                <input type="hidden" id="rejectionReasons" value='@Json.Serialize(rejectionReasons)' />
+            <input type="hidden" id="rejectionReasons" value='@Json.Serialize(rejectionReasons)' />
 
                 @* Bulk actions: floating dark bar shown while rows are selected (Stitch). The button
                    ids are unchanged — all existing bulk handlers keep working; visibility is driven
@@ -394,473 +438,106 @@
                     </div>
                 }
 
-            </div>
-
-            <div class="card-body pt-0">
+            <div>
                 <div>
-                    <!-- 🔹 Main Navigation Tabs (Draft → Sent → Received) — Stitch underline-tab style -->
-                    <ul class="nav nav-tabs nav-fill mb-3">
-                        @foreach (var tab in mainTabs)
-                        {
-                            var isActive = invoiceDirection == tab.Key;
-                            var activeClass = isActive ? "active" : "";
-
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold @activeClass"
-                                   asp-page="./InvoiceLists"
-                                   asp-route-invoiceDirection="@tab.Key"
-                                   asp-route-LHDNStatus="@(tab.Key == "Draft" ? null : (validStatuses.Contains(invoiceStatus) ? invoiceStatus : null))"
-                                   asp-route-status="@(tab.Key == "Draft" ? null : (validStatuses.Contains(invoiceStatus) ? invoiceStatus : null))">
-                                    @tab.Label
-                                </a>
-                            </li>
-                        }
-                    </ul>
-
-                    <!-- 🔹 Status Filter Tabs -->
-                    <ul class="nav nav-pills nav-pills-custom nav-success mb-3">
-                        @foreach (var status in statusFilters.Where(s => s.Key == "All" || validStatuses.Contains(s.Key)))
-                        {
-                            var isActive = (invoiceStatus == status.Key || (string.IsNullOrEmpty(invoiceStatus) && status.Key == "All"));
-                            var activeClass = isActive ? "active bg-light " + status.Value.Color + " border" : "text-dark";
-
-                            <li class="nav-item">
-                                <a class="nav-link @activeClass"
-                                   asp-page="./InvoiceLists"
-                                   asp-route-invoiceDirection="@invoiceDirection"
-                                   asp-route-LHDNStatus="@(validStatuses.Contains(status.Key) ? (status.Key == "All" ? null : status.Key) : null)"
-                                   asp-route-status="@(validStatuses.Contains(status.Key) ? (status.Key == "All" ? null : status.Key) : null)">
-                                    <i class="@status.Value.Icon me-1 align-bottom"></i> @status.Value.Text
-                                </a>
-                            </li>
-                        }
-                    </ul>
-
-                    @if (invoiceDirection == "Draft" && !Model.IsViewOnly)
-                    {
-                        <div class="alert alert-success d-flex align-items-start gap-2 border-0" role="note"
-                             style="background-color:#e9f5ee; color:#0c5434;">
-                            <i class="ri-lightbulb-flash-line fs-5 mt-1"></i>
-                            <div class="small">
-                                <b>Quick Tip:</b> Tick multiple draft rows and use <b>Submit to LHDN</b> to bulk-submit them.
-                                Each invoice is validated individually and, once accepted by LHDN, can only be cancelled within 72 hours.
-                            </div>
-                        </div>
-                    }
-
-                    @if (invoiceDirection == "Sent")
-                    {
-                        @* Dismissible how-to callout (Stitch Sent reference). Starts hidden; the inline
-                           script below reveals it unless the user dismissed it before (localStorage). *@
-                        <div class="alert d-none align-items-start gap-2 border-0" id="sentHelpCallout" role="note"
-                             style="background-color:#eaf6fd; color:#0b4a6f;">
-                            <i class="ri-information-line fs-5 mt-1" aria-hidden="true"></i>
-                            <div class="small flex-grow-1">
-                                <b>How to use Sent Invoices:</b> documents listed here have been submitted to LHDN and delivered
-                                to the buyer. Track validation in the <b>LHDN Status</b> column, or resend a document from its
-                                <b>Action</b> menu if the buyer has not received it.
-                            </div>
-                            <button type="button" class="btn-close mt-1" aria-label="Dismiss this tip"
-                                    onclick="try { localStorage.setItem('einv-sent-help-dismissed', '1'); } catch (e) { } this.closest('.alert').classList.add('d-none');"></button>
-                        </div>
-                        <script>
-                            (function () {
-                                try {
-                                    if (localStorage.getItem('einv-sent-help-dismissed') !== '1') {
-                                        var el = document.getElementById('sentHelpCallout');
-                                        if (el) { el.classList.remove('d-none'); el.classList.add('d-flex'); }
-                                    }
-                                } catch (e) { /* storage unavailable — keep the callout hidden */ }
-                            })();
-                        </script>
-                    }
+                        <div class="card mb-3">
                         <div class="tab-content">
                             <!-- All Tab Content -->
                             <div class="tab-pane fade show active" id="allTab" role="tabpanel">
 
-                                <!-- Enhanced Column Settings Button Styles -->
-                                <style>
-                                    #columnSettingsBtn {
-                                        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-                                        border: 1.5px solid #006948;
-                                        color: #006948;
-                                        font-weight: 500;
-                                        padding: 0.5rem 1rem;
-                                        border-radius: 8px;
-                                        box-shadow: 0 2px 4px rgba(58, 165, 100, 0.1);
-                                        transition: all 0.3s ease;
-                                        position: relative;
-                                        overflow: hidden;
-                                    }
-
-                                    #columnSettingsBtn:hover {
-                                        background: linear-gradient(135deg, #006948 0%, #187447 100%);
-                                        border-color: #187447;
-                                        color: #ffffff;
-                                        transform: translateY(-1px);
-                                        box-shadow: 0 4px 12px rgba(58, 165, 100, 0.25);
-                                    }
-
-                                    #columnSettingsBtn:active {
-                                        transform: translateY(0);
-                                        box-shadow: 0 2px 4px rgba(58, 165, 100, 0.15);
-                                    }
-
-                                    #columnSettingsBtn::before {
-                                        content: '';
-                                        position: absolute;
-                                        top: 0;
-                                        left: -100%;
-                                        width: 100%;
-                                        height: 100%;
-                                        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                                        transition: left 0.5s;
-                                    }
-
-                                    #columnSettingsBtn:hover::before {
-                                        left: 100%;
-                                    }
-
-                                    #columnSettingsBtn .badge {
-                                        animation: pulse 2s infinite;
-                                        background: linear-gradient(45deg, #006948, #187447) !important;
-                                    }
-
-                                    @@keyframes pulse {
-                                        0% { transform: translate(-50%, -50%) scale(1); }
-                                        50% { transform: translate(-50%, -50%) scale(1.1); }
-                                        100% { transform: translate(-50%, -50%) scale(1); }
-                                    }
-
-                                    /* Responsive design */
-                                    @@media (max-width: 768px) {
-                                        #columnSettingsBtn span:not(.badge) {
-                                            display: none;
-                                        }
-                                        #columnSettingsBtn {
-                                            padding: 0.4rem 0.8rem;
-                                        }
-                                    }
-
-                                    /* Enhanced Modal Styles */
-                                    .custom-checkbox:checked {
-                                        background-color: #006948;
-                                        border-color: #006948;
-                                    }
-
-                                    .custom-checkbox:focus {
-                                        border-color: #006948;
-                                        box-shadow: 0 0 0 0.2rem rgba(58, 165, 100, 0.25);
-                                    }
-
-                                    .hover-bg-light:hover {
-                                        background-color: rgba(58, 165, 100, 0.05) !important;
-                                    }
-
-                                    #columnSettingsModal .form-check-label {
-                                        cursor: pointer;
-                                        transition: color 0.2s ease;
-                                    }
-
-                                    #columnSettingsModal .form-check-label:hover {
-                                        color: #006948 !important;
-                                    }
-
-                                    #columnSettingsModal .modal-content {
-                                        border-radius: 12px;
-                                        overflow: hidden;
-                                    }
-
-                                    #invoiceTable {
-                                        table-layout: fixed;
-                                        /* Let the table exactly match the size of its columns, preventing stretch jumps */
-                                        width: max-content !important; 
-                                        min-width: 100%;
-                                        border-collapse: separate; 
-                                        border-spacing: 0;
-                                    }
-
-                                    #invoiceTable th {
-                                        /* CRITICAL: Stops padding from adding extra width when resizing */
-                                        box-sizing: border-box !important; 
-                                    }
-                                    .table-scroll .inner {
-                                        max-height: 65vh; /* Limits table height to 65% of screen */
-                                        overflow-y: auto;
-                                        overflow-x: auto;
-                                        position: relative;
-                                        border: 1px solid #e9ebec;
-                                        border-radius: 8px;
-                                        cursor: grab;
-                                    }
-                                    .table-scroll .inner.is-dragging {
-                                        cursor: grabbing !important;
-                                        user-select: none; /* Prevents text from turning blue while panning */
-                                    }
-                                    /* Ensure clickable items still show the pointer finger */
-                                    .table-scroll .inner a, 
-                                    .table-scroll .inner button, 
-                                    .table-scroll .inner input {
-                                        cursor: pointer;
-                                    }
-                                    /* Sticky Header so you don't lose context when scrolling down */
-                                    #invoiceTable thead th {
-                                        position: sticky !important;
-                                        top: 0 !important;
-                                        background-color: #f3f6f9 !important;
-                                        z-index: 11 !important;
-                                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                                        background-clip: padding-box;
-                                        white-space: nowrap;
-                                    }
-
-                                    /* Fix Z-Index intersection for top-left sticky headers */
-                                    #invoiceTable thead th.col-checkbox, 
-                                    #invoiceTable thead th.col-invoice-no {
-                                        z-index: 12 !important; /* Must be higher than normal sticky headers */
-                                    }
-
-                                    /* Sticky Left Columns */
-                                    #invoiceTable th.col-checkbox, #invoiceTable td.col-checkbox {
-                                        position: sticky !important;
-                                        left: 0 !important;
-                                        background: #fff !important;
-                                        z-index: 10;
-                                        border-right: 1px solid rgba(0,0,0,0.1) !important;
-                                        width: 40px;
-                                    }
-
-                                    #invoiceTable th.col-invoice-no, #invoiceTable td.col-invoice-no {
-                                        position: sticky !important;
-                                        left: 40px !important; /* Aligned next to checkbox */
-                                        background: #fff !important;
-                                        z-index: 9;
-                                        border-right: 1px solid rgba(0,0,0,0.2) !important;
-                                        box-shadow: 2px 0 5px rgba(0,0,0,0.05) !important;
-                                        width: 140px;
-                                    }
-
-                                    /* Smart Text Truncation for cells to prevent breaking layout */
-                                    #invoiceTable tbody td {
-                                        white-space: nowrap;
-                                        overflow: hidden;
-                                        text-overflow: ellipsis;
-                                        padding: 0.6rem 0.75rem; 
-                                    }
-
-                                    /* FIX: Allow the Action column to overflow its cell so the dropdown menu can be seen */
-                                    #invoiceTable tbody td.col-action {
-                                        overflow: visible !important; 
-                                    }
-
-                                    /* FIX: Ensure the dropdown menu has a high enough layer to float above the sticky headers/columns */
-                                    #invoiceTable .dropdown-menu {
-                                        z-index: 1050 !important;
-                                    }
-
-                                    /* --- Draggable Column Resizer Styles --- */
-                                    .col-resizer {
-                                        position: absolute;
-                                        top: 0;
-                                        right: 0;
-                                        width: 5px;
-                                        cursor: col-resize;
-                                        user-select: none;
-                                        height: 100%;
-                                        z-index: 15;
-                                        background-color: transparent;
-                                        transition: background-color 0.2s;
-                                    }
-                                    .col-resizer:hover, .col-resizer.resizing {
-                                        background-color: #006948; /* Highlight line when dragging */
-                                    }
-                                    #invoiceTable .col-checkbox { width: 40px; }
-                                    #invoiceTable .col-invoice-no { width: 120px; }
-                                    #invoiceTable .col-uuid { width: 200px; }
-                                    #invoiceTable .col-submission-id { width: 200px; }
-                                    #invoiceTable .col-supplier { width: 180px; }
-                                    #invoiceTable .col-buyer { width: 180px; }
-                                    #invoiceTable .col-submitted-date { width: 140px; }
-                                    #invoiceTable .col-document-type { width: 140px; }
-                                    #invoiceTable .col-total-amount { width: 120px; }
-                                    #invoiceTable .col-lhdn-status { width: 140px; }
-                                    #invoiceTable .col-internal-status { width: 160px; }
-                                    #invoiceTable .col-rejected-date { width: 160px; }
-                                    #invoiceTable .col-last-updated { width: 160px; }
-                                    #invoiceTable .col-created-by { width: 140px; }
-                                    #invoiceTable .col-action { width: 80px; }
-
-                                    /* Fix Sticky Column Positioning */
-                                    #invoiceTable th.col-checkbox, #invoiceTable td.col-checkbox {
-                                        position: sticky !important;
-                                        left: 0 !important;
-                                        background: #fff !important;
-                                        z-index: 10 !important;
-                                        border-right: 1px solid rgba(0,0,0,0.2) !important;
-                                        min-width: 30px !important;
-                                        padding-right: 8px !important;
-                                    }
-
-                                    #invoiceTable th.col-invoice-no, #invoiceTable td.col-invoice-no {
-                                        position: sticky !important;
-                                        left: 40px !important; /* <--- CHANGED FROM 48px to 40px to close the gap */
-                                        background: #fff !important; /* This solid white background hides scrolling text */
-                                        z-index: 9 !important;
-                                        border-right: 1px solid rgba(0,0,0,0.2) !important;
-                                        box-shadow: 2px 0 5px rgba(0,0,0,0.1) !important;
-                                        padding-left: 12px !important;
-                                        padding-right: 8px !important;
-                                    }
-                                </style>
+                                
                                 
                                 <!-- Enhanced Scrollable Table Container -->
                                 <div class="table-scroll at-left">
                                     <div class="inner" style="overflow-x: auto; width: 100%;">
                                         <table class="table table-nowrap align-middle table-hover mb-0" id="invoiceTable">
-                                        <thead class="text-muted">
+                                        <thead class="einv-table-head">
                                         <tr>
-                                            <th class="col-checkbox"><input type="checkbox" id="selectAll" /></th>
+                                            @if (showSelection)
+                                            {
+                                                <th class="col-checkbox"><input type="checkbox" id="selectAll" aria-label="Select all invoices" /></th>
+                                            }
 
-                                            @* Invoice No *@
-                                            <th class="col-invoice-no sortable" data-sort="text">
-                                                <a asp-route-sortBy="InvoiceNo"
-                                                   asp-route-sortOrder="@(Model.SortBy == "InvoiceNo" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   asp-route-pageNumber="1"
-                                                   asp-route-pageSize="@Request.Query["pageSize"]"
-                                                   asp-route-searchTerm="@Request.Query["searchTerm"]"
-                                                   asp-route-supplierName="@Request.Query["supplierName"]"
-                                                   asp-route-customerName="@Request.Query["customerName"]"
-                                                   asp-route-invoiceNo="@Request.Query["invoiceNo"]"
-                                                   asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
-                                                   asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
-                                                   asp-route-documentType="@Request.Query["documentType"]"
-                                                   asp-route-LHDNStatus="@Request.Query["LHDNStatus"]"
-                                                   asp-route-InternalStatus="@Request.Query["InternalStatus"]"
-                                                   asp-route-invoiceDirection="@Request.Query["invoiceDirection"]"
-                                                   class="@(Model.SortBy == "InvoiceNo" ? "text-primary fw-semibold" : "")">
-                                                    e-Invoice No
-                                                    <i class="ri-arrow-@(Model.SortBy == "InvoiceNo" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
+                                            <th class="col-invoice-no">
+                                                <a href="@SortUrl("InvoiceNo")" class="@(Model.SortBy == "InvoiceNo" ? "text-primary fw-semibold" : "")">
+                                                    Invoice # <i class="@SortIcon("InvoiceNo") sort-indicator"></i>
                                                 </a>
                                             </th>
 
+                                            <th class="col-document-type">
+                                                <a href="@SortUrl("DocumentType")" class="@(Model.SortBy == "DocumentType" ? "text-primary fw-semibold" : "")">
+                                                    Type <i class="@SortIcon("DocumentType") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-supplier">
+                                                <a href="@SortUrl("SupplierName")" class="@(Model.SortBy == "SupplierName" ? "text-primary fw-semibold" : "")">
+                                                    Supplier <i class="@SortIcon("SupplierName") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-buyer">
+                                                <a href="@SortUrl("CustomerName")" class="@(Model.SortBy == "CustomerName" ? "text-primary fw-semibold" : "")">
+                                                    Buyer <i class="@SortIcon("CustomerName") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-submitted-date">
+                                                <a href="@SortUrl("IssueDate")" class="@(Model.SortBy == "IssueDate" ? "text-primary fw-semibold" : "")">
+                                                    Date <i class="@SortIcon("IssueDate") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-total-amount text-end">
+                                                <a href="@SortUrl("TotalAmount")" class="@(Model.SortBy == "TotalAmount" ? "text-primary fw-semibold" : "")">
+                                                    Total <i class="@SortIcon("TotalAmount") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-internal-status">
+                                                <a href="@SortUrl("InternalStatus")" class="@(Model.SortBy == "InternalStatus" ? "text-primary fw-semibold" : "")">
+                                                    Internal Status <i class="@SortIcon("InternalStatus") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-lhdn-status">
+                                                <a href="@SortUrl("LHDNStatus")" class="@(Model.SortBy == "LHDNStatus" ? "text-primary fw-semibold" : "")">
+                                                    LHDN Status <i class="@SortIcon("LHDNStatus") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
+                                            <th class="col-created-by">Created By</th>
+
                                             @if (invoiceDirection != "Draft")
                                             {
-                                                @* UUID *@
-                                                <th class="col-uuid sortable" data-sort="text">
-                                                    <a asp-route-sortBy="UUID"
-                                                       asp-route-sortOrder="@(Model.SortBy == "UUID" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                       class="@(Model.SortBy == "UUID" ? "text-primary fw-semibold" : "")">
-                                                        UUID
-                                                        <i class="ri-arrow-@(Model.SortBy == "UUID" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
+                                                @* Technical metadata — hidden by default, available via Customize *@
+                                                <th class="col-uuid">
+                                                    <a href="@SortUrl("UUID")" class="@(Model.SortBy == "UUID" ? "text-primary fw-semibold" : "")">
+                                                        UUID <i class="@SortIcon("UUID") sort-indicator"></i>
                                                     </a>
                                                 </th>
-                                                
-                                                @* Submission ID *@
-                                                <th class="col-submission-id sortable" data-sort="text">
-                                                    <a asp-route-sortBy="SubmissionId"
-                                                       asp-route-sortOrder="@(Model.SortBy == "SubmissionId" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                       class="@(Model.SortBy == "SubmissionId" ? "text-primary fw-semibold" : "")">
-                                                        Submission ID
-                                                        <i class="ri-arrow-@(Model.SortBy == "SubmissionId" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
+                                                <th class="col-submission-id">
+                                                    <a href="@SortUrl("SubmissionId")" class="@(Model.SortBy == "SubmissionId" ? "text-primary fw-semibold" : "")">
+                                                        Submission ID <i class="@SortIcon("SubmissionId") sort-indicator"></i>
                                                     </a>
                                                 </th>
                                             }
 
-                                            @* Supplier Name *@
-                                            <th class="col-supplier sortable" data-sort="text">
-                                                <a asp-route-sortBy="SupplierName"
-                                                   asp-route-sortOrder="@(Model.SortBy == "SupplierName" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "SupplierName" ? "text-primary fw-semibold" : "")">
-                                                    Supplier Name
-                                                    <i class="ri-arrow-@(Model.SortBy == "SupplierName" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
+                                            <th class="col-rejected-date">
+                                                <a href="@SortUrl("RejectedDate")" class="@(Model.SortBy == "RejectedDate" ? "text-primary fw-semibold" : "")">
+                                                    Rejected Date <i class="@SortIcon("RejectedDate") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            @* Buyer Name *@
-                                            <th class="col-buyer sortable" data-sort="text">
-                                                <a asp-route-sortBy="CustomerName"
-                                                   asp-route-sortOrder="@(Model.SortBy == "CustomerName" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "CustomerName" ? "text-primary fw-semibold" : "")">
-                                                    Buyer Name
-                                                    <i class="ri-arrow-@(Model.SortBy == "CustomerName" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
+                                            <th class="col-last-updated">
+                                                <a href="@SortUrl("UpdatedDate")" class="@(Model.SortBy == "UpdatedDate" ? "text-primary fw-semibold" : "")">
+                                                    Last Updated <i class="@SortIcon("UpdatedDate") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            @* Submitted Date *@
-                                            <th class="col-submitted-date sortable" data-sort="date">
-                                                <a asp-route-sortBy="IssueDate"
-                                                   asp-route-sortOrder="@(Model.SortBy == "IssueDate" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "IssueDate" ? "text-primary fw-semibold" : "")">
-                                                    Submitted Date
-                                                    <i class="ri-arrow-@(Model.SortBy == "IssueDate" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-
-                                            @* Document Type *@
-                                            <th class="col-document-type d-none d-md-table-cell sortable" data-sort="text">
-                                                <a asp-route-sortBy="DocumentType"
-                                                   asp-route-sortOrder="@(Model.SortBy == "DocumentType" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "DocumentType" ? "text-primary fw-semibold" : "")">
-                                                    Document Type
-                                                    <i class="ri-arrow-@(Model.SortBy == "DocumentType" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-
-                                            @* Total Amount *@
-                                            <th class="col-total-amount sortable text-end" data-sort="number">
-                                                <a asp-route-sortBy="TotalAmount"
-                                                   asp-route-sortOrder="@(Model.SortBy == "TotalAmount" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "TotalAmount" ? "text-primary fw-semibold" : "")">
-                                                    Total Amount
-                                                    <i class="ri-arrow-@(Model.SortBy == "TotalAmount" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-
-                                            @* LHDN Status *@
-                                            <th class="col-lhdn-status sortable" data-sort="status">
-                                                <a asp-route-sortBy="LHDNStatus"
-                                                   asp-route-sortOrder="@(Model.SortBy == "LHDNStatus" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "LHDNStatus" ? "text-primary fw-semibold" : "")">
-                                                    LHDN Status
-                                                    <i class="ri-arrow-@(Model.SortBy == "LHDNStatus" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-                                            
-                                            @* Internal Status *@
-                                            <th class="col-internal-status sortable" data-sort="status">
-                                                <a asp-route-sortBy="InternalStatus"
-                                                   asp-route-sortOrder="@(Model.SortBy == "InternalStatus" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "InternalStatus" ? "text-primary fw-semibold" : "")">
-                                                    Internal Status
-                                                    <i class="ri-arrow-@(Model.SortBy == "InternalStatus" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-                                            
-                                            @* Rejected Date *@
-                                            <th class="col-rejected-date d-none d-xl-table-cell sortable" data-sort="date">
-                                                <a asp-route-sortBy="RejectedDate"
-                                                   asp-route-sortOrder="@(Model.SortBy == "RejectedDate" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "RejectedDate" ? "text-primary fw-semibold" : "")">
-                                                    Rejected Date
-                                                    <i class="ri-arrow-@(Model.SortBy == "RejectedDate" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-                                            
-                                            @* Last Updated *@
-                                            <th class="col-last-updated d-none d-lg-table-cell sortable" data-sort="date">
-                                                <a asp-route-sortBy="UpdatedDate"
-                                                   asp-route-sortOrder="@(Model.SortBy == "UpdatedDate" && Model.SortOrder == "asc" ? "desc" : "asc")"
-                                                   class="@(Model.SortBy == "UpdatedDate" ? "text-primary fw-semibold" : "")">
-                                                    Last Updated
-                                                    <i class="ri-arrow-@(Model.SortBy == "UpdatedDate" ? (Model.SortOrder == "asc" ? "up-s" : "down-s") : "up-down")-line sort-indicator"></i>
-                                                </a>
-                                            </th>
-
-                                            @* Created By *@
-                                            <th class="col-created-by d-none d-xl-table-cell">Created By</th>
                                             @if (!Model.IsViewOnly)
                                             {
-                                                <th class="col-action">Action</th>
+                                                <th class="col-action text-end">Action</th>
                                             }
                                         </tr>
                                     </thead>
@@ -877,67 +554,45 @@
                                                         ? (invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN) 
                                                         : invoice.Supplier?.TIN);
 
-                                                <tr id="row-@invoice.InvoiceNo">
-                                                    <td class="col-checkbox">
-                                                        <input type="checkbox" class="invoice-checkbox" value="@invoice.UUID" data-invoiceno="@invoice.InvoiceNo" data-tin="@submittingTin">
-                                                    </td>
-                                                    @* <td>@invoice.InvoiceNo</td> *@
-                                                    <td class="col-invoice-no">
+                                                <tr id="row-@invoice.InvoiceNo" data-invoiceno="@invoice.InvoiceNo">
+                                                    @if (showSelection)
+                                                    {
+                                                        <td class="col-checkbox">
+                                                            <input type="checkbox" class="invoice-checkbox" value="@invoice.UUID" data-invoiceno="@invoice.InvoiceNo" data-tin="@submittingTin" aria-label="Select invoice @invoice.InvoiceNo">
+                                                        </td>
+                                                    }
+                                                    <td class="col-invoice-no" data-label="Invoice #">
                                                         <a asp-page="./InvoiceDetails2"
                                                            asp-route-uuid="@(invoiceDirection == "Draft" ? invoice.InvoiceNo : invoice.UUID)"
-                                                           class="fw-medium link-primary">
+                                                           class="fw-semibold link-primary">
                                                             @invoice.InvoiceNo
                                                         </a>
                                                     </td>
-                                                    @if (invoiceDirection != "Draft") // Hide UUID & Submission ID for Draft
-                                                    {
-                                                        <td class="col-uuid truncate" title="@invoice.UUID"><a asp-page="./InvoiceDetails2" asp-route-uuid="@invoice.UUID" class="fw-medium link-primary">@invoice.UUID</a></td>
-                                                        <td class="col-submission-id truncate" title="@invoice.SubmissionID">@invoice.SubmissionID</td>
-                                                    }
-                                                    <td class="col-supplier truncate" title="@(invoice.Supplier != null ? invoice.Supplier.CompanyName : "N/A")">@(invoice.Supplier != null ? invoice.Supplier.CompanyName : "N/A")</td>
-                                                    <td class="col-buyer truncate"
-                                                        title="@(invoice.Customer != null 
-                                                                    ? invoice.Customer.CompanyName 
-                                                                    : invoice.PublicCustomer != null 
-                                                                        ? invoice.PublicCustomer.CompanyName 
-                                                                        : "N/A")">
-                                                        @(invoice.Customer != null 
-                                                            ? invoice.Customer.CompanyName 
-                                                            : invoice.PublicCustomer != null 
-                                                                ? invoice.PublicCustomer.CompanyName 
-                                                                : "N/A")
-                                                    </td>
-                                                    <td class="col-submitted-date">@invoice.IssueDate?.ToString("yyyy-MM-dd"), <small>@invoice.IssueDate?.ToString("hh:mm tt")</small></td>
-                                                    <td class="col-document-type d-none d-md-table-cell">
+                                                    <td class="col-document-type" data-label="Type">
                                                         @(DocumentTypeDisplay.GetDisplayNames()
                                                             .FirstOrDefault(x => ((int)x.Key).ToString("D2") == invoice.DocTypeCode).Value ?? invoice.DocTypeCode)
                                                     </td>
-                                                    <td class="col-total-amount text-center">@invoice.TotalAmountIncTax?.ToString("F2")</td>
-                                                    <td class="col-lhdn-status text-center">
-                                                        @if (invoice.LHDNStatusId == "Invalid")
-                                                        {
-                                                            <button type="button" class="badge bg-danger text-white border-0 py-1 px-2 shadow-sm" 
-                                                                    data-invoiceno="@invoice.InvoiceNo"
-                                                                    data-uuid="@invoice.UUID"
-                                                                    data-submissionid="@invoice.SubmissionID"
-                                                                    data-tin="@submittingTin"
-                                                                    data-reason="@invoice.RejectedReason"
-                                                                    onclick="showInvalidReason(this)"
-                                                                    title="Click to view Invalid Reason & Suggested Fix">
-                                                                <i class="ri-error-warning-line align-middle me-1"></i> Invalid
-                                                            </button>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge @(invoice.LHDNStatusId == "Valid" ? "bg-success" : invoice.LHDNStatusId == "Cancelled" ? "bg-warning" : invoice.LHDNStatusId == "Submitted" ? "bg-info" : "bg-dark")">
-                                                                @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.LHDNStatusId, out var lhdnStatus) ? EnumHelper.GetEnumDescription(lhdnStatus) : invoice.LHDNStatusId)
-                                                            </span>
-                                                        }
+                                                    <td class="col-supplier truncate" data-label="Supplier" title="@(invoice.Supplier != null ? invoice.Supplier.CompanyName : "N/A")">@(invoice.Supplier != null ? invoice.Supplier.CompanyName : "N/A")</td>
+                                                    <td class="col-buyer truncate" data-label="Buyer"
+                                                        title="@(invoice.Customer != null
+                                                                    ? invoice.Customer.CompanyName
+                                                                    : invoice.PublicCustomer != null
+                                                                        ? invoice.PublicCustomer.CompanyName
+                                                                        : "N/A")">
+                                                        @(invoice.Customer != null
+                                                            ? invoice.Customer.CompanyName
+                                                            : invoice.PublicCustomer != null
+                                                                ? invoice.PublicCustomer.CompanyName
+                                                                : "N/A")
                                                     </td>
-                                                    <td class="col-internal-status text-center">
+                                                    <td class="col-submitted-date" data-label="Date">@invoice.IssueDate?.ToString("yyyy-MM-dd") <small class="text-muted">@invoice.IssueDate?.ToString("hh:mm tt")</small></td>
+                                                    <td class="col-total-amount text-end fw-semibold" data-label="Total">
+                                                        @invoice.TotalAmountIncTax?.ToString("N2") <small class="text-muted fw-normal">@invoice.Currency</small>
+                                                    </td>
+                                                    <td class="col-internal-status" data-label="Internal Status">
                                                         @if (invoice.InternalStatusId == "Invalid" || invoice.InternalStatusId == "RequestReject")
                                                         {
-                                                            <button type="button" class="badge bg-danger text-white border-0 py-1 px-2 shadow-sm" 
+                                                            <button type="button" class="einv-badge einv-badge-danger border-0"
                                                                     data-invoiceno="@invoice.InvoiceNo"
                                                                     data-uuid="@invoice.UUID"
                                                                     data-submissionid="@invoice.SubmissionID"
@@ -945,35 +600,83 @@
                                                                     data-reason="@invoice.RejectedReason"
                                                                     onclick="showInvalidReason(this)"
                                                                     title="Click to view details">
-                                                                <i class="ri-error-warning-line align-middle me-1"></i> 
+                                                                <i class="ri-error-warning-line"></i>
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusRej) ? EnumHelper.GetEnumDescription(internalStatusRej) : invoice.InternalStatusId)
                                                             </button>
                                                         }
                                                         else
                                                         {
-                                                            <span class="badge @(invoice.InternalStatusId == "Valid" ? "bg-success" : invoice.InternalStatusId == "ValidInternal" ? "bg-info" : invoice.InternalStatusId == "Draft" ? "bg-warning" : invoice.InternalStatusId == "Completed" ? "bg-success" : invoice.InternalStatusId == "Submitted" ? "bg-info" : invoice.InternalStatusId == "Cancelled" ? "bg-warning" : "bg-secondary")">
+                                                            var internalIcon = invoice.InternalStatusId switch
+                                                            {
+                                                                "Valid" or "Completed" => "ri-checkbox-circle-line",
+                                                                "Submitted" or "ValidInternal" => "ri-time-line",
+                                                                "Cancelled" or "CancelledInternal" => "ri-close-circle-line",
+                                                                _ => null
+                                                            };
+                                                            <span class="@InternalBadgeClass(invoice.InternalStatusId)">
+                                                                @if (internalIcon != null)
+                                                                {
+                                                                    <i class="@internalIcon"></i>
+                                                                }
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusStr) ? EnumHelper.GetEnumDescription(internalStatusStr) : invoice.InternalStatusId)
                                                             </span>
                                                         }
                                                     </td>
-                                                    <td class="col-rejected-date d-none d-xl-table-cell">
+                                                    <td class="col-lhdn-status" data-label="LHDN Status">
+                                                        @if (invoice.LHDNStatusId == "Invalid")
+                                                        {
+                                                            <button type="button" class="einv-badge einv-badge-danger border-0"
+                                                                    data-invoiceno="@invoice.InvoiceNo"
+                                                                    data-uuid="@invoice.UUID"
+                                                                    data-submissionid="@invoice.SubmissionID"
+                                                                    data-tin="@submittingTin"
+                                                                    data-reason="@invoice.RejectedReason"
+                                                                    onclick="showInvalidReason(this)"
+                                                                    title="Click to view Invalid Reason & Suggested Fix">
+                                                                <i class="ri-error-warning-line"></i> Invalid
+                                                            </button>
+                                                        }
+                                                        else
+                                                        {
+                                                            var lhdnIcon = invoice.LHDNStatusId switch
+                                                            {
+                                                                "Valid" => "ri-checkbox-circle-line",
+                                                                "Submitted" => "ri-time-line",
+                                                                "Cancelled" => "ri-close-circle-line",
+                                                                _ => null
+                                                            };
+                                                            <span class="@LhdnBadgeClass(invoice.LHDNStatusId)">
+                                                                @if (lhdnIcon != null)
+                                                                {
+                                                                    <i class="@lhdnIcon"></i>
+                                                                }
+                                                                @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.LHDNStatusId, out var lhdnStatus) ? EnumHelper.GetEnumDescription(lhdnStatus) : invoice.LHDNStatusId)
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                    <td class="col-created-by truncate" data-label="Created By" title="@invoice.CreatedBy">@invoice.CreatedBy</td>
+                                                    @if (invoiceDirection != "Draft")
+                                                    {
+                                                        <td class="col-uuid truncate" data-label="UUID" title="@invoice.UUID"><a asp-page="./InvoiceDetails2" asp-route-uuid="@invoice.UUID" class="fw-medium link-primary">@invoice.UUID</a></td>
+                                                        <td class="col-submission-id truncate" data-label="Submission ID" title="@invoice.SubmissionID">@invoice.SubmissionID</td>
+                                                    }
+                                                    <td class="col-rejected-date" data-label="Rejected Date">
                                                         @if (invoice.RejectedTimestamp.HasValue)
                                                         {
-                                                            @invoice.RejectedTimestamp?.ToString("yyyy-MM-dd") <small>@invoice.RejectedTimestamp?.ToString("hh:mm tt")</small>
+                                                            @invoice.RejectedTimestamp?.ToString("yyyy-MM-dd") <small class="text-muted">@invoice.RejectedTimestamp?.ToString("hh:mm tt")</small>
                                                         }
                                                     </td>
-                                                    <td class="col-last-updated d-none d-lg-table-cell">
+                                                    <td class="col-last-updated" data-label="Last Updated">
                                                         @if (invoice.LastUpdated.HasValue)
                                                         {
-                                                            @invoice.LastUpdated?.ToString("yyyy-MM-dd") <small>@invoice.LastUpdated?.ToString("hh:mm tt")</small>
+                                                            @invoice.LastUpdated?.ToString("yyyy-MM-dd") <small class="text-muted">@invoice.LastUpdated?.ToString("hh:mm tt")</small>
                                                         }
                                                     </td>
-                                                    <td class="col-created-by d-none d-xl-table-cell truncate" title="@invoice.CreatedBy">@invoice.CreatedBy</td>
                                                     @if (!Model.IsViewOnly)
                                                     {
                                                     <td class="col-action text-end">
                                                         <div class="dropdown">
-                                                            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Invoice actions">
                                                                 <i class="ri-more-2-fill"></i>
                                                             </button>
                                                             <ul class="dropdown-menu shadow-lg">
@@ -1107,7 +810,10 @@
                                         else
                                         {
                                             <tr>
-                                                <td class="text-center">No e-invoices found.</td>
+                                                <td colspan="14" class="text-center py-5 text-muted">
+                                                    <i class="ri-file-list-3-line d-block mb-2" style="font-size:2rem;" aria-hidden="true"></i>
+                                                    No e-invoices found for the current filters.
+                                                </td>
                                             </tr>
                                         }
                                         </tbody>
@@ -1118,68 +824,67 @@
                     </div> 
                                     
                     @{
-                        // "Showing X to Y of Z" range for the current page (Stitch table footer).
+                        // Stitch table footer: result count (left) + compact numbered pager (right).
                         var footerTotal = Model.Metadata?.totalCount ?? 0;
+                        var footerTotalPages = Math.Max(1, Model.Metadata?.totalPages ?? 1);
                         var footerPageNo = Math.Max(1, Model.SearchInput?.pageNo ?? 1);
                         var footerPageSize = Math.Max(1, Model.SearchInput?.pageSize ?? 25);
                         var footerFrom = footerTotal == 0 ? 0 : ((footerPageNo - 1) * footerPageSize) + 1;
                         var footerTo = Math.Min(footerTotal, footerPageNo * footerPageSize);
+
+                        // Compact page window: 1 … (p-1) p (p+1) … N
+                        var pagerPages = new List<int>();
+                        for (var p = 1; p <= footerTotalPages; p++)
+                        {
+                            if (p == 1 || p == footerTotalPages || Math.Abs(p - footerPageNo) <= 1)
+                            {
+                                pagerPages.Add(p);
+                            }
+                        }
                     }
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-                        <!-- Page Size Selector -->
-                        <div class="d-flex align-items-center">
-                            <label for="pageSizeSelect" class="form-label me-2 mb-0">Show:</label>
-                            <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
-                                <option value="10" selected="@(Model.SearchInput?.pageSize == 10)">10</option>
-                                <option value="25" selected="@(Model.SearchInput?.pageSize == 25)">25</option>
-                                <option value="50" selected="@(Model.SearchInput?.pageSize == 50)">50</option>
-                                <option value="100" selected="@(Model.SearchInput?.pageSize == 100)">100</option>
-                            </select>
-                            <span class="ms-2 text-muted">entries</span>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-3 border-top">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <span class="text-muted small" aria-live="polite">
+                                Showing @footerFrom&ndash;@footerTo of @footerTotal.ToString("N0") results
+                            </span>
+                            <div class="d-flex align-items-center">
+                                <label for="pageSizeSelect" class="form-label me-2 mb-0 small text-muted">Show</label>
+                                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                                    <option value="10" selected="@(Model.SearchInput?.pageSize == 10)">10</option>
+                                    <option value="25" selected="@(Model.SearchInput?.pageSize == 25)">25</option>
+                                    <option value="50" selected="@(Model.SearchInput?.pageSize == 50)">50</option>
+                                    <option value="100" selected="@(Model.SearchInput?.pageSize == 100)">100</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <span class="text-muted small" aria-live="polite">
-                            Showing @footerFrom&ndash;@footerTo of @footerTotal.ToString("N0") results
-                        </span>
-
-                        <div class="pagination-wrap hstack gap-2">
-                            @if (Model.SearchInput?.pageNo > 1)
-                            {
-                                <a class="page-item pagination-prev"
-                                   asp-page="./InvoiceLists"
-                                   asp-route-pageNo="@(Model.SearchInput.pageNo - 1)"
-                                   asp-route-pageSize="@(Model.SearchInput.pageSize)"
-                                   asp-route-searchQuery="@Model.SearchInput?.searchQuery"
-                                   asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
-                                   asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
-                                   asp-route-documentType="@Request.Query["documentType"]"
-                                   asp-route-LHDNStatus="@Request.Query["LHDNStatus"]"
-                                   asp-route-InternalStatus="@Request.Query["InternalStatus"]"
-                                   asp-route-sortBy="@Request.Query["sortBy"]"
-                                   asp-route-sortOrder="@Request.Query["sortOrder"]"
-                                   asp-route-invoiceDirection="@invoiceDirection">
-                                    Previous
-                                </a>
-                            }
-                            @if (Model.SearchInput?.pageNo < Model.Metadata?.totalPages)
-                            {
-                                <a class="page-item pagination-next"
-                                   asp-page="./InvoiceLists"
-                                   asp-route-pageNo="@(Model.SearchInput.pageNo + 1)"
-                                   asp-route-pageSize="@(Model.SearchInput.pageSize)"
-                                   asp-route-searchQuery="@Model.SearchInput?.searchQuery"
-                                   asp-route-submissionDateFrom="@Request.Query["submissionDateFrom"]"
-                                   asp-route-submissionDateTo="@Request.Query["submissionDateTo"]"
-                                   asp-route-documentType="@Request.Query["documentType"]"
-                                   asp-route-LHDNStatus="@Request.Query["LHDNStatus"]"
-                                   asp-route-InternalStatus="@Request.Query["InternalStatus"]"
-                                   asp-route-sortBy="@Request.Query["sortBy"]"
-                                   asp-route-sortOrder="@Request.Query["sortOrder"]"
-                                   asp-route-invoiceDirection="@invoiceDirection">
-                                    Next
-                                </a>
-                            }
-                        </div>
+                        <nav aria-label="Invoice list pages">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(footerPageNo <= 1 ? "disabled" : "")">
+                                    <a class="page-link" href="@(footerPageNo <= 1 ? "#" : PageUrl(footerPageNo - 1))" aria-label="Previous page">
+                                        <i class="ri-arrow-left-s-line" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                                @{ var lastRendered = 0; }
+                                @foreach (var p in pagerPages)
+                                {
+                                    if (lastRendered > 0 && p - lastRendered > 1)
+                                    {
+                                        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                    }
+                                    <li class="page-item @(p == footerPageNo ? "active" : "")" @(p == footerPageNo ? Html.Raw("aria-current=\"page\"") : null)>
+                                        <a class="page-link" href="@PageUrl(p)">@p</a>
+                                    </li>
+                                    lastRendered = p;
+                                }
+                                <li class="page-item @(footerPageNo >= footerTotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="@(footerPageNo >= footerTotalPages ? "#" : PageUrl(footerPageNo + 1))" aria-label="Next page">
+                                        <i class="ri-arrow-right-s-line" aria-hidden="true"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
                     </div>
 
                     @{
@@ -1545,36 +1250,7 @@
     <script src="~/js/enhanced-table-scroll.js"></script>
     <script>
     document.addEventListener("DOMContentLoaded", function () {
-        initResizableColumns();
-        initDragToScroll();
         initDoubleClickToCopy();
-        const toggleBtn = document.querySelector('[data-bs-target="#instructionCollapse"]');
-        const collapseEl = document.getElementById("instructionCollapse");
-
-        if (!toggleBtn || !collapseEl) return;
-
-        const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
-
-        collapseEl.addEventListener('show.bs.collapse', () => {
-            toggleBtn.innerHTML = `<i class="ri-eye-line me-1"></i> Hide Instructions`;
-        });
-
-        collapseEl.addEventListener('hide.bs.collapse', () => {
-            toggleBtn.innerHTML = `<i class="ri-eye-off-line me-1"></i> Show Instructions`;
-        });
-
-        const storageKey = "invoiceHelpVisible";
-        if (localStorage.getItem(storageKey) === "true") {
-            bsCollapse.show();
-        }
-
-        collapseEl.addEventListener("shown.bs.collapse", () => {
-            localStorage.setItem(storageKey, "true");
-        });
-
-        collapseEl.addEventListener("hidden.bs.collapse", () => {
-            localStorage.setItem(storageKey, "false");
-        });
     });
     function initDoubleClickToCopy() {
         const table = document.getElementById('invoiceTable');
@@ -1582,7 +1258,7 @@
 
         table.addEventListener('dblclick', function(e) {
             // 1. Ignore if the user clicked a link, button, input, or the column resizer
-            if (e.target.closest('a') || e.target.closest('button') || e.target.closest('input') || e.target.classList.contains('col-resizer')) {
+            if (e.target.closest('a') || e.target.closest('button') || e.target.closest('input')) {
                 return; 
             }
 
@@ -1620,131 +1296,6 @@
             });
         });
     }
-    function initDragToScroll() {
-    const slider = document.querySelector('.table-scroll .inner');
-    if (!slider) return;
-
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-
-    slider.addEventListener('mousedown', (e) => {
-        // CRITICAL: Ignore the drag if the user is clicking a link, button, checkbox, dropdown, or our column resizer!
-        if (e.target.closest('a, button, input, .dropdown-menu, .col-resizer, .form-check')) {
-            return;
-        }
-
-        isDown = true;
-        slider.classList.add('is-dragging');
-        
-        // Calculate the starting position
-        startX = e.pageX - slider.offsetLeft;
-        scrollLeft = slider.scrollLeft;
-    });
-
-    slider.addEventListener('mouseleave', () => {
-        isDown = false;
-        slider.classList.remove('is-dragging');
-    });
-
-    slider.addEventListener('mouseup', () => {
-        isDown = false;
-        slider.classList.remove('is-dragging');
-    });
-
-    slider.addEventListener('mousemove', (e) => {
-        if (!isDown) return;
-        
-        e.preventDefault(); // Stop default browser behaviors
-        
-        // Calculate how far the mouse has moved
-        const x = e.pageX - slider.offsetLeft;
-        const walk = (x - startX) * 1.5; // Multiply by 1.5 to make scrolling slightly faster/smoother
-        
-        // Apply the scroll
-        slider.scrollLeft = scrollLeft - walk;
-    });
-}
-
-
-    function initResizableColumns() {
-        const table = document.getElementById('invoiceTable');
-        if (!table) return;
-    
-        const cols = table.querySelectorAll('thead th');
-        const savedWidths = JSON.parse(localStorage.getItem('invoiceTableColWidths')) || {};
-
-        // FIRST PASS: Lock every single column to an exact pixel width immediately.
-        // This stops the browser from auto-distributing space, which causes the "jump".
-        [].forEach.call(cols, function (col) {
-            const colClass = Array.from(col.classList).find(c => c.startsWith('col-'));
-        
-            if (colClass && savedWidths[colClass]) {
-                // Apply saved widths
-                col.style.width = savedWidths[colClass];
-                col.style.minWidth = savedWidths[colClass];
-                col.style.maxWidth = savedWidths[colClass];
-            } else {
-                // Read the currently rendered actual width and lock it in
-                const rect = col.getBoundingClientRect();
-                if (rect.width > 0) {
-                    col.style.width = `${rect.width}px`;
-                    col.style.minWidth = `${rect.width}px`;
-                    col.style.maxWidth = `${rect.width}px`;
-                }
-            }
-
-            // Skip adding the drag handle for checkbox and action columns
-            if (col.classList.contains('col-checkbox') || col.classList.contains('col-action')) return;
-
-            // Create the drag handle element
-            const resizer = document.createElement('div');
-            resizer.classList.add('col-resizer');
-            col.appendChild(resizer);
-            col.style.position = 'relative'; 
-
-            let x = 0;
-            let w = 0;
-
-            const mouseDownHandler = function (e) {
-                x = e.clientX;
-                // Now that padding is handled by border-box, this reading is perfectly accurate
-                w = col.getBoundingClientRect().width;
-
-                // Stop text from turning blue while dragging rapidly
-                document.body.style.userSelect = 'none';
-
-                document.addEventListener('mousemove', mouseMoveHandler);
-                document.addEventListener('mouseup', mouseUpHandler);
-                resizer.classList.add('resizing');
-            };
-
-            const mouseMoveHandler = function (e) {
-                const dx = e.clientX - x;
-                const newWidth = Math.max(30, w + dx); // 40px minimum width
-
-                col.style.width = `${newWidth}px`;
-                col.style.minWidth = `${newWidth}px`;
-                col.style.maxWidth = `${newWidth}px`;
-            };
-
-            const mouseUpHandler = function () {
-                document.removeEventListener('mousemove', mouseMoveHandler);
-                document.removeEventListener('mouseup', mouseUpHandler);
-                resizer.classList.remove('resizing');
-            
-                // Restore text selection
-                document.body.style.userSelect = '';
-            
-                if (colClass) {
-                    savedWidths[colClass] = col.style.width;
-                    localStorage.setItem('invoiceTableColWidths', JSON.stringify(savedWidths));
-                }
-            };
-
-            resizer.addEventListener('mousedown', mouseDownHandler);
-        });
-    }
     // Column Display Settings - Server-side User-specific Storage
     async function loadColumnSettings() {
         try {
@@ -1755,7 +1306,7 @@
                 headers['RequestVerificationToken'] = csrfToken.value;
             }
             
-            const response = await fetch('?handler=LoadColumnPreferences', {
+            const response = await fetch('?handler=LoadColumnPreferences&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
                 method: 'GET',
                 headers: headers
             });
@@ -1793,24 +1344,26 @@
     }
 
     function loadDefaultColumnSettings() {
-        // Default settings — the lean Stitch column set. Detail/audit columns (UUID, Submission ID,
-        // Supplier, Rejected Date, Last Updated) stay available via Customize; saved user
-        // preferences always override these defaults.
+        // Default settings — the lean Stitch column set. Technical metadata (UUID, Submission ID,
+        // Rejected Date, Last Updated) stays available via Customize; saved user preferences
+        // always override these defaults. The counterparty column is direction-aware: Received
+        // shows the Supplier, every other tab shows the Buyer.
+        const isReceived = @Json.Serialize(invoiceDirection == "Received");
         const defaultSettings = {
             'col-checkbox': true,
             'col-invoice-no': true,
             'col-uuid': false,
             'col-submission-id': false,
-            'col-supplier': false,
-            'col-buyer': true,
+            'col-supplier': isReceived,
+            'col-buyer': !isReceived,
             'col-submitted-date': true,
             'col-document-type': true,
             'col-total-amount': true,
             'col-lhdn-status': true,
             'col-internal-status': true,
             'col-rejected-date': false,
-            'col-last-updated': true,
-            'col-created-by': true,
+            'col-last-updated': false,
+            'col-created-by': !isReceived,
             'col-action': true
         };
 
@@ -2087,9 +1640,10 @@
             // Skip this tick if the previous sync request hasn't finished yet
             if (sessionSyncInFlight) return;
 
-            // Gather the Invoice Numbers currently visible on the table
+            // Gather the Invoice Numbers currently visible on the table. Read from the rows
+            // (not the checkboxes) so tabs without row selection — e.g. All — still auto-sync.
             let visibleInvoices = [];
-            $('.invoice-checkbox').each(function () {
+            $('#invoiceTable tbody tr[data-invoiceno]').each(function () {
                 let invoiceNo = $(this).data('invoiceno');
                 if (invoiceNo) {
                     visibleInvoices.push(invoiceNo);
