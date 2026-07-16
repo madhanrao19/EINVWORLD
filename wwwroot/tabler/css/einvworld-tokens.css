@@ -1,4 +1,4 @@
-/* EINVWORLD design tokens for the Tabler theme.
+﻿/* EINVWORLD design tokens for the Tabler theme.
  * Loaded AFTER tabler.min.css so these overrides win. Rebrands Tabler's default blue to the
  * EINVWORLD green and exposes brand tokens for the migrated UI. Pure CSS custom properties —
  * no build step, self-hosted, offline-friendly. Does not affect the Velzon layout (only pages
@@ -404,8 +404,10 @@ pre { overflow-x: auto; max-width: 100%; }
 
 /* ============================================================
  * Invoice list (Stitch batch 6): tinted table header, compact
- * semantic badges, quiet row-action button, numbered pager and
- * a stacked-card mobile presentation for the invoice table.
+ * semantic badges, quiet row-action button, numbered pager,
+ * responsive density steps and a stacked-card mobile layout.
+ * Order matters: base rules first, then the width-scoped
+ * overrides, so every media block wins over the base.
  * ============================================================ */
 
 /* Tinted table header (Stitch #e9efe9 family) with quiet uppercase labels. */
@@ -418,14 +420,18 @@ pre { overflow-x: auto; max-width: 100%; }
   color: var(--einv-text-muted);
   white-space: nowrap;
   border-bottom: 1px solid var(--einv-border);
+  padding: .6rem .6rem;
 }
 #invoiceTable thead.einv-table-head th a {
   color: inherit;
   text-decoration: none;
 }
 #invoiceTable thead.einv-table-head th a:hover { color: var(--einv-primary); }
+
+/* Cells: compact padding; long free-text columns are capped + ellipsised so the
+ * default column set fits a 1440px desktop with no horizontal scrolling. */
 #invoiceTable tbody td {
-  padding: .65rem .75rem;
+  padding: .6rem .6rem;
   vertical-align: middle;
 }
 #invoiceTable td.truncate {
@@ -434,6 +440,11 @@ pre { overflow-x: auto; max-width: 100%; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+#invoiceTable td.col-supplier { max-width: 180px; }
+#invoiceTable td.col-buyer { max-width: 190px; }
+#invoiceTable td.col-created-by { max-width: 160px; }
+#invoiceTable td.col-submitted-date { white-space: nowrap; }
+#invoiceTable .col-checkbox { width: 36px; }
 
 /* Quiet ellipsis row-action trigger (Stitch). */
 .einv-action-btn {
@@ -472,6 +483,29 @@ button.einv-badge { cursor: pointer; }
   background-color: var(--einv-primary);
   border-color: var(--einv-primary);
   color: #fff;
+}
+
+/* Progressive density on smaller desktops/tablets (Stitch keeps the essentials:
+ * invoice #, type, counterparty, total, statuses, action). Scoped to >=768px so
+ * the stacked mobile cards below keep every field. A user hiding a column via
+ * Customize still wins (inline display:none). */
+@media (min-width: 768px) and (max-width: 1399.98px) {
+  #invoiceTable .col-created-by { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  #invoiceTable .col-submitted-date { display: none; }
+  #invoiceTable thead.einv-table-head th,
+  #invoiceTable tbody td { padding: .5rem .45rem; }
+  #invoiceTable td.col-supplier,
+  #invoiceTable td.col-buyer { max-width: 140px; }
+  #invoiceTable td.col-invoice-no { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  #invoiceTable .einv-badge { padding: .1rem .4rem; font-size: .68rem; }
+  #invoiceTable .einv-badge i { font-size: .78rem; }
+  /* Header sort chevrons drive each column's minimum width; headers stay clickable. */
+  #invoiceTable thead.einv-table-head .sort-indicator { display: none; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  #invoiceTable .col-document-type { display: none; }
 }
 
 /* Invoice tabs scroll horizontally instead of wrapping on narrow screens. */
@@ -514,48 +548,4 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable tbody td.col-checkbox::before,
   #invoiceTable tbody td.col-action::before { content: ""; }
   #invoiceTable tbody tr:nth-child(even) > td { background-color: transparent; }
-}
-
-/* Fit the default column set inside the card at 1440px with no internal horizontal scroll:
- * slightly tighter cell padding and capped widths on the long free-text columns. */
-#invoiceTable thead.einv-table-head th { padding: .6rem .6rem; }
-#invoiceTable tbody td { padding: .6rem .6rem; }
-#invoiceTable td.col-supplier,
-#invoiceTable td.col-buyer { max-width: 190px; }
-#invoiceTable td.col-created-by { max-width: 160px; }
-#invoiceTable td.col-submitted-date { white-space: nowrap; }
-
-/* Progressive column trimming on smaller desktops/tablets (Stitch keeps the essentials:
- * invoice #, type, counterparty, total, statuses, action). Scoped to >=768px so the
- * stacked mobile cards below keep every field. A user hiding a column via Customize
- * still wins (inline display:none). */
-#invoiceTable .col-checkbox { width: 36px; }
-@media (min-width: 768px) and (max-width: 1399.98px) {
-  #invoiceTable .col-created-by { display: none; }
-}
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  #invoiceTable .col-submitted-date { display: none; }
-}
-@media (min-width: 768px) and (max-width: 991.98px) {
-  #invoiceTable .col-document-type { display: none; }
-}
-
-/* Density steps: tighter padding + shorter name caps as width shrinks. */
-#invoiceTable td.col-supplier { max-width: 180px; }
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  #invoiceTable thead.einv-table-head th,
-  #invoiceTable tbody td { padding: .5rem .45rem; }
-  #invoiceTable td.col-supplier,
-  #invoiceTable td.col-buyer { max-width: 140px; }
-  #invoiceTable td.col-invoice-no { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-}
-
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  #invoiceTable .einv-badge { padding: .1rem .4rem; font-size: .68rem; }
-  #invoiceTable .einv-badge i { font-size: .78rem; }
-}
-
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  /* Header sort chevrons drive each column's minimum width; the headers stay clickable. */
-  #invoiceTable thead.einv-table-head .sort-indicator { display: none; }
 }
