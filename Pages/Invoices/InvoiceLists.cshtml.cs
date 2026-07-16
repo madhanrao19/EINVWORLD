@@ -1827,8 +1827,16 @@ namespace eInvWorld.Pages.Invoices
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
         }
 
+        // Preference key per tab: Received shows the Supplier counterparty while the other tabs show
+        // the Buyer, so a single shared column set can't serve both. Received gets its own key; the
+        // legacy direction-agnostic key stays as the store for the other tabs (and the fallback).
+        private static string ColumnPreferenceKey(string? invoiceDirection) =>
+            string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase)
+                ? "invoiceListColumns:Received"
+                : "invoiceListColumns";
+
         // API method to save user column preferences
-        public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings)
+        public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings, string? invoiceDirection = null)
         {
             try
             {
@@ -1856,7 +1864,7 @@ namespace eInvWorld.Pages.Invoices
                 }
 
                 // Update column preferences
-                preferences["invoiceListColumns"] = columnSettings;
+                preferences[ColumnPreferenceKey(invoiceDirection)] = columnSettings;
 
                 // Save back to user
                 user.UserPreferences = JsonConvert.SerializeObject(preferences);
@@ -1914,15 +1922,18 @@ namespace eInvWorld.Pages.Invoices
                     { "col-action", true }
                 };
 
-                // Load user preferences
+                // Load user preferences for this tab's key. No fallback across keys: a Received
+                // pref set never leaks the Buyer/Supplier choice into the other tabs and vice versa
+                // — a tab without its own saved set simply gets the direction-aware defaults.
                 if (!string.IsNullOrEmpty(user.UserPreferences))
                 {
                     try
                     {
                         var preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences);
-                        if (preferences != null && preferences.ContainsKey("invoiceListColumns"))
+                        var key = ColumnPreferenceKey(invoiceDirection);
+                        if (preferences != null && preferences.ContainsKey(key))
                         {
-                            var columnPrefs = JsonConvert.DeserializeObject<Dictionary<string, bool>>(preferences["invoiceListColumns"].ToString() ?? "");
+                            var columnPrefs = JsonConvert.DeserializeObject<Dictionary<string, bool>>(preferences[key].ToString() ?? "");
                             if (columnPrefs != null)
                             {
                                 return new JsonResult(new { success = true, data = columnPrefs });

@@ -515,3 +515,47 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable tbody td.col-action::before { content: ""; }
   #invoiceTable tbody tr:nth-child(even) > td { background-color: transparent; }
 }
+
+/* Fit the default column set inside the card at 1440px with no internal horizontal scroll:
+ * slightly tighter cell padding and capped widths on the long free-text columns. */
+#invoiceTable thead.einv-table-head th { padding: .6rem .6rem; }
+#invoiceTable tbody td { padding: .6rem .6rem; }
+#invoiceTable td.col-supplier,
+#invoiceTable td.col-buyer { max-width: 190px; }
+#invoiceTable td.col-created-by { max-width: 160px; }
+#invoiceTable td.col-submitted-date { white-space: nowrap; }
+
+/* Progressive column trimming on smaller desktops/tablets (Stitch keeps the essentials:
+ * invoice #, type, counterparty, total, statuses, action). Scoped to >=768px so the
+ * stacked mobile cards below keep every field. A user hiding a column via Customize
+ * still wins (inline display:none). */
+#invoiceTable .col-checkbox { width: 36px; }
+@media (min-width: 768px) and (max-width: 1399.98px) {
+  #invoiceTable .col-created-by { display: none; }
+}
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  #invoiceTable .col-submitted-date { display: none; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  #invoiceTable .col-document-type { display: none; }
+}
+
+/* Density steps: tighter padding + shorter name caps as width shrinks. */
+#invoiceTable td.col-supplier { max-width: 180px; }
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  #invoiceTable thead.einv-table-head th,
+  #invoiceTable tbody td { padding: .5rem .45rem; }
+  #invoiceTable td.col-supplier,
+  #invoiceTable td.col-buyer { max-width: 140px; }
+  #invoiceTable td.col-invoice-no { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  #invoiceTable .einv-badge { padding: .1rem .4rem; font-size: .68rem; }
+  #invoiceTable .einv-badge i { font-size: .78rem; }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  /* Header sort chevrons drive each column's minimum width; the headers stay clickable. */
+  #invoiceTable thead.einv-table-head .sort-indicator { display: none; }
+}
