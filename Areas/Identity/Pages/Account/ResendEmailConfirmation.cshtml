@@ -19,28 +19,37 @@
 <!-- end row -->
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6 col-xl-5">
+        @* Stitch reference 2: dark centered title + explanatory sentence, uppercase label,
+           "Resend Email" action, then a "Back to Login" line under a divider. *@
         <div class="card mt-4 card-bg-fill">
             <div class="card-body p-4">
-                <div class="text-center mt-2">
-                    <h5 class="text-primary">Resend Confirmation Email</h5>
-                   
-                    <form method="post">
-                        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-                        <div class="mb-4">
-                            <label class="form-label">Enter Your Email Address</label>
-                            <input asp-for="Input.Email" type="email" name="email" class="form-control" aria-required="true" placeholder="Enter Email" required>
-                            <span asp-validation-for="Input.Email" class="text-danger"></span>
-
-                        </div>
-
-                        <!-- ✅ Include Honeypot & Turnstile -->
-                        <partial name="_TurnstilePartial" />
-
-                        <div class="text-center mt-4">
-                            <button class="btn btn-success w-100" type="submit">Send Confirmation Email</button>
-                        </div>
-                    </form>
+                <div class="text-center mt-2 mb-4">
+                    <h4 class="fw-bold fs-3 mb-2">Resend Confirmation Email</h4>
+                    <p class="text-muted mb-0">Enter your email address and we&rsquo;ll send you a new link to verify your account.</p>
                 </div>
+
+                <form method="post">
+                    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+                    <div class="mb-4">
+                        <label class="form-label text-uppercase fw-semibold small" style="letter-spacing:.05em;">Email address</label>
+                        <input asp-for="Input.Email" type="email" name="email" class="form-control" aria-required="true" placeholder="name@company.com" required>
+                        <span asp-validation-for="Input.Email" class="text-danger"></span>
+                    </div>
+
+                    <!-- ✅ Include Honeypot & Turnstile -->
+                    <partial name="_TurnstilePartial" />
+
+                    <div class="mt-4">
+                        <button class="btn btn-primary w-100" type="submit">
+                            Resend Email <i class="ri-send-plane-line ms-1" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+                <p class="text-center mb-0">
+                    <a asp-page="/Account/Login" class="fw-semibold"><i class="ri-arrow-left-line me-1" aria-hidden="true"></i>Back to Login</a>
+                </p>
             </div>
             <!-- end card body -->
         </div>
