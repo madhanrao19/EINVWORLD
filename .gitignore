@@ -48,3 +48,7 @@ Thumbs.db
 
 # Claude Code per-machine settings (may contain local credentials in permission entries)
 .claude/settings.local.json
+
+# ---- Local scratch + machine-specific deploy profile (internal host/user details) ----
+/temp/
+Properties/PublishProfiles/IISProfile.pubxml
