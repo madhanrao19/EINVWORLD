@@ -6,6 +6,26 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-16 — Stitch auth-pages parity (refs 1–4): Login, Register, Forgot Password, Resend Confirmation
+
+> Visual parity pass against the Stitch auth references. Markup/CSS only — no handler, route,
+> validation, Turnstile or honeypot change. No schema change.
+
+- **Login:** dark bold "Welcome Back !" title (was green); the Register / Resend-confirmation links
+  now sit in a soft-green footer strip attached to the card (`.einv-auth-alt`) instead of floating
+  below it (also fixes an invisible `text-white` line on the light background).
+- **Forgot Password:** restyled to the reference — left-aligned dark title + plain sentence
+  (truthful copy: a reset **link** is emailed), uppercase EMAIL ADDRESS label, primary
+  "Send me a reset link" button with mail icon, divider and "Forget it, send me back to the login
+  screen". The amber alert box and the **lord-icon CDN animation are removed** (self-hosted-only policy).
+- **Resend Confirmation Email:** dark title + explanatory sentence, uppercase label,
+  "Resend Email" primary button, and a previously missing "← Back to Login" link.
+- **Register:** dark bold title (was green). The reference's "GDPR Compliant / ISO 27001" trust
+  chips are deliberately **not** added — unverifiable compliance claims.
+- Audit outcome for the other Stitch refs: Navigation Master (5) and Supplier Dashboard (6) already
+  match from batches 4–5; the reference's decorative notification-bell/help topbar icons are
+  intentionally omitted (no notification feature behind them).
+
 ## 📅 2026-07-15 — Stitch parity batch: inline filters, bulk bar, Created By, chart palette
 
 > Follow-up to the restyle: closes the structural gaps against the Stitch references on the invoice

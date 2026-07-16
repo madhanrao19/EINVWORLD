@@ -138,3 +138,10 @@
 @media (max-width: 575.98px) {
   .einv-auth .card-body { padding: 1.5rem; }
 }
+
+/* Stitch auth: soft green footer strip attached to the auth card (register/resend links). */
+.card-footer.einv-auth-alt {
+  background-color: #eff5ef;
+  border-top: 1px solid var(--einv-border, #e6e8eb);
+  padding: 1rem 1.5rem;
+}
