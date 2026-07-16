@@ -447,6 +447,14 @@ namespace eInvWorld.Pages.Invoices
                     );
                 }
 
+                // Direction-scoped LHDN status counts for the compliance strip under the table.
+                // One grouped query pushed to the DB, computed BEFORE the user filters so the
+                // strip reflects the whole tab (per-TIN scoping is already applied above).
+                InvoiceSummaryByStatus = await query
+                    .GroupBy(i => i.LHDNStatusId ?? "None")
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.Status, x => x.Count);
+
                 //  Apply additional filters. Always call this — besides filtering, ApplyFilters applies a
                 //  deterministic OrderBy that pagination (Skip/Take below) requires.
                 query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
@@ -1870,21 +1878,22 @@ namespace eInvWorld.Pages.Invoices
                     return new JsonResult(new { success = false, message = "User not found" });
                 }
 
-                // Default column settings (all visible except always-hidden ones)
+                // Default column settings — the lean Stitch column set. Detail/audit columns stay
+                // available via Customize; saved user preferences always override these defaults.
                 var defaultSettings = new Dictionary<string, bool>
                 {
                     { "col-checkbox", true },
                     { "col-invoice-no", true },
-                    { "col-uuid", true },
-                    { "col-submission-id", true },
-                    { "col-supplier", true },
+                    { "col-uuid", false },
+                    { "col-submission-id", false },
+                    { "col-supplier", false },
                     { "col-buyer", true },
                     { "col-submitted-date", true },
                     { "col-document-type", true },
                     { "col-total-amount", true },
                     { "col-lhdn-status", true },
                     { "col-internal-status", true },
-                    { "col-rejected-date", true },
+                    { "col-rejected-date", false },
                     { "col-last-updated", true },
                     { "col-created-by", true },
                     { "col-action", true }

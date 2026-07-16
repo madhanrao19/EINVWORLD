@@ -147,17 +147,24 @@
     <p>Please wait while we fetch the latest updates. Do not close this page.</p>
 </div>
 
-<!-- Start page title -->
+<!-- Start page title (Stitch header: breadcrumb above, large title + description left) -->
 <div class="row">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">e-Invoice List</h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="javascript: void(0);">Invoices</a></li>
-                    <li class="breadcrumb-item active">e-Invoice List</li>
+        <div class="page-title-box mb-3">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb m-0 mb-1">
+                    <li class="breadcrumb-item"><a href="/Dashboard/Dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Invoices</li>
                 </ol>
-            </div>
+            </nav>
+            <h1 class="einv-page-title mb-1">
+                @(Model.invoiceDirection == "Draft" ? "Draft Invoices" : Model.invoiceDirection == "Received" ? "Received Invoices" : Model.invoiceDirection == "Sent" ? "Sent Invoices" : "All Invoices")
+            </h1>
+            <p class="text-muted mb-0">
+                @(Model.invoiceDirection == "Received"
+                    ? "Manage and track incoming documents from your suppliers."
+                    : "Manage, track, and submit your e-invoices to LHDN MyInvois.")
+            </p>
         </div>
     </div>
 </div>
@@ -439,6 +446,33 @@
                                 Each invoice is validated individually and, once accepted by LHDN, can only be cancelled within 72 hours.
                             </div>
                         </div>
+                    }
+
+                    @if (invoiceDirection == "Sent")
+                    {
+                        @* Dismissible how-to callout (Stitch Sent reference). Starts hidden; the inline
+                           script below reveals it unless the user dismissed it before (localStorage). *@
+                        <div class="alert d-none align-items-start gap-2 border-0" id="sentHelpCallout" role="note"
+                             style="background-color:#eaf6fd; color:#0b4a6f;">
+                            <i class="ri-information-line fs-5 mt-1" aria-hidden="true"></i>
+                            <div class="small flex-grow-1">
+                                <b>How to use Sent Invoices:</b> documents listed here have been submitted to LHDN and delivered
+                                to the buyer. Track validation in the <b>LHDN Status</b> column, or resend a document from its
+                                <b>Action</b> menu if the buyer has not received it.
+                            </div>
+                            <button type="button" class="btn-close mt-1" aria-label="Dismiss this tip"
+                                    onclick="try { localStorage.setItem('einv-sent-help-dismissed', '1'); } catch (e) { } this.closest('.alert').classList.add('d-none');"></button>
+                        </div>
+                        <script>
+                            (function () {
+                                try {
+                                    if (localStorage.getItem('einv-sent-help-dismissed') !== '1') {
+                                        var el = document.getElementById('sentHelpCallout');
+                                        if (el) { el.classList.remove('d-none'); el.classList.add('d-flex'); }
+                                    }
+                                } catch (e) { /* storage unavailable — keep the callout hidden */ }
+                            })();
+                        </script>
                     }
                         <div class="tab-content">
                             <!-- All Tab Content -->
@@ -1083,7 +1117,15 @@
                         </div> 
                     </div> 
                                     
-                    <div class="d-flex justify-content-between align-items-center mt-3">
+                    @{
+                        // "Showing X to Y of Z" range for the current page (Stitch table footer).
+                        var footerTotal = Model.Metadata?.totalCount ?? 0;
+                        var footerPageNo = Math.Max(1, Model.SearchInput?.pageNo ?? 1);
+                        var footerPageSize = Math.Max(1, Model.SearchInput?.pageSize ?? 25);
+                        var footerFrom = footerTotal == 0 ? 0 : ((footerPageNo - 1) * footerPageSize) + 1;
+                        var footerTo = Math.Min(footerTotal, footerPageNo * footerPageSize);
+                    }
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
                         <!-- Page Size Selector -->
                         <div class="d-flex align-items-center">
                             <label for="pageSizeSelect" class="form-label me-2 mb-0">Show:</label>
@@ -1095,7 +1137,11 @@
                             </select>
                             <span class="ms-2 text-muted">entries</span>
                         </div>
-                        
+
+                        <span class="text-muted small" aria-live="polite">
+                            Showing @footerFrom&ndash;@footerTo of @footerTotal.ToString("N0") results
+                        </span>
+
                         <div class="pagination-wrap hstack gap-2">
                             @if (Model.SearchInput?.pageNo > 1)
                             {
@@ -1136,7 +1182,70 @@
                         </div>
                     </div>
 
-
+                    @{
+                        // Compliance strip (Stitch): real, direction-scoped LHDN status counts — no
+                        // placeholder figures. Hidden entirely when the tab has no documents.
+                        var lhdnCounts = Model.InvoiceSummaryByStatus ?? new Dictionary<string, int>();
+                        var lhdnTotal = lhdnCounts.Values.Sum();
+                        var lhdnValid = lhdnCounts.TryGetValue("Valid", out var lhdnValidCount) ? lhdnValidCount : 0;
+                        var lhdnPending = lhdnCounts.TryGetValue("Submitted", out var lhdnPendingCount) ? lhdnPendingCount : 0;
+                        var lhdnValidRate = lhdnTotal > 0 ? (int)Math.Round(lhdnValid * 100.0 / lhdnTotal) : 0;
+                    }
+                    @if (invoiceDirection != "Draft" && lhdnTotal > 0)
+                    {
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-5">
+                                <div class="card mb-0 h-100">
+                                    <div class="card-body py-3">
+                                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">LHDN Validation Rate</p>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <h3 class="mb-0 fw-bold" style="color:@(lhdnValidRate >= 90 ? "var(--einv-success)" : lhdnValidRate >= 70 ? "var(--einv-warning)" : "var(--einv-error)");">@lhdnValidRate%</h3>
+                                            <div class="flex-grow-1">
+                                                <div class="progress" style="height:8px;">
+                                                    <div class="progress-bar bg-primary" role="progressbar" style="width:@lhdnValidRate%;"
+                                                         aria-valuenow="@lhdnValidRate" aria-valuemin="0" aria-valuemax="100"
+                                                         aria-label="LHDN validation success rate"></div>
+                                                </div>
+                                                <span class="small text-muted">@lhdnValid.ToString("N0") of @lhdnTotal.ToString("N0") documents validated successfully</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="card mb-0 h-100">
+                                    <div class="card-body py-3 d-flex align-items-center justify-content-between gap-3">
+                                        <div>
+                                            <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">Pending Submissions</p>
+                                            <h3 class="mb-0 fw-bold" style="color:var(--einv-warning);">@lhdnPending.ToString("N0")</h3>
+                                            <span class="small text-muted">Invoices awaiting LHDN validation</span>
+                                        </div>
+                                        @if (lhdnPending > 0)
+                                        {
+                                            <a class="small fw-semibold text-decoration-none"
+                                               href="./InvoiceLists?invoiceDirection=@invoiceDirection&LHDNStatus=Submitted&status=Submitted">
+                                                View details <i class="ri-arrow-right-line align-bottom" aria-hidden="true"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    @if (invoiceDirection == "Draft" && lhdnTotal > 0)
+                    {
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-5">
+                                <div class="card mb-0 h-100">
+                                    <div class="card-body py-3">
+                                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">Total Drafts</p>
+                                        <h3 class="mb-0 fw-bold">@lhdnTotal.ToString("N0")</h3>
+                                        <span class="small text-muted">Unsubmitted documents — submit within your reporting window</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
 
                 </div>
 
@@ -1684,20 +1793,22 @@
     }
 
     function loadDefaultColumnSettings() {
-        // Default settings - all columns visible
+        // Default settings — the lean Stitch column set. Detail/audit columns (UUID, Submission ID,
+        // Supplier, Rejected Date, Last Updated) stay available via Customize; saved user
+        // preferences always override these defaults.
         const defaultSettings = {
             'col-checkbox': true,
             'col-invoice-no': true,
-            'col-uuid': true,
-            'col-submission-id': true,
-            'col-supplier': true,
+            'col-uuid': false,
+            'col-submission-id': false,
+            'col-supplier': false,
             'col-buyer': true,
             'col-submitted-date': true,
             'col-document-type': true,
             'col-total-amount': true,
             'col-lhdn-status': true,
             'col-internal-status': true,
-            'col-rejected-date': true,
+            'col-rejected-date': false,
             'col-last-updated': true,
             'col-created-by': true,
             'col-action': true
