@@ -401,3 +401,117 @@ pre { overflow-x: auto; max-width: 100%; }
   background: transparent;
   z-index: 5;
 }
+
+/* ============================================================
+ * Invoice list (Stitch batch 6): tinted table header, compact
+ * semantic badges, quiet row-action button, numbered pager and
+ * a stacked-card mobile presentation for the invoice table.
+ * ============================================================ */
+
+/* Tinted table header (Stitch #e9efe9 family) with quiet uppercase labels. */
+#invoiceTable thead.einv-table-head th {
+  background-color: #eef4ef;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--einv-text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--einv-border);
+}
+#invoiceTable thead.einv-table-head th a {
+  color: inherit;
+  text-decoration: none;
+}
+#invoiceTable thead.einv-table-head th a:hover { color: var(--einv-primary); }
+#invoiceTable tbody td {
+  padding: .65rem .75rem;
+  vertical-align: middle;
+}
+#invoiceTable td.truncate {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Quiet ellipsis row-action trigger (Stitch). */
+.einv-action-btn {
+  color: var(--einv-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+.einv-action-btn:hover,
+.einv-action-btn:focus {
+  background: var(--einv-page-bg);
+  border-color: var(--einv-border);
+  color: var(--einv-text);
+}
+
+/* Compact semantic status badges: soft tinted background, solid semantic text. */
+.einv-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .15rem .55rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.einv-badge i { font-size: .85rem; line-height: 1; }
+.einv-badge-success { background: rgba(16, 185, 129, .12); color: #047857; }
+.einv-badge-warning { background: rgba(245, 158, 11, .14); color: #b45309; }
+.einv-badge-danger { background: rgba(239, 68, 68, .12); color: #b91c1c; }
+.einv-badge-neutral { background: rgba(100, 116, 139, .12); color: #475569; }
+button.einv-badge { cursor: pointer; }
+
+/* Numbered pager: brand-green active page. */
+.pagination .page-item.active .page-link {
+  background-color: var(--einv-primary);
+  border-color: var(--einv-primary);
+  color: #fff;
+}
+
+/* Invoice tabs scroll horizontally instead of wrapping on narrow screens. */
+@media (max-width: 575.98px) {
+  .einv-invoice-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .einv-invoice-tabs .nav-link { white-space: nowrap; }
+}
+
+/* Mobile: stack each invoice row as a labelled card (uses the cells' data-label). */
+@media (max-width: 767.98px) {
+  #invoiceTable thead { display: none; }
+  #invoiceTable tbody tr {
+    display: block;
+    border: 1px solid var(--einv-border);
+    border-radius: .5rem;
+    margin: .75rem;
+    background: var(--einv-surface);
+    overflow: hidden;
+  }
+  #invoiceTable tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border: 0 !important;
+    padding: .45rem .75rem;
+    text-align: right;
+  }
+  #invoiceTable tbody td.truncate { max-width: none; white-space: normal; }
+  #invoiceTable tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--einv-text-muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  #invoiceTable tbody td.col-checkbox::before,
+  #invoiceTable tbody td.col-action::before { content: ""; }
+  #invoiceTable tbody tr:nth-child(even) > td { background-color: transparent; }
+}
