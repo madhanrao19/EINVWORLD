@@ -35,7 +35,7 @@
             <div class="card">
                 <div class="card-body p-4">
                     <div class="text-center mb-3">
-                        <h5 class="text-primary">Welcome Back</h5>
+                        <h4 class="fw-bold fs-3 mb-1">Welcome Back !</h4>
                         <p class="text-muted mb-0">Sign in to continue to eInvWorld.</p>
                     </div>
 
@@ -76,13 +76,15 @@
                         </div>
                     </form>
                 </div>
+
+                @* Stitch reference 3: the register/resend links sit in a soft green footer
+                   strip attached to the card, not floating below it. *@
+                <div class="card-footer einv-auth-alt text-center">
+                    <p class="mb-1">Don't have an account? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold">Register as a new user</a></p>
+                    <p class="mb-0"><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="fw-semibold">Resend email confirmation</a></p>
+                </div>
             </div>
             <!-- end card -->
-
-            <div class="mt-3 text-center">
-                <p class="mb-1 text-white">Don't have an account? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold">Register as a new user</a></p>
-                <p class="mb-0"><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="fw-semibold">Resend email confirmation</a></p>
-            </div>
         </div>
     </div>
     <!-- end row -->
