@@ -326,8 +326,9 @@
                     <div class="card-body pb-2">
                         <form method="get" action="./InvoiceLists">
                             <input type="hidden" name="invoiceDirection" value="@invoiceDirection" />
-                            <input type="hidden" name="status" value="@invoiceStatus" />
-                            <input type="hidden" name="lhdnStatus" value="@invoiceStatus" />
+                            @* No hidden status/lhdnStatus inputs here: the LHDNStatus select below is the
+                               single source for that filter — a duplicate hidden field bound first and
+                               silently discarded the selected value. *@
                             <input type="hidden" id="submissionDateFrom" name="submissionDateFrom" value="@Request.Query["submissionDateFrom"]">
                             <input type="hidden" id="submissionDateTo" name="submissionDateTo" value="@Request.Query["submissionDateTo"]">
                             @* Column-header links drive sorting; carry the current sort through the filter form. *@
@@ -635,6 +636,11 @@
                                                                     title="Click to view Invalid Reason & Suggested Fix">
                                                                 <i class="ri-error-warning-line"></i> Invalid
                                                             </button>
+                                                        }
+                                                        else if (string.IsNullOrEmpty(invoice.LHDNStatusId))
+                                                        {
+                                                            @* Drafts have no LHDN status yet — show a quiet dash, not an empty pill. *@
+                                                            <span class="text-muted" aria-label="No LHDN status yet">&mdash;</span>
                                                         }
                                                         else
                                                         {
@@ -1433,7 +1439,7 @@
                 headers['RequestVerificationToken'] = csrfToken.value;
             }
             
-            const response = await fetch('?handler=SaveColumnPreferences', {
+            const response = await fetch('?handler=SaveColumnPreferences&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(settings)
