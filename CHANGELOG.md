@@ -6,6 +6,43 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-16 — Stitch batch 6: invoice list module redesign (All/Draft/Sent/Received)
+
+> Full Stitch-parity redesign of the invoice list pages (references 7–10). Presentation-layer
+> restructure of `Pages/Invoices/InvoiceLists.cshtml` plus one scoped page-model change. All
+> handlers, GET query names, role checks, anti-forgery and LHDN behaviour preserved. No schema change.
+
+- **New "All Invoices" tab** (Suppliers/Admins; Buyers stay Received-only): a fourth
+  `invoiceDirection=All` view showing every document where one of the user's company TINs is a
+  party. **Security fix included:** previously an unrecognised `invoiceDirection` query value
+  skipped every ownership branch in `OnGetAsync` and would list other companies' invoices; the
+  direction filter now falls back to mandatory TIN scoping (same guard the export handler had).
+- **Single underline tab row** — All Invoices / Draft / Sent / Received; the equal-width
+  "… e-Invoices" tab bar and the second status-pill row are gone (LHDN status remains available in
+  the filter card).
+- **Stitch page header:** breadcrumb → title → per-tab description on the left; page actions
+  (Filter, Refresh from API, Export, Customize, Create Invoice) right-aligned. Refresh is hidden on
+  the local-only Draft tab; Create Invoice shows on All/Draft for non-view-only Suppliers.
+- **Instruction clutter removed:** the "How to Use the e-Invoice Actions" card
+  (`_HelpInstructions.cshtml` deleted — it was only used here), the Draft quick-tip and the Sent
+  how-to callout are gone from the list pages.
+- **Lean fluid table:** columns reordered to Invoice # / Type / Buyer (Supplier on Received) /
+  Date / Total (right-aligned with currency) / Internal Status / LHDN Status / Created By / Action.
+  Technical metadata (UUID, Submission ID, Rejected Date, Last Updated) is hidden by default and
+  available via the existing Customize modal (defaults now direction-aware; saved preferences still
+  win). The JS column resizers, drag-to-scroll panning, sticky-column hacks and fixed
+  `width:max-content` layout were removed — the table fits 1440 px without horizontal scrolling.
+- **Stitch badges:** compact tinted pills (`.einv-badge-*`) — green valid/completed, amber
+  submitted/pending, red invalid/rejected/cancelled, grey draft; Invalid stays clickable to open the
+  LHDN validation-failure details.
+- **Table footer:** result count + page-size on the left, compact numbered pager (1 … n) on the
+  right. Sort-header and pager links now **preserve all active filters** (previously most header
+  sorts dropped them).
+- **Mobile:** rows collapse to labelled cards below 768 px (`data-label` CSS), tabs scroll
+  horizontally on narrow screens.
+- The 30-second session status sync now reads invoice numbers from the rows rather than the
+  selection checkboxes, so tabs without bulk selection (All) still auto-refresh statuses.
+
 ## 📅 2026-07-15 — Stitch parity batch: inline filters, bulk bar, Created By, chart palette
 
 > Follow-up to the restyle: closes the structural gaps against the Stitch references on the invoice

@@ -446,6 +446,19 @@ namespace eInvWorld.Pages.Invoices
                         )
                     );
                 }
+                else
+                {
+                    // "All" (and any unrecognised direction value): every document where one of the
+                    // user's company TINs is a party — issuer or counterparty. This branch is also the
+                    // security backstop: without it an unexpected invoiceDirection skipped every
+                    // ownership filter above and exposed other companies' invoices (same mandatory
+                    // scoping the export handler applies).
+                    query = query.Where(i =>
+                        userTINs.Contains(i.Supplier.TIN) ||
+                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
+                    );
+                }
 
                 // Direction-scoped LHDN status counts for the compliance strip under the table.
                 // One grouped query pushed to the DB, computed BEFORE the user filters so the
@@ -1814,8 +1827,16 @@ namespace eInvWorld.Pages.Invoices
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
         }
 
+        // Preference key per tab: Received shows the Supplier counterparty while the other tabs show
+        // the Buyer, so a single shared column set can't serve both. Received gets its own key; the
+        // legacy direction-agnostic key stays as the store for the other tabs (and the fallback).
+        private static string ColumnPreferenceKey(string? invoiceDirection) =>
+            string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase)
+                ? "invoiceListColumns:Received"
+                : "invoiceListColumns";
+
         // API method to save user column preferences
-        public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings)
+        public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings, string? invoiceDirection = null)
         {
             try
             {
@@ -1843,7 +1864,7 @@ namespace eInvWorld.Pages.Invoices
                 }
 
                 // Update column preferences
-                preferences["invoiceListColumns"] = columnSettings;
+                preferences[ColumnPreferenceKey(invoiceDirection)] = columnSettings;
 
                 // Save back to user
                 user.UserPreferences = JsonConvert.SerializeObject(preferences);
@@ -1868,7 +1889,7 @@ namespace eInvWorld.Pages.Invoices
         }
 
         // API method to load user column preferences
-        public async Task<IActionResult> OnGetLoadColumnPreferencesAsync()
+        public async Task<IActionResult> OnGetLoadColumnPreferencesAsync(string? invoiceDirection = null)
         {
             try
             {
@@ -1878,36 +1899,41 @@ namespace eInvWorld.Pages.Invoices
                     return new JsonResult(new { success = false, message = "User not found" });
                 }
 
-                // Default column settings — the lean Stitch column set. Detail/audit columns stay
+                // Default column settings — the lean Stitch column set. Technical metadata stays
                 // available via Customize; saved user preferences always override these defaults.
+                // Direction-aware counterparty: Received shows the Supplier, other tabs the Buyer.
+                var isReceived = string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase);
                 var defaultSettings = new Dictionary<string, bool>
                 {
                     { "col-checkbox", true },
                     { "col-invoice-no", true },
                     { "col-uuid", false },
                     { "col-submission-id", false },
-                    { "col-supplier", false },
-                    { "col-buyer", true },
+                    { "col-supplier", isReceived },
+                    { "col-buyer", !isReceived },
                     { "col-submitted-date", true },
                     { "col-document-type", true },
                     { "col-total-amount", true },
                     { "col-lhdn-status", true },
                     { "col-internal-status", true },
                     { "col-rejected-date", false },
-                    { "col-last-updated", true },
-                    { "col-created-by", true },
+                    { "col-last-updated", false },
+                    { "col-created-by", !isReceived },
                     { "col-action", true }
                 };
 
-                // Load user preferences
+                // Load user preferences for this tab's key. No fallback across keys: a Received
+                // pref set never leaks the Buyer/Supplier choice into the other tabs and vice versa
+                // — a tab without its own saved set simply gets the direction-aware defaults.
                 if (!string.IsNullOrEmpty(user.UserPreferences))
                 {
                     try
                     {
                         var preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences);
-                        if (preferences != null && preferences.ContainsKey("invoiceListColumns"))
+                        var key = ColumnPreferenceKey(invoiceDirection);
+                        if (preferences != null && preferences.ContainsKey(key))
                         {
-                            var columnPrefs = JsonConvert.DeserializeObject<Dictionary<string, bool>>(preferences["invoiceListColumns"].ToString() ?? "");
+                            var columnPrefs = JsonConvert.DeserializeObject<Dictionary<string, bool>>(preferences[key].ToString() ?? "");
                             if (columnPrefs != null)
                             {
                                 return new JsonResult(new { success = true, data = columnPrefs });
