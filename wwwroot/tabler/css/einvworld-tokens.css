@@ -83,6 +83,30 @@
   font-weight: 600;
 }
 
+/* Flat sectioned menu (Navigation Master): small tracked section labels between link groups,
+ * and a utility block pinned to the sidebar bottom on desktop. */
+.einv-nav-section {
+  list-style: none;
+  padding: 1rem .75rem .25rem;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8a948d;
+}
+@media (min-width: 992px) {
+  .navbar-vertical .navbar-collapse {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .navbar-vertical .einv-nav-bottom {
+    margin-top: auto;
+    padding-bottom: .75rem;
+    border-top: 1px solid var(--einv-border);
+  }
+}
+
 /* Invoice list: subtle zebra striping (scoped to the invoice table only — the page canvas tone
  * keeps rows readable without fighting row selection or status colouring). */
 #invoiceTable tbody tr:nth-child(even) > td {
@@ -265,6 +289,40 @@ pre { overflow-x: auto; max-width: 100%; }
 .page-title-box {
   margin-bottom: 1rem;
 }
+/* Floating action button (Navigation Master): fixed bottom-right primary create action. */
+.einv-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1030;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 9999px;
+  background: var(--einv-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 6px 16px rgba(0, 105, 72, .35);
+  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.einv-fab:hover, .einv-fab:focus-visible {
+  color: #fff;
+  background: var(--einv-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(0, 105, 72, .4);
+}
+
+/* Stitch page header: large tight-tracked title under a quiet breadcrumb. */
+.einv-page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--einv-text);
+}
+.breadcrumb { font-size: .8rem; }
+.breadcrumb .breadcrumb-item.active { color: var(--einv-primary); font-weight: 600; }
 .page-title-box h1,
 .page-title-box h2,
 .page-title-box h3,
