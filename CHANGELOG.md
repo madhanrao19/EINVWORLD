@@ -6,6 +6,23 @@
 > **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
 > Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
 
+## 📅 2026-07-23 — Company Details (My Company) Stitch-parity restyle
+
+> Presentation-only restyle of `Pages/Suppliers/Details.cshtml` to the Stitch design mockup
+> (`screen.png`). All handlers, role checks, assign/unassign modals and the `PartyInfo` data
+> binding are preserved. No schema/migration change.
+
+- **Identity card:** Verified / Active / Supplier status pills added (Verified ← `PartyInfo.IsApproved`,
+  Active ← `IsActive`; no new fields invented).
+- **Two-column data grid:** the flat field list is split into **Legal & Registration** and
+  **Contact & Finance** sections matching the mockup.
+- **Assigned Buyers:** the `<ul>` list is replaced by a table (Buyer Entity / TIN / Industry /
+  Manage + Unassign) reusing the existing `unassignBuyer` handler and assign modals. "Manage" is a
+  `mailto:` (no buyer-detail route exists on this page — left as a link, not a dead button).
+- **Verified by Playwright:** new `tests/playwright/11-company-details-parity.spec.js` asserts the
+  pills, both grid sections and the buyers table, and screenshots the page for visual diff. Run via
+  `npm run qa` against a live instance (`EINVWORLD_BASE_URL`, `COMPANY_ID`).
+
 ## 📅 2026-07-16 — Stitch batch 6: invoice list module redesign (All/Draft/Sent/Received)
 
 > Full Stitch-parity redesign of the invoice list pages (references 7–10). Presentation-layer
