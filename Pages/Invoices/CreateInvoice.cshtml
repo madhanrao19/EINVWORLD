@@ -876,19 +876,55 @@
     </div>
 </div>
 
-<!-- Progress Indicator -->
-<div class="row mb-3">
-    <div class="col-12">
-        <div class="progress" style="height: 6px;">
-            <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="formProgress"></div>
+<!-- Step Indicator (Stitch-style 3-step) -->
+<div class="mb-4">
+    <div class="ci-stepper">
+        <div class="ci-step-node is-active" data-step="1">
+            <div class="ci-step-circle">1</div>
+            <div class="ci-step-label">Basic Information</div>
         </div>
-        <div class="d-flex justify-content-between mt-1">
-            <small class="text-muted">Step 1: Basic Information</small>
-            <small class="text-muted">Step 2: Invoice Items</small>
-            <small class="text-muted">Step 3: Review & Submit</small>
+        <div class="ci-step-node" data-step="2">
+            <div class="ci-step-circle">2</div>
+            <div class="ci-step-label">Invoice Items</div>
         </div>
+        <div class="ci-step-node" data-step="3">
+            <div class="ci-step-circle">3</div>
+            <div class="ci-step-label">Review &amp; Submit</div>
+        </div>
+        <div class="ci-step-track"><div class="ci-step-fill" id="formProgress"></div></div>
     </div>
 </div>
+<style>
+.ci-stepper{position:relative;display:flex;justify-content:space-between;padding:0 8px;}
+.ci-step-node{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center;flex:0 0 auto;}
+.ci-step-circle{width:2rem;height:2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.875rem;background:#e9efe9;color:#3d4a42;border:2px solid #e9efe9;}
+.ci-step-node.is-active .ci-step-circle{background:var(--einv-primary,#006948);color:#fff;border-color:var(--einv-primary,#006948);}
+.ci-step-node.is-complete .ci-step-circle{background:#0069481a;color:var(--einv-primary,#006948);border-color:var(--einv-primary,#006948);}
+.ci-step-label{font-size:.75rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#6d7a72;}
+.ci-step-node.is-active .ci-step-label{color:var(--einv-primary,#006948);}
+.ci-step-track{position:absolute;top:1rem;left:8%;right:8%;height:2px;background:#e9efe9;z-index:1;transform:translateY(-50%);}
+.ci-step-fill{height:100%;width:33%;background:var(--einv-primary,#006948);transition:width .3s ease;}
+.ci-summary-row{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid #eef1f4;font-size:.875rem;color:#3d4a42;}
+.ci-summary-row:last-child{border-bottom:0;}
+.ci-summary-row strong{font-weight:600;text-align:right;}
+.ci-summary-total{font-size:1rem;}
+.ci-summary-total strong{color:var(--einv-primary,#006948);}
+</style>
+
+<!-- SVDP Notice (Stitch-style info banner; gated on config) -->
+@if (Configuration.GetValue<bool>("LHDNApiConfig:SvdpEnabled", false))
+{
+    <div class="mb-4 d-flex align-items-start gap-3 p-3 rounded border bg-light-info" style="border-color:#cfe8ff;">
+        <i class="ri-information-line fs-5 text-info mt-1"></i>
+        <div>
+            <div class="text-uppercase fw-semibold text-info" style="font-size:.75rem;letter-spacing:.05em;">Notice</div>
+            <div class="text-secondary small">
+                Taxpayers under the e-Invoice Special Voluntary Disclosure Programme (SVDP) must use document version
+                SVDP 1.3 to rectify inaccuracies and regularise compliance with e-Invoice requirements.
+            </div>
+        </div>
+    </div>
+}
 
 <!-- Template Alert -->
 @if (!string.IsNullOrEmpty(Model.TemplateName))
@@ -956,11 +992,9 @@
 
             <!-- Step 1: Basic Information -->
             <div class="card mb-3" id="step1">
-                <div class="card-header bg-primary bg-opacity-10 border-0">
+                <div class="card-header bg-primary bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
-                            <span class="text-white fw-bold">1</span>
-                        </div>
+                        <i class="ri-file-text-line fs-4 text-primary me-2"></i>
                         <div>
                             <h6 class="card-title mb-0">Basic Information</h6>
                             <small class="text-muted">Enter the fundamental details of your invoice</small>
@@ -1197,23 +1231,13 @@
                     <!-- Additional Party Information Section -->
                     <div class="row g-4">
                         <div class="col-12">
-                            <div class="card border-primary">
-                                <div class="card-header bg-primary bg-opacity-10">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <h6 class="mb-0">
-                                            <i class="ri-bank-card-line me-2"></i>Additional Party Information
-                                            <small class="text-muted ms-2">(Auto-populated)</small>
-                                        </h6>
-                                        @* <div class="d-flex align-items-center">
-                                            <div class="form-check form-switch me-3">
-                                                <input class="form-check-input" type="checkbox" id="debugMode" />
-                                                <label class="form-check-label small" for="debugMode">Debug Mode</label>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="testBankAccountLoading()">
-                                                <i class="ri-test-tube-line me-1"></i>Test Loading
-                                            </button>
-                                        </div> *@
-                                    </div>
+                            <div class="card border-primary border-start border-4 border-start-primary">
+                                <div class="card-header bg-primary bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+                                    <h6 class="mb-0">
+                                        <i class="ri-bank-card-line me-2 text-primary"></i>Additional Party Information
+                                        <small class="text-muted ms-2">(Auto-populated)</small>
+                                    </h6>
+                                    <span class="badge bg-primary-lt text-primary fw-bold" style="font-size:.65rem;letter-spacing:.04em;">SYSTEM PRE-FILLED</span>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
@@ -1308,9 +1332,9 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="button" class="btn btn-outline-danger me-2" onclick="location.reload()">
-                            <i class="ri-refresh-line me-1"></i>Reset
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <button type="button" class="btn btn-outline-danger" onclick="location.reload()">
+                            <i class="ri-delete-bin-line me-1"></i>Discard Draft
                         </button>
                         <button type="button" class="btn btn-primary" onclick="nextStep()">
                             Next: Invoice Items <i class="ri-arrow-right-line ms-1"></i>
@@ -1321,11 +1345,9 @@
 
             <!-- Step 2: Invoice Items -->
             <div class="card mb-3 d-none" id="step2">
-                <div class="card-header bg-success bg-opacity-10 border-0">
+                <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
-                        <div class="avatar-sm bg-success rounded-circle d-flex align-items-center justify-content-center me-2">
-                            <span class="text-white fw-bold">2</span>
-                        </div>
+                        <i class="ri-list-check-2 fs-4 text-success me-2"></i>
                         <div>
                             <h6 class="card-title mb-0">Invoice Items</h6>
                             <small class="text-muted">Add products or services to your invoice</small>
@@ -1439,16 +1461,15 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-center mt-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
                     <button type="button" class="btn btn-outline-primary" id="addItemBtn">
                         <i class="ri-add-line me-1"></i>Add Item
                     </button>
-                   @*  <button type="button" class="btn btn-outline-warning ms-2" onclick="updateAllClassificationCodes(true)">
-                        <i class="ri-refresh-line me-1"></i>Test Classification Update
-                    </button> *@
-                    @* <button type="button" class="btn btn-outline-info ms-2" onclick="testAddItem()">
-                        <i class="ri-test-tube-line me-1"></i>Test Add Item
-                    </button> *@
+                    <div class="text-secondary small">
+                        Subtotal: <strong id="step2Subtotal" class="text-dark">0.00</strong>
+                        &nbsp;·&nbsp; Tax: <strong id="step2Tax" class="text-dark">0.00</strong>
+                        &nbsp;·&nbsp; Total: <strong id="step2Total" class="text-primary">0.00</strong>
+                    </div>
                 </div>
 
                 <!-- Tax Management Section -->
@@ -1482,80 +1503,54 @@
         </form>
         <!-- Step 3: Review & Submit -->
         <div class="card mb-4 d-none" id="step3">
-            <div class="card-header bg-warning bg-opacity-10 border-0">
+            <div class="card-header bg-warning bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                    <div class="avatar-sm bg-warning rounded-circle d-flex align-items-center justify-content-center me-3">
-                        <span class="text-white fw-bold">3</span>
-                    </div>
+                    <i class="ri-clipboard-check-line fs-4 text-warning me-2"></i>
                     <div>
-                        <h5 class="card-title mb-0">Review & Submit</h5>
+                        <h5 class="card-title mb-0">Review &amp; Submit</h5>
                         <small class="text-muted">Review your invoice and choose your action</small>
                     </div>
                 </div>
             </div>
             <div class="card-body">
                 <!-- Invoice Summary -->
-                <div class="row mb-4">
+                <div class="row mb-4 g-3">
                     <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Invoice Summary</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Document Type:</strong></td>
-                                    <td id="summaryDocType">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Supplier:</strong></td>
-                                    <td id="summarySupplier">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Buyer:</strong></td>
-                                    <td id="summaryBuyer">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Issue Date:</strong></td>
-                                    <td id="summaryIssueDate">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Items Count:</strong></td>
-                                    <td id="summaryItemsCount">-</td>
-                                </tr>
-                            </table>
+                        <div class="card border-0 border-start border-4 border-start-primary h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Summary</h6>
+                                <div class="ci-summary-row"><span>Document Type:</span><strong id="summaryDocType">-</strong></div>
+                                <div class="ci-summary-row"><span>Supplier:</span><strong id="summarySupplier">-</strong></div>
+                                <div class="ci-summary-row"><span>Buyer:</span><strong id="summaryBuyer">-</strong></div>
+                                <div class="ci-summary-row"><span>Issue Date:</span><strong id="summaryIssueDate">-</strong></div>
+                                <div class="ci-summary-row"><span>Items Count:</span><strong id="summaryItemsCount">-</strong></div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-muted mb-3">Financial Summary</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Subtotal:</strong></td>
-                                    <td id="summarySubtotal">0.00</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Tax Amount:</strong></td>
-                                    <td id="summaryTaxAmount">0.00</td>
-                                </tr>
-                                <tr class="table-primary">
-                                    <td><strong>Total Amount:</strong></td>
-                                    <td id="summaryTotalAmount">0.00</td>
-                                </tr>
-                            </table>
+                        <div class="card border-0 border-start border-4 border-start-success h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Financial Summary</h6>
+                                <div class="ci-summary-row"><span>Subtotal:</span><strong id="summarySubtotal">0.00</strong></div>
+                                <div class="ci-summary-row"><span>Tax Amount:</span><strong id="summaryTaxAmount">0.00</strong></div>
+                                <div class="ci-summary-row ci-summary-total"><span>Total Amount:</span><strong id="summaryTotalAmount">0.00</strong></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
                         <i class="ri-arrow-left-line me-1"></i>Previous
                     </button>
 
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         <button type="submit" name="action" value="saveDraft" class="btn btn-secondary">
                             <i class="ri-save-line me-1"></i>Save as Draft
                         </button>
 
-                        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
                             <i class="ri-file-copy-line me-1"></i>Save as Template
                         </button>
 
@@ -3072,6 +3067,11 @@
             updateProgress() {
                 const progress = (currentStep / totalSteps) * 100;
                 document.getElementById('formProgress').style.width = progress + '%';
+                document.querySelectorAll('.ci-step-node').forEach(node => {
+                    const step = parseInt(node.dataset.step, 10);
+                    node.classList.toggle('is-active', step === currentStep);
+                    node.classList.toggle('is-complete', step < currentStep);
+                });
             },
 
             updateExchangeRate() {
