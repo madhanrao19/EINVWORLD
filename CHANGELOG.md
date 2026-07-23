@@ -19,9 +19,31 @@
 - **Assigned Buyers:** the `<ul>` list is replaced by a table (Buyer Entity / TIN / Industry /
   Manage + Unassign) reusing the existing `unassignBuyer` handler and assign modals. "Manage" is a
   `mailto:` (no buyer-detail route exists on this page — left as a link, not a dead button).
-- **Verified by Playwright:** new `tests/playwright/11-company-details-parity.spec.js` asserts the
-  pills, both grid sections and the buyers table, and screenshots the page for visual diff. Run via
+- **Verified by Playwright:** new `tests/playwright/11-company-details-parity.spec.js` asserts the pills,
+  both grid sections and the buyers table, and screenshots the page for visual diff. Run via
   `npm run qa` against a live instance (`EINVWORLD_BASE_URL`, `COMPANY_ID`).
+
+## 📅 2026-07-23 — Create e-Invoice wizard → Stitch parity (UI migration)
+
+> Full UI migration of `Pages/Invoices/CreateInvoice.cshtml` to the Stitch design system (3-step
+> mockup). Markup rebuilt with reusable Tabler components; **all** business logic, `asp-for` bindings,
+> validation, JS (`nextStep`/`prevStep`/`calculateTotals`/`addItemRow`/auto-fill), LHDN handlers and
+> permissions preserved. No schema/migration change.
+
+- **Stepper:** the thin Bootstrap progress bar is replaced by a Stitch 3-node step indicator
+  (`.ci-stepper`) that still drives the existing `#formProgress` fill and `InvoiceManager.updateProgress()`.
+- **SVDP notice:** Stitch info banner, gated on `LHDNApiConfig:SvdpEnabled` (unchanged behaviour).
+- **Step 1 (Basic Information):** card header restyled to icon style; Additional Party Information
+  card gets a primary left-accent border + `SYSTEM PRE-FILLED` badge; footer split into
+  **Discard Draft** + green **Next** (matches mockup; "Reset" renamed, same `location.reload()`).
+- **Step 2 (Invoice Items):** header icon style; **Add Item** paired with a live subtotal/tax/total
+  readout (`#step2Subtotal/.../Total`) beside the line-items table (rows/columns/bindings unchanged).
+- **Step 3 (Review & Submit):** summary rebuilt as two Stitch accent cards (`.ci-summary-row`) keeping
+  every `summary*` id; action row = Previous / Save as Draft / Save as Template / Submit to LHDN.
+- **Branding:** EINVWORLD green (`--einv-primary:#006948`) only; no mockup brand text, no Tailwind/
+  Material-Symbols/Inter CDN imported (Tabler + Remix icons used).
+- **Verified by Playwright:** `tests/playwright/12-create-invoice-parity.spec.js` asserts stepper,
+  step visibility toggles, add-item, review summary ids and submit handlers (appearance + function).
 
 ## 📅 2026-07-16 — Stitch batch 6: invoice list module redesign (All/Draft/Sent/Received)
 
