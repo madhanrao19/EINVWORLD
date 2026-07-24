@@ -13,6 +13,36 @@
         return;
     }
 
+    // Export Scope: "Selected Items" exports exactly the checked rows from the list page instead of
+    // the date/type/status filters below. Kept in sync whenever the modal opens or a row is (un)checked.
+    function selectedInvoiceUuids() {
+        return Array.from(document.querySelectorAll(".invoice-checkbox:checked")).map(cb => cb.value).filter(Boolean);
+    }
+
+    function isSelectedScope() {
+        var radio = document.querySelector('input[name="exportScope"]:checked');
+        return radio && radio.value === "selected";
+    }
+
+    function refreshExportScopeUI() {
+        var countEl = document.getElementById("exportSelectedCount");
+        var count = selectedInvoiceUuids().length;
+        if (countEl) countEl.textContent = count;
+        var selectedScopeRadio = document.getElementById("exportScopeSelected");
+        if (selectedScopeRadio) selectedScopeRadio.disabled = count === 0;
+        document.querySelectorAll(".export-filter-field").forEach(function (el) {
+            el.style.display = isSelectedScope() ? "none" : "";
+        });
+    }
+
+    var exportModalEl = document.getElementById("exportModal");
+    if (exportModalEl) exportModalEl.addEventListener("show.bs.modal", refreshExportScopeUI);
+    document.addEventListener("change", function (e) {
+        if (e.target && (e.target.classList.contains("invoice-checkbox") || e.target.id === "selectAll" || e.target.name === "exportScope")) {
+            refreshExportScopeUI();
+        }
+    });
+
     function startLoading() {
         console.log("✅ Showing loading overlay");
         loadingOverlay.style.display = "flex"; // Ensure it's visible
@@ -31,6 +61,22 @@
     function handleExport(fileType) {
 
         startLoading(); //Loading window
+
+        // Export Scope = "Selected Items": skip the date/type/status filters entirely and export
+        // exactly the checked rows. Falls through to the same fetch/blob download logic below as
+        // Current View, just with a different exportUrl.
+        if (isSelectedScope()) {
+            let uuids = selectedInvoiceUuids();
+            if (uuids.length === 0) {
+                alert("No invoices selected. Check at least one row, or switch to Current View.");
+                stopLoading();
+                return;
+            }
+            let invoiceDirection = getInvoiceDirection();
+            let exportUrl = `/Invoices/InvoiceLists?handler=Export&fileType=${fileType}&invoiceDirection=${encodeURIComponent(invoiceDirection)}&uuids=${encodeURIComponent(uuids.join(','))}`;
+            downloadExport(exportUrl, fileType);
+            return;
+        }
 
         // Get selected values
         let documentTypeDropdown = document.getElementById("documentTypeExp");
@@ -92,9 +138,12 @@
         if (submissionDateTo) exportUrl += `&submissionDateTo=${submissionDateTo}`;
         if (internalStatusId) exportUrl += `&internalStatusId=${internalStatusId}`;
 
-        // Redirect user to the generated export URL
-        //window.location.href = exportUrl;
+        downloadExport(exportUrl, fileType);
+    }
 
+    // Shared fetch/blob download used by both Export Scopes (Current View above, Selected Items in
+    // handleExport's early-return branch) — same UTF-8 BOM fix for CSV, same loading-overlay lifecycle.
+    function downloadExport(exportUrl, fileType) {
         if (fileType == "csv") {
             fetch(exportUrl, { method: "GET" })
                 .then(response => {

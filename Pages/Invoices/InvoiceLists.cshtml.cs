@@ -66,6 +66,9 @@ namespace eInvWorld.Pages.Invoices
         public Metadata Metadata { get; set; } = null!;
         public SearchDocumentInput SearchInput { get; set; } = null!;
         public Dictionary<string, int> InvoiceSummaryByStatus { get; set; } = new();
+        public decimal TabTotalAmount { get; set; }
+        public int TotalAllInvoices { get; set; }
+        public int TotalDraftInvoices { get; set; }
         public int TotalSentInvoices { get; set; }
         public int TotalReceivedInvoices { get; set; }
         public string invoiceDirection { get; set; } = "Sent"; //  Set Default Value
@@ -264,7 +267,10 @@ namespace eInvWorld.Pages.Invoices
 
         public async Task<IActionResult> OnGetAsync(int? pageNo, int? pageSize, string status, DateTime? submissionDateFrom, DateTime? submissionDateTo,
                             string invoiceDirection, string? searchQuery = null, string? documentType = null, bool refresh = false,
-                            string? lhdnStatus = null, string? internalStatus = null, string? sortBy = null, string? sortOrder = null)
+                            string? lhdnStatus = null, string? internalStatus = null, string? sortBy = null, string? sortOrder = null,
+                            DateTime? submissionReceivedFrom = null, DateTime? submissionReceivedTo = null, string? createdBy = null,
+                            string? supplierFilter = null, string? buyerFilter = null, decimal? amountMin = null, decimal? amountMax = null,
+                            string? currencyFilter = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -411,54 +417,15 @@ namespace eInvWorld.Pages.Invoices
                 int pageSizeValue = Math.Max(1, pageSize ?? 25);
 
                 //  Apply invoice direction logic dynamically (FIXED LOGIC)
-                var selfBilledTypes = new[] { "11", "12", "13", "14" };
+                query = ApplyDirectionFilter(query, invoiceDirection, userTINs);
 
-                if (invoiceDirection == "Draft")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId == "Draft" &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                        )
-                    );
-                }
-                else if (invoiceDirection == "Sent")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId != "Draft" &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                        )
-                    );
-                }
-                else if (invoiceDirection == "Received")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId != "Draft" &&
-                        i.InternalStatusId != "Invalid" &&
-                        i.LHDNStatusId != "Invalid" &&
-                        !string.IsNullOrEmpty(i.UUID) &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
-                        )
-                    );
-                }
-                else
-                {
-                    // "All" (and any unrecognised direction value): every document where one of the
-                    // user's company TINs is a party — issuer or counterparty. This branch is also the
-                    // security backstop: without it an unexpected invoiceDirection skipped every
-                    // ownership filter above and exposed other companies' invoices (same mandatory
-                    // scoping the export handler applies).
-                    query = query.Where(i =>
-                        userTINs.Contains(i.Supplier.TIN) ||
-                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                    );
-                }
+                // Tab badge counts (Stitch): same ApplyDirectionFilter used for the page query above,
+                // so these can never drift from the real per-TIN ownership scoping. Count-only, no
+                // Include()s needed — cheap indexed queries against a fresh base queryable each.
+                TotalAllInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs).CountAsync();
+                TotalDraftInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Draft", userTINs).CountAsync();
+                TotalSentInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Sent", userTINs).CountAsync();
+                TotalReceivedInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Received", userTINs).CountAsync();
 
                 // Direction-scoped LHDN status counts for the compliance strip under the table.
                 // One grouped query pushed to the DB, computed BEFORE the user filters so the
@@ -468,10 +435,15 @@ namespace eInvWorld.Pages.Invoices
                     .Select(g => new { Status = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(x => x.Status, x => x.Count);
 
+                // KPI strip total value — same tab-wide, pre-filter scope as InvoiceSummaryByStatus above.
+                TabTotalAmount = await query.SumAsync(i => (decimal?)i.TotalAmountIncTax) ?? 0m;
+
                 //  Apply additional filters. Always call this — besides filtering, ApplyFilters applies a
                 //  deterministic OrderBy that pagination (Skip/Take below) requires.
                 query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
-                    lhdnStatus, internalStatus, sortBy, sortOrder);
+                    lhdnStatus, internalStatus, sortBy, sortOrder,
+                    submissionReceivedFrom, submissionReceivedTo, createdBy, supplierFilter, buyerFilter,
+                    amountMin, amountMax, currencyFilter);
 
                 int totalInvoices = await query.CountAsync();
 
@@ -501,6 +473,44 @@ namespace eInvWorld.Pages.Invoices
         // SearchDocumentsWithRetry helpers) was removed. The "Refresh from API" button now enqueues
         // a paced background import (see the refresh branch in OnGet) instead of blocking the request.
 
+        // Per-TIN ownership scoping for a tab (Draft/Sent/Received/All). Shared by the page query and
+        // the tab badge counts so the counts can never drift from what a tab actually shows — the
+        // "All" branch is also the security backstop for an unrecognised direction value (same mandatory
+        // scoping the export handler applies).
+        private static IQueryable<InvoiceHeader> ApplyDirectionFilter(
+            IQueryable<InvoiceHeader> query, string direction, List<string> userTINs)
+        {
+            var selfBilledTypes = new[] { "11", "12", "13", "14" };
+            return direction switch
+            {
+                "Draft" => query.Where(i =>
+                    i.InternalStatusId == "Draft" &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
+                    )),
+                "Sent" => query.Where(i =>
+                    i.InternalStatusId != "Draft" &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
+                    )),
+                "Received" => query.Where(i =>
+                    i.InternalStatusId != "Draft" &&
+                    i.InternalStatusId != "Invalid" &&
+                    i.LHDNStatusId != "Invalid" &&
+                    !string.IsNullOrEmpty(i.UUID) &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
+                    )),
+                _ => query.Where(i =>
+                    userTINs.Contains(i.Supplier.TIN) ||
+                    (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                    (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN)))
+            };
+        }
+
         private IQueryable<InvoiceHeader> ApplyFilters(
             IQueryable<InvoiceHeader> query,
             DateTime? submissionDateFrom,
@@ -511,12 +521,61 @@ namespace eInvWorld.Pages.Invoices
             string? lhdnStatus,
             string? internalStatus,
             string? sortBy,
-            string? sortOrder)
+            string? sortOrder,
+            DateTime? submissionReceivedFrom = null,
+            DateTime? submissionReceivedTo = null,
+            string? createdBy = null,
+            string? supplierFilter = null,
+            string? buyerFilter = null,
+            decimal? amountMin = null,
+            decimal? amountMax = null,
+            string? currencyFilter = null)
         {
             // Apply existing filters
             if (submissionDateFrom.HasValue && submissionDateTo.HasValue)
             {
                 query = query.Where(i => i.IssueDate >= submissionDateFrom.Value && i.IssueDate <= submissionDateTo.Value);
+            }
+
+            // Advanced Filters (Stitch): additional, purely narrowing constraints layered on top of the
+            // mandatory per-TIN ownership scoping applied earlier — cannot widen results beyond a user's
+            // own tenant, so no additional IDOR review is needed here.
+            if (submissionReceivedFrom.HasValue && submissionReceivedTo.HasValue)
+            {
+                query = query.Where(i => i.DateTimeReceived >= submissionReceivedFrom.Value && i.DateTimeReceived <= submissionReceivedTo.Value);
+            }
+
+            if (!string.IsNullOrEmpty(createdBy))
+            {
+                query = query.Where(i => EF.Functions.Like(i.CreatedBy, $"%{createdBy}%"));
+            }
+
+            if (!string.IsNullOrEmpty(supplierFilter))
+            {
+                query = query.Where(i => EF.Functions.Like(i.Supplier.CompanyName, $"%{supplierFilter}%")
+                                      || EF.Functions.Like(i.Supplier.TIN, $"%{supplierFilter}%"));
+            }
+
+            if (!string.IsNullOrEmpty(buyerFilter))
+            {
+                query = query.Where(i =>
+                    EF.Functions.Like(i.Customer != null ? i.Customer.CompanyName : i.PublicCustomer!.CompanyName, $"%{buyerFilter}%")
+                    || EF.Functions.Like(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN, $"%{buyerFilter}%"));
+            }
+
+            if (amountMin.HasValue)
+            {
+                query = query.Where(i => i.TotalAmountIncTax >= amountMin.Value);
+            }
+
+            if (amountMax.HasValue)
+            {
+                query = query.Where(i => i.TotalAmountIncTax <= amountMax.Value);
+            }
+
+            if (!string.IsNullOrEmpty(currencyFilter))
+            {
+                query = query.Where(i => i.Currency == currencyFilter);
             }
 
             if (!string.IsNullOrEmpty(lhdnStatus))
@@ -1166,7 +1225,7 @@ namespace eInvWorld.Pages.Invoices
         }
 
 
-        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "")
+        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "", string? uuids = null)
         {
             try
             {
@@ -1271,6 +1330,18 @@ namespace eInvWorld.Pages.Invoices
                 {
                     var endOfDay = submissionDateTo.Value.Date.AddDays(1).AddTicks(-1);
                     query = query.Where(i => i.IssueDate >= submissionDateFrom.Value.Date && i.IssueDate <= endOfDay);
+                }
+
+                // Export Scope: "Selected Items" — narrows to the exact rows the user checked on the
+                // list page. Layered on top of the mandatory per-TIN scope above, so a UUID belonging
+                // to another tenant is silently excluded rather than exported.
+                if (!string.IsNullOrEmpty(uuids))
+                {
+                    var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                    if (uuidList.Count > 0)
+                    {
+                        query = query.Where(i => uuidList.Contains(i.UUID));
+                    }
                 }
 
                 // Apply Internal Status Filtering
