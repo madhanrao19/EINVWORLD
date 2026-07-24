@@ -582,12 +582,18 @@
                         }
                         @if (Model.invoiceDirection == "Sent")
                         {
+                            <button id="bulkValidateBtn" class="btn btn-outline-primary btn-sm d-none" title="Re-check LHDN validation status for the selected invoices">
+                                <i class="ri-refresh-line"></i> Bulk Validate
+                            </button>
                             <button id="bulkCancelBtn" class="btn btn-warning btn-sm d-none">
                                 <i class="ri-close-circle-line"></i> Cancel e-Invoice
                             </button>
                         }
                         @if (Model.invoiceDirection == "Received")
                         {
+                            <button id="bulkValidateBtn" class="btn btn-outline-primary btn-sm d-none" title="Re-check LHDN validation status for the selected invoices">
+                                <i class="ri-refresh-line"></i> Bulk Validate
+                            </button>
                             <button id="bulkRejectBtn" class="btn btn-danger btn-sm d-none">
                                 <i class="ri-close-circle-line"></i> Request Reject e-Invoice
                             </button>
@@ -1376,6 +1382,7 @@
     <script type="module" src="~/js/submit-invoice.js"></script>
 
     <script src="~/js/bulk-submit-invoice.js"></script>
+    <script src="~/js/bulk-validate-invoice.js"></script>
     <script type="module" src="~/js/delete-invoice.js"></script>
     <script type="module" src="~/js/date-picker.js"></script>
     
@@ -1825,7 +1832,7 @@
     //  2) Make the header "select all" checkbox actually select/deselect every row + reflect an
     //     indeterminate state. No PageModel/query/permission/API change.
     (function () {
-        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn'];
+        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn', 'bulkValidateBtn'];
 
         function rowCheckboxes() { return Array.prototype.slice.call(document.querySelectorAll('.invoice-checkbox')); }
 
