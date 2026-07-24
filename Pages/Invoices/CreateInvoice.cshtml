@@ -587,24 +587,10 @@
         margin-bottom: 4px;
     }
 
-    /* Ensure action column doesn't wrap */
-    #lineItemsTable td:last-child {
-        white-space: nowrap;
-        vertical-align: middle;
-        text-align: center;
-    }
-
     /* Icon button styling for actions */
     .ri-file-copy-line,
     .ri-delete-bin-line {
         border-radius: 3px;
-    }
-
-    /* Adjust action column width for vertical layout */
-    #lineItemsTable th:last-child,
-    #lineItemsTable td:last-child {
-        width: 5%;
-        min-width: 40px;
     }
 
     /* Remove validation icons while keeping colored borders */
@@ -687,41 +673,6 @@
         box-shadow: none !important;
         background-image: none !important;
     }
-
-    /* Optimized Table Column Widths */
-    #lineItemsTable {
-        table-layout: fixed; /* Forces browser to respect our exact widths */
-        min-width: 1000px; /* Ensures the table doesn't get too squeezed on small screens */
-    }
-
-        #lineItemsTable th:nth-child(1) {
-            width: 36%;
-        }
-        /* Items */
-        #lineItemsTable th:nth-child(2) {
-            width: 6%;
-        }
-        /* Quantity */
-        #lineItemsTable th:nth-child(3) {
-            width: 16%;
-        }
-        /* Unit */
-        #lineItemsTable th:nth-child(4) {
-            width: 9%;
-        }
-        /* Unit Price */
-        #lineItemsTable th:nth-child(5) {
-            width: 8%;
-        }
-        /* Subtotal */
-        #lineItemsTable th:nth-child(6) {
-            width: 22%;
-        }
-        /* Tax */
-        #lineItemsTable th:nth-child(7) {
-            width: 3%;
-        }
-        /* Actions */
 
         /* Improve Textarea usability */
         #lineItemsTable textarea {
@@ -1002,6 +953,46 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <!-- Bento KPI Highlights -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Buyer Status</div>
+                                <div class="d-flex align-items-center gap-2 mt-2">
+                                    <span class="rounded-circle bg-secondary" style="width:8px;height:8px;" id="kpiBuyerDot"></span>
+                                    <span class="fw-bold" id="kpiBuyerStatus">Not Selected</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Currency</div>
+                                <div class="fw-bold mt-2" id="kpiCurrency">-</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Running Total</div>
+                                <div class="fw-bold mt-2 text-primary" id="kpiRunningTotal">RM 0.00</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Document Type</div>
+                                <div class="fw-bold mt-2" id="kpiDocType">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-lg-row gap-4">
+                    <div class="flex-grow-1" style="min-width:0;">
+
+                    <!-- Document Setup -->
+                    <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-between mb-3" data-bs-toggle="collapse" data-bs-target="#documentSetupCollapse" aria-expanded="true">
+                        <span><i class="ri-file-text-line text-primary me-2"></i><strong>Document Setup</strong></span>
+                        <i class="ri-arrow-up-s-line"></i>
+                    </button>
+                    <div class="collapse show" id="documentSetupCollapse">
                     <div class="row g-4">
                         <!-- Document Type -->
                         <div class="col-md-6">
@@ -1163,6 +1154,17 @@
                             </div>
                         </div>
 
+                    </div>
+                    </div>
+                    <!-- /Document Setup -->
+
+                    <!-- Buyer & Supplier -->
+                    <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-between mb-3 mt-4" data-bs-toggle="collapse" data-bs-target="#buyerSupplierCollapse" aria-expanded="true">
+                        <span><i class="ri-user-search-line text-primary me-2"></i><strong>Buyer &amp; Supplier</strong></span>
+                        <i class="ri-arrow-up-s-line"></i>
+                    </button>
+                    <div class="collapse show" id="buyerSupplierCollapse">
+                    <div class="row g-4">
                         <!-- Supplier -->
                         <div class="col-md-6">
                             <div class="form-floating">
@@ -1226,9 +1228,15 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                    <!-- /Buyer & Supplier -->
 
-                    <br />
-                    <!-- Additional Party Information Section -->
+                    <!-- Additional Party Information (collapsed by default — auto-populated, not required reading) -->
+                    <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-between mb-3 mt-4" data-bs-toggle="collapse" data-bs-target="#additionalPartyCollapse" aria-expanded="false">
+                        <span><i class="ri-bank-card-line text-primary me-2"></i><strong>Additional Party Information</strong> <span class="badge bg-primary-lt text-primary fw-bold ms-2" style="font-size:.65rem;letter-spacing:.04em;">PRE-FILLED</span></span>
+                        <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div class="collapse" id="additionalPartyCollapse">
                     <div class="row g-4">
                         <div class="col-12">
                             <div class="card border-primary border-start border-4 border-start-primary">
@@ -1331,6 +1339,61 @@
                             </div>
                         </div>
                     </div>
+                    </div>
+                    <!-- /Additional Party Information -->
+
+                    </div>
+                    <!-- /main column -->
+
+                    <!-- Sticky right panel: Invoice Summary + Validation Checklist -->
+                    <div class="flex-shrink-0" style="width:100%; max-width:320px;">
+                    <div style="position:sticky; top:1rem;">
+                        <div class="card bg-primary text-white mb-3">
+                            <div class="card-body">
+                                <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Invoice Summary</h6>
+                                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="step1SummarySubtotal">RM 0.00</strong></div>
+                                <div class="d-flex justify-content-between mb-2"><span>Tax Amount</span><strong id="step1SummaryTax">RM 0.00</strong></div>
+                                <hr class="border-white opacity-25" />
+                                <div class="d-flex justify-content-between align-items-end">
+                                    <span class="text-uppercase opacity-75" style="font-size:.7rem;">Total Payable</span>
+                                    <span class="fs-3 fw-bold" id="step1SummaryTotal">0.00</span>
+                                </div>
+                                <div class="text-end opacity-75" style="font-size:.65rem;">MYR - Malaysian Ringgit</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Validation Checklist</h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="d-flex align-items-start gap-2 mb-3">
+                                        <i class="ri-checkbox-circle-fill text-secondary" id="chkBuyerIcon"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkBuyerText">Buyer Not Selected</div>
+                                            <div class="text-muted" style="font-size:.7rem;" id="chkBuyerDetail">Select a buyer to continue.</div>
+                                        </div>
+                                    </li>
+                                    <li class="d-flex align-items-start gap-2 mb-3">
+                                        <i class="ri-checkbox-circle-fill text-success"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkCurrencyText">Currency Selected</div>
+                                            <div class="text-muted" style="font-size:.7rem;" id="chkCurrencyDetail">MYR</div>
+                                        </div>
+                                    </li>
+                                    <li class="d-flex align-items-start gap-2">
+                                        <i class="ri-error-warning-fill text-danger" id="chkPoIcon"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkPoText">PO/DO Number Not Set</div>
+                                            <div class="text-muted" style="font-size:.7rem;">Optional — set if your buyer requires PO matching.</div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    <!-- /sticky right panel -->
+                    </div>
+                    <!-- /two-column layout -->
 
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <button type="button" class="btn btn-outline-danger" onclick="location.reload()">
@@ -1355,26 +1418,23 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered invoice-table" id="lineItemsTable">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th scope="col" style="text-align: center;">Items</th>
-                                    <th scope="col" style="text-align: center;">Quantity</th>
-                                    <th scope="col" style="text-align: center;">Unit</th>
-                                    <th scope="col" style="text-align: center;">Unit Price</th>
-                                    <th scope="col" style="text-align: center;">Subtotal</th>
-                                    <th scope="col" style="text-align: center;">Tax</th>
-                                    <th scope="col" style="text-align: center;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lineItems">
-                                @for (int i = 0; i < (Model.Invoice?.InvoiceLines.Count ?? 0); i++)
-                                {
-                                    <tr data-item-index="@i" class="item-row">
-                                        <td>
-                                            <div class="mb-2">
-                                                <select class="form-select form-select-sm saved-item-select bg-light border-primary" onchange="autoFillItem(this, @i)">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div class="text-muted small">Add products or services to your invoice</div>
+                        <button type="button" class="btn btn-outline-primary" id="addItemBtn">
+                            <i class="ri-add-line me-1"></i>Add Item
+                        </button>
+                    </div>
+
+                    <div id="lineItemsTable">
+                        <div id="lineItems">
+                            @for (int i = 0; i < (Model.Invoice?.InvoiceLines.Count ?? 0); i++)
+                            {
+                                <div data-item-index="@i" class="item-row card mb-3" style="border-left: 4px solid var(--einv-primary, #006948);">
+                                    <div class="card-body">
+                                        <div class="row g-4">
+                                            <div class="col-12 col-lg-6">
+                                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                                <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, @i)">
                                                     <option value="">-- Select Saved Item --</option>
                                                     @if (Model.SavedItems != null && Model.SavedItems.Any())
                                                     {
@@ -1384,91 +1444,114 @@
                                                         }
                                                     }
                                                 </select>
-                                            </div>
-                                            <div class="row g-2 mb-2">
-                                                <div class="col-sm-7">
-                                                    <select asp-for="Invoice.InvoiceLines[i].ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select form-select-sm item-classification" required>
-                                                        <option value="">Select Classification</option>
-                                                    </select>
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-sm-7">
+                                                        <select asp-for="Invoice.InvoiceLines[i].ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select form-select-sm item-classification" required>
+                                                            <option value="">Select Classification</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-sm-5">
+                                                        <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                                                    </div>
                                                 </div>
-                                                <div class="col-sm-5">
-                                                    <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
                                                 <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required></textarea>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" class="form-control form-control-sm quantity-input" step="0.01" min="0" required placeholder="0" />
-                                        </td>
-                                        <td>
-                                            <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
-                                                <option value="">Unit</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" class="form-control form-control-sm price-input" step="0.01" min="0" required placeholder="0.00" />
-                                        </td>
-                                        <td>
-                                            <div class="amount text-end fw-bold" id="subtotal-@i">0.00</div>
-                                        </td>
-                                        <td>
-                                            <div class="tax-section" id="taxes-@i">
-                                                @if (Model.Invoice?.InvoiceLines[i].Taxes != null)
-                                                {
-                                                    for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
-                                                    {
-                                                        <div class="tax-row mb-2 p-2 border rounded">
-                                                            <div class="d-flex flex-wrap gap-1 align-items-start">
-                                                                <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
-                                                                    <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
-                                                                        <option value="">Tax Category</option>
-                                                                    </select>
-                                                                </div>
-                                                                <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
-                                                                    <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
-                                                                </div>
-                                                                <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                                                                    <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mt-2 tax-exemption-reason" style="display: none;">
-                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxExemptionReason" class="form-control form-control-sm" placeholder="Exemption Reason (Required)" />
-                                                            </div>
+                                            <div class="col-12 col-lg-6">
+                                                <div class="row g-2">
+                                                    <div class="col-4">
+                                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                                        <input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                                        <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
+                                                            <option value="">Unit</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-4">
+                                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                                        <input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="text-uppercase text-muted small mb-1">Tax</label>
+                                                        <div class="tax-section" id="taxes-@i">
+                                                            @if (Model.Invoice?.InvoiceLines[i].Taxes != null)
+                                                            {
+                                                                for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
+                                                                {
+                                                                    <div class="tax-row mb-2 p-2 border rounded">
+                                                                        <div class="d-flex flex-wrap gap-1 align-items-start">
+                                                                            <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
+                                                                                <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
+                                                                                    <option value="">Tax Category</option>
+                                                                                </select>
+                                                                            </div>
+                                                                            <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
+                                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
+                                                                            </div>
+                                                                            <div class="tax-action-wrapper" style="flex: 0 0 auto;">
+                                                                                <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="mt-2 tax-exemption-reason" style="display: none;">
+                                                                            <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxExemptionReason" class="form-control form-control-sm" placeholder="Exemption Reason (Required)" />
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            }
                                                         </div>
-                                                    }
-                                                }
+                                                        <button type="button" class="btn btn-sm btn-primary" onclick="addTaxRow(@i)">
+                                                            <i class="ri-add-line me-1"></i>Tax
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="text-uppercase text-muted small mb-1">Subtotal</label>
+                                                        <div class="p-2 rounded bg-light text-end fw-bold" id="subtotal-@i">0.00</div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <label class="text-uppercase text-muted small mb-1">Row Total</label>
+                                                        <div class="p-2 rounded text-end fw-bold text-primary" style="background:rgba(0,105,72,.08);" id="rowtotal-@i">0.00</div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="addTaxRow(@i)">
-                                                <i class="ri-add-line me-1"></i>Tax
-                                            </button>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex flex-column gap-1 align-items-center">
-                                                <i class="ri-file-copy-line text-success" onclick="duplicateItem(this)" title="Duplicate Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                                                <i class="ri-delete-bin-line text-danger" onclick="removeItem(this)" title="Delete Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                                        </div>
+                                        <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
+                                            <div class="d-flex gap-3">
+                                                <button type="button" class="btn btn-link btn-sm text-success text-decoration-none p-0" onclick="duplicateItem(this)">
+                                                    <i class="ri-file-copy-line me-1"></i>Duplicate
+                                                </button>
+                                                <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)">
+                                                    <i class="ri-delete-bin-line me-1"></i>Remove
+                                                </button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
 
-                            <!-- 🔧 Required for model binding -->
-                            <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@(Model.Invoice?.InvoiceLines.Count ?? 0)" />
-
-                        </table>
+                        <!-- 🔧 Required for model binding -->
+                        <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@(Model.Invoice?.InvoiceLines.Count ?? 0)" />
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
-                    <button type="button" class="btn btn-outline-primary" id="addItemBtn">
-                        <i class="ri-add-line me-1"></i>Add Item
-                    </button>
-                    <div class="text-secondary small">
-                        Subtotal: <strong id="step2Subtotal" class="text-dark">0.00</strong>
-                        &nbsp;·&nbsp; Tax: <strong id="step2Tax" class="text-dark">0.00</strong>
-                        &nbsp;·&nbsp; Total: <strong id="step2Total" class="text-primary">0.00</strong>
+                <!-- Invoice Summary (Step 2) -->
+                <div class="card border-0 border-start border-4 border-start-success mt-3">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Summary</h6>
+                        <div class="row g-4 align-items-center">
+                            <div class="col-md-7">
+                                <div class="ci-summary-row"><span>Subtotal:</span><strong id="step2SummarySubtotal">0.00</strong></div>
+                                <div class="ci-summary-row"><span>Tax Amount:</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
+                                <div class="ci-summary-row ci-summary-total"><span>Total Inclusive:</span><strong id="step2SummaryTotalAmount">0.00</strong></div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="p-3 rounded" style="background:rgba(0,105,72,.08);">
+                                    <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Amount Payable</div>
+                                    <div class="fs-3 fw-bold text-primary" id="step2AmountPayable">0.00</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1513,50 +1596,125 @@
                 </div>
             </div>
             <div class="card-body">
-                <!-- Invoice Summary -->
-                <div class="row mb-4 g-3">
-                    <div class="col-md-6">
-                        <div class="card border-0 border-start border-4 border-start-primary h-100">
+                <div class="row g-4">
+                    <!-- Left: Detailed Review -->
+                    <div class="col-lg-8">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Details</h6>
+                                        <div class="ci-summary-row"><span>Document Type:</span><strong id="summaryDocType">-</strong></div>
+                                        <div class="ci-summary-row"><span>Issue Date:</span><strong id="summaryIssueDate">-</strong></div>
+                                        <div class="ci-summary-row"><span>Items Count:</span><strong id="summaryItemsCount">-</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Buyer &amp; Supplier</h6>
+                                        <div class="ci-summary-row"><span>Supplier:</span><strong id="summarySupplier">-</strong></div>
+                                        <div class="ci-summary-row"><span>Buyer:</span><strong id="summaryBuyer">-</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Item Summary -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light border-0 d-flex align-items-center justify-content-between">
+                                <h6 class="mb-0"><i class="ri-list-check-2 me-2 text-primary"></i>Item Summary</h6>
+                                <span class="badge bg-primary-lt text-primary" id="summaryItemBadge">0 Items</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0" id="reviewItemsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Description</th>
+                                            <th class="text-center">Qty</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-end">Tax</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reviewItemsBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Payment & Terms -->
+                        <div class="card">
                             <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Summary</h6>
-                                <div class="ci-summary-row"><span>Document Type:</span><strong id="summaryDocType">-</strong></div>
-                                <div class="ci-summary-row"><span>Supplier:</span><strong id="summarySupplier">-</strong></div>
-                                <div class="ci-summary-row"><span>Buyer:</span><strong id="summaryBuyer">-</strong></div>
-                                <div class="ci-summary-row"><span>Issue Date:</span><strong id="summaryIssueDate">-</strong></div>
-                                <div class="ci-summary-row"><span>Items Count:</span><strong id="summaryItemsCount">-</strong></div>
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Payment &amp; Terms</h6>
+                                <div class="ci-summary-row"><span>Payment Terms:</span><strong id="summaryPaymentTerms">-</strong></div>
+                                <div class="ci-summary-row"><span>Billing Frequency:</span><strong id="summaryBillingFrequency">-</strong></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="card border-0 border-start border-4 border-start-success h-100">
-                            <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Financial Summary</h6>
-                                <div class="ci-summary-row"><span>Subtotal:</span><strong id="summarySubtotal">0.00</strong></div>
-                                <div class="ci-summary-row"><span>Tax Amount:</span><strong id="summaryTaxAmount">0.00</strong></div>
-                                <div class="ci-summary-row ci-summary-total"><span>Total Amount:</span><strong id="summaryTotalAmount">0.00</strong></div>
+
+                    <!-- Right: Financial Summary & Validation (sticky) -->
+                    <div class="col-lg-4">
+                        <div style="position:sticky; top:1rem;">
+                            <div class="card bg-primary text-white mb-3">
+                                <div class="card-body">
+                                    <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Total Amount Due</h6>
+                                    <div class="fs-2 fw-bold mb-3" id="summaryTotalAmount">0.00</div>
+                                    <hr class="border-white opacity-25" />
+                                    <div class="d-flex justify-content-between mb-2"><span>Subtotal (Excl. Tax)</span><strong id="summarySubtotal">0.00</strong></div>
+                                    <div class="d-flex justify-content-between"><span>Tax Amount</span><strong id="summaryTaxAmount">0.00</strong></div>
+                                </div>
+                            </div>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Submission Readiness</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="d-flex align-items-start gap-2 mb-3">
+                                            <i class="ri-checkbox-circle-fill" id="chkItemsIcon"></i>
+                                            <div>
+                                                <div class="fw-bold" id="chkItemsText">No Items</div>
+                                                <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                            </div>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2 mb-3">
+                                            <i class="ri-checkbox-circle-fill" id="chkPartiesIcon"></i>
+                                            <div>
+                                                <div class="fw-bold" id="chkPartiesText">Supplier/Buyer Not Set</div>
+                                                <div class="text-muted" style="font-size:.7rem;">Both supplier and buyer must be selected.</div>
+                                            </div>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2">
+                                            <i class="ri-checkbox-circle-fill" id="chkTotalsIcon"></i>
+                                            <div>
+                                                <div class="fw-bold" id="chkTotalsText">Totals Not Calculated</div>
+                                                <div class="text-muted" style="font-size:.7rem;">Subtotal and tax are computed from item rows.</div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" name="handler" value="SubmitDocuments" class="btn btn-danger btn-lg" id="sa-success-submit-lhdn">
+                                    <i class="ri-send-plane-fill me-1"></i>Submit to LHDN
+                                </button>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <button type="submit" name="action" value="saveDraft" class="btn btn-outline-secondary w-100">
+                                            <i class="ri-save-line me-1"></i>Save Draft
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                                            <i class="ri-file-copy-line me-1"></i>Template
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-link text-secondary text-decoration-none" onclick="prevStep()">
+                                    <i class="ri-arrow-left-line me-1"></i>Back to Items
+                                </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
-                        <i class="ri-arrow-left-line me-1"></i>Previous
-                    </button>
-
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="submit" name="action" value="saveDraft" class="btn btn-secondary">
-                            <i class="ri-save-line me-1"></i>Save as Draft
-                        </button>
-
-                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
-                            <i class="ri-file-copy-line me-1"></i>Save as Template
-                        </button>
-
-                        <button type="submit" name="handler" value="SubmitDocuments" class="btn btn-danger" id="sa-success-submit-lhdn">
-                            <i class="ri-send-plane-fill me-1"></i>Submit to LHDN
-                        </button>
                     </div>
                 </div>
 
@@ -3096,12 +3254,69 @@
                 const supplier = document.getElementById('supplierSelect');
                 const buyer = document.getElementById('buyerSelect');
                 const issueDate = document.getElementById('issueDate');
+                const paymentTerms = document.getElementById('paymentTerms');
+                const billingFrequency = document.querySelector('select[name="Invoice.InvoicePeriod"]');
 
                 document.getElementById('summaryDocType').textContent = docType.options[docType.selectedIndex]?.text || '-';
                 document.getElementById('summarySupplier').textContent = supplier.options[supplier.selectedIndex]?.text || '-';
                 document.getElementById('summaryBuyer').textContent = buyer.options[buyer.selectedIndex]?.text || '-';
                 document.getElementById('summaryIssueDate').textContent = issueDate.value || '-';
-                document.getElementById('summaryItemsCount').textContent = document.querySelectorAll('.item-row').length;
+                const itemRows = document.querySelectorAll('.item-row');
+                document.getElementById('summaryItemsCount').textContent = itemRows.length;
+
+                const summaryPaymentTerms = document.getElementById('summaryPaymentTerms');
+                if (summaryPaymentTerms) summaryPaymentTerms.textContent = (paymentTerms && paymentTerms.value) || '-';
+                const summaryBillingFrequency = document.getElementById('summaryBillingFrequency');
+                if (summaryBillingFrequency) {
+                    summaryBillingFrequency.textContent = (billingFrequency && billingFrequency.options[billingFrequency.selectedIndex]?.text) || '-';
+                }
+
+                // Item Summary table — built directly from the actual item cards, no server round-trip
+                const reviewBody = document.getElementById('reviewItemsBody');
+                if (reviewBody) {
+                    reviewBody.innerHTML = '';
+                    itemRows.forEach(row => {
+                        const desc = row.querySelector('.item-description')?.value || '(no description)';
+                        const qty = row.querySelector('.quantity-input')?.value || '0';
+                        const price = row.querySelector('.price-input')?.value || '0';
+                        const subtotalEl = row.querySelector('[id^="subtotal-"]');
+                        const rowTotalEl = row.querySelector('[id^="rowtotal-"]');
+                        const subtotal = parseFloat(subtotalEl?.textContent) || 0;
+                        const rowTotal = parseFloat(rowTotalEl?.textContent) || 0;
+                        const tax = (rowTotal - subtotal).toFixed(2);
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${desc}</td><td class="text-center">${qty}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
+                        reviewBody.appendChild(tr);
+                    });
+                }
+                const summaryItemBadge = document.getElementById('summaryItemBadge');
+                if (summaryItemBadge) summaryItemBadge.textContent = `${itemRows.length} Item${itemRows.length === 1 ? '' : 's'}`;
+
+                // Submission Readiness — only real, currently-true facts; no external verification implied.
+                const hasItems = itemRows.length > 0;
+                const chkItemsIcon = document.getElementById('chkItemsIcon');
+                const chkItemsText = document.getElementById('chkItemsText');
+                if (chkItemsText) {
+                    chkItemsText.textContent = hasItems ? `Items Ready (${itemRows.length})` : 'No Items';
+                    chkItemsIcon.className = hasItems ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+                }
+
+                const hasParties = !!(supplier.value && buyer.value);
+                const chkPartiesIcon = document.getElementById('chkPartiesIcon');
+                const chkPartiesText = document.getElementById('chkPartiesText');
+                if (chkPartiesText) {
+                    chkPartiesText.textContent = hasParties ? 'Supplier & Buyer Set' : 'Supplier/Buyer Not Set';
+                    chkPartiesIcon.className = hasParties ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+                }
+
+                const totalAmountEl = document.getElementById('summaryTotalAmount');
+                const hasTotals = totalAmountEl && parseFloat(totalAmountEl.textContent) > 0;
+                const chkTotalsIcon = document.getElementById('chkTotalsIcon');
+                const chkTotalsText = document.getElementById('chkTotalsText');
+                if (chkTotalsText) {
+                    chkTotalsText.textContent = hasTotals ? 'Totals Calculated' : 'Totals Not Calculated';
+                    chkTotalsIcon.className = hasTotals ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+                }
             }
         };
 
@@ -3634,6 +3849,7 @@
                 }
             }
             
+            window.InvoiceManager = InvoiceManager; // expose for debugging/tests; nextStep() already calls this in-scope
             InvoiceManager.init();
 
             // Update classification codes if document is already self-billed on page load
@@ -3816,6 +4032,11 @@
                             }
                         });
                         taxAmount += itemTaxAmount;
+
+                        const rowTotalElement = row.querySelector('[id^="rowtotal-"]');
+                        if (rowTotalElement) {
+                            rowTotalElement.textContent = (itemSubtotal + itemTaxAmount).toFixed(2);
+                        }
                     }
                 }
             });
@@ -3848,6 +4069,16 @@
             } else {
                 console.warn(`⚠️ summaryTotalAmount element not found`);
             }
+
+            // Step 2 "Invoice Summary" card (separate ids from the Step 3 review card above)
+            const step2Subtotal = document.getElementById('step2SummarySubtotal');
+            const step2TaxAmount = document.getElementById('step2SummaryTaxAmount');
+            const step2TotalAmount = document.getElementById('step2SummaryTotalAmount');
+            const step2AmountPayable = document.getElementById('step2AmountPayable');
+            if (step2Subtotal) step2Subtotal.textContent = subtotal.toFixed(2);
+            if (step2TaxAmount) step2TaxAmount.textContent = taxAmount.toFixed(2);
+            if (step2TotalAmount) step2TotalAmount.textContent = totalAmount.toFixed(2);
+            if (step2AmountPayable) step2AmountPayable.textContent = totalAmount.toFixed(2);
 
             // Update hidden fields
             const totalAmountExclTax = document.getElementById('totalAmountExclTax');
@@ -4077,61 +4308,80 @@
                 const itemCount = parseInt(itemCountInput?.value) || tbody.children.length;
                 console.log(`📝 Adding item #${itemCount + 1}, current count: ${itemCount}`);
 
-                const newRow = document.createElement('tr');
-                newRow.className = 'item-row';
+                const newRow = document.createElement('div');
+                newRow.className = 'item-row card mb-3';
+                newRow.style.borderLeft = '4px solid var(--einv-primary, #006948)';
                 newRow.setAttribute('data-item-index', itemCount);
 
-                // UPDATED HTML: Added the Quick Select dropdown in the first <td>
+                // UPDATED HTML: Added the Quick Select dropdown in the description block
                 newRow.innerHTML = `
-                    <td>
-                        <div class="mb-2">
-                            <select class="form-select form-select-sm saved-item-select bg-light border-primary" onchange="autoFillItem(this, ${itemCount})">
-                                <option value="">-- Select Saved Item --</option>
-                                ${savedItemsOptionsHtml}
-                            </select>
-                        </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-sm-7">
-                                <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                    <option value="">Select Classification</option>
-                                    ${classificationOptionsHtml}
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-12 col-lg-6">
+                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                                    <option value="">-- Select Saved Item --</option>
+                                    ${savedItemsOptionsHtml}
                                 </select>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-sm-7">
+                                        <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                            <option value="">Select Classification</option>
+                                            ${classificationOptionsHtml}
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                                    </div>
+                                </div>
+                                <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
                             </div>
-                            <div class="col-sm-5">
-                                <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                            <div class="col-12 col-lg-6">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
+                                            <option value="">Unit</option>
+                                            ${unitOptionsHtml}
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="text-uppercase text-muted small mb-1">Tax</label>
+                                        <div class="tax-section" id="taxes-${itemCount}"></div>
+                                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                            <i class="ri-add-line me-1"></i>Tax
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-uppercase text-muted small mb-1">Subtotal</label>
+                                        <div class="p-2 rounded bg-light text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-uppercase text-muted small mb-1">Row Total</label>
+                                        <div class="p-2 rounded text-end fw-bold text-primary" style="background:rgba(0,105,72,.08);" id="rowtotal-${itemCount}">0.00</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
+                        <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
+                            <div class="d-flex gap-3">
+                                <button type="button" class="btn btn-link btn-sm text-success text-decoration-none p-0" onclick="duplicateItem(this)">
+                                    <i class="ri-file-copy-line me-1"></i>Duplicate
+                                </button>
+                                <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)">
+                                    <i class="ri-delete-bin-line me-1"></i>Remove
+                                </button>
+                            </div>
                         </div>
-                    </td>
-                    <td>
-                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input" step="0.01" min="0" required placeholder="0" />
-                    </td>
-                    <td>
-                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                            <option value="">Unit</option>
-                            ${unitOptionsHtml}
-                        </select>
-                    </td>
-                    <td>
-                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input" step="0.01" min="0" required placeholder="0.00" />
-                    </td>
-                    <td>
-                        <div class="amount text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
-                    </td>
-                    <td>
-                        <div class="tax-section" id="taxes-${itemCount}"></div>
-                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
-                            <i class="ri-add-line me-1"></i>Tax
-                        </button>
-                    </td>
-                    <td>
-                        <div class="d-flex flex-column gap-1 align-items-center">
-                            <i class="ri-file-copy-line text-success" onclick="duplicateItem(this)" title="Duplicate Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                            <i class="ri-delete-bin-line text-danger" onclick="removeItem(this)" title="Delete Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                        </div>
-                    </td>
+                    </div>
                 `;
 
                 // Add the row to the table
@@ -4307,8 +4557,9 @@
                 const itemCount = parseInt(itemCountInput?.value) || tbody.children.length;
 
                 // Create new row
-                const newRow = document.createElement('tr');
-                newRow.className = 'item-row';
+                const newRow = document.createElement('div');
+                newRow.className = 'item-row card mb-3';
+                newRow.style.borderLeft = '4px solid var(--einv-primary, #006948)';
                 newRow.setAttribute('data-item-index', itemCount);
 
                 // Get all form data from source row SAFELY using the classes
@@ -4339,55 +4590,73 @@
 
                 // 🚨 CRITICAL FIX: Create BLANK HTML for new row (NO INJECTED TEXT VALUES)
                 newRow.innerHTML = `
-                    <td>
-                        <div class="mb-2">
-                            <select class="form-select form-select-sm saved-item-select bg-light border-primary" onchange="autoFillItem(this, ${itemCount})">
-                                <option value="">-- Select Saved Item --</option>
-                                ${savedItemsOptionsHtml}
-                            </select>
-                        </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-sm-7">
-                                <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                    <option value="">Select Classification</option>
-                                    ${classificationOptionsHtml}
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-12 col-lg-6">
+                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                                    <option value="">-- Select Saved Item --</option>
+                                    ${savedItemsOptionsHtml}
                                 </select>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-sm-7">
+                                        <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                            <option value="">Select Classification</option>
+                                            ${classificationOptionsHtml}
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                                    </div>
+                                </div>
+                                <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
                             </div>
-                            <div class="col-sm-5">
-                                <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                            <div class="col-12 col-lg-6">
+                                <div class="row g-2">
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
+                                            <option value="">Unit</option>
+                                            ${unitOptionsHtml}
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="text-uppercase text-muted small mb-1">Tax</label>
+                                        <div class="tax-section" id="taxes-${itemCount}"></div>
+                                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                            <i class="ri-add-line me-1"></i>Tax
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-uppercase text-muted small mb-1">Subtotal</label>
+                                        <div class="p-2 rounded bg-light text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="text-uppercase text-muted small mb-1">Row Total</label>
+                                        <div class="p-2 rounded text-end fw-bold text-primary" style="background:rgba(0,105,72,.08);" id="rowtotal-${itemCount}">0.00</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
+                        <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
+                            <div class="d-flex gap-3">
+                                <button type="button" class="btn btn-link btn-sm text-success text-decoration-none p-0" onclick="duplicateItem(this)">
+                                    <i class="ri-file-copy-line me-1"></i>Duplicate
+                                </button>
+                                <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)">
+                                    <i class="ri-delete-bin-line me-1"></i>Remove
+                                </button>
+                            </div>
                         </div>
-                    </td>
-                    <td>
-                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input" step="0.01" min="0" required placeholder="0" />
-                    </td>
-                    <td>
-                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                            <option value="">Unit</option>
-                            ${unitOptionsHtml}
-                        </select>
-                    </td>
-                    <td>
-                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input" step="0.01" min="0" required placeholder="0.00" />
-                    </td>
-                    <td>
-                        <div class="amount text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
-                    </td>
-                    <td>
-                        <div class="tax-section" id="taxes-${itemCount}"></div>
-                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
-                            <i class="ri-add-line me-1"></i>Tax
-                        </button>
-                    </td>
-                    <td>
-                        <div class="d-flex flex-column gap-1 align-items-center">
-                            <i class="ri-file-copy-line text-success" onclick="duplicateItem(this)" title="Duplicate Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                            <i class="ri-delete-bin-line text-danger" onclick="removeItem(this)" title="Delete Row" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                        </div>
-                    </td>
+                    </div>
                 `;
 
                 // Add the row to the table BEFORE accessing its elements
@@ -4580,6 +4849,12 @@
                 const subtotalElement = row.querySelector('[id^="subtotal-"]');
                 if (subtotalElement) {
                     subtotalElement.id = `subtotal-${index}`;
+                }
+
+                // Update row total ID
+                const rowTotalElement = row.querySelector('[id^="rowtotal-"]');
+                if (rowTotalElement) {
+                    rowTotalElement.id = `rowtotal-${index}`;
                 }
 
                 // Update taxes section ID
@@ -4790,6 +5065,59 @@
             }
         }
 
+        // Step 1 KPI tiles + validation checklist — purely derived from existing form fields, no fabricated status.
+        function updateStep1Kpis() {
+            const buyerSelect = document.getElementById('buyerSelect');
+            const currencySelect = document.getElementById('currency');
+            const docTypeSelect = document.getElementById('docTypeCode');
+            const poDoNo = document.getElementById('poDoNo');
+
+            const buyerText = buyerSelect && buyerSelect.selectedIndex > 0 ? buyerSelect.options[buyerSelect.selectedIndex].text : '';
+            const kpiBuyerStatus = document.getElementById('kpiBuyerStatus');
+            const kpiBuyerDot = document.getElementById('kpiBuyerDot');
+            if (kpiBuyerStatus) kpiBuyerStatus.textContent = buyerText || 'Not Selected';
+            if (kpiBuyerDot) kpiBuyerDot.className = 'rounded-circle ' + (buyerText ? 'bg-success' : 'bg-secondary');
+
+            const currencyText = currencySelect && currencySelect.selectedIndex > 0 ? currencySelect.value : '';
+            const kpiCurrency = document.getElementById('kpiCurrency');
+            if (kpiCurrency) kpiCurrency.textContent = currencyText || '-';
+
+            const docTypeText = docTypeSelect && docTypeSelect.selectedIndex > 0 ? docTypeSelect.options[docTypeSelect.selectedIndex].text : '';
+            const kpiDocType = document.getElementById('kpiDocType');
+            if (kpiDocType) kpiDocType.textContent = docTypeText || '-';
+
+            // Validation checklist — each line reflects a real, currently-true fact about the form; no external verification implied.
+            const chkBuyerIcon = document.getElementById('chkBuyerIcon');
+            const chkBuyerText = document.getElementById('chkBuyerText');
+            const chkBuyerDetail = document.getElementById('chkBuyerDetail');
+            if (chkBuyerText) {
+                if (buyerText) {
+                    chkBuyerText.textContent = 'Buyer Selected';
+                    chkBuyerDetail.textContent = buyerText;
+                    chkBuyerIcon.className = 'ri-checkbox-circle-fill text-success';
+                } else {
+                    chkBuyerText.textContent = 'Buyer Not Selected';
+                    chkBuyerDetail.textContent = 'Select a buyer to continue.';
+                    chkBuyerIcon.className = 'ri-error-warning-fill text-danger';
+                }
+            }
+
+            const chkCurrencyText = document.getElementById('chkCurrencyText');
+            const chkCurrencyDetail = document.getElementById('chkCurrencyDetail');
+            if (chkCurrencyText) {
+                chkCurrencyText.textContent = currencyText ? 'Currency Selected' : 'Currency Not Selected';
+                chkCurrencyDetail.textContent = currencyText || '-';
+            }
+
+            const chkPoIcon = document.getElementById('chkPoIcon');
+            const chkPoText = document.getElementById('chkPoText');
+            if (chkPoText) {
+                const hasPo = poDoNo && poDoNo.value.trim().length > 0;
+                chkPoText.textContent = hasPo ? 'PO/DO Number Set' : 'PO/DO Number Not Set';
+                chkPoIcon.className = hasPo ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-warning';
+            }
+        }
+
         // Set default currency to MYR if not already selected
         function setDefaultCurrency() {
             const currencySelect = document.getElementById('currency');
@@ -4798,6 +5126,16 @@
                 updateExchangeRate();
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            ['buyerSelect', 'currency', 'docTypeCode', 'poDoNo'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', updateStep1Kpis);
+            });
+            const poDoNo = document.getElementById('poDoNo');
+            if (poDoNo) poDoNo.addEventListener('input', updateStep1Kpis);
+            updateStep1Kpis();
+        });
 
         // Force validation styling for required fields
         function forceValidationStyling() {
@@ -5233,7 +5571,7 @@
                             var existing = tbody.querySelectorAll('.item-row, tr').length;
                             for (var k = existing; k < items.length && addBtn; k++) { addBtn.click(); }
 
-                            var rows = tbody.querySelectorAll('tr');
+                            var rows = tbody.querySelectorAll('.item-row');
                             for (var r = 0; r < items.length && r < rows.length; r++) {
                                 var row = rows[r], it = items[r] || {};
                                 var desc = row.querySelector('.item-description');
