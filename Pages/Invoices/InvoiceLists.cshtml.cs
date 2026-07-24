@@ -2105,6 +2105,82 @@ namespace eInvWorld.Pages.Invoices
             return new JsonResult(new { success = true, updatedCount = updatedCount });
         }
 
+        // "Bulk Validate" (Stitch): user-triggered re-check of LHDN status for explicitly selected
+        // invoices. Deliberately reuses the exact same safety mechanisms as OnPostSyncActiveSessionAsync
+        // above rather than calling LHDN directly — the same per-user single-flight gate (so this can't
+        // stack with the active-session auto-poll or with itself across double-clicks), the same
+        // "UISession" 60s-cooldown/429-abort rules in InvoiceSyncHelper, and the same centralized
+        // LhdnRateLimitHandler pacing on the underlying HttpClient. Scoped to UUIDs (not InvoiceNo) to
+        // match the checkbox values already rendered on the list page.
+        public async Task<JsonResult> OnPostBulkValidateAsync([FromBody] List<string> uuids)
+        {
+            if (uuids == null || !uuids.Any())
+                return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0 });
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, updatedCount = 0, checkedCount = 0 });
+
+            var gate = _sessionSyncGates.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+            if (!await gate.WaitAsync(0))
+                return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0, message = "A status check is already running for your account — try again shortly." });
+
+            int updatedCount = 0;
+            int checkedCount = 0;
+            try
+            {
+                var userTINs = await _context.UserCompanies
+                    .Where(uc => uc.UserId == user.Id)
+                    .Select(uc => uc.PartyInfo.TIN)
+                    .Distinct()
+                    .ToListAsync(HttpContext.RequestAborted);
+
+                if (!userTINs.Any())
+                    return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0 });
+
+                // Same mandatory per-TIN ownership scope as everywhere else on this page — a UUID
+                // belonging to another tenant is silently excluded rather than polled.
+                var invoicesToCheck = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .Where(i => uuids.Contains(i.UUID) &&
+                                (userTINs.Contains(i.Supplier.TIN) ||
+                                 (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                                 (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                    .ToListAsync(HttpContext.RequestAborted);
+
+                foreach (var invoice in invoicesToCheck)
+                {
+                    if (HttpContext.RequestAborted.IsCancellationRequested)
+                        break;
+
+                    // Terminal statuses never change — skip rather than waste an LHDN call.
+                    if (EINVWORLD.Helpers.InvoiceSyncRules.IsPermanentStatus(invoice.LHDNStatusId))
+                        continue;
+
+                    checkedCount++;
+                    try
+                    {
+                        bool wasUpdated = await _invoiceSyncHelper.SyncLhdnInvoiceStatusAsync(invoice, "UISession", HttpContext.RequestAborted);
+                        if (wasUpdated)
+                        {
+                            updatedCount++;
+                        }
+                    }
+                    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+                    {
+                        // Same rule as the active-session sync: abort the whole batch rather than
+                        // hammering the rest — the user can retry once the rate limit window clears.
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                gate.Release();
+            }
+
+            return new JsonResult(new { success = true, updatedCount = updatedCount, checkedCount = checkedCount });
+        }
     }
 }
