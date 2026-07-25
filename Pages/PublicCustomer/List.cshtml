@@ -39,199 +39,199 @@
     </div>
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">Manage Buyers</h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="javascript: void(0);">Buyers Management</a></li>
-                    <li class="breadcrumb-item active">Buyers</li>
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Buyer Directory</h1>
+                <p class="text-muted mb-0">Manage the buyers you issue e-Invoices to.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-page="Import"><i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV</a>
+                <a class="btn btn-primary" asp-page="/PublicCustomer/Create" asp-route-from="@(isAdmin ? "admin" : null)">
+                    <i class="ri-add-line align-bottom me-1"></i> Add Buyer
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header">
-                <div class="d-flex align-items-center flex-wrap gap-2">
-                    <div class="flex-grow-1">
-                        <a class="btn btn-info add-btn"
-                           asp-page="/PublicCustomer/Create"
-                           asp-route-from="@(isAdmin ? "admin" : null)">
-                            <i class="ri-add-fill me-1 align-bottom"></i> Create New
-                        </a>
-                        <a class="btn btn-secondary ms-2" asp-page="Import"><i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV</a>
-                    </div>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Total Buyers</p>
+            <h3 class="fw-bold mb-0">@Model.TotalBuyersCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active</p>
+            <h3 class="fw-bold mb-0 text-success">@Model.ActiveBuyersCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Added This Month</p>
+            <h3 class="fw-bold mb-0">@Model.AddedThisMonthCount</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+
+        <form method="get" class="mb-4">
+            <input type="hidden" name="SortBy" value="@Model.SortBy" />
+            <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search buyers..." />
+                </div>
+                <div class="col-md-5">
+                    <button type="submit" class="btn btn-primary"><i class="ri-search-line align-bottom me-1"></i> Filter</button>
+                    <a asp-page="./List" class="btn btn-outline-secondary">Clear</a>
                 </div>
             </div>
+        </form>
 
-            <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="customerTable">
+                <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
+                    <tr>
+                        <th scope="col">
+                            <a href="@GetSortUrl("name")" class="text-dark text-decoration-none">
+                                Buyer @GetSortIcon("name")
+                            </a>
+                        </th>
+                        <th scope="col">
+                            <a href="@GetSortUrl("tin")" class="text-dark text-decoration-none">
+                                TIN / Registration @GetSortIcon("tin")
+                            </a>
+                        </th>
+                        <th scope="col">Contact</th>
+                        <th scope="col">Location</th>
+                        <th scope="col">Invoices</th>
 
-                <form method="get" class="mb-4">
-                    <input type="hidden" name="SortBy" value="@Model.SortBy" />
-                    <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
-                    <div class="row g-3 align-items-center">
-                        <div class="col-md-5">
-                            <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search..." />
-                        </div>
-                        <div class="col-md-5">
-                            <button type="submit" class="btn btn-primary"><i class="ri-search-line align-bottom me-1"></i> Filter</button>
-                            <a asp-page="./List" class="btn btn-soft-secondary">Clear</a>
-                        </div>
-                    </div>
-                </form>
-
-                <div class="table-responsive">
-                    <table class="table table-nowrap align-middle" id="customerTable">
-                        <thead class="text-muted table-light">
+                        @if (isAdmin)
+                        {
+                            <th scope="col">Status</th>
+                        }
+                        else
+                        {
+                            <th scope="col">Action</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.CustomerViewModels.Any())
+                    {
+                        @foreach (var wrapper in Model.CustomerViewModels)
+                        {
+                            var item = wrapper.Customer;
+                            var isAssignedToCurrentUser = Model.AssignedBuyerKeys.Contains($"{item.CreatedByCompanyId}_{item.PublicCustomerId}");
+                            var isAssignedByAnySupplier = Model.AssignedPublicCustomerIds.Contains(item.PublicCustomerId);
+                            var invoiceCount = Model.InvoiceCountByBuyer.TryGetValue(item.PublicCustomerId, out var c) ? c : 0;
                             <tr>
-                                <th scope="col">
-                                    <a href="@GetSortUrl("name")" class="text-dark text-decoration-none">
-                                        Company Name @GetSortIcon("name")
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a href="@GetSortUrl("tin")" class="text-dark text-decoration-none">
-                                        TIN @GetSortIcon("tin")
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a href="@GetSortUrl("email")" class="text-dark text-decoration-none">
-                                        Email @GetSortIcon("email")
-                                    </a>
-                                </th>
-                                <th scope="col">
-                                    <a href="@GetSortUrl("phone")" class="text-dark text-decoration-none">
-                                        Phone @GetSortIcon("phone")
-                                    </a>
-                                </th>
-
-                                <th scope="col">Updated By</th>
-                                <th scope="col">
-                                    <a href="@GetSortUrl("updated")" class="text-dark text-decoration-none">
-                                        Updated Date @GetSortIcon("updated")
-                                    </a>
-                                </th>
+                                <td>
+                                    <span class="fw-semibold">@item.CompanyName</span>
+                                    @if (!item.IsActive)
+                                    {
+                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary ms-1">Inactive</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="d-block">@item.TIN</span>
+                                    <span class="text-muted small">@item.RegTypeCode @item.RegNo</span>
+                                </td>
+                                <td>
+                                    <span class="d-block text-truncate" style="max-width: 200px;">@item.Email</span>
+                                    <span class="text-muted small">@item.PhoneNo</span>
+                                </td>
+                                <td>@item.CityName, @(item.State?.State ?? item.StateCode)</td>
+                                <td>@invoiceCount</td>
 
                                 @if (isAdmin)
                                 {
-                                    <th scope="col">Status</th>
-                                }
-                                else
-                                {
-                                    <th scope="col">Action</th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if (Model.CustomerViewModels.Any())
-                            {
-                                @foreach (var wrapper in Model.CustomerViewModels)
-                                {
-                                    var item = wrapper.Customer;
-                                    var isAssignedToCurrentUser = Model.AssignedBuyerKeys.Contains($"{item.CreatedByCompanyId}_{item.PublicCustomerId}");
-                                    var isAssignedByAnySupplier = Model.AssignedPublicCustomerIds.Contains(item.PublicCustomerId);
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="flex-grow-1 ms-2 name">
-                                                    @item.CompanyName
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>@item.TIN</td>
-                                        <td>@item.Email</td>
-                                        <td>@item.PhoneNo</td>
+                                    <td>
+                                        <strong>@wrapper.CreatorCompanyName</strong><br />
+                                        <small class="text-muted">User: @(string.IsNullOrEmpty(item.UpdatedBy) ? "-" : item.UpdatedBy)</small><br />
 
-                                        @if (isAdmin)
+                                        @if (item.IsAdminCreated)
                                         {
-                                            <td>
-                                                <strong>@wrapper.CreatorCompanyName</strong><br />
-                                                <small class="text-muted">User: @(string.IsNullOrEmpty(item.UpdatedBy) ? "-" : item.UpdatedBy)</small><br />
-
-                                                @if (item.IsAdminCreated)
-                                                {
-                                                    <span class="badge bg-info mt-1">Admin</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-secondary mt-1">Supplier</span>
-                                                }
-                                            </td>
-
-                                            <td>@(item.UpdatedDate.HasValue? item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
-
-                                            <td>
-                                                @if (isAssignedByAnySupplier)
-                                                {
-                                                    <span class="badge bg-success">Assigned</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-warning">Not Assigned</span>
-                                                }
-                                            </td>
+                                            <span class="badge bg-info mt-1">Admin</span>
                                         }
                                         else
                                         {
-                                            <td>@(string.IsNullOrEmpty(item.UpdatedBy) ? "-" : item.UpdatedBy)</td>
-                                            <td>@(item.UpdatedDate.HasValue? item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
-                                            <td>
-                                                <div class="dropdown d-inline-block">
-                                                    <button class="btn @(isAssignedToCurrentUser ? "btn-soft-success" : "btn-soft-warning") btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                        <i class="ri-more-fill align-middle"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            @if (isAssignedToCurrentUser)
-                                                            {
-                                                                <form method="post" asp-page-handler="RemoveFromBuyers" asp-route-publicCustomerId="@item.PublicCustomerId" onsubmit="return confirm('Remove this buyer from your active list?');">
-                                                                    <button type="submit" class="dropdown-item text-warning" title="Remove from My Buyers">
-                                                                        <i class="ri-user-unfollow-line align-bottom me-2"></i> Remove from My Buyers List
-                                                                    </button>
-                                                                </form>
-                                                            }
-                                                            else
-                                                            {
-                                                                <form method="post" asp-page-handler="AddToBuyers" asp-route-publicCustomerId="@item.PublicCustomerId">
-                                                                    <button type="submit" class="dropdown-item text-success" title="Add to My Buyers List">
-                                                                        <i class="ri-user-add-line align-bottom me-2"></i> Add to My Buyers List
-                                                                    </button>
-                                                                </form>
-                                                            }
-                                                        </li>
-                                                        <li>
-                                                            <a asp-page="./Details" asp-route-id="@item.PublicCustomerId" class="dropdown-item">
-                                                                <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <form method="post" asp-page-handler="Delete" asp-route-buyerId="@item.PublicCustomerId" onsubmit="return confirm('Are you sure you want to delete this buyer?');">
-                                                                <button type="submit" class="dropdown-item text-danger">
-                                                                    <i class="ri-delete-bin-fill align-bottom me-2"></i> Delete
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </td>
+                                            <span class="badge bg-secondary mt-1">Supplier</span>
                                         }
-                                    </tr>
+                                        <br />
+                                        @if (isAssignedByAnySupplier)
+                                        {
+                                            <span class="badge rounded-pill bg-success-subtle text-success mt-1">Assigned</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge rounded-pill bg-warning-subtle text-warning mt-1">Not Assigned</span>
+                                        }
+                                    </td>
                                 }
-                            }
-                            else
-                            {
-                                <tr>
-                                    <td colspan="@(isAdmin ? "6" : "7")" class="text-center">No buyers found.</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                                else
+                                {
+                                    <td>
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn @(isAssignedToCurrentUser ? "btn-outline-success" : "btn-outline-warning") btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="ri-more-fill align-middle"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    @if (isAssignedToCurrentUser)
+                                                    {
+                                                        <form method="post" asp-page-handler="RemoveFromBuyers" asp-route-publicCustomerId="@item.PublicCustomerId" onsubmit="return confirm('Remove this buyer from your active list?');">
+                                                            <button type="submit" class="dropdown-item text-warning" title="Remove from My Buyers">
+                                                                <i class="ri-user-unfollow-line align-bottom me-2"></i> Remove from My Buyers List
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <form method="post" asp-page-handler="AddToBuyers" asp-route-publicCustomerId="@item.PublicCustomerId">
+                                                            <button type="submit" class="dropdown-item text-success" title="Add to My Buyers List">
+                                                                <i class="ri-user-add-line align-bottom me-2"></i> Add to My Buyers List
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                </li>
+                                                <li>
+                                                    <a asp-page="./Details" asp-route-id="@item.PublicCustomerId" class="dropdown-item">
+                                                        <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <form method="post" asp-page-handler="Delete" asp-route-buyerId="@item.PublicCustomerId" onsubmit="return confirm('Are you sure you want to delete this buyer?');">
+                                                        <button type="submit" class="dropdown-item text-danger">
+                                                            <i class="ri-delete-bin-fill align-bottom me-2"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="ri-group-line fs-24 d-block mb-2"></i>
+                                No buyers found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
                 @if (Model.TotalPages > 1)
                 {
