@@ -31,6 +31,12 @@ namespace eInvWorld.Pages.Items
         public IList<ItemViewModel> ItemViewModels { get; set; } = default!;
         public bool IsAdmin { get; set; }
 
+        // Real KPI counts, scoped the same way as the main query (company-scoped for non-admins),
+        // but BEFORE the search/status filters so the tiles reflect the whole catalogue.
+        public int TotalItemsCount { get; set; }
+        public int ActiveItemsCount { get; set; }
+        public int InactiveItemsCount { get; set; }
+
         [BindProperty(SupportsGet = true)]
         public string? SearchTerm { get; set; }
 
@@ -81,6 +87,10 @@ namespace eInvWorld.Pages.Items
                     query = query.Where(i => false);
                 }
             }
+
+            TotalItemsCount = await query.CountAsync();
+            ActiveItemsCount = await query.CountAsync(q => q.Item.IsActive);
+            InactiveItemsCount = TotalItemsCount - ActiveItemsCount;
 
             // --- Apply Filtering Logic ---
             if (!string.IsNullOrEmpty(SearchTerm))
