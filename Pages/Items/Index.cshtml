@@ -24,21 +24,47 @@
     }
 }
 
-@await Html.PartialAsync("_PageHeader", "Manage Saved Items")
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">My Items</h5>
-
-        <div class="d-flex gap-2">
-            <a class="btn btn-secondary" asp-page="Import">
-                <i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV
-            </a>
-            <a asp-page="Create" class="btn btn-primary">
-                <i class="ri-add-line"></i> Add New Item
-            </a>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Items &amp; Services</h1>
+                <p class="text-muted mb-0">Manage reusable item codes for faster, more consistent invoice creation.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" asp-page="Import">
+                    <i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV
+                </a>
+                <a asp-page="Create" class="btn btn-primary">
+                    <i class="ri-add-line align-bottom me-1"></i> Add Item
+                </a>
+            </div>
         </div>
     </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Total Items</p>
+            <h3 class="fw-bold mb-0">@Model.TotalItemsCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active</p>
+            <h3 class="fw-bold mb-0 text-success">@Model.ActiveItemsCount</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Inactive</p>
+            <h3 class="fw-bold mb-0 text-secondary">@Model.InactiveItemsCount</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
     <div class="card-body">
 
         <form method="get" class="mb-4">
@@ -46,7 +72,7 @@
             <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
             <div class="row g-3 align-items-center">
                 <div class="col-md-4">
-                    <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search ..." />
+                    <input type="text" asp-for="SearchTerm" class="form-control" placeholder="Search items, codes, or descriptions..." />
                 </div>
                 <div class="col-md-3">
                     <select asp-for="StatusFilter" class="form-select">
@@ -62,8 +88,8 @@
             </div>
         </form>
         <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead>
+            <table class="table align-middle mb-0">
+                <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
                     <tr>
                         <th>
                             <a href="@GetSortUrl("itemcode")" class="text-dark text-decoration-none">
@@ -106,8 +132,10 @@
                         @foreach (var wrapper in Model.ItemViewModels)
                         {
                             <tr>
-                                <td>@wrapper.Item.ItemCode</td>
-                                <td>@wrapper.Item.ClassificationCode</td>
+                                <td class="fw-semibold">@wrapper.Item.ItemCode</td>
+                                <td>
+                                    <span class="badge bg-light text-body border">@wrapper.Item.ClassificationCode</span>
+                                </td>
 
                                 <td class="text-truncate" style="max-width: 300px;" title="@wrapper.Item.Description">
                                     @wrapper.Item.Description
@@ -119,21 +147,21 @@
                                 }
 
                                 <td>@(string.IsNullOrEmpty(wrapper.Item.UpdatedBy) ? "-" : wrapper.Item.UpdatedBy)</td>
-                                <td>@(wrapper.Item.UpdatedDate.HasValue? wrapper.Item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+                                <td class="text-muted small">@(wrapper.Item.UpdatedDate.HasValue? wrapper.Item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
 
                                 <td>
                                     @if (wrapper.Item.IsActive)
                                     {
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge rounded-pill bg-success-subtle text-success">Active</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">Inactive</span>
+                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary">Inactive</span>
                                     }
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <a asp-page="./Edit" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-outline-info">Edit</a>
+                                        <a asp-page="./Edit" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
                                         <a asp-page="./Delete" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-outline-danger">Delete</a>
                                     </div>
                                 </td>
@@ -143,7 +171,10 @@
                     else
                     {
                         <tr>
-                            <td colspan="@(Model.IsAdmin ? "8" : "7")" class="text-center">No items found matching your filter criteria.</td>
+                            <td colspan="@(Model.IsAdmin ? "8" : "7")" class="text-center py-4 text-muted">
+                                <i class="ri-price-tag-3-line fs-24 d-block mb-2"></i>
+                                No items found matching your filter criteria.
+                            </td>
                         </tr>
                     }
                 </tbody>
