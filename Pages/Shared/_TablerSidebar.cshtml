@@ -20,6 +20,13 @@
                 <img src="~/assets/images/einvworld-logo-dark.png" height="26" alt="eInvWorld">
             </a>
 
+            @* Desktop collapse-to-icons toggle. Mobile already auto-collapses via the Bootstrap
+               navbar-toggler above, so this is hidden below the lg breakpoint. *@
+            <button type="button" id="einv-sidebar-collapse-toggle" class="btn btn-ghost-secondary btn-icon d-none d-lg-inline-flex ms-auto"
+                    aria-label="Collapse sidebar" aria-pressed="false" title="Collapse sidebar">
+                <i class="ri-arrow-left-s-line" aria-hidden="true"></i>
+            </button>
+
             <div class="collapse navbar-collapse" id="einv-sidebar-menu">
                 <nav aria-label="Main navigation">
                     @if (User?.IsInRole("Admin") == true)

@@ -251,14 +251,32 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
  * (the HTML height="26" attribute is overridden by Tabler's CSS, so this rule is required). */
 .navbar-brand img,
 .navbar-brand-autodark img {
-  height: 2.25rem !important;
+  height: 3rem !important;
   width: auto !important;
   max-width: 100%;
 }
 /* On the collapsed mobile navbar, keep the brand compact next to the toggler. */
 @media (max-width: 991.98px) {
   .navbar-vertical .navbar-brand { padding-top: .25rem; padding-bottom: .25rem; }
-  .navbar-vertical .navbar-brand img { height: 2rem !important; }
+  .navbar-vertical .navbar-brand img { height: 2.5rem !important; }
+}
+
+/* Desktop sidebar collapse-to-icons (toggled by #einv-sidebar-collapse-toggle, einvworld-ui.js).
+ * Mobile already auto-collapses the whole nav via Bootstrap's navbar-collapse, so this only
+ * applies at the lg breakpoint where the sidebar is a fixed 15rem column (see tabler.min.css). */
+@media (min-width: 992px) {
+  body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg { width: 4.5rem; }
+  body.einv-sidebar-collapsed .page-wrapper { margin-left: 4.5rem; }
+  body.einv-sidebar-collapsed .navbar-vertical .container-fluid { flex-direction: column; }
+  body.einv-sidebar-collapsed .navbar-vertical .navbar-brand { margin: 0 0 .5rem; }
+  body.einv-sidebar-collapsed #einv-sidebar-collapse-toggle { margin: 0 0 .5rem; transform: rotate(180deg); }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link-title,
+  body.einv-sidebar-collapsed .navbar-vertical .einv-nav-section,
+  body.einv-sidebar-collapsed .navbar-vertical .badge:not(.nav-link-icon .badge) {
+    display: none;
+  }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link { justify-content: center; padding: .625rem; }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link-icon { margin-right: 0; }
 }
 
 /* Long inline code / tokens (e.g. env-var names on AI Settings, the import-instructions block) and
