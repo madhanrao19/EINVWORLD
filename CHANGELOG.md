@@ -1,10 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.10.0`** (`AppInfo:Version` in `appsettings.json`). v1.10.0 is a **minor**
-> release (new backward-compatible feature) that consolidates the accumulated post-v1.9.9 work in the
-> three 2026-07-10…12 sections below: the **Tabler UI migration** (all authenticated pages), the
-> **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
-> Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
+> **Current version: `v1.10.1`** (`AppInfo:Version` in `appsettings.json`). v1.10.1 is a **patch**
+> release: UI polish (bigger brand logo, cleaner login header, collapsible sidebar) plus a local-dev-only
+> AI enablement and a static-asset caching fix. No schema/migration change.
+
+## 📅 2026-07-26 — Bigger logo, cleaner login header, collapsible sidebar, local AI enabled
+
+> Presentation + local-dev-config pass across the Tabler shell and the Identity auth pages. No
+> schema/migration change; Production/Staging AI defaults are unchanged (still OFF).
+
+- **Brand logo, bigger everywhere:** sidebar brand (`_TablerSidebar`) grown 2.25rem→3rem on desktop
+  (2rem→2.5rem on mobile); all 10 Identity auth pages (Login, Register, Forgot/Reset Password, 2FA,
+  Recovery Code, Resend/Register Confirmation) grown 100px→140px.
+- **Login header decluttered:** removed the redundant `<p>eInvWorld</p>` wordmark under the logo on all
+  10 auth pages — the logo image already carries the brand name.
+- **Sidebar collapse-to-icons (desktop):** new toggle button in `_TablerSidebar` shrinks the sidebar to a
+  4.5rem icon rail and back, persisted via `localStorage` and applied synchronously on load (no flash of
+  the expanded sidebar) via an inline script in `_LayoutTabler`. Mobile's existing Bootstrap
+  auto-collapse below the `lg` breakpoint is unchanged.
+- **AI Assistant + AI Document Capture enabled for local Development only**
+  (`appsettings.Development.json`), pointed at whatever Ollama model is actually pulled on the dev
+  machine. Verified end-to-end against a running local Ollama instance. Production/Staging remain OFF
+  by default per existing policy — `AI:Enabled` is not required for invoicing to keep working.
+- **Bug fix:** `einvworld-ui.js` was missing `asp-append-version`, so browsers could cache it indefinitely
+  across deploys and silently run stale JS. Added, matching the CSS links in the same layout.
 
 ## 📅 2026-07-23 — Company Details (My Company) Stitch-parity restyle
 
