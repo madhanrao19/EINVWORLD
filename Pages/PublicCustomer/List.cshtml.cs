@@ -33,6 +33,12 @@ namespace eInvWorld.Pages.PublicCustomer
         public IList<PublicCustomerViewModel> CustomerViewModels { get; set; } = default!;
         public HashSet<string> AssignedBuyerKeys { get; set; } = new();
         public HashSet<int> AssignedPublicCustomerIds { get; set; } = new();
+        public Dictionary<int, int> InvoiceCountByBuyer { get; set; } = new();
+
+        // Real KPI counts, scoped the same way as the main query, before search filtering.
+        public int TotalBuyersCount { get; set; }
+        public int ActiveBuyersCount { get; set; }
+        public int AddedThisMonthCount { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? SearchTerm { get; set; }
@@ -116,6 +122,31 @@ namespace eInvWorld.Pages.PublicCustomer
                     query = query.Where(p => false);
                 }
             }
+
+            // 2b. REAL KPI COUNTS — scoped by role like the table, but computed before the search
+            // filter so the tiles reflect the whole directory regardless of what's typed in the box.
+            var kpiScope = _context.PublicCustomers.AsQueryable();
+            if (!isAdmin)
+            {
+                var userCompany = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .FirstOrDefaultAsync();
+                kpiScope = userCompany != null
+                    ? kpiScope.Where(p => p.CreatedByCompanyId == userCompany.PartyInfoId)
+                    : kpiScope.Where(p => false);
+            }
+            TotalBuyersCount = await kpiScope.CountAsync();
+            ActiveBuyersCount = await kpiScope.CountAsync(p => p.IsActive);
+            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            AddedThisMonthCount = await kpiScope.CountAsync(p => p.CreatedDate >= monthStart);
+
+            var buyerIds = await kpiScope.Select(p => p.PublicCustomerId).ToListAsync();
+            InvoiceCountByBuyer = await _context.InvoiceHeaders
+                .Where(i => i.PublicCustomerId.HasValue && buyerIds.Contains(i.PublicCustomerId.Value))
+                .GroupBy(i => i.PublicCustomerId!.Value)
+                .Select(g => new { BuyerId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.BuyerId, g => g.Count);
 
             // 3. APPLY SORTING
             bool isDesc = SortOrder == "desc";
