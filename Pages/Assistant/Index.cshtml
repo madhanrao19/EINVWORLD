@@ -3,18 +3,49 @@
 @model eInvWorld.Pages.Assistant.IndexModel
 @{
     ViewData["Title"] = "E-Invoice Assistant";
+    // Which mode panel to show first: whichever handler just posted back with content, else Ask.
+    var activeMode = !string.IsNullOrEmpty(Model.SuggestionJson) ? "suggest"
+        : (!string.IsNullOrEmpty(Model.RejectionExplanation) ? "explain" : "ask");
 }
 
-<h3>🤖 E-Invoice Assistant <small class="text-muted">(beta)</small></h3>
-<p class="text-muted">
-    Ask questions about Malaysian e-invoicing, or describe a transaction and get a suggested invoice to review.
-    The assistant runs on a local, on-prem model — your invoice data never leaves this server. It only suggests; it never submits.
-</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">
+                    E-Invoice Assistant <span class="badge bg-primary-soft text-primary align-middle" style="font-size: 0.65rem;">BETA</span>
+                </h1>
+                <p class="text-muted mb-0">Get help with Malaysian e-invoicing, draft invoices from plain text, and understand LHDN validation errors.</p>
+            </div>
+            @if (Model.Enabled)
+            {
+                <span class="badge bg-success-subtle text-success px-3 py-2"><i class="ri-checkbox-circle-line align-bottom me-1"></i>Assistant Enabled</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary-subtle text-secondary px-3 py-2"><i class="ri-pause-circle-line align-bottom me-1"></i>Assistant Disabled</span>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex flex-wrap gap-3 justify-content-center text-muted" style="font-size: 0.8rem;">
+                <span><i class="ri-lightbulb-line align-bottom me-1 text-primary"></i>AI Suggestions Only</span>
+                <span><i class="ri-forbid-line align-bottom me-1 text-primary"></i>No Automatic Submissions</span>
+                <span><i class="ri-user-search-line align-bottom me-1 text-primary"></i>Human Review Required</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (!Model.Enabled)
 {
     <div class="alert alert-warning">
-        ⚙️ The assistant is currently <strong>disabled</strong>. To enable it, install
+        <i class="ri-settings-3-line align-bottom me-1"></i>
+        The assistant is currently <strong>disabled</strong>. To enable it, install
         <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> on the server, pull a model
         (e.g. <code>ollama pull gemma3:12b</code>), then set <code>AI:Enabled = true</code> in configuration.
     </div>
@@ -25,14 +56,41 @@
     <div class="alert alert-danger">@Model.ErrorText</div>
 }
 
-<div class="row">
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header">💬 Ask a question <small class="text-muted">(keeps context)</small></div>
+<div class="row g-4">
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+                <p class="text-uppercase text-muted fw-semibold mb-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Assistant Mode</p>
+                <div class="list-group list-group-flush" id="assistantModeNav">
+                    <button type="button" class="list-group-item list-group-item-action border-0 rounded mb-1 assistant-mode-btn" data-mode="ask">
+                        <i class="ri-chat-3-line align-bottom me-2 text-primary"></i>Ask a Question
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action border-0 rounded mb-1 assistant-mode-btn" data-mode="suggest">
+                        <i class="ri-file-text-line align-bottom me-2 text-primary"></i>Create from Description
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action border-0 rounded assistant-mode-btn" data-mode="explain">
+                        <i class="ri-error-warning-line align-bottom me-2 text-primary"></i>Fix an Error (LHDN)
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body p-3">
+                <p class="fw-semibold mb-1"><i class="ri-shield-check-line align-bottom me-1 text-primary"></i>Local Processing Guarantee</p>
+                <p class="text-muted mb-0" style="font-size: 0.8rem;">
+                    The assistant runs on a local, on-prem model — your invoice data never leaves this server, and nothing is ever submitted automatically.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm assistant-panel" data-panel="ask" style="display: none;">
+            <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-chat-3-line align-bottom me-1"></i>Ask a Question</h5></div>
             <div class="card-body">
                 @if (Model.Conversation.Count > 0)
                 {
-                    <div class="mb-2" style="max-height:320px; overflow-y:auto;">
+                    <div class="mb-3" style="max-height: 360px; overflow-y: auto;">
                         @foreach (var turn in Model.Conversation)
                         {
                             var isUser = turn.Role == "user";
@@ -56,17 +114,15 @@
                 </form>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-6">
-        <div class="card mb-3">
-            <div class="card-header">🧾 Suggest an invoice</div>
+        <div class="card border-0 shadow-sm assistant-panel" data-panel="suggest" style="display: none;">
+            <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-file-text-line align-bottom me-1"></i>Create from Description</h5></div>
             <div class="card-body">
                 <form method="post" asp-page-handler="Suggest">
                     <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
                     <textarea name="Description" class="form-control mb-2" rows="3"
                               placeholder="e.g. Sold 3 laptops to Acme Sdn Bhd in Penang at RM4500 each, 8% SST.">@Model.Description</textarea>
-                    <button type="submit" class="btn btn-success" disabled="@(!Model.Enabled)">Suggest invoice</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Suggest Invoice</button>
                 </form>
                 @if (!string.IsNullOrEmpty(Model.SuggestionJson))
                 {
@@ -95,24 +151,20 @@
                     }
                     <p class="text-muted mb-1"><small>Review the suggestion below. "Use in Create Invoice form" pre-fills the real form — you still pick the supplier/customer and confirm everything before saving. Nothing is submitted automatically.</small></p>
                     <pre id="suggestionJson" class="border rounded p-2 bg-light" style="white-space:pre-wrap;">@Model.SuggestionJson</pre>
-                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-success btn-sm" disabled="@(Model.Review?.HasErrors ?? false)">✏️ Use in Create Invoice form</button>
+                    <button type="button" id="useSuggestionBtn" class="btn btn-outline-primary btn-sm" disabled="@(Model.Review?.HasErrors ?? false)"><i class="ri-edit-line align-bottom me-1"></i>Use in Create Invoice form</button>
                 }
             </div>
         </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card mb-3">
-            <div class="card-header">🩹 Explain an LHDN rejection</div>
+        <div class="card border-0 shadow-sm assistant-panel" data-panel="explain" style="display: none;">
+            <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-error-warning-line align-bottom me-1"></i>Fix an Error (LHDN)</h5></div>
             <div class="card-body">
                 <p class="text-muted mb-2"><small>Paste the rejection / validation error from MyInvois (or from the invoice's status) and get a plain-English explanation plus how to fix it.</small></p>
                 <form method="post" asp-page-handler="ExplainRejection">
                     <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
                     <textarea name="RejectionText" class="form-control mb-2" rows="4"
                               placeholder="e.g. CF321 - The TIN does not match the registered taxpayer for the supplied registration number.">@Model.RejectionText</textarea>
-                    <button type="submit" class="btn btn-warning" disabled="@(!Model.Enabled)">Explain &amp; suggest fix</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Explain &amp; Suggest Fix</button>
                 </form>
                 @if (!string.IsNullOrEmpty(Model.RejectionExplanation))
                 {
@@ -124,16 +176,35 @@
     </div>
 </div>
 
+<style>
+    .assistant-mode-btn.active {
+        background-color: var(--primary-soft, #e9f5ee);
+        color: var(--primary-text, #0c5434);
+        font-weight: 600;
+    }
+</style>
+
 @section Scripts {
     <script>
         (function () {
-            var btn = document.getElementById('useSuggestionBtn');
-            if (!btn) return;
+            var buttons = document.querySelectorAll('.assistant-mode-btn');
+            var panels = document.querySelectorAll('.assistant-panel');
+            function activate(mode) {
+                buttons.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === mode); });
+                panels.forEach(function (p) { p.style.display = p.getAttribute('data-panel') === mode ? '' : 'none'; });
+            }
+            buttons.forEach(function (b) {
+                b.addEventListener('click', function () { activate(b.getAttribute('data-mode')); });
+            });
+            activate('@activeMode');
+        })();
+
+        var btn = document.getElementById('useSuggestionBtn');
+        if (btn) {
             btn.addEventListener('click', function () {
                 try {
                     var pre = document.getElementById('suggestionJson');
                     if (!pre) return;
-                    // Validate it parses before sending the user to the form.
                     var parsed = JSON.parse(pre.textContent.trim());
                     sessionStorage.setItem('einv_prefill', JSON.stringify(parsed));
                     window.location.href = '/Invoices/CreateInvoice?prefill=1';
@@ -141,6 +212,6 @@
                     alert('The suggestion is not valid JSON, so it cannot be loaded into the form. Try regenerating it.');
                 }
             });
-        })();
+        }
     </script>
 }
