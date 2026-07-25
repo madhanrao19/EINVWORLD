@@ -5,28 +5,16 @@
 }
 
 <!-- Start page title -->
-<div class="row">
+<div class="row mb-2">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">@ViewData["Title"]</h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
-                    <li class="breadcrumb-item active">My Profile</li>
-                </ol>
-            </div>
-        </div>
+        <h1 class="einv-page-title mb-1">My Account</h1>
+        <p class="text-muted mb-0">Manage your profile, security, and company access.</p>
     </div>
 </div>
 
 <!-- Profile Header Card -->
-<div class="profile-foreground position-relative mx-n4 mt-n4">
-    <div class="profile-wid-bg" style="background: linear-gradient(135deg, #005137 0%, #006948 100%);">
-        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(5, 83, 50, 0.1); backdrop-filter: blur(1px);"></div>
-    </div>
-</div>
-<div class="pt-4 mb-4 mb-lg-3 pb-lg-4 profile-wrapper">
-    <div class="row g-4">
+<div class="rounded-3 p-4 mb-4 shadow-sm" style="background: linear-gradient(135deg, #005137 0%, #006948 100%);">
+    <div class="row g-4 align-items-center">
         <div class="col-auto">
             <div class="avatar-lg position-relative">
                 @if (!string.IsNullOrEmpty(Model.UserProfile.ProfilePicture))
@@ -75,7 +63,7 @@
                     <span class="badge bg-light text-dark px-3 py-2">
                         <i class="ri-shield-user-line me-1"></i>@string.Join(", ", Model.Roles)
                     </span>
-                    <span class="badge px-3 py-2" style="background-color: rgba(58, 165, 100, 0.2); color: #006948; border: 1px solid #006948;">
+                    <span class="badge px-3 py-2" style="background-color: rgba(255, 255, 255, 0.15); color: #fff; border: 1px solid rgba(255, 255, 255, 0.5);">
                         <i class="ri-building-2-line me-1"></i>@Model.LoginMode
                     </span>
                 </div>
