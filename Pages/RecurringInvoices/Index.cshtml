@@ -4,99 +4,76 @@
     ViewData["Title"] = "Recurring Invoices";
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Recurring Invoices</h4>
-            <div class="page-title-right">
-                <a href="/Templates/TemplateLists" class="btn btn-success">
-                    <i class="ri-add-line align-bottom me-1"></i> New Profile
-                </a>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Recurring Invoices</h1>
+                <p class="text-muted mb-0">Automatically generate invoices from approved templates.</p>
             </div>
+            <a href="/Templates/TemplateLists" class="btn btn-primary">
+                <i class="ri-add-line align-bottom me-1"></i> New Recurring Profile
+            </a>
         </div>
-        <p class="text-muted">Automate invoice generation on schedules based on your templates.</p>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-xl-4 col-md-6">
-        <div class="card card-animate">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1 overflow-hidden">
-                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Total Profiles</p>
-                    </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-4">
-                    <div>
-                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">@Model.TotalProfiles</h4>
-                    </div>
-                    <div class="avatar-sm flex-shrink-0">
-                        <span class="avatar-title bg-light rounded fs-3">
-                            <i class="ri-refresh-line text-primary"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
+<div class="row g-3 mb-4">
+    <div class="col-lg col-md-4 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active Profiles</p>
+            <h3 class="fw-bold mb-0">@Model.ActiveProfiles</h3>
         </div>
     </div>
-    <div class="col-xl-4 col-md-6">
-        <div class="card card-animate">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1 overflow-hidden">
-                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Active</p>
-                    </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-4">
-                    <div>
-                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">@Model.ActiveProfiles</h4>
-                    </div>
-                    <div class="avatar-sm flex-shrink-0">
-                        <span class="avatar-title bg-success-subtle rounded fs-3">
-                            <i class="ri-play-fill text-success"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
+    <div class="col-lg col-md-4 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Due Next 7 Days</p>
+            <h3 class="fw-bold mb-0">@Model.DueNext7DaysCount</h3>
         </div>
     </div>
-    <div class="col-xl-4 col-md-6">
-        <div class="card card-animate">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1 overflow-hidden">
-                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Paused</p>
-                    </div>
-                </div>
-                <div class="d-flex align-items-end justify-content-between mt-4">
-                    <div>
-                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">@Model.PausedProfiles</h4>
-                    </div>
-                    <div class="avatar-sm flex-shrink-0">
-                        <span class="avatar-title bg-warning-subtle rounded fs-3">
-                            <i class="ri-pause-fill text-warning"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
+    <div class="col-lg col-md-4 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Paused</p>
+            <h3 class="fw-bold mb-0">@Model.PausedProfiles</h3>
+        </div>
+    </div>
+    <div class="col-lg col-md-4 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm @(Model.FailedRunsLast30DaysCount > 0 ? "border-start border-danger border-4" : "")">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Failed Runs (30d)</p>
+            <h3 class="fw-bold mb-0 @(Model.FailedRunsLast30DaysCount > 0 ? "text-danger" : "")">@Model.FailedRunsLast30DaysCount</h3>
+        </div>
+    </div>
+    <div class="col-lg col-md-4 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Generated This Month</p>
+            <h3 class="fw-bold mb-0">@Model.GeneratedThisMonthCount</h3>
         </div>
     </div>
 </div>
 
 <div class="row">
     <div class="col-lg-12">
-        <div class="card">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="p-3 border-bottom">
+                    <div class="btn-group" role="group" id="statusFilterGroup">
+                        <button type="button" class="btn btn-sm btn-primary" data-filter="all">All</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="Active">Active</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="Paused">Paused</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="DueSoon">Due Soon</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="Failed">Failed Last Run</button>
+                    </div>
+                </div>
                 <div class="table-responsive">
-                    <table class="table align-middle table-nowrap mb-0">
-                        <thead class="table-light">
+                    <table class="table align-middle table-nowrap mb-0" id="recurringProfilesTable">
+                        <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
                             <tr>
-                                <th>Profile Name</th>
-                                <th>Company</th>
+                                <th>Profile</th>
                                 <th>Buyer</th>
                                 <th>Frequency</th>
-                                <th>Next Run Date</th>
+                                <th>Next Run</th>
+                                <th>Last Run</th>
+                                <th>Submission</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -104,23 +81,67 @@
                         <tbody>
                             @if (Model.Profiles.Any())
                             {
+                                var sevenDaysOut = DateTime.Today.AddDays(7);
                                 foreach (var item in Model.Profiles)
                                 {
-                                    <tr>
+                                    Model.LastRunByProfile.TryGetValue(item.Id, out var lastRun);
+                                    bool isDueSoon = item.Status == "Active" && item.NextRunDate.Date <= sevenDaysOut;
+                                    bool lastRunFailed = lastRun != null && (lastRun.RunStatus.StartsWith("Failed") || lastRun.RunStatus == "LHDN_Failed");
+                                    <tr data-status="@item.Status" data-due-soon="@isDueSoon.ToString().ToLower()" data-last-failed="@lastRunFailed.ToString().ToLower()">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <i class="ri-refresh-line text-primary me-2"></i>
-                                                <span class="fw-medium">@item.ProfileName</span>
+                                                <div>
+                                                    <span class="fw-semibold d-block">@item.ProfileName</span>
+                                                    <span class="text-muted" style="font-size: 0.75rem;">@(item.InvoiceTemplate?.Supplier?.CompanyName ?? "-")</span>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td>@(item.InvoiceTemplate?.Supplier?.CompanyName ?? "-")</td>
                                         <td>@(item.InvoiceTemplate?.Customer?.CompanyName ?? item.InvoiceTemplate?.PublicCustomer?.CompanyName ?? "All Buyers")</td>
                                         <td>
                                             <span class="badge bg-light text-body border border-dark-subtle">
                                                 <i class="ri-time-line align-bottom me-1"></i> @item.Frequency
                                             </span>
                                         </td>
-                                        <td>@item.NextRunDate.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @item.NextRunDate.ToString("dd MMM yyyy")
+                                            @if (isDueSoon)
+                                            {
+                                                <span class="badge rounded-pill bg-warning-subtle text-warning ms-1">Soon</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (lastRun == null)
+                                            {
+                                                <span class="text-muted">Never run</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small d-block">@lastRun.RunTimestamp.ToString("dd MMM yyyy")</span>
+                                                @if (lastRunFailed)
+                                                {
+                                                    <span class="badge rounded-pill bg-danger-subtle text-danger" title="@lastRun.ErrorMessage">Failed</span>
+                                                }
+                                                else if (lastRun.RunStatus == "Success_Submitted")
+                                                {
+                                                    <span class="badge rounded-pill bg-success-subtle text-success">Submitted</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary">Draft Created</span>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (item.AutoSubmitToMyInvois)
+                                            {
+                                                <span class="badge bg-primary-subtle text-primary">Auto-Submit</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-body border">Review First</span>
+                                            }
+                                        </td>
                                         <td>
                                             @if (item.Status == "Active")
                                             {
@@ -160,9 +181,9 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         <i class="ri-calendar-todo-line fs-24 d-block mb-2"></i>
-                                        No recurring profiles found. Click "New Profile" to automate an invoice.
+                                        No recurring profiles found. Click "New Recurring Profile" to automate an invoice.
                                     </td>
                                 </tr>
                             }
@@ -173,3 +194,31 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var group = document.getElementById('statusFilterGroup');
+            if (!group) return;
+            var rows = document.querySelectorAll('#recurringProfilesTable tbody tr[data-status]');
+            group.addEventListener('click', function (e) {
+                var btn = e.target.closest('button[data-filter]');
+                if (!btn) return;
+                group.querySelectorAll('button').forEach(function (b) {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-secondary');
+                });
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-primary');
+                var filter = btn.getAttribute('data-filter');
+                rows.forEach(function (row) {
+                    var show = filter === 'all'
+                        || (filter === 'DueSoon' && row.getAttribute('data-due-soon') === 'true')
+                        || (filter === 'Failed' && row.getAttribute('data-last-failed') === 'true')
+                        || row.getAttribute('data-status') === filter;
+                    row.style.display = show ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+}
