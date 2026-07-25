@@ -50,6 +50,7 @@ namespace eInvWorld.Pages.Invoices
         /// <summary>Capture needs both its own switch and the AI assistant (which does the extraction → suggestion).</summary>
         public bool Enabled => _options.Enabled && _assistant.IsEnabled;
         public int MaxFileSizeMb => _options.MaxFileSizeMb;
+        public bool OcrAvailable => _ocr.IsAvailable;
 
         [BindProperty]
         public IFormFile? Upload { get; set; }
