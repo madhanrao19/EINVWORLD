@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Dashboard";
     Layout = "_LayoutTabler";
+    var hour = DateTime.Now.Hour;
+    var timeGreeting = hour < 12 ? "Good Morning" : (hour < 18 ? "Good Afternoon" : "Good Evening");
 }
 
 
@@ -52,9 +54,16 @@
     }
 
     .metric-label-top {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
         font-weight: 600;
-        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    /* Forest Enterprise reference favors flat, dense cards over decorative fills. */
+    .wave-container {
+        display: none;
     }
 
     .metric-label-bottom {
@@ -158,9 +167,15 @@
                         <li class="breadcrumb-item active fw-semibold text-primary">Overview</li>
                     </ol>
                 </nav>
-                <h1 class="einv-page-title mb-1">Dashboard Overview</h1>
+                <h1 class="einv-page-title mb-1">
+                    @timeGreeting@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "" : $", {Model.DisplayName.Split(' ')[0]}")
+                </h1>
                 <p class="text-muted mb-0">
-                    Welcome back@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "" : $", {Model.DisplayName}"). Here is what's happening with your invoices today.
+                    @if (Model.FilterType == "Month" && Model.UserType != "Buyer")
+                    {
+                        @($"{Model.TotalInvoices} invoice{(Model.TotalInvoices == 1 ? "" : "s")} this month. ")
+                    }
+                    Here is what's happening with your invoices today.
                 </p>
             </div>
             
