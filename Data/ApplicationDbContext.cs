@@ -49,6 +49,7 @@ namespace eInvWorld.Data
         }
 
         public DbSet<LHDNToken> LHDNTokens { get; set; }
+        public DbSet<SavedInvoiceView> SavedInvoiceViews { get; set; } = default!;
 
         public DbSet<InvoiceHistory> InvoiceHistories { get; set; }
         public DbSet<ContactUs> ContactUs { get; set; }

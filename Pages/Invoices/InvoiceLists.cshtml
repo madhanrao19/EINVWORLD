@@ -423,6 +423,23 @@
     }
 </ul>
 
+<!-- Saved Views (Stitch): named filter presets for this tab. Each stores the filter form's own
+     query string, so applying one is a plain navigation — no separate filter-serialization logic. -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="savedViewsRow">
+    @foreach (var view in Model.SavedViews)
+    {
+        <span class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill border saved-view-pill">
+            <a href="./InvoiceLists?invoiceDirection=@invoiceDirection&@view.QueryString" class="text-decoration-none fw-semibold small">@view.Name</a>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 delete-saved-view" data-id="@view.Id" title="Delete this saved view" style="line-height:1;">
+                <i class="ri-close-line"></i>
+            </button>
+        </span>
+    }
+    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" id="saveCurrentViewBtn" title="Save the current filters as a named view">
+        <i class="ri-add-line"></i> Save View
+    </button>
+</div>
+
 <div class="row">
     <div class="col-lg-12">
         <div id="documentList">
@@ -1622,6 +1639,85 @@
     }
 
     document.addEventListener('DOMContentLoaded', loadColumnOrder);
+
+    // Saved Views: capture the current URL's filter params (excluding direction/sort/paging — those
+    // come from the tab and live state, not the saved preset) and let the user name+save them.
+    (function initSavedViews() {
+        const saveBtn = document.getElementById('saveCurrentViewBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const params = new URLSearchParams(window.location.search);
+                ['invoiceDirection', 'sortBy', 'sortOrder', 'pageNo'].forEach(k => params.delete(k));
+                const queryString = params.toString();
+
+                const { value: name } = await Swal.fire({
+                    title: 'Save Current View',
+                    input: 'text',
+                    inputLabel: 'Name this view (e.g. "High Value", "Failed Validation")',
+                    inputPlaceholder: 'My View',
+                    showCancelButton: true,
+                    confirmButtonText: 'Save',
+                    inputValidator: (value) => !value ? 'Please enter a name.' : undefined
+                });
+                if (!name) return;
+
+                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken) headers['RequestVerificationToken'] = csrfToken.value;
+
+                try {
+                    const response = await fetch('?handler=SaveView', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ invoiceDirection: '@invoiceDirection', name: name, queryString: queryString })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        Swal.fire('Could Not Save', result.message || 'Please try again.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Save view error:', error);
+                    Swal.fire('Error', 'A network error occurred. Please try again.', 'error');
+                }
+            });
+        }
+
+        document.querySelectorAll('.delete-saved-view').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const id = btn.dataset.id;
+                const confirmed = await Swal.fire({
+                    title: 'Delete this saved view?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete',
+                    cancelButtonText: 'Cancel'
+                });
+                if (!confirmed.isConfirmed) return;
+
+                const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+                const headers = {};
+                if (csrfToken) headers['RequestVerificationToken'] = csrfToken.value;
+
+                try {
+                    const response = await fetch(`?handler=DeleteSavedView&id=${encodeURIComponent(id)}`, {
+                        method: 'POST',
+                        headers: headers
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        btn.closest('.saved-view-pill')?.remove();
+                    } else {
+                        Swal.fire('Could Not Delete', result.message || 'Please try again.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Delete saved view error:', error);
+                }
+            });
+        });
+    })();
 
     function loadDefaultColumnSettings() {
         // Default settings — the lean Stitch column set. Technical metadata (UUID, Submission ID,

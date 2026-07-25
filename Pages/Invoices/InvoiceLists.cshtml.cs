@@ -67,6 +67,7 @@ namespace eInvWorld.Pages.Invoices
         public Metadata Metadata { get; set; } = null!;
         public SearchDocumentInput SearchInput { get; set; } = null!;
         public Dictionary<string, int> InvoiceSummaryByStatus { get; set; } = new();
+        public List<SavedInvoiceView> SavedViews { get; set; } = new();
         public decimal TabTotalAmount { get; set; }
         public int TotalAllInvoices { get; set; }
         public int TotalDraftInvoices { get; set; }
@@ -304,6 +305,11 @@ namespace eInvWorld.Pages.Invoices
             }
 
             this.invoiceDirection = invoiceDirection;
+
+            SavedViews = await _context.SavedInvoiceViews
+                .Where(v => v.UserId == user.Id && v.InvoiceDirection == invoiceDirection)
+                .OrderBy(v => v.CreatedAtUtc)
+                .ToListAsync();
 
             var docTypes = await _context.EInvoiceTypes.Where(dt => dt.IsActive).ToListAsync();
             ViewData["DocType"] = docTypes;
@@ -2409,6 +2415,76 @@ namespace eInvWorld.Pages.Invoices
             zipStream.Position = 0;
             string timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
             return File(zipStream.ToArray(), "application/zip", $"Invoices_PDF_{timestamp}.zip");
+        }
+
+        public class SaveViewInput
+        {
+            public string InvoiceDirection { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string QueryString { get; set; } = string.Empty;
+        }
+
+        // "Saved Views" (Stitch): a user's named filter presets, shown as pill tabs next to the main
+        // direction tabs. Deliberately stores the exact query string the filter form already produces
+        // (see the filter <form> in the view) rather than re-modeling every filter field server-side —
+        // applying a view is just a normal navigation to ./InvoiceLists?{QueryString}.
+        private const int MaxSavedViewsPerDirection = 10;
+
+        public async Task<IActionResult> OnPostSaveViewAsync([FromBody] SaveViewInput input)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, message = "User not found." });
+
+            var name = (input?.Name ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(name))
+                return new JsonResult(new { success = false, message = "Please enter a name for this view." });
+            if (name.Length > 100)
+                name = name.Substring(0, 100);
+
+            var direction = input?.InvoiceDirection ?? "Sent";
+            var existingCount = await _context.SavedInvoiceViews
+                .CountAsync(v => v.UserId == user.Id && v.InvoiceDirection == direction);
+            if (existingCount >= MaxSavedViewsPerDirection)
+                return new JsonResult(new { success = false, message = $"You can save up to {MaxSavedViewsPerDirection} views per tab. Delete one first." });
+
+            var queryString = input?.QueryString ?? string.Empty;
+            if (queryString.Length > 2048)
+                queryString = queryString.Substring(0, 2048);
+            // Defense in depth: a saved view's QueryString is rendered back into an href on every page
+            // load. Razor's default encoding already makes that safe, but reject anything that isn't
+            // plausible query-string content (percent-encoded key=value pairs) rather than store it at all.
+            if (!string.IsNullOrEmpty(queryString) && !System.Text.RegularExpressions.Regex.IsMatch(queryString, @"^[A-Za-z0-9=&%_.,:+-]*$"))
+                return new JsonResult(new { success = false, message = "Invalid filter data — please reapply your filters and try saving again." });
+
+            var view = new SavedInvoiceView
+            {
+                UserId = user.Id,
+                InvoiceDirection = direction,
+                Name = name,
+                QueryString = queryString,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _context.SavedInvoiceViews.Add(view);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+
+            return new JsonResult(new { success = true, id = view.Id, name = view.Name });
+        }
+
+        public async Task<IActionResult> OnPostDeleteSavedViewAsync(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, message = "User not found." });
+
+            // Ownership check: a view can only be deleted by the user who created it.
+            var view = await _context.SavedInvoiceViews.FirstOrDefaultAsync(v => v.Id == id && v.UserId == user.Id);
+            if (view == null)
+                return new JsonResult(new { success = false, message = "View not found." });
+
+            _context.SavedInvoiceViews.Remove(view);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+            return new JsonResult(new { success = true });
         }
     }
 }
