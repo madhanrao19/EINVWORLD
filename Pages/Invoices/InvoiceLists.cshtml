@@ -585,6 +585,9 @@
                             <button id="bulkValidateBtn" class="btn btn-outline-primary btn-sm d-none" title="Re-check LHDN validation status for the selected invoices">
                                 <i class="ri-refresh-line"></i> Bulk Validate
                             </button>
+                            <button id="bulkSendToBuyersBtn" class="btn btn-outline-primary btn-sm d-none" title="Resend the validated invoice email to each buyer">
+                                <i class="ri-mail-send-line"></i> Send to Buyers
+                            </button>
                             <button id="bulkCancelBtn" class="btn btn-warning btn-sm d-none">
                                 <i class="ri-close-circle-line"></i> Cancel e-Invoice
                             </button>
@@ -1383,6 +1386,7 @@
 
     <script src="~/js/bulk-submit-invoice.js"></script>
     <script src="~/js/bulk-validate-invoice.js"></script>
+    <script src="~/js/bulk-send-to-buyers.js"></script>
     <script type="module" src="~/js/delete-invoice.js"></script>
     <script type="module" src="~/js/date-picker.js"></script>
     
@@ -1832,7 +1836,7 @@
     //  2) Make the header "select all" checkbox actually select/deselect every row + reflect an
     //     indeterminate state. No PageModel/query/permission/API change.
     (function () {
-        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn', 'bulkValidateBtn'];
+        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn', 'bulkValidateBtn', 'bulkSendToBuyersBtn'];
 
         function rowCheckboxes() { return Array.prototype.slice.call(document.querySelectorAll('.invoice-checkbox')); }
 
