@@ -139,7 +139,9 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
 - **Tabler (new):** `_LayoutTabler` composed of `_TablerSidebar` (+ `_AdminNavigation`/
   `_SupplierNavigation`/`_BuyerNavigation`), `_TablerTopbar`, `_UserMenu`, `_Footer`, `_PageHeader`; and
   `_LoginLayoutTabler` for the Identity area. Assets under `wwwroot/tabler/` (Tabler v1.4.0 +
-  `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting).
+  `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting
+  and the desktop sidebar collapse-to-icons toggle, persisted via `localStorage`; mobile keeps Bootstrap's
+  own auto-collapse below `lg`). `einvworld-ui.js` is cache-busted with `asp-append-version`.
 - **Switch mechanism:** a per-folder `Pages/<area>/_ViewStart.cshtml` sets `Layout = "_LayoutTabler"` for
   **authenticated** users only, so anonymous/public pages keep the marketing layout. Delete that file to
   revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
