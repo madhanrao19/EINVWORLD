@@ -44,6 +44,13 @@
     <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>
 </head>
 <body>
+    <script>
+        // Applied synchronously (before the sidebar paints) to avoid a flash of the expanded
+        // sidebar on desktop; einvworld-ui.js owns the toggle button + persistence afterwards.
+        if (localStorage.getItem("einv-sidebar-collapsed") === "1") {
+            document.body.classList.add("einv-sidebar-collapsed");
+        }
+    </script>
 
     <!-- Bootstrap toast host (id reused by existing app scripts + einvworld.toast helper) -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
@@ -85,7 +92,7 @@
     <script src="~/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
 
     <!-- EINVWORLD shared UI helpers (route highlighting + toast) -->
-    <script src="~/tabler/js/einvworld-ui.js"></script>
+    <script src="~/tabler/js/einvworld-ui.js" asp-append-version="true"></script>
 
     <!-- lord-icon (self-hosted) — several pages embed <lord-icon> animated icons -->
     <script src="~/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>

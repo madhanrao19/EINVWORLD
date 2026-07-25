@@ -56,12 +56,31 @@
     window.bootstrap.Toast.getOrCreateInstance(el).show();
   }
 
+  // Desktop sidebar collapse-to-icons. The collapsed class itself is applied synchronously by
+  // an inline script in _LayoutTabler (avoids a flash of the expanded sidebar); this just wires
+  // the toggle button and persists the choice. Mobile has its own Bootstrap collapse already.
+  function initSidebarCollapse() {
+    var STORAGE_KEY = "einv-sidebar-collapsed";
+    var btn = document.getElementById("einv-sidebar-collapse-toggle");
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", String(document.body.classList.contains("einv-sidebar-collapsed")));
+    btn.addEventListener("click", function () {
+      var collapsed = document.body.classList.toggle("einv-sidebar-collapsed");
+      btn.setAttribute("aria-pressed", String(collapsed));
+      localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+    });
+  }
+
   window.einvworld = window.einvworld || {};
   window.einvworld.toast = makeToast;
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", highlightCurrentRoute);
+    document.addEventListener("DOMContentLoaded", function () {
+      highlightCurrentRoute();
+      initSidebarCollapse();
+    });
   } else {
     highlightCurrentRoute();
+    initSidebarCollapse();
   }
 })();
