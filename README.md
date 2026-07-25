@@ -82,6 +82,13 @@ Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 dotnet test
 ```
 
+UI/visual regression is covered by the Playwright suite (requires a running instance):
+
+```bash
+npm run qa                                  # all specs
+EINVWORLD_BASE_URL=http://localhost:5260 COMPANY_ID=1 npx playwright test 11-company-details-parity
+```
+
 Unit tests always run. The `EINVWORLD.Tests/Integration/` suite additionally runs against a **real SQL
 Server** when `INTEGRATION_SQLSERVER` is set (CI does this automatically via LocalDB); it no-ops otherwise,
 so `dotnet test` passes with or without a database available:
