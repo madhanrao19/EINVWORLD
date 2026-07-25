@@ -1,42 +1,73 @@
-﻿@page
+@page
 @model eInvWorld.Pages.Items.CreateModel
 @{
     ViewData["Title"] = "Create Item";
 }
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Create New Item</h5>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Create Item</h1>
+                <p class="text-muted mb-0">Add a reusable item code for your invoice catalogue.</p>
+            </div>
+            <a asp-page="Index" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+            </a>
+        </div>
     </div>
-    <div class="card-body">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+</div>
 
-            <div class="mb-3">
-                <label asp-for="ItemDescription.ItemCode" class="form-label">Item Code</label>
-                <input asp-for="ItemDescription.ItemCode" class="form-control" required />
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="ItemDescription.ItemCode" class="form-label fw-semibold">Item Code</label>
+                        <input asp-for="ItemDescription.ItemCode" class="form-control" placeholder="e.g. PCS-001" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ItemDescription.ClassificationCode" class="form-label fw-semibold">Classification Code</label>
+                        <select asp-for="ItemDescription.ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select select2" required>
+                            <option value="">Select Classification Code</option>
+                        </select>
+                        <span asp-validation-for="ItemDescription.ClassificationCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ItemDescription.Description" class="form-label fw-semibold">Description</label>
+                        <textarea asp-for="ItemDescription.Description" class="form-control" rows="3" placeholder="Brief details for the invoice line item..." required></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mb-4" dir="ltr">
+                        <input asp-for="ItemDescription.IsActive" class="form-check-input" />
+                        <label class="form-check-label fw-semibold ms-2" asp-for="ItemDescription.IsActive">Active</label>
+                    </div>
+
+                    <div class="text-end">
+                        <a asp-page="Index" class="btn btn-light me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Item</button>
+                    </div>
+                </form>
             </div>
+        </div>
+    </div>
 
-            <div class="mb-3">
-                <label asp-for="ItemDescription.ClassificationCode" class="form-label">Classification Code</label>
-                <select asp-for="ItemDescription.ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select select2" required>
-                    <option value="">Select Classification Code</option>
-                </select>
-                <span asp-validation-for="ItemDescription.ClassificationCode" class="text-danger"></span>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+                <p class="text-uppercase text-muted fw-semibold mb-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                    <i class="ri-information-line align-bottom me-1 text-primary"></i>How This Is Used
+                </p>
+                <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
+                    <li class="mb-2"><i class="ri-price-tag-3-line align-bottom me-2 text-primary"></i>The Item Code and Description prefill an invoice line when you pick this item during Create e-Invoice.</li>
+                    <li class="mb-0"><i class="ri-government-line align-bottom me-2 text-primary"></i>The Classification Code is LHDN's official item classification — it's submitted as-is on every invoice line using this item.</li>
+                </ul>
             </div>
-
-            <div class="mb-3">
-                <label asp-for="ItemDescription.Description" class="form-label">Description</label>
-                <textarea asp-for="ItemDescription.Description" class="form-control" rows="3" required></textarea>
-            </div>
-
-            <div class="form-check mb-3">
-                <input asp-for="ItemDescription.IsActive" class="form-check-input" />
-                <label class="form-check-label" asp-for="ItemDescription.IsActive">Is Active</label>
-            </div>
-
-            <button type="submit" class="btn btn-success">Save Item</button>
-            <a asp-page="Index" class="btn btn-light">Cancel</a>
-        </form>
+        </div>
     </div>
 </div>
