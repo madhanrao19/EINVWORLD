@@ -54,6 +54,7 @@ namespace eInvWorld.Pages.Invoices
         private readonly InvoiceSyncHelper _invoiceSyncHelper;
         private readonly ISyncJobTracker _jobTracker;
         private readonly IInvoiceFinalizer _invoiceFinalizer;
+        private readonly FilePathConfig _filePathConfig;
 
         public List<InvoiceHeader> DraftInvoices { get; set; } = new List<InvoiceHeader>();
         public List<InvoiceHeader> Invoices { get; set; } = new List<InvoiceHeader>();
@@ -96,7 +97,8 @@ namespace eInvWorld.Pages.Invoices
                                  IHttpClientFactory httpClientFactory,
                                  InvoiceSyncHelper invoiceSyncHelper,
                                  ISyncJobTracker jobTracker,
-                                 IInvoiceFinalizer invoiceFinalizer)
+                                 IInvoiceFinalizer invoiceFinalizer,
+                                 Microsoft.Extensions.Options.IOptions<FilePathConfig> filePathConfig)
         {
             _context = context;
             _configuration = configuration;
@@ -112,6 +114,7 @@ namespace eInvWorld.Pages.Invoices
             _invoiceSyncHelper = invoiceSyncHelper;
             _jobTracker = jobTracker;
             _invoiceFinalizer = invoiceFinalizer;
+            _filePathConfig = filePathConfig.Value;
         }
         public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
         {
@@ -2261,6 +2264,84 @@ namespace eInvWorld.Pages.Invoices
             }
 
             return new JsonResult(new { success = true, sentCount = sentCount, skippedCount = skipped.Count, skipped = skipped });
+        }
+
+        // Bulk PDF export (Stitch "Export Configuration" — PDF file format): ZIPs the already-generated
+        // PDF for each selected invoice, generating on demand only for the ones missing one. Bounded to
+        // the user's own explicit selection (not "export everything"), so this can't turn into a
+        // synchronous loop over hundreds of documents — the real timeout risk flagged earlier.
+        private const int MaxBulkPdfCount = 50;
+
+        public async Task<IActionResult> OnGetBulkPdfAsync(string uuids)
+        {
+            if (string.IsNullOrEmpty(uuids))
+                return BadRequest("No invoices selected.");
+
+            var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            if (uuidList.Count == 0)
+                return BadRequest("No invoices selected.");
+            if (uuidList.Count > MaxBulkPdfCount)
+                return BadRequest($"Select at most {MaxBulkPdfCount} invoices for a PDF export — use CSV/XLSX for larger batches.");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return RedirectToPage("/Account/Login");
+
+            var userTINs = await _context.UserCompanies
+                .Where(uc => uc.UserId == user.Id)
+                .Select(uc => uc.PartyInfo.TIN)
+                .Distinct()
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (!userTINs.Any())
+                return BadRequest("No company associated with this account.");
+
+            // Same mandatory per-TIN ownership scope as every other bulk/export path on this page.
+            var invoices = await _context.InvoiceHeaders
+                .Include(i => i.Supplier)
+                .Include(i => i.Customer)
+                .Include(i => i.PublicCustomer)
+                .Where(i => uuidList.Contains(i.UUID) &&
+                            (userTINs.Contains(i.Supplier.TIN) ||
+                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (invoices.Count == 0)
+                return BadRequest("None of the selected invoices could be found.");
+
+            using var zipStream = new MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var invoice in invoices)
+                {
+                    string pdfPath = System.IO.Path.Combine(_filePathConfig.GeneratedPdfFolder, $"{invoice.InvoiceNo}.pdf");
+                    if (!System.IO.File.Exists(pdfPath))
+                    {
+                        try
+                        {
+                            pdfPath = await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to generate PDF for bulk export: {InvoiceNo}", invoice.InvoiceNo);
+                            continue; // Skip this one; the rest of the batch still succeeds.
+                        }
+                    }
+
+                    if (!System.IO.File.Exists(pdfPath))
+                        continue;
+
+                    var entry = archive.CreateEntry($"{invoice.InvoiceNo}.pdf", System.IO.Compression.CompressionLevel.Fastest);
+                    using var entryStream = entry.Open();
+                    using var fileStream = System.IO.File.OpenRead(pdfPath);
+                    await fileStream.CopyToAsync(entryStream, HttpContext.RequestAborted);
+                }
+            }
+
+            zipStream.Position = 0;
+            string timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
+            return File(zipStream.ToArray(), "application/zip", $"Invoices_PDF_{timestamp}.zip");
         }
     }
 }
