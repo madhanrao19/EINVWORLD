@@ -2182,5 +2182,85 @@ namespace eInvWorld.Pages.Invoices
 
             return new JsonResult(new { success = true, updatedCount = updatedCount, checkedCount = checkedCount });
         }
+
+        // "Send to Buyers" (Stitch): manual resend of the validated-invoice email for explicitly
+        // selected invoices. Reuses the exact same email service/template InvoiceFinalizer already
+        // uses for the automatic first send (SendValidatedNotificationEmail) — no new email content.
+        // Deliberately does NOT touch IsValidationEmailSent/ValidationEmailSentAt (those record the
+        // original automatic send); a manual resend is logged as a separate "EmailResent" history
+        // entry instead, so the audit trail keeps both facts.
+        public async Task<JsonResult> OnPostBulkSendToBuyersAsync([FromBody] List<string> uuids)
+        {
+            if (uuids == null || !uuids.Any())
+                return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, sentCount = 0, skippedCount = 0 });
+
+            var userTINs = await _context.UserCompanies
+                .Where(uc => uc.UserId == user.Id)
+                .Select(uc => uc.PartyInfo.TIN)
+                .Distinct()
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (!userTINs.Any())
+                return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
+
+            // Same mandatory per-TIN ownership scope as every other bulk/export path on this page.
+            var invoices = await _context.InvoiceHeaders
+                .Include(i => i.Supplier)
+                .Include(i => i.Customer)
+                .Include(i => i.PublicCustomer)
+                .Where(i => uuids.Contains(i.UUID) &&
+                            (userTINs.Contains(i.Supplier.TIN) ||
+                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .ToListAsync(HttpContext.RequestAborted);
+
+            int sentCount = 0;
+            var skipped = new List<string>();
+            foreach (var invoice in invoices)
+            {
+                // Only a Valid document actually has a validated PDF + timestamp to email — sending the
+                // "validated invoice" template for anything else would misrepresent its real status.
+                if (invoice.LHDNStatusId != "Valid")
+                {
+                    skipped.Add($"{invoice.InvoiceNo}: not yet LHDN-validated.");
+                    continue;
+                }
+
+                try
+                {
+                    await _eInvoiceEmailService.SendValidatedNotificationEmail(
+                        invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
+                        invoice.Customer,
+                        invoice.Supplier,
+                        invoice.InvoiceNo,
+                        invoice.IssueDate ?? DateTime.Now,
+                        invoice.DateTimeValidated ?? DateTime.Now,
+                        invoice.PublicCustomer);
+
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoice.InvoiceNo,
+                        Action = "EmailResent",
+                        PerformedBy = user.UserName ?? user.Id,
+                        Remarks = invoice.Customer?.Email ?? invoice.PublicCustomer?.Email ?? "(no buyer email on file)",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync(HttpContext.RequestAborted);
+
+                    sentCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resend invoice email for {InvoiceNo}", invoice.InvoiceNo);
+                    skipped.Add($"{invoice.InvoiceNo}: send failed.");
+                }
+            }
+
+            return new JsonResult(new { success = true, sentCount = sentCount, skippedCount = skipped.Count, skipped = skipped });
+        }
     }
 }
