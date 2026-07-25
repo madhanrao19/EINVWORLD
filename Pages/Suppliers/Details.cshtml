@@ -45,95 +45,75 @@
                 <h5 class="mt-3 mb-1">@Model.PartyInfo.CompanyName</h5>
                 <p class="text-muted">@Model.PartyInfo.Email</p>
 
+                <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
+                    <span class="badge bg-soft-success text-success border">
+                        <i class="ri-verified-badge-line me-1"></i>@(Model.PartyInfo.IsApproved ? "Verified" : "Unverified")
+                    </span>
+                    <span class="badge bg-soft-success text-success border">
+                        <i class="ri-checkbox-circle-line me-1"></i>@(Model.PartyInfo.IsActive ? "Active" : "Inactive")
+                    </span>
+                    <span class="badge bg-soft-secondary text-secondary border">
+                        <i class="ri-building-line me-1"></i>Supplier
+                    </span>
+                </div>
+
                 <div class="table-responsive table-card">
-                    <table class="table table-borderless mb-0">
-                        <tbody>
-                            <tr>
-                                <td class="fw-medium">Registration Type</td>
-                                <td>@Model.PartyInfo.RegTypeCode</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Tax ID</td>
-                                <td>@Model.PartyInfo.TIN</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Registration Number</td>
-                                <td>@Model.PartyInfo.RegNo</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Old Registration Number</td>
-                                <td>@Model.PartyInfo.OldRegNo</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Industry Classification</td>
-                                <td>@Model.PartyInfo.IndustryClassificationCode</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Business Description</td>
-                                <td>@Model.PartyInfo.BizDescription</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Phone Number</td>
-                                <td>@Model.PartyInfo.PhoneNo</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Fax Number</td>
-                                <td>@Model.PartyInfo.FaxNo</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">SST Registration</td>
-                                <td>@Model.PartyInfo.SST</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Tourism Tax (TTX)</td>
-                                <td>@Model.PartyInfo.TTX</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Remarks</td>
-                                <td>@Model.PartyInfo.Remarks</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Bank Account Number</td>
-                                <td>@Model.PartyInfo.BankAccountNo</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Bank Name</td>
-                                <td>@Model.PartyInfo.BankName</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Attention</td>
-                                <td>@Model.PartyInfo.Attention</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-medium">Location</td>
-                                <td>
-                                    @{
-                                        var addressParts = new[]
-                                        {
-                                    Model.PartyInfo.Addr1,
-                                    Model.PartyInfo.Addr2,
-                                    Model.PartyInfo.Addr3,
-                                    Model.PartyInfo.PostalCode,
-                                    Model.PartyInfo.CityName,
-                                    Model.StateName,
-                                    Model.CountryName
-                                    }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                    <div class="row g-0">
+                        <div class="col-md-6 pe-md-3">
+                            <h6 class="text-uppercase text-muted fs-12 mb-2"><i class="ri-file-list-3-line me-1"></i>Legal &amp; Registration</h6>
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr><td class="fw-medium text-muted">Registration Type</td><td>@Model.PartyInfo.RegTypeCode</td></tr>
+                                    <tr><td class="fw-medium text-muted">Tax ID</td><td>@Model.PartyInfo.TIN</td></tr>
+                                    <tr><td class="fw-medium text-muted">Registration Number</td><td>@Model.PartyInfo.RegNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Old Registration Number</td><td>@Model.PartyInfo.OldRegNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Industry Classification</td><td>@Model.PartyInfo.IndustryClassificationCode</td></tr>
+                                    <tr><td class="fw-medium text-muted">Business Description</td><td>@Model.PartyInfo.BizDescription</td></tr>
+                                    <tr><td class="fw-medium text-muted">SST Registration</td><td>@Model.PartyInfo.SST</td></tr>
+                                    <tr><td class="fw-medium text-muted">Tourism Tax (TTX)</td><td>@Model.PartyInfo.TTX</td></tr>
+                                    <tr><td class="fw-medium text-muted">Remarks</td><td>@Model.PartyInfo.Remarks</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6 ps-md-3 border-md-start">
+                            <h6 class="text-uppercase text-muted fs-12 mb-2"><i class="ri-bank-card-line me-1"></i>Contact &amp; Finance</h6>
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr><td class="fw-medium text-muted">Phone Number</td><td>@Model.PartyInfo.PhoneNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Fax Number</td><td>@Model.PartyInfo.FaxNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Bank Account Number</td><td>@Model.PartyInfo.BankAccountNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Bank Name</td><td>@Model.PartyInfo.BankName</td></tr>
+                                    <tr><td class="fw-medium text-muted">Attention</td><td>@Model.PartyInfo.Attention</td></tr>
+                                    <tr>
+                                        <td class="fw-medium text-muted align-top">Location</td>
+                                        <td>
+                                            @{
+                                                var addressParts = new[]
+                                                {
+                                                    Model.PartyInfo.Addr1,
+                                                    Model.PartyInfo.Addr2,
+                                                    Model.PartyInfo.Addr3,
+                                                    Model.PartyInfo.PostalCode,
+                                                    Model.PartyInfo.CityName,
+                                                    Model.StateName,
+                                                    Model.CountryName
+                                                }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
 
-                                        var addressDisplay = string.Join(", ", addressParts);
-                                        var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
-                                    }
-
-                                    @addressDisplay
-                                    <div class="mt-2">
-                                        <a href="@googleMapsUrl" target="_blank" class="btn btn-primary btn-sm">
-                                            <i class="ri-map-pin-fill fs-16"></i> View on Google Maps
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-
-                        </tbody>
-                    </table>
+                                                var addressDisplay = string.Join(", ", addressParts);
+                                                var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
+                                            }
+                                            @addressDisplay
+                                            <div class="mt-2">
+                                                <a href="@googleMapsUrl" target="_blank" class="btn btn-primary btn-sm">
+                                                    <i class="ri-map-pin-fill fs-16"></i> View on Maps
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mt-3 d-flex justify-content-center gap-2">
@@ -296,7 +276,10 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="d-flex mb-3">
-                                <h6 class="card-title mb-0 flex-grow-1">Assigned Buyers</h6>
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title mb-0">Assigned Buyers</h6>
+                                    <small class="text-muted">Total @Model.AssignedBuyers.Count buyer@(Model.AssignedBuyers.Count == 1 ? "" : "s") currently managed</small>
+                                </div>
                                 <!-- NEW -->
                                     @if (User.IsInRole("Admin"))
                                     {
@@ -312,29 +295,42 @@
 
                                 @if (Model.AssignedBuyers.Any())
                                 {
-                                    @foreach (var buyer in Model.AssignedBuyers)
-                                    {
-                                        var isPublic = buyer.CompanyName.EndsWith("(Buyers) ");
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-sm align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Buyer Entity</th>
+                                                    <th>TIN / Registration</th>
+                                                    <th>Industry</th>
+                                                    <th class="text-end">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var buyer in Model.AssignedBuyers)
+                                                {
+                                                    var isPublic = buyer.CompanyName.EndsWith("(Buyers) ");
 
-                                        <ul class="list-unstyled vstack gap-3 mb-0">
-                                            <li class="d-flex align-items-center">
-                                                <img src="/assets/images/users/buyer-icon.png" alt="" class="avatar-md rounded-circle material-shadow me-2">
-                                                <div>
-                                                    <h6 class="mb-1">@buyer.CompanyName</h6>
-                                                    <p class="text-muted mb-0">@buyer.Email</p>
-                                                </div>
-
-                                                <button class="btn btn-danger btn-sm ms-auto"
-                                                        onclick="unassignBuyer(
-                                                            @Model.PartyInfo.PartyInfoId,
-                                                            @buyer.PartyInfoId,
-                                                            '@(isPublic ? "PC" : "PI")'
-                                                        )">
-                                                    <i class="ri-delete-bin-line"></i> Unassign
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    }
+                                                    <tr>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="fw-medium">@buyer.CompanyName</span>
+                                                                <small class="text-muted">@buyer.Email</small>
+                                                            </div>
+                                                        </td>
+                                                        <td>@buyer.TIN</td>
+                                                        <td>@buyer.IndustryClassificationCode</td>
+                                                        <td class="text-end white-space-nowrap">
+                                                            @if (!string.IsNullOrEmpty(buyer.Email))
+                                                            {
+                                                                <a href="mailto:@buyer.Email" class="btn btn-link btn-sm text-decoration-none text-success p-0 shadow-none">Manage</a>
+                                                            }
+                                                            <button class="btn btn-link btn-sm text-decoration-none text-danger p-0 shadow-none" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')">Unassign</button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 }
                                 else
                                 {
