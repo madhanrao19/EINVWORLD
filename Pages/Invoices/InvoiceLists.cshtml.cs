@@ -1909,6 +1909,73 @@ namespace eInvWorld.Pages.Invoices
                 ? "invoiceListColumns:Received"
                 : "invoiceListColumns";
 
+        // Separate key/endpoints for column ORDER (drag-to-reorder), independent of the visibility
+        // toggles above — same per-direction split, same JSON blob on the user record.
+        private static string ColumnOrderPreferenceKey(string? invoiceDirection) =>
+            string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase)
+                ? "invoiceListColumnOrder:Received"
+                : "invoiceListColumnOrder";
+
+        public async Task<IActionResult> OnPostSaveColumnOrderAsync([FromBody] List<string> columnOrder, string? invoiceDirection = null)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                    return new JsonResult(new { success = false, message = "User not found" });
+
+                var preferences = new Dictionary<string, object>();
+                if (!string.IsNullOrEmpty(user.UserPreferences))
+                {
+                    try
+                    {
+                        preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences)
+                                    ?? new Dictionary<string, object>();
+                    }
+                    catch
+                    {
+                        preferences = new Dictionary<string, object>();
+                    }
+                }
+
+                preferences[ColumnOrderPreferenceKey(invoiceDirection)] = columnOrder ?? new List<string>();
+                user.UserPreferences = JsonConvert.SerializeObject(preferences);
+                var result = await _userManager.UpdateAsync(user);
+
+                return new JsonResult(new { success = result.Succeeded });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving column order");
+                return new JsonResult(new { success = false, message = "An error occurred while saving column order" });
+            }
+        }
+
+        public async Task<IActionResult> OnGetLoadColumnOrderAsync(string? invoiceDirection = null)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null || string.IsNullOrEmpty(user.UserPreferences))
+                    return new JsonResult(new { success = true, data = (List<string>?)null });
+
+                var preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences);
+                var key = ColumnOrderPreferenceKey(invoiceDirection);
+                if (preferences != null && preferences.ContainsKey(key))
+                {
+                    var order = JsonConvert.DeserializeObject<List<string>>(preferences[key].ToString() ?? "[]");
+                    return new JsonResult(new { success = true, data = order });
+                }
+
+                return new JsonResult(new { success = true, data = (List<string>?)null });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading column order");
+                return new JsonResult(new { success = true, data = (List<string>?)null });
+            }
+        }
+
         // API method to save user column preferences
         public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings, string? invoiceDirection = null)
         {

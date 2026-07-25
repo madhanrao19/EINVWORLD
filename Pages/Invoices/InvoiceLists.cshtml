@@ -1232,68 +1232,100 @@
                 <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: rgba(58, 165, 100, 0.05); border-left: 4px solid #006948;">
                     <i class="ri-information-line text-primary me-2" style="font-size: 1.2rem;"></i>
                     <div>
-                        <strong>Personalized Display:</strong> Choose which columns to show in your invoice list. Your preferences are saved automatically.
+                        <strong>Personalized Display:</strong> Choose which columns to show, and drag <i class="ri-draggable"></i> to reorder them. Your preferences are saved automatically.
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-check mb-3 p-2 rounded hover-bg-light" style="transition: background-color 0.2s ease;">
-                            <input class="form-check-input column-toggle custom-checkbox" type="checkbox" value="col-invoice-no" id="toggle-invoice-no" checked disabled>
-                            <label class="form-check-label fw-medium d-flex align-items-center" for="toggle-invoice-no">
-                                <i class="ri-file-list-line me-2 text-primary"></i>e-Invoice No
+                <div id="columnOrderList" class="list-group">
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-invoice-no">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
+                            <input class="form-check-input column-toggle" type="checkbox" value="col-invoice-no" id="toggle-invoice-no" checked disabled>
+                            <label class="form-check-label fw-medium ms-2 d-flex align-items-center flex-grow-1" for="toggle-invoice-no">
+                                e-Invoice No
                                 <span class="badge bg-warning ms-auto" style="font-size: 0.6rem;">Required</span>
                             </label>
-                            <small class="text-muted d-block ms-4">Always visible for identification</small>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-uuid">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-uuid" id="toggle-uuid" checked>
                             <label class="form-check-label" for="toggle-uuid">UUID</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-submission-id">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-submission-id" id="toggle-submission-id" checked>
                             <label class="form-check-label" for="toggle-submission-id">Submission ID</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-supplier">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-supplier" id="toggle-supplier" checked>
                             <label class="form-check-label" for="toggle-supplier">Supplier Name</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-buyer">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-buyer" id="toggle-buyer" checked>
                             <label class="form-check-label" for="toggle-buyer">Buyer Name</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-submitted-date">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-submitted-date" id="toggle-submitted-date" checked>
                             <label class="form-check-label" for="toggle-submitted-date">Submitted Date</label>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-check mb-2">
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-document-type">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-document-type" id="toggle-document-type" checked>
                             <label class="form-check-label" for="toggle-document-type">Document Type</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-total-amount">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-total-amount" id="toggle-total-amount" checked>
                             <label class="form-check-label" for="toggle-total-amount">Total Amount</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-lhdn-status">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-lhdn-status" id="toggle-lhdn-status" checked disabled>
-                            <label class="form-check-label fw-medium" for="toggle-lhdn-status">LHDN Status</label>
-                            <small class="text-muted d-block">Always visible</small>
+                            <label class="form-check-label fw-medium ms-2" for="toggle-lhdn-status">LHDN Status <small class="text-muted">(always visible)</small></label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-internal-status">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-internal-status" id="toggle-internal-status" checked disabled>
-                            <label class="form-check-label fw-medium" for="toggle-internal-status">Internal Status</label>
-                            <small class="text-muted d-block">Always visible</small>
+                            <label class="form-check-label fw-medium ms-2" for="toggle-internal-status">Internal Status <small class="text-muted">(always visible)</small></label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-rejected-date">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-rejected-date" id="toggle-rejected-date" checked>
                             <label class="form-check-label" for="toggle-rejected-date">Rejected Date</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-last-updated">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-last-updated" id="toggle-last-updated" checked>
                             <label class="form-check-label" for="toggle-last-updated">Last Updated</label>
                         </div>
-                        <div class="form-check mb-2">
+                    </div>
+                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-created-by">
+                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
+                        <div class="form-check mb-0 flex-grow-1">
                             <input class="form-check-input column-toggle" type="checkbox" value="col-created-by" id="toggle-created-by" checked>
                             <label class="form-check-label" for="toggle-created-by">Created By</label>
                         </div>
@@ -1499,6 +1531,98 @@
         }
     }
 
+    // Drag-to-reorder for the Customize Columns list (native HTML5 DnD — no new dependency).
+    // col-checkbox and col-action are structural (not in this list) and stay pinned first/last.
+    (function initColumnDragReorder() {
+        const list = document.getElementById('columnOrderList');
+        if (!list) return;
+        let dragged = null;
+
+        list.addEventListener('dragstart', (e) => {
+            dragged = e.target.closest('.list-group-item');
+            if (dragged) e.dataTransfer.effectAllowed = 'move';
+        });
+        list.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const target = e.target.closest('.list-group-item');
+            if (!target || target === dragged) return;
+            const rect = target.getBoundingClientRect();
+            const before = (e.clientY - rect.top) < rect.height / 2;
+            list.insertBefore(dragged, before ? target : target.nextSibling);
+        });
+        list.addEventListener('dragend', () => { dragged = null; });
+    })();
+
+    // Reorders the live table's <th>/<td> to match a saved column order. Columns not present in
+    // `order` (e.g. a new column added after the user last saved) keep their existing relative
+    // position at the end, just before the pinned col-action.
+    function applyColumnOrder(order) {
+        if (!order || !order.length) return;
+        const headerRow = document.querySelector('#invoiceTable thead tr');
+        if (!headerRow) return;
+
+        function reorderRow(row) {
+            const cellByColumn = {};
+            Array.from(row.children).forEach(cell => {
+                const match = Array.from(cell.classList).find(c => c.startsWith('col-'));
+                if (match) cellByColumn[match] = cell;
+            });
+            order.forEach(columnClass => {
+                const cell = cellByColumn[columnClass];
+                // Insert before the pinned last cell (col-action) if present, else append.
+                const actionCell = row.querySelector('.col-action');
+                if (cell && cell !== actionCell) {
+                    row.insertBefore(cell, actionCell || null);
+                }
+            });
+        }
+
+        reorderRow(headerRow);
+        document.querySelectorAll('#invoiceTable tbody tr').forEach(reorderRow);
+
+        // Reflect the loaded order in the modal's drag list too, so it matches what's on screen.
+        const list = document.getElementById('columnOrderList');
+        if (list) {
+            const itemByColumn = {};
+            Array.from(list.children).forEach(item => { itemByColumn[item.dataset.column] = item; });
+            order.forEach(columnClass => {
+                const item = itemByColumn[columnClass];
+                if (item) list.appendChild(item);
+            });
+        }
+    }
+
+    async function loadColumnOrder() {
+        try {
+            const response = await fetch('?handler=LoadColumnOrder&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', { method: 'GET' });
+            const result = await response.json();
+            if (result.success && result.data) {
+                applyColumnOrder(result.data);
+            }
+        } catch (error) {
+            console.error('Error loading column order:', error);
+        }
+    }
+
+    async function saveColumnOrder() {
+        const order = Array.from(document.querySelectorAll('#columnOrderList .list-group-item')).map(item => item.dataset.column);
+        try {
+            const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) headers['RequestVerificationToken'] = csrfToken.value;
+            await fetch('?handler=SaveColumnOrder&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(order)
+            });
+            applyColumnOrder(order);
+        } catch (error) {
+            console.error('Error saving column order:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadColumnOrder);
+
     function loadDefaultColumnSettings() {
         // Default settings — the lean Stitch column set. Technical metadata (UUID, Submission ID,
         // Rejected Date, Last Updated) stays available via Customize; saved user preferences
@@ -1522,6 +1646,11 @@
             'col-created-by': !isReceived,
             'col-action': true
         };
+
+        // Reset drag order back to the original markup order (both the live table and the modal list).
+        applyColumnOrder(['col-invoice-no', 'col-uuid', 'col-submission-id', 'col-supplier', 'col-buyer',
+            'col-submitted-date', 'col-document-type', 'col-total-amount', 'col-lhdn-status',
+            'col-internal-status', 'col-rejected-date', 'col-last-updated', 'col-created-by']);
 
         Object.keys(defaultSettings).forEach(columnClass => {
             const isVisible = defaultSettings[columnClass];
@@ -1596,8 +1725,10 @@
             });
             
             const result = await response.json();
-            
+
             if (result.success) {
+                await saveColumnOrder();
+
                 // Close modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
                 modal.hide();
