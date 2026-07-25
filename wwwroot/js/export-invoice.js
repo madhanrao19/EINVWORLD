@@ -238,6 +238,31 @@
         handleExport("xlsx");
     });
 
+    // PDF (ZIP) only makes sense for an explicit, bounded selection — the server caps this at 50
+    // invoices and generates on demand, which is fine for a deliberate small batch but would be a
+    // real timeout risk for "every invoice matching the current filters."
+    var exportPdfZipButton = document.getElementById("exportPdfZipButton");
+    if (exportPdfZipButton) {
+        exportPdfZipButton.addEventListener("click", function () {
+            if (!isSelectedScope()) {
+                Swal.fire("Selected Items Only", "Switch Export Scope to \"Selected Items\" to export PDFs — this avoids generating hundreds of PDFs in one request.", "info");
+                return;
+            }
+            let uuids = selectedInvoiceUuids();
+            if (uuids.length === 0) {
+                Swal.fire("No Selection", "Please select at least one invoice.", "warning");
+                return;
+            }
+            if (uuids.length > 50) {
+                Swal.fire("Too Many Selected", "Select at most 50 invoices for a PDF export.", "warning");
+                return;
+            }
+            let invoiceDirection = getInvoiceDirection();
+            let url = `/Invoices/InvoiceLists?handler=BulkPdf&invoiceDirection=${encodeURIComponent(invoiceDirection)}&uuids=${encodeURIComponent(uuids.join(','))}`;
+            window.location.href = url;
+        });
+    }
+
     // ✅ Preselect the radio button based on the selected tab
     function setDefaultInvoiceDirection() {
         let invoiceDirection = new URLSearchParams(window.location.search).get("invoiceDirection") || "Sent";
