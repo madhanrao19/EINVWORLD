@@ -28,6 +28,9 @@ namespace eInvWorld.Pages.RecurringInvoices
         public string BaseTemplateName { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
         public string BuyerName { get; set; } = string.Empty;
+        public int TemplateItemCount { get; set; }
+        public decimal? TemplateTotalAmount { get; set; }
+        public string TemplateCurrency { get; set; } = "MYR";
 
         public async Task<IActionResult> OnGetAsync(int templateId)
         {
@@ -38,6 +41,7 @@ namespace eInvWorld.Pages.RecurringInvoices
                 .Include(t => t.Supplier)
                 .Include(t => t.Customer)
                 .Include(t => t.PublicCustomer)
+                .Include(t => t.InvoiceLines)
                 .FirstOrDefaultAsync(t => t.Id == templateId && t.CreatedByUserId == userId);
 
             if (template == null)
@@ -50,6 +54,9 @@ namespace eInvWorld.Pages.RecurringInvoices
             BaseTemplateName = template.TemplateName ?? "Unnamed Template";
             SupplierName = template.Supplier?.CompanyName ?? "Unknown Company";
             BuyerName = template.Customer?.CompanyName ?? template.PublicCustomer?.CompanyName ?? "All Buyers";
+            TemplateItemCount = template.InvoiceLines?.Count ?? 0;
+            TemplateTotalAmount = template.TotalAmountIncTax;
+            TemplateCurrency = template.Currency ?? "MYR";
 
             // 3. Pre-fill the hidden input bindings so they submit with the form
             Input.InvoiceTemplateId = template.Id;

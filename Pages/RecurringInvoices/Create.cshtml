@@ -4,23 +4,23 @@
     ViewData["Title"] = "Create Recurring Profile";
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Create Recurring Profile</h4>
-            <div class="page-title-right">
-                <a asp-page="./Index" class="btn btn-soft-secondary">
-                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
-                </a>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Create Recurring Profile</h1>
+                <p class="text-muted mb-0">Set up automated invoice generation based on the template: <strong>@Model.BaseTemplateName</strong>.</p>
             </div>
+            <a asp-page="./Index" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+            </a>
         </div>
-        <p class="text-muted">Set up automated invoice generation based on the template: <strong>@Model.BaseTemplateName</strong>.</p>
     </div>
 </div>
 
-<div class="row justify-content-center">
+<div class="row g-4">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <form method="post">
                     <input type="hidden" asp-for="Input.InvoiceTemplateId" />
@@ -68,9 +68,29 @@
 
                     <div class="text-end">
                         <a asp-page="./Index" class="btn btn-light me-2">Cancel</a>
-                        <button type="submit" class="btn btn-success">Create Profile</button>
+                        <button type="submit" class="btn btn-primary">Create Profile</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header-clean" style="background: #0c5434; border-radius: 12px 12px 0 0; padding: 1rem 1.25rem;">
+                <p class="text-uppercase mb-0 text-white-50" style="font-size: 0.7rem; letter-spacing: 0.05em;">Template Preview</p>
+                <h5 class="mb-0 text-white fw-bold">@Model.BaseTemplateName</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-1" style="font-size: 0.8rem;">@Model.SupplierName &rarr; @Model.BuyerName</p>
+                <div class="d-flex gap-2 mb-3">
+                    <span class="badge bg-light text-body border">@Model.TemplateItemCount item@(Model.TemplateItemCount == 1 ? "" : "s")</span>
+                    <span class="badge bg-light text-body border">@Model.TemplateCurrency</span>
+                </div>
+                <hr />
+                <p class="text-muted mb-0" style="font-size: 0.75rem;">Template Total</p>
+                <h3 class="fw-bold mb-0">@Model.TemplateCurrency @(Model.TemplateTotalAmount?.ToString("N2") ?? "0.00")</h3>
+                <p class="text-muted small mt-3 mb-0">Each generated invoice copies this template's items and amounts as of its run date. Edit the base template to change future runs.</p>
             </div>
         </div>
     </div>
