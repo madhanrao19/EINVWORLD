@@ -6,17 +6,16 @@
     Layout = "_LayoutTabler";
     var isAdmin = User.IsInRole("Admin");
 }
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">Create New Buyer</h4>
-
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="javascript: void(0);">Buyer Management</a></li>
-                    <li class="breadcrumb-item active">Create New Buyer</li>
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Add Buyer</h1>
+                <p class="text-muted mb-0">Register a new buyer to issue e-Invoices to.</p>
             </div>
+            <a asp-page="./List" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Directory
+            </a>
         </div>
     </div>
 </div>
