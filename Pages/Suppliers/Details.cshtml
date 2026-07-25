@@ -6,20 +6,43 @@
 }
 
 <!-- Start Page Title -->
-<div class="row">
+<div class="row mb-3">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">@((Model.From == "lead") ? "Lead Info" : "Company Info")</h4>
-
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item">
-                        <a href="javascript:void(0);">@((Model.From == "lead") ? "Lead Management" : "Company Management")</a>
-                    </li>
-                    <li class="breadcrumb-item active">@((Model.From == "lead") ? "Lead Details" : "Company Details")</li>
-
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">@Model.PartyInfo.CompanyName</h1>
+                <p class="text-muted mb-0">
+                    @(Model.PartyInfo.IsActive ? "Active" : "Inactive") &middot; @Model.CountryName &middot;
+                    @((Model.From == "lead") ? "Lead Details" : "Company Details")
+                </p>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Users</p>
+            <h3 class="fw-bold mb-0">@(Model.AssignedUsers.Count + 1)</h3>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Buyers</p>
+            <h3 class="fw-bold mb-0">@Model.AssignedBuyers.Count</h3>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Suppliers</p>
+            <h3 class="fw-bold mb-0">@Model.AssignedSuppliers.Count</h3>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Verification</p>
+            <h3 class="fw-bold mb-0 @(Model.PartyInfo.IsApproved ? "text-success" : "text-warning")">@(Model.PartyInfo.IsApproved ? "Verified" : "Pending")</h3>
         </div>
     </div>
 </div>
