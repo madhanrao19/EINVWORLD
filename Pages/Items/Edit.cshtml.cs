@@ -29,6 +29,7 @@ namespace eInvWorld.Pages.Items
         public ItemDescription ItemDescription { get; set; } = default!;
 
         public List<SelectListItem> ClassificationCodes { get; set; } = new();
+        public List<SelectListItem> UnitOptions { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(int? id)
         {
@@ -54,6 +55,7 @@ namespace eInvWorld.Pages.Items
 
             ItemDescription = itemdescription;
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+            UnitOptions = _dropdownHelper.GetUnitOptions();
             return Page();
         }
 
@@ -62,6 +64,16 @@ namespace eInvWorld.Pages.Items
             if (!ModelState.IsValid)
             {
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions();
+                return Page();
+            }
+
+            if (!string.IsNullOrWhiteSpace(ItemDescription.UnitCode)
+                && !await _context.UnitTypes.AnyAsync(u => u.Code == ItemDescription.UnitCode && u.IsActive))
+            {
+                ModelState.AddModelError("ItemDescription.UnitCode", "Selected Unit is not a valid LHDN unit-of-measure code.");
+                ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions();
                 return Page();
             }
 
