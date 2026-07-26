@@ -9,24 +9,6 @@
 }
 
 <style>
-    /* eInvWorld Brand Colors - Override Velzon Defaults */
-    .btn-primary {
-        background-color: #006948 !important;
-        border-color: #006948 !important;
-    }
-    
-    .btn-primary:hover, .btn-primary:focus {
-        background-color: #005137 !important;
-        border-color: #005137 !important;
-    }
-    
-    .avatar-title.bg-primary {
-        background-color: #006948 !important;
-    }
-    
-    .progress-bar.bg-primary {
-        background-color: #006948 !important;
-    }
     /* Optimized Table Column Widths (Copied from CreateInvoice) */
     #lineItemsTable {
         table-layout: fixed;
@@ -255,30 +237,28 @@
 </style>
 
 <!-- Start page title -->
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             @if (Model.IsTemplateMode)
             {
-                <h4 class="mb-sm-0">Edit Template: @Model.TemplateName</h4>
-                <div class="page-title-right">
-                    <ol class="breadcrumb m-0">
-                        <li class="breadcrumb-item"><a href="/Dashboard/MainDashboard">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="/Templates/TemplateLists">Templates</a></li>
-                        <li class="breadcrumb-item active">Edit Template</li>
-                    </ol>
+                <div>
+                    <h1 class="einv-page-title mb-1">Edit Template: @Model.TemplateName</h1>
+                    <p class="text-muted mb-0">Changes here update the reusable template, not any invoice already created from it.</p>
                 </div>
+                <a href="/Templates/TemplateLists" class="btn btn-outline-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Templates
+                </a>
             }
             else
             {
-                <h4 class="mb-sm-0">Edit e-Invoice @Model.Invoice?.InvoiceNo</h4>
-                <div class="page-title-right">
-                    <ol class="breadcrumb m-0">
-                        <li class="breadcrumb-item"><a href="/Dashboard/MainDashboard">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="/Invoices/InvoiceLists">Invoice Management</a></li>
-                        <li class="breadcrumb-item active">Edit Invoice</li>
-                    </ol>
+                <div>
+                    <h1 class="einv-page-title mb-1">Edit e-Invoice @Model.Invoice?.InvoiceNo</h1>
+                    <p class="text-muted mb-0">Draft invoices can be freely edited before submission to LHDN.</p>
                 </div>
+                <a href="/Invoices/InvoiceLists" class="btn btn-outline-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Invoice Lists
+                </a>
             }
         </div>
     </div>
@@ -970,7 +950,7 @@
 {
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
+            <div class="card border-0 shadow-sm">
                 <div class="card-header">
                     <h6 class="mb-0">Generated JSON</h6>
                 </div>
