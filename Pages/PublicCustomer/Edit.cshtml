@@ -1,161 +1,225 @@
-﻿@page
+@page
 @model eInvWorld.Pages.PublicCustomer.EditModel
 @{
     ViewData["Title"] = "Edit Buyer";
     Layout = "_LayoutTabler";
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex justify-content-between align-items-center">
-            <h4>Edit Buyer</h4>
-            <a asp-page="./Details" asp-route-id="@Model.PublicCustomer.PublicCustomerId"
-               class="btn btn-light">Back</a>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Edit Buyer</h1>
+                <p class="text-muted mb-0">Update this buyer's details.</p>
+            </div>
+            <a asp-page="./Details" asp-route-id="@Model.PublicCustomer.PublicCustomerId" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back
+            </a>
         </div>
     </div>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="card mt-3 p-4">
+<form method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="PublicCustomer.PublicCustomerId" />
-    <div asp-validation-summary="All" class="text-danger"></div>
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.CompanyName" class="form-label"></label>
-            <input asp-for="PublicCustomer.CompanyName" class="form-control" />
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-building-line align-bottom me-1"></i> Legal Identity
+            </h6>
         </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.CompanyName" class="form-label">Buyer Name (Legal Entity)</label>
+                    <input asp-for="PublicCustomer.CompanyName" class="form-control" />
+                </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.TIN" class="form-label"></label>
-            <input asp-for="PublicCustomer.TIN" class="form-control" />
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.TIN" class="form-label">Tax Identification Number (TIN)</label>
+                    <input asp-for="PublicCustomer.TIN" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.RegTypeCode" class="form-label">Registration Type</label>
+                    <select asp-for="PublicCustomer.RegTypeCode"
+                            asp-items="Model.IdTypesOptions"
+                            class="form-select">
+                        <option value="">-- Select ID Type --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.RegNo" class="form-label">Registration Number</label>
+                    <input asp-for="PublicCustomer.RegNo" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.OldRegNo" class="form-label">Old Registration Number</label>
+                    <input asp-for="PublicCustomer.OldRegNo" class="form-control" />
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.IndustryClassificationCode" class="form-label">MSIC Code</label>
-            <select asp-for="PublicCustomer.IndustryClassificationCode"
-                    asp-items="Model.MSICOptions"
-                    class="form-select">
-                <option value="">-- Select MSIC Code --</option>
-            </select>
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-file-list-3-line align-bottom me-1"></i> Tax &amp; Industry
+            </h6>
         </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label asp-for="PublicCustomer.SST" class="form-label">Sales &amp; Service Tax (SST) No.</label>
+                    <input asp-for="PublicCustomer.SST" class="form-control" />
+                </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.BizDescription" class="form-label">Business Description</label>
-            <input asp-for="PublicCustomer.BizDescription" class="form-control" />
+                <div class="col-md-3 mb-3">
+                    <label asp-for="PublicCustomer.TTX" class="form-label">Tourism Tax (TTx) No.</label>
+                    <input asp-for="PublicCustomer.TTX" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.IndustryClassificationCode" class="form-label">Industry (MSIC Code)</label>
+                    <select asp-for="PublicCustomer.IndustryClassificationCode"
+                            asp-items="Model.MSICOptions"
+                            class="form-select">
+                        <option value="">-- Select MSIC Code --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-12 mb-3">
+                    <label asp-for="PublicCustomer.BizDescription" class="form-label">Business Description</label>
+                    <input asp-for="PublicCustomer.BizDescription" class="form-control" />
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.RegTypeCode" class="form-label"></label>
-            <select asp-for="PublicCustomer.RegTypeCode"
-                    asp-items="Model.IdTypesOptions"
-                    class="form-select">
-                <option value="">-- Select ID Type --</option>
-            </select>
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-mail-line align-bottom me-1"></i> Contact Details
+            </h6>
         </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.Email" class="form-label">Primary Email</label>
+                    <input asp-for="PublicCustomer.Email" class="form-control" />
+                </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.RegNo" class="form-label"></label>
-            <input asp-for="PublicCustomer.RegNo" class="form-control" />
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.PhoneNo" class="form-label">Phone Number</label>
+                    <input asp-for="PublicCustomer.PhoneNo" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.FaxNo" class="form-label">Fax Number</label>
+                    <input asp-for="PublicCustomer.FaxNo" class="form-control" />
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.OldRegNo" class="form-label"></label>
-            <input asp-for="PublicCustomer.OldRegNo" class="form-control" />
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-map-pin-line align-bottom me-1"></i> Address
+            </h6>
         </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label asp-for="PublicCustomer.Addr1" class="form-label">Street Address</label>
+                <textarea asp-for="PublicCustomer.Addr1" class="form-control" rows="3" placeholder="Enter full address..."></textarea>
+                <span asp-validation-for="PublicCustomer.Addr1" class="text-danger"></span>
+            </div>
 
-        <div class="col-md-3 mb-3">
-            <label asp-for="PublicCustomer.SST" class="form-label"></label>
-            <input asp-for="PublicCustomer.SST" class="form-control" />
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="PublicCustomer.PostalCode" class="form-label">Postal Code</label>
+                    <input asp-for="PublicCustomer.PostalCode" class="form-control" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="PublicCustomer.CityName" class="form-label">City</label>
+                    <input asp-for="PublicCustomer.CityName" class="form-control" />
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="PublicCustomer.StateCode" class="form-label">State / Province</label>
+                    <select asp-for="PublicCustomer.StateCode"
+                            asp-items="Model.StateOptions"
+                            class="form-select">
+                        <option value="">-- Select State --</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.CountryCode" class="form-label">Country</label>
+                    <select asp-for="PublicCustomer.CountryCode"
+                            asp-items="Model.CountryOptions"
+                            class="form-select">
+                        <option value="">-- Select Country --</option>
+                    </select>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="col-md-3 mb-3">
-            <label asp-for="PublicCustomer.TTX" class="form-label"></label>
-            <input asp-for="PublicCustomer.TTX" class="form-control" />
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-bank-line align-bottom me-1"></i> Banking, Payment &amp; Logo
+            </h6>
         </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.BankName" class="form-label">Bank Name</label>
+                    <input asp-for="PublicCustomer.BankName" class="form-control" />
+                </div>
 
-        <div class="col-md-12 mb-3">
-            <label asp-for="PublicCustomer.Addr1" class="form-label">Full Address</label>
-            <textarea asp-for="PublicCustomer.Addr1" class="form-control" rows="5" placeholder="Enter full address..."></textarea>
-            <span asp-validation-for="PublicCustomer.Addr1" class="text-danger"></span>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.BankAccountNo" class="form-label">Bank Account Number</label>
+                    <input asp-for="PublicCustomer.BankAccountNo" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.Attention" class="form-label">Attention To</label>
+                    <input asp-for="PublicCustomer.Attention" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PublicCustomer.PaymentTerms" class="form-label">Default Payment Terms</label>
+                    <input asp-for="PublicCustomer.PaymentTerms" class="form-control" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Company Logo</label>
+                    <input type="file" asp-for="LogoUpload" class="form-control" />
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="col-md-4 mb-3">
-            <label asp-for="PublicCustomer.PostalCode" class="form-label"></label>
-            <input asp-for="PublicCustomer.PostalCode" class="form-control" />
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-transparent border-0 pb-0">
+            <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                <i class="ri-sticky-note-line align-bottom me-1"></i> Internal Notes
+            </h6>
         </div>
-
-        <div class="col-md-4 mb-3">
-            <label asp-for="PublicCustomer.CityName" class="form-label"></label>
-            <input asp-for="PublicCustomer.CityName" class="form-control" />
-        </div>
-
-        <div class="col-md-4 mb-3">
-            <label asp-for="PublicCustomer.StateCode" class="form-label"></label>
-            <select asp-for="PublicCustomer.StateCode"
-                    asp-items="Model.StateOptions"
-                    class="form-select">
-                <option value="">-- Select State --</option>
-            </select>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.CountryCode" class="form-label"></label>
-            <select asp-for="PublicCustomer.CountryCode"
-                    asp-items="Model.CountryOptions"
-                    class="form-select">
-                <option value="">-- Select Country --</option>
-            </select>
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.Email" class="form-label"></label>
-            <input asp-for="PublicCustomer.Email" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.PhoneNo" class="form-label"></label>
-            <input asp-for="PublicCustomer.PhoneNo" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.FaxNo" class="form-label"></label>
-            <input asp-for="PublicCustomer.FaxNo" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.BankName" class="form-label"></label>
-            <input asp-for="PublicCustomer.BankName" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.BankAccountNo" class="form-label"></label>
-            <input asp-for="PublicCustomer.BankAccountNo" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.Attention" class="form-label"></label>
-            <input asp-for="PublicCustomer.Attention" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label asp-for="PublicCustomer.PaymentTerms" class="form-label"></label>
-            <input asp-for="PublicCustomer.PaymentTerms" class="form-control" />
-        </div>
-
-        <div class="col-md-6 mb-3">
-            <label>Logo</label>
-            <input type="file" asp-for="LogoUpload" class="form-control" />
-        </div>
-
-        <div class="col-md-12 mb-3">
-            <label asp-for="PublicCustomer.Remarks" class="form-label"></label>
-            <textarea asp-for="PublicCustomer.Remarks" class="form-control"></textarea>
+        <div class="card-body">
+            <label asp-for="PublicCustomer.Remarks" class="form-label">Notes (visible to your team only)</label>
+            <textarea asp-for="PublicCustomer.Remarks" class="form-control" rows="3"></textarea>
         </div>
     </div>
 
     <div class="text-end">
         <button type="submit" class="btn btn-success">
-            Save Changes
+            <i class="ri-save-line align-bottom me-1"></i> Save Changes
         </button>
     </div>
 </form>

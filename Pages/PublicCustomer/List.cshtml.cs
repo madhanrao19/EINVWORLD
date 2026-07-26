@@ -43,6 +43,10 @@ namespace eInvWorld.Pages.PublicCustomer
         [BindProperty(SupportsGet = true)]
         public string? SearchTerm { get; set; }
 
+        // "active" | "inactive" | null/"" = all. Purely additive filter on the existing IsActive flag.
+        [BindProperty(SupportsGet = true)]
+        public string? StatusFilter { get; set; }
+
         [BindProperty(SupportsGet = true)]
         public string? SortBy { get; set; }
 
@@ -81,6 +85,15 @@ namespace eInvWorld.Pages.PublicCustomer
                     q.Customer.TIN.Contains(SearchTerm) ||
                     (q.Customer.Email != null && q.Customer.Email.Contains(SearchTerm)) ||
                     q.CreatorCompanyName.Contains(SearchTerm));
+            }
+
+            if (string.Equals(StatusFilter, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => q.Customer.IsActive);
+            }
+            else if (string.Equals(StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => !q.Customer.IsActive);
             }
 
             // 2. APPLY ROLE FILTERS
@@ -243,6 +256,20 @@ namespace eInvWorld.Pages.PublicCustomer
                 {
                     _context.SupplierBuyers.Remove(existingAssignment);
                 }
+            }
+
+            // Other suppliers may still be assigned to this buyer (e.g. an Admin-shared buyer, or one
+            // linked to multiple suppliers by an Admin). Only hard-delete the shared PublicCustomer row
+            // once no other SupplierBuyer link references it — otherwise this action is just an unlink.
+            bool hasOtherAssignments = await _context.SupplierBuyers
+                .AnyAsync(sb => sb.PublicCustomerId == buyerId
+                    && (!supplierIdToCheck.HasValue || sb.SupplierId != supplierIdToCheck.Value));
+
+            if (hasOtherAssignments)
+            {
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Buyer removed from your list.";
+                return RedirectToPage();
             }
 
             _context.PublicCustomers.Remove(entity);

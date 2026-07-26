@@ -567,3 +567,85 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable tbody td.col-action::before { content: ""; }
   #invoiceTable tbody tr:nth-child(even) > td { background-color: transparent; }
 }
+
+/* ============================================================
+ * Shared data-table pattern (Stitch): tinted header / einv-badge / mobile-
+ * stacked-card layout. Apply via the `einv-table-head` class on <thead> (already
+ * used across the app) and by giving any narrow (<=6 column) table's <table>
+ * element the `einv-mobile-stack` class — NOT by adding more per-page IDs here.
+ * Wrap it in a `.table-responsive.einv-table-scroll-x` container (see below)
+ * so the row-action dropdown-clipping fix also applies.
+ * ============================================================ */
+.einv-mobile-stack thead.einv-table-head th {
+  background-color: #eef4ef;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--einv-text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--einv-border);
+  padding: .6rem .6rem;
+}
+.einv-mobile-stack thead.einv-table-head th a { color: inherit; text-decoration: none; }
+.einv-mobile-stack thead.einv-table-head th a:hover { color: var(--einv-primary); }
+.einv-mobile-stack tbody td { padding: .6rem .6rem; vertical-align: middle; }
+.einv-mobile-stack td.truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Row-action dropdowns inside .table-responsive get clipped by its overflow-x. Per the CSS overflow
+ * spec, `overflow-x: auto` + `overflow-y: visible` is not a valid combination — the UA silently
+ * forces both axes to `auto`, so overflow-y can't be freed while overflow-x stays scrollable. The
+ * buyer/duplicate-review tables are narrow (<=6 columns) and never need horizontal scroll at any
+ * width down to the 767.98px breakpoint where they switch to stacked cards anyway, so drop the
+ * scroll wrapper entirely here rather than fight the spec. */
+.einv-table-scroll-x { overflow: visible; }
+
+/* Round initials avatar for buyer rows (no photo — company/contact initials only). */
+.einv-avatar-initials {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .5rem;
+  background: rgba(var(--einv-primary-rgb), .12);
+  color: var(--einv-primary);
+  font-weight: 700;
+  font-size: .8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+  .einv-mobile-stack thead { display: none; }
+  .einv-mobile-stack tbody tr {
+    display: block;
+    border: 1px solid var(--einv-border);
+    border-radius: .5rem;
+    margin: .75rem;
+    background: var(--einv-surface);
+    overflow: hidden;
+  }
+  .einv-mobile-stack tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    border: 0 !important;
+    padding: .45rem .75rem;
+    text-align: right;
+  }
+  .einv-mobile-stack tbody td.truncate { max-width: none; white-space: normal; }
+  .einv-mobile-stack tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--einv-text-muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .einv-mobile-stack tbody td.col-action::before { content: ""; }
+  .einv-mobile-stack tbody td.col-name { text-align: left; }
+  .einv-mobile-stack tbody tr:nth-child(even) > td { background-color: transparent; }
+}

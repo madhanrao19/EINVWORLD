@@ -1,156 +1,175 @@
-﻿@page
+@page
 @model eInvWorld.Pages.PublicCustomer.DetailsModel
 @{
     ViewData["Title"] = "Buyer Details";
     Layout = "_LayoutTabler";
+
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+        };
+    }
 }
 
-<div class="page-title-box d-sm-flex align-items-center justify-content-between">
-    <h4 class="mb-sm-0">Buyer Details</h4>
+<nav aria-label="breadcrumb" class="mb-1">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-page="./List">Buyer Directory</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.PublicCustomer.CompanyName</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <span class="einv-avatar-initials" style="width:3.5rem;height:3.5rem;font-size:1.1rem;">@Initials(Model.PublicCustomer.CompanyName)</span>
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h1 class="einv-page-title mb-0">@Model.PublicCustomer.CompanyName</h1>
+                @if (Model.PublicCustomer.IsApproved)
+                {
+                    <span class="einv-badge einv-badge-success">Approved</span>
+                }
+                else
+                {
+                    <span class="einv-badge einv-badge-warning">Pending</span>
+                }
+                @if (!Model.PublicCustomer.IsActive)
+                {
+                    <span class="einv-badge einv-badge-neutral">Inactive</span>
+                }
+            </div>
+            <p class="text-muted mb-0">Tax Identification Number (TIN): @Model.PublicCustomer.TIN</p>
+        </div>
+    </div>
 
     <div class="d-flex gap-2">
         @if (Model.CanEdit)
         {
-            <a asp-page="./Edit"
-               asp-route-id="@Model.PublicCustomer.PublicCustomerId"
-               class="btn btn-primary">
-                <i class="ri-edit-line me-1"></i> Edit
+            <a asp-page="./Edit" asp-route-id="@Model.PublicCustomer.PublicCustomerId" class="btn btn-primary">
+                <i class="ri-edit-line align-bottom me-1"></i> Edit
             </a>
         }
-
-        <a asp-page="./List" class="btn btn-light">
-            Back to List
+        <a asp-page="./List" class="btn btn-outline-secondary">
+            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
         </a>
     </div>
 </div>
 
-
-<div class="card mt-3">
-    <div class="card-body">
-
-        <div class="row mb-4">
-            <div class="col-md-3 text-center">
-                <img src="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath)
-                                                 ? Url.Content("~/assets/images/users/multi-user.jpg")
-                                                 : Url.Content(Model.PublicCustomer.LogoPath))"
-                     class="img-fluid rounded-circle border"
-                     style="width:120px;height:120px;object-fit:cover;" />
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h3 class="card-title mb-0">Identity &amp; Registration</h3>
             </div>
-            <div class="col-md-9">
-                <h4>@Model.PublicCustomer.CompanyName</h4>
-                <p class="text-muted mb-1">
-                    <strong>TIN:</strong> @Model.PublicCustomer.TIN
-                </p>
-                <p class="text-muted mb-0">
-                    <strong>Status:</strong>
-                    @if (Model.PublicCustomer.IsApproved)
-                    {
-                        <span class="badge bg-success">Approved</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-warning text-dark">Pending</span>
-                    }
-                </p>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Registration Type</label>
+                        <div>@(Model.PublicCustomer.RegType?.Name ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Registration Number</label>
+                        <div>@(Model.PublicCustomer.RegNo ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Old Registration Number</label>
+                        <div>@(Model.PublicCustomer.OldRegNo ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">MSIC Code</label>
+                        <div>@(Model.PublicCustomer.IndustryClassificationCode ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">SST</label>
+                        <div>@(Model.PublicCustomer.SST ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-0">
+                        <label class="fw-bold text-muted small text-uppercase">TTX</label>
+                        <div>@(Model.PublicCustomer.TTX ?? "-")</div>
+                    </div>
+                    <div class="col-12 mt-1">
+                        <label class="fw-bold text-muted small text-uppercase">Business Description</label>
+                        <div>@(Model.PublicCustomer.BizDescription ?? "-")</div>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
 
-        <hr />
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Registration Type</label>
-                <div>
-                    @(Model.PublicCustomer.RegType?.Name ?? "-")
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h3 class="card-title mb-0">Contact &amp; Address</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Email</label>
+                        <div>@(Model.PublicCustomer.Email ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Phone</label>
+                        <div>@(Model.PublicCustomer.PhoneNo ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Fax</label>
+                        <div>@(Model.PublicCustomer.FaxNo ?? "-")</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="fw-bold text-muted small text-uppercase">Attention</label>
+                        <div>@(Model.PublicCustomer.Attention ?? "-")</div>
+                    </div>
+                    <div class="col-12 mb-0">
+                        <label class="fw-bold text-muted small text-uppercase">Address</label>
+                        <div>
+                            @if (!string.IsNullOrEmpty(Model.PublicCustomer.Addr1))
+                            {
+                                @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.PublicCustomer.Addr1.Trim()).Replace("\n", "<br/>").Replace("\r", ""))
+                                <br />
+                            }
+                            else
+                            {
+                                @Html.Raw("-<br />")
+                            }
+                            @(Model.PublicCustomer.PostalCode ?? "-") @(Model.PublicCustomer.CityName ?? "-")<br />
+                            @(Model.PublicCustomer.State?.State ?? "-"), @(string.IsNullOrEmpty(Model.PublicCustomer.Country?.Country) ? "-" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Model.PublicCustomer.Country.Country.ToLower()))
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Registration Number</label>
-                <div>
-                    @(Model.PublicCustomer.RegNo ?? "-")
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Old Registration Number</label>
-                <div>@(Model.PublicCustomer.OldRegNo ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">MSIC Code</label>
-                <div>@(Model.PublicCustomer.IndustryClassificationCode ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Business Description</label>
-                <div>@(Model.PublicCustomer.BizDescription ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">SST</label>
-                <div>@(Model.PublicCustomer.SST?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">TTX</label>
-                <div>@(Model.PublicCustomer.TTX ?? "-")</div>
-            </div>
-
-            <div class="col-md-12 mb-3">
-                <label class="fw-bold">Address</label>
-                <div>
-                    @if (!string.IsNullOrEmpty(Model.PublicCustomer.Addr1))
-                    {
-                        @Html.Raw(System.Net.WebUtility.HtmlEncode(Model.PublicCustomer.Addr1.Trim()).Replace("\n", "<br/>").Replace("\r", ""))
-
-                        <br />
-                    }
-                    else
-                    {
-                        @Html.Raw("-<br />")
-                    }
-                    @(Model.PublicCustomer.PostalCode ?? "-") @(Model.PublicCustomer.CityName ?? "-")<br />
-                    @(Model.PublicCustomer.State?.State ?? "-"), @(string.IsNullOrEmpty(Model.PublicCustomer.Country?.Country) ? "-" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Model.PublicCustomer.Country.Country.ToLower()))
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Email</label>
-                <div>@(Model.PublicCustomer.Email ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Phone</label>
-                <div>@(Model.PublicCustomer.PhoneNo ?? "-")</div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Fax</label>
-                <div>@(Model.PublicCustomer.FaxNo ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Bank Name</label>
-                <div>@(Model.PublicCustomer.BankName ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Bank Account</label>
-                <div>@(Model.PublicCustomer.BankAccountNo ?? "-")</div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Attention</label>
-                <div>@(Model.PublicCustomer.Attention ?? "-")</div>
-            </div>
-
-            <div class="col-md-6 mb-3">
-                <label class="fw-bold">Payment Terms</label>
-                <div>@(Model.PublicCustomer.PaymentTerms ?? "-")</div>
-            </div>
-
-            <div class="col-md-12 mb-3">
-                <label class="fw-bold">Remarks</label>
-                <div>@(Model.PublicCustomer.Remarks ?? "-")</div>
             </div>
         </div>
+    </div>
 
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent">
+                <h3 class="card-title mb-0">Banking &amp; Payment Terms</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <label class="fw-bold text-muted small text-uppercase">Bank Name</label>
+                        <div>@(Model.PublicCustomer.BankName ?? "-")</div>
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <label class="fw-bold text-muted small text-uppercase">Bank Account</label>
+                        <div>@(Model.PublicCustomer.BankAccountNo ?? "-")</div>
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <label class="fw-bold text-muted small text-uppercase">Payment Terms</label>
+                        <div>@(Model.PublicCustomer.PaymentTerms ?? "-")</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="fw-bold text-muted small text-uppercase">Remarks</label>
+                        <div>@(Model.PublicCustomer.Remarks ?? "-")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
