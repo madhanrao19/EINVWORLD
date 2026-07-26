@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,6 +14,8 @@ using eInvWorld.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using eInvWorld.Models;
+using EINVWORLD.Helpers;
+using EINVWORLD.Services.Audit;
 
 namespace eInvWorld.Pages.Suppliers
 {
@@ -24,14 +27,16 @@ namespace eInvWorld.Pages.Suppliers
         private readonly DropdownHelper _dropdownHelper;
         private readonly ILogger<EditModel> _logger; // Inject Logger
         private readonly FilePathConfig _filePathConfig;
+        private readonly IAuditService _auditService;
 
-        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig)
+        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig, IAuditService auditService)
         {
             _context = context;
             _env = env;
             _dropdownHelper = dropdownHelper;
             _logger = logger;
             _filePathConfig = filePathConfig.Value;
+            _auditService = auditService;
         }
 
         [BindProperty(SupportsGet = true)]
@@ -43,6 +48,12 @@ namespace eInvWorld.Pages.Suppliers
 
         [BindProperty]
         public IFormFile? LogoFile { get; set; }
+
+        /// <summary>Display-only masked bank account (e.g. "•••• 1234"); the real value is never sent to the client.</summary>
+        public string MaskedBankAccountNo { get; set; } = "";
+
+        /// <summary>True once this company has at least one invoice under LHDN — TIN becomes immutable to avoid invalidating a submitted identity.</summary>
+        public bool TinLocked { get; set; }
 
         public List<SelectListItem> StateOptions { get; set; } = new();
         public List<SelectListItem> CountryOptions { get; set; } = new();
@@ -66,6 +77,12 @@ namespace eInvWorld.Pages.Suppliers
 
             PartyInfo = partyInfo;
 
+            // Mask the bank account for display; never render the decrypted value into the page.
+            MaskedBankAccountNo = MaskingHelper.MaskLast4(PartyInfo.BankAccountNo);
+            PartyInfo.BankAccountNo = null;
+
+            TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == id);
+
             // Populate dropdowns using the helper
             LoadDropdownOptions();
 
@@ -87,6 +104,28 @@ namespace eInvWorld.Pages.Suppliers
                 _logger.LogWarning($"PartyInfo with ID {PartyInfo.PartyInfoId} not found during update.");
                 return NotFound();
             }
+
+            // ✅ TIN is immutable once the company has submitted at least one invoice to LHDN — re-check
+            // server-side (defense in depth) even though the field is also rendered readonly in the view.
+            TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == existingParty.PartyInfoId);
+            if (TinLocked && !string.Equals(existingParty.TIN, PartyInfo.TIN, StringComparison.Ordinal))
+            {
+                ModelState.AddModelError("PartyInfo.TIN", "TIN cannot be changed once the company has submitted invoices to LHDN.");
+                MaskedBankAccountNo = MaskingHelper.MaskLast4(existingParty.BankAccountNo);
+                LoadDropdownOptions();
+                return Page();
+            }
+
+            var oldSnapshotJson = JsonSerializer.Serialize(new
+            {
+                existingParty.CompanyName,
+                existingParty.RegNo,
+                existingParty.Addr1,
+                existingParty.CityName,
+                existingParty.PostalCode,
+                existingParty.StateCode,
+                existingParty.CountryCode,
+            });
 
             // ✅ New: Check for duplicate TIN (Excluding General TINs and the current record)
             var generalTins = new[] { "EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040" };
@@ -152,9 +191,18 @@ namespace eInvWorld.Pages.Suppliers
             existingParty.UpdatedBy = PartyInfo.UpdatedBy;
             existingParty.UpdatedDate = PartyInfo.UpdatedDate;
             existingParty.OldRegNo = PartyInfo.OldRegNo;
-            existingParty.BankAccountNo = PartyInfo.BankAccountNo;
+            // The form only ever shows a masked placeholder for the bank account — a blank post means
+            // "unchanged", not "clear it". Only overwrite when the user actually typed a new value.
+            bool bankAccountChanged = !string.IsNullOrWhiteSpace(PartyInfo.BankAccountNo)
+                && PartyInfo.BankAccountNo != existingParty.BankAccountNo;
+            if (bankAccountChanged)
+            {
+                existingParty.BankAccountNo = PartyInfo.BankAccountNo;
+            }
             existingParty.BankName = PartyInfo.BankName;
             existingParty.Attention = PartyInfo.Attention;
+
+            bool logoChanged = LogoFile != null && LogoFile.Length > 0;
 
             try
             {
@@ -168,6 +216,24 @@ namespace eInvWorld.Pages.Suppliers
                 LoadDropdownOptions();
                 return Page();
             }
+
+            await _auditService.WriteAsync("PartyInfo.Update", new AuditEntry
+            {
+                Tin = existingParty.TIN,
+                OldValueJson = oldSnapshotJson,
+                NewValueJson = JsonSerializer.Serialize(new
+                {
+                    PartyInfo.CompanyName,
+                    PartyInfo.RegNo,
+                    PartyInfo.Addr1,
+                    PartyInfo.CityName,
+                    PartyInfo.PostalCode,
+                    PartyInfo.StateCode,
+                    PartyInfo.CountryCode,
+                    BankAccountChanged = bankAccountChanged,
+                    LogoChanged = logoChanged,
+                }),
+            });
 
             return RedirectToPage(From == "lead" ? "/Lead/List" : "./Index");
         }

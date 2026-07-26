@@ -23,5 +23,11 @@ namespace eInvWorld.Models.InputModel
         public bool IsPrimaryCompany { get; set; } = false; // ✅ To mark a default company (Optional)
         public bool HasCompanyAccess { get; set; } = false;
         public bool IsViewOnly { get; set; } = false;
+
+        /// <summary>Optional — null rows fall back to <see cref="HasCompanyAccess"/>/<see cref="IsViewOnly"/>.</summary>
+        public int? CompanyRoleId { get; set; }
+
+        [ForeignKey("CompanyRoleId")]
+        public CompanyRole? CompanyRole { get; set; }
     }
 }
