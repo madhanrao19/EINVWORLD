@@ -5,24 +5,51 @@
     ViewData["Title"] = "Bulk Invoice Import (validate)";
 }
 
-<h3>📥 Bulk Invoice Import <small class="text-muted">(validate-only)</small></h3>
-<p class="text-muted">
-    Upload a CSV or Excel file (one row per invoice line) to validate it against the real LHDN codes before
-    keying invoices in. This checks the data only — it does not create anything yet.
-</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Bulk Invoice Import</h1>
+                <p class="text-muted mb-0">Validate a CSV or Excel file against the real LHDN codes before keying invoices in. This checks the data only — it does not create anything yet.</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (!string.IsNullOrEmpty(Model.ErrorText))
 {
-    <div class="alert alert-danger">@Model.ErrorText</div>
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <div><i class="ri-error-warning-line align-bottom me-2"></i>@Model.ErrorText</div>
+    </div>
 }
 
-<div class="card mb-3">
+<div class="card border-0 shadow-sm mb-4">
     <div class="card-body">
-        <a asp-page-handler="Template" class="btn btn-outline-secondary btn-sm mb-3">⬇️ Download template (.xlsx)</a>
-        <form method="post" enctype="multipart/form-data">
-            <input type="file" name="Upload" accept=".csv,.xlsx" class="form-control mb-2" />
-            <div class="text-muted mb-2"><small>Columns: @string.Join(", ", Model.Columns)</small></div>
-            <button type="submit" class="btn btn-primary">Validate</button>
+        <div class="row g-4 mb-3">
+            <div class="col-lg-8">
+                <p class="fw-semibold mb-2">File Format</p>
+                <p class="text-muted small mb-2">One row per invoice line. Required columns:</p>
+                <code class="d-block bg-light p-2 rounded mb-0">@string.Join(", ", Model.Columns)</code>
+            </div>
+            <div class="col-lg-4 d-flex align-items-start justify-content-lg-end">
+                <a asp-page-handler="Template" class="btn btn-outline-primary btn-sm">
+                    <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Template (.xlsx)
+                </a>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="bulkImportForm">
+            <div class="einv-dropzone border rounded-3 p-4 text-center mb-3" id="bulkImportDropzone" role="button" tabindex="0">
+                <i class="ri-upload-cloud-2-line fs-24 text-primary d-block mb-2"></i>
+                <span class="fw-semibold">Click to choose a CSV or XLSX file, or drag it here</span>
+                <div class="text-muted small mt-1" id="bulkImportFileName">No file selected</div>
+                <input type="file" asp-for="Upload" class="d-none" accept=".csv,.xlsx" required />
+            </div>
+            <span asp-validation-for="Upload" class="text-danger d-block mb-2"></span>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="ri-refresh-line align-bottom me-1"></i> Validate
+            </button>
         </form>
     </div>
 </div>
@@ -32,60 +59,128 @@
     var p = Model.Preview;
     if (!string.IsNullOrEmpty(p.ParseError))
     {
-        <div class="alert alert-danger">@p.ParseError</div>
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <div><i class="ri-error-warning-line align-bottom me-2"></i>@p.ParseError</div>
+        </div>
     }
     else
     {
-        <div class="alert @(p.ErrorRows == 0 ? "alert-success" : "alert-warning")">
-            <strong>@Model.FileName</strong> — @p.TotalRows row(s): @p.OkRows OK, @p.ErrorRows with errors.
-            @if (p.ErrorRows == 0) { <text>All rows passed validation.</text> }
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle">
-                <thead>
-                    <tr>
-                        <th>Row</th>
-                        <th>Status</th>
-                        <th>Invoice</th>
-                        <th>Line</th>
-                        <th>Issues</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in p.Rows)
+        <div class="card border-0 shadow-sm" id="previewSection">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="card-title mb-0">@Model.FileName</h3>
+                    <p class="text-muted small mb-0">@p.TotalRows row(s) checked</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="einv-badge einv-badge-success">@p.OkRows OK</span>
+                    @if (p.ErrorRows > 0)
                     {
-                        var invNo = row.Values.TryGetValue("InvoiceNo", out var iv) ? iv : "";
-                        var lineNo = row.Values.TryGetValue("LineNumber", out var ln) ? ln : "";
-                        <tr class="@(row.HasError ? "table-danger" : "")">
-                            <td>@row.RowNumber</td>
-                            <td>
-                                @if (row.HasError) { <span class="badge bg-danger">Error</span> }
-                                else if (row.Issues.Count > 0) { <span class="badge bg-warning text-dark">Warning</span> }
-                                else { <span class="badge bg-success">OK</span> }
-                            </td>
-                            <td><small>@invNo</small></td>
-                            <td><small>@lineNo</small></td>
-                            <td>
-                                @if (row.Issues.Count == 0)
-                                {
-                                    <small class="text-muted">—</small>
-                                }
-                                else
-                                {
-                                    <ul class="mb-0 ps-3">
-                                        @foreach (var issue in row.Issues)
-                                        {
-                                            var css = issue.Severity == ImportSeverity.Error ? "text-danger" : "text-warning";
-                                            <li class="@css"><small>[@issue.Column] @issue.Message</small></li>
-                                        }
-                                    </ul>
-                                }
-                            </td>
-                        </tr>
+                        <span class="einv-badge einv-badge-danger">@p.ErrorRows with errors</span>
                     }
-                </tbody>
-            </table>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (p.ErrorRows == 0)
+                {
+                    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+                        <div><i class="ri-checkbox-circle-line align-bottom me-2"></i>All rows passed validation.</div>
+                    </div>
+                }
+                <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                    <table class="table align-middle mb-0">
+                        <thead class="einv-table-head" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th>Row</th>
+                                <th>Status</th>
+                                <th>Invoice</th>
+                                <th>Line</th>
+                                <th>Issues</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in p.Rows)
+                            {
+                                var invNo = row.Values.TryGetValue("InvoiceNo", out var iv) ? iv : "";
+                                var lineNo = row.Values.TryGetValue("LineNumber", out var ln) ? ln : "";
+                                <tr class="@(row.HasError ? "table-danger" : "")">
+                                    <td>@row.RowNumber</td>
+                                    <td>
+                                        @if (row.HasError)
+                                        {
+                                            <span class="badge bg-danger">Error</span>
+                                        }
+                                        else if (row.Issues.Count > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">Warning</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">OK</span>
+                                        }
+                                    </td>
+                                    <td><small>@invNo</small></td>
+                                    <td><small>@lineNo</small></td>
+                                    <td>
+                                        @if (row.Issues.Count == 0)
+                                        {
+                                            <small class="text-muted">—</small>
+                                        }
+                                        else
+                                        {
+                                            <ul class="mb-0 ps-3">
+                                                @foreach (var issue in row.Issues)
+                                                {
+                                                    var css = issue.Severity == ImportSeverity.Error ? "text-danger" : "text-warning";
+                                                    <li class="@css"><small>[@issue.Column] @issue.Message</small></li>
+                                                }
+                                            </ul>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     }
+}
+
+@section Scripts {
+    <style>
+        .einv-dropzone { cursor: pointer; border-style: dashed !important; background: var(--einv-page-bg, #f6f8fb); transition: border-color .15s ease, background .15s ease; }
+        .einv-dropzone:hover, .einv-dropzone.dragover { border-color: var(--einv-primary, #006948) !important; background: #fff; }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var previewBlock = document.getElementById("previewSection");
+            if (previewBlock) {
+                previewBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            var dropzone = document.getElementById("bulkImportDropzone");
+            var fileInput = dropzone.querySelector('input[type="file"]');
+            var fileNameLabel = document.getElementById("bulkImportFileName");
+
+            dropzone.addEventListener("click", function () { fileInput.click(); });
+            dropzone.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+            });
+            fileInput.addEventListener("change", function () {
+                fileNameLabel.textContent = fileInput.files.length ? fileInput.files[0].name : "No file selected";
+            });
+            ["dragover", "dragenter"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.add("dragover"); });
+            });
+            ["dragleave", "drop"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.remove("dragover"); });
+            });
+            dropzone.addEventListener("drop", function (e) {
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileNameLabel.textContent = e.dataTransfer.files[0].name;
+                }
+            });
+        });
+    </script>
 }
