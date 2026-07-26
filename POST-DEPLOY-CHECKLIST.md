@@ -16,8 +16,9 @@ bottom; stop and investigate on the first ❌.
 - [ ] `DataProtection:KeyRingPath` folder exists, is **outside** `App\`, and the app-pool identity has Modify. ✅ existing users stay logged in across a redeploy (keys not rotated).
 
 ## 1. Database & migrations
-- [ ] First boot applied pending migrations (or you ran `Apply_*.sql`). ✅ no migration error; `__EFMigrationsHistory` up to date.
+- [ ] First boot applied pending migrations (or you ran `Apply_*.sql`). ✅ no migration error; `__EFMigrationsHistory` up to date — compare its last row against the newest filename in `Migrations\*.cs`.
 - [ ] Spot-check a few tables load in the app (invoice list, users). ✅ data intact (migrations are additive — no data loss).
+- [ ] **v1.11.0 one-time step:** after migrations land, go to **Admin → System Health → Encrypt PII** and run the backfill (once per environment). ✅ existing bank-account/address data is now encrypted at rest, not just the schema widened. Safe to click again if unsure — it's idempotent.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
@@ -32,11 +33,28 @@ bottom; stop and investigate on the first ❌.
       no invisible/low-contrast text; the invoice list is usable on mobile.
 - [ ] Public pages (home/about/contact/resources) still use the **marketing** layout; error pages are
       standalone. ✅
+- [ ] **(v1.11.0) Admin sidebar on mobile** (<992px): the hamburger toggle opens a sliding off-canvas
+      drawer with a backdrop and its own close button, not the old inline collapse. ✅ at desktop widths
+      the sidebar is unchanged (fixed column, collapsible to icon-only with tooltips on hover).
 - [ ] (Automated) With Turnstile **test** keys + `Security__EnforceAdminMfa=false` set temporarily, run
       `tests/playwright/10-tabler-modules.spec.js` — ✅ all module pages pass; then revert those env vars.
       (See DEPLOY-NOTES / `docs/TABLER-MIGRATION-AUDIT.md`.)
 
-## 3. Invoice lifecycle (the core money path)
+## 2b. Company Management workspace (v1.11.0)
+- [ ] **My Company** shows the tabbed workspace (Overview/Profile/Users/Roles & Permissions/Invoice Branding/Security/Audit). ✅ all tabs load without error.
+- [ ] Invite a new user by email (Users tab). ✅ invitation email sends (reuses existing SMTP), accept link works, invitee sets their **own** password (no admin-set-password path exists anymore).
+- [ ] Assign a company role (Owner/Admin/Editor/Viewer) to a member (Roles & Permissions tab). ✅ their effective permissions change accordingly; a member with no role assigned still works via the legacy `HasCompanyAccess`/`IsViewOnly` fallback.
+- [ ] Set an invoice accent color / footer note / bank-details visibility (Invoice Branding tab). ✅ saves; note this is **not yet wired into PDF rendering** in this release (settings-only).
+- [ ] Audit tab loads recent `AuditLog` entries filtered to the company's TIN. ✅ no cross-tenant rows visible.
+
+## 2c. Buyer Management & Items (v1.11.0)
+- [ ] Buyer List/Create/Edit/Details/Import render the new Tabler layout. ✅ KPI cards, search/status filter, sortable table.
+- [ ] Duplicate Review page loads (read-only — no merge/delete actions in this phase). ✅
+- [ ] Deleting a buyer shared with another supplier **unlinks** rather than hard-deletes it. ✅ the other supplier still sees the record.
+- [ ] Create/Edit an Item with a **Unit** and **Unit Price**. ✅ Unit validates against active LHDN unit codes; Unit Price stores 4 decimal places (`decimal(18,4)`) — check a fractional price like `12.3456` round-trips exactly, not rounded to 2dp.
+- [ ] Select a saved item on **Create Invoice**. ✅ the line's unit and price auto-fill from the item.
+
+
 - [ ] Create a **standard invoice (01)** with ≥2 lines + tax. ✅ totals correct (line extension / tax-exclusive / tax-inclusive / payable); draft saved with a `.json` file.
 - [ ] Create one of each remaining type used: **02 credit, 03 debit, 04 refund**, and **11–14 self-billed**. ✅ each maps and the `BillingReference` shape is right (01 = additional ref; 02–04 = invoice ref; 11–14 = both).
 - [ ] Edit a draft. ✅ header + lines update atomically.
