@@ -4,23 +4,23 @@
     ViewData["Title"] = "Edit Recurring Profile";
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Edit Recurring Profile</h4>
-            <div class="page-title-right">
-                <a asp-page="./Index" class="btn btn-soft-secondary">
-                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
-                </a>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Edit Recurring Profile</h1>
+                <p class="text-muted mb-0">Update the schedule for: <strong>@Model.Input.ProfileName</strong>.</p>
             </div>
+            <a asp-page="./Index" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+            </a>
         </div>
-        <p class="text-muted">Update the schedule for: <strong>@Model.Input.ProfileName</strong>.</p>
     </div>
 </div>
 
 <div class="row justify-content-center">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <form method="post">
                     <input type="hidden" asp-for="Input.Id" />
@@ -87,19 +87,19 @@
 
 <div class="row justify-content-center mt-4">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card border-0 shadow-sm">
             <div class="card-header align-items-center d-flex">
                 <h4 class="card-title mb-0 flex-grow-1">Automation Run History</h4>
                 <div class="flex-shrink-0">
-                    <button type="button" class="btn btn-soft-primary btn-sm" onclick="location.reload();">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="location.reload();">
                         <i class="ri-refresh-line align-middle"></i>
                     </button>
                 </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-nowrap align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="table align-middle mb-0">
+                        <thead class="einv-table-head">
                             <tr>
                                 <th>Timestamp</th>
                                 <th>Generated Invoice</th>
