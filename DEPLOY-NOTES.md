@@ -37,6 +37,12 @@ changes are additive and AI/features stay off unless already enabled.
      verified UUID/SubmissionUid rows into the script, then run SECTION 2. Do **not** run it
      verbatim — the fill-in rows are environment-specific (it refuses to run with none filled in).
      It is idempotent and never overwrites an already-recorded submission.
+   - **v1.11.0 (this release):** Buyer Management, Company Management (new tabbed workspace — Users,
+     Roles & Permissions, Invoice Branding, Security, Audit), AI Assistant, Items & Services, and the
+     Admin sidebar were all restyled to Tabler and the Company workspace gained real backing features
+     (company-scoped roles, token-based user invitations, invoice branding settings). **No new required
+     secrets** — user invitations reuse the existing `EmailConfiguration` SMTP settings (same sender as
+     other app emails). See §1 for the 4 new migrations and the two-step PII encryption note.
    - **Tabler UI migration (unreleased):** the authenticated UI is being migrated from the Velzon theme
      to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It ships as a normal
      build — no extra deploy step. As of 2026-07-11 **all authenticated pages render Tabler** and the build
@@ -59,47 +65,90 @@ changes are additive and AI/features stay off unless already enabled.
 
 ## 1. Database migrations
 
-**Default: automatic.** `appsettings.Production.json` ships with
-`DatabaseSettings:AutoMigrateOnStartup = true`, so on the first start of a new version the app applies
-any pending EF migrations itself. The migrations are **additive** (new tables/columns/indexes — no
-`Up()` drops data), so existing data is preserved. Before that first start you MUST:
+### ⚠️ v1.11.0 pre-flight: confirm how far behind each environment is
+
+A production backup taken 2026-07-26 (`__EFMigrationsHistory` check) showed the live database was on
+migration `20260415075935_RemovePreFix` — **22 migrations behind head**, i.e. it had not been
+schema-migrated since mid-April even though `AutoMigrateOnStartup` policy and code shipped well past
+that point. `AutoMigrateOnStartup=false` in Production means migrations only ever apply when someone
+runs them as a deploy step — if that step gets skipped on a release, the gap silently grows until the
+next person notices (usually because a newer feature 500s on a missing column/table). Those 22
+migrations have since been **squashed into one**, `20260726135229_ConsolidatedSchemaCatchup_v1_11_0`
+(see below) — but **Staging auto-migrates by default**, so it may have already applied some or all of
+the original 22 individually, under their own IDs, before they were squashed. Run this on Staging and
+Production before deploying to see exactly where each stands:
+
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+```
+If the last row is `20260415075935_RemovePreFix` or earlier, that environment is fully behind — the
+squashed migration/script builds everything from scratch. If it's one of the 22 original IDs (e.g.
+`20260726085937_AddUnitAndPriceToItemDescription`), that environment already has the schema — the
+squashed script's per-object guards will detect this and only insert its own history row (a no-op on
+the schema). **Either way, run `Apply_ConsolidatedSchemaCatchup_v1_11_0.sql` once, manually, on Staging
+before its next deploy** — do not let Staging's normal auto-migrate-on-boot be the first thing to try
+applying the new squashed migration ID, since the app's own `Migrate()` call runs the raw (non-guarded)
+`Up()` and will fail with "object already exists" on anything Staging already has. Running the guarded
+SQL script first (safe on any starting state, per above) marks the new migration ID as applied, so the
+next boot's `Migrate()` sees it as already done and skips it.
+
+This was rehearsed for this release in all three states — a full restore of the 2026-07-26 production
+backup, a copy of the same backup with all 22 original migrations pre-applied under their own IDs
+(simulating an already-caught-up Staging), and re-running the script a second time against each — with
+`dotnet ef database update` and the `Apply_*.sql` script producing identical, correct end states and
+zero errors in every case, including confirming `SystemLogs` (111k+ existing rows) is never dropped.
+
+**Default: automatic.** `appsettings.json` ships with `DatabaseSettings:AutoMigrateOnStartup = true`
+(inherited by Staging, which has no override), so on the first start of a new version the app applies
+any pending EF migrations itself. `appsettings.Production.json` overrides this to **`false`** — Production
+always requires the manual step below as a matter of policy, run in a controlled window. The migrations
+in this release are **additive** (new tables/columns/indexes — no `Up()` drops data), so existing data is
+preserved regardless of which path you use. Before the first start on a version bump you MUST:
 
 1. **Take a full DB backup** (your rollback).
-2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`).
+2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`) — or use a
+   separate migration login for the manual path (see §7 exception).
 3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
    affected tables) and keep the app pool at a **single worker process**.
 
-### Manual alternative (optional)
+### Manual alternative (Production's default — required, not optional)
 
-If you prefer to control schema changes yourself, set `AutoMigrateOnStartup = false` and run the
-idempotent `Apply_*.sql` scripts below in order (staging first, then production) with a migration login
-(`db_ddladmin`). Each guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID` and is safe to re-run.
+With `AutoMigrateOnStartup = false`, run the idempotent `Apply_*.sql` scripts below **in order** (staging
+first, then production) with a migration login (`db_ddladmin`). Each guards on `__EFMigrationsHistory` /
+`COL_LENGTH` / `OBJECT_ID` and is safe to re-run — running the full list against an already-migrated
+database is a no-op.
 
 ```bat
 set DB=-S <sql-host> -d <database> -E -b
-sqlcmd %DB% -i "Migrations\Apply_SyncModelAfterNet10Upgrade.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSyncJobTable.sql"
-sqlcmd %DB% -i "Migrations\Apply_DecoupleSystemLogsFromEf.sql"
-sqlcmd %DB% -i "Migrations\Apply_FixInvoiceDecimalPrecision.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHotPathIndexes.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceSubmissionClaim.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSyncJobDurability.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSubmissionRecords.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddAuditLog.sql"
-sqlcmd %DB% -i "Migrations\Apply_EncryptPiiFields.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddWebhookSubscriptions.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHeaderRowVersion.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddGrossTonUnitType.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSvdpFlagToInvoiceHeader.sql"
+sqlcmd %DB% -i "Migrations\Apply_ConsolidatedSchemaCatchup_v1_11_0.sql"
 ```
 
-> v1.8.2 note: `Apply_AddInvoiceHeaderRowVersion.sql` adds a `rowversion` column to `InvoiceHeaders`
-> (optimistic concurrency). It takes a brief schema lock on that table — run it (or first-boot
-> auto-migrate) in a quiet window on large databases.
+> **v1.11.0 note — this one script replaces 22 individually-numbered migrations.** The originals
+> (`AddLhdnIntermediaryRejectedFlag` through `AddUnitAndPriceToItemDescription`, spanning 2026-04-23 to
+> 2026-07-26) were squashed into `20260726135229_ConsolidatedSchemaCatchup_v1_11_0` because Production had
+> never applied any of them and was 3.5 months behind — see the pre-flight note above for why Staging
+> needs the script run manually once before its next deploy, even though it normally auto-migrates.
 
-Verify the expected migrations are recorded:
+> v1.8.2 note: the squashed migration adds a `rowversion` column to `InvoiceHeaders` (optimistic
+> concurrency, originally `AddInvoiceHeaderRowVersion`). It takes a brief schema lock on that table — run
+> it (or first-boot auto-migrate) in a quiet window on large databases.
+
+> **v1.11.0 note — PII encryption is two steps, not one.** The column-widening in this migration only
+> **widens** the bank-account/address columns (`nvarchar(150)` → `nvarchar(max)`) so they can hold
+> ciphertext — it does **not** encrypt any existing rows. After this migration lands (and the app is
+> confirmed running with a valid `DataProtection:KeyRingPath`), go to **Admin → System Health → Encrypt
+> PII** and run the backfill once per environment. It's idempotent (`PiiEncryptionBackfillService`) — safe
+> to click again if unsure whether it already ran. Until it's run, existing bank/address data stays in
+> plaintext (still readable — no functional break) but isn't yet protected at rest.
+
+> **v1.11.0 note — new `CompanyRoles` seed data.** The migration seeds 4 fixed rows (`CompanyRoleId` 1–4:
+> Owner/Admin/Editor/Viewer) only if the table is empty. This is a brand-new table so there's no collision
+> risk, but don't manually insert rows with `CompanyRoleId` 1–4 into that table before running this script.
+
+Verify the expected migration is recorded:
 ```sql
 SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260726135229_ConsolidatedSchemaCatchup_v1_11_0
 ```
 
 > The durable job worker, idempotency guard, and audit service all **degrade gracefully** (log a
