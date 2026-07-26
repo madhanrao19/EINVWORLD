@@ -20,6 +20,12 @@
     </div>
 </div>
 
+@if (Model.From != "lead")
+{
+    var workspaceTabsModel = new CompanyWorkspaceTabsModel { PartyInfoId = Model.PartyInfo.PartyInfoId, Active = "overview", From = Model.From };
+    <partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+}
+
 <div class="row g-3 mb-3">
     <div class="col-md-3 col-6">
         <div class="card p-3 h-100 border-0 shadow-sm">
@@ -175,9 +181,9 @@
                             <div class="d-flex mb-3">
                                 <h6 class="card-title mb-0 flex-grow-1">Assigned Users</h6>
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#createUserModal">
-                                        <i class="ri-user-add-line me-1 align-bottom"></i> Create User
-                                    </button>
+                                    <a asp-page="/Suppliers/Users" asp-route-id="@Model.PartyInfo.PartyInfoId" class="btn btn-soft-success btn-sm">
+                                        <i class="ri-mail-send-line me-1 align-bottom"></i> Invite User
+                                    </a>
 
                                     <button type="button" class="btn btn-soft-danger btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
                                         <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
@@ -507,39 +513,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create New Staff</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form method="post" asp-page-handler="CreateUser" onsubmit="return validateCreateUser()">
-                    <input type="hidden" name="supplierId" value="@Model.PartyInfo.PartyInfoId" />
-                    @Html.AntiForgeryToken()
-
-                    <div class="mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" class="form-control" name="NewUserFullName" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" name="NewUserEmail" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" name="NewUserPassword" required minlength="6" />
-                    </div>
-
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-success">Create & Assign</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 <div class="modal fade" id="changeRoleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -566,21 +539,6 @@
     </div>
 </div>
 <script>
-
-    document.querySelector("#createUserModal form").addEventListener("submit", function (event) {
-    event.preventDefault();
-    var formData = new FormData(this);
-
-    fetch(this.action, { method: "POST", body: formData })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire("Success!", data.message, "success").then(() => location.reload());
-            } else {
-                Swal.fire("Error!", data.message, "error");
-            }
-        });
-});
 
     function updatePermission(userId, type, isChecked) {
         const token = document.querySelector('input[name="__RequestVerificationToken"]').value;

@@ -1,0 +1,172 @@
+@page
+@model eInvWorld.Pages.Suppliers.UsersModel
+
+@{
+    ViewData["Title"] = "Users";
+}
+
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Company Management</div>
+            <h2 class="page-title">Users</h2>
+            <p class="text-muted mt-1 mb-0">Invite teammates to this company's workspace — they always set their own password.</p>
+        </div>
+    </div>
+</div>
+
+@{
+    var workspaceTabsModel = new CompanyWorkspaceTabsModel { PartyInfoId = Model.PartyInfo.PartyInfoId, Active = "users", From = Model.From };
+}
+<partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form method="post" id="__afForm">@Html.AntiForgeryToken()</form>
+
+@if (Model.CanManageUsers)
+{
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header">
+            <h3 class="card-title">Invite a teammate</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="Invite">
+                <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label">Email address</label>
+                        <input type="email" name="InviteEmail" class="form-control" placeholder="colleague@example.com" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Role</label>
+                        <select name="InviteCompanyRoleId" class="form-select">
+                            <option value="">-- No role (legacy access) --</option>
+                            @foreach (var role in Model.AvailableRoles)
+                            {
+                                <option value="@role.CompanyRoleId">@role.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ri-mail-send-line me-1"></i> Send Invite
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.PendingInvitations.Any())
+{
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header">
+            <h3 class="card-title">Pending Invitations</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive einv-table-scroll-x">
+                <table class="table align-middle mb-0">
+                    <thead class="einv-table-head">
+                        <tr>
+                            <th scope="col">Email</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Expires</th>
+                            @if (Model.CanManageUsers)
+                            {
+                                <th scope="col" class="col-action">Action</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invite in Model.PendingInvitations)
+                        {
+                            <tr>
+                                <td data-label="Email">@invite.Email</td>
+                                <td data-label="Role"><span class="einv-badge einv-badge-neutral">@(invite.CompanyRole?.Name ?? "No role")</span></td>
+                                <td data-label="Expires">@invite.ExpiresAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                @if (Model.CanManageUsers)
+                                {
+                                    <td class="col-action" data-label="Action">
+                                        <form method="post" asp-page-handler="RevokeInvite" onsubmit="return confirm('Revoke this invitation?');">
+                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                            <input type="hidden" name="invitationId" value="@invite.CompanyInvitationId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                                        </form>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header">
+        <h3 class="card-title">Team Members</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive einv-table-scroll-x">
+            <table class="table align-middle mb-0 einv-mobile-stack" id="usersTable">
+                <thead class="einv-table-head">
+                    <tr>
+                        <th scope="col">Member</th>
+                        <th scope="col">Company Role</th>
+                        <th scope="col" class="text-center">Primary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Members.Any())
+                    {
+                        @foreach (var m in Model.Members)
+                        {
+                            <tr>
+                                <td data-label="Member">
+                                    <span class="fw-semibold d-block">@m.User.FullName</span>
+                                    <span class="text-muted small">@m.User.Email</span>
+                                </td>
+                                <td data-label="Company Role">
+                                    @if (m.CompanyRole != null)
+                                    {
+                                        <span class="einv-badge einv-badge-success">@m.CompanyRole.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="einv-badge einv-badge-neutral">@(m.HasCompanyAccess ? (m.IsViewOnly ? "Legacy: View Only" : "Legacy: Full Access") : "No Access")</span>
+                                    }
+                                </td>
+                                <td class="text-center" data-label="Primary">@(m.IsPrimaryCompany ? "✓" : "—")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">No team members yet.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+            Manage roles and permissions for existing members on the <a asp-page="/Suppliers/RolesPermissions" asp-route-id="@Model.PartyInfo.PartyInfoId">Roles &amp; Permissions</a> tab.
+        </p>
+    </div>
+</div>

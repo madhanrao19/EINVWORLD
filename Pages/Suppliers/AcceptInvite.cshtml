@@ -1,0 +1,70 @@
+@page
+@model eInvWorld.Pages.Suppliers.AcceptInviteModel
+
+@{
+    ViewData["Title"] = "Accept Invitation";
+    Layout = "_HomeLayout";
+}
+
+<div class="container" style="max-width: 480px; margin-top: 4rem; margin-bottom: 4rem;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            @if (!Model.IsValid)
+            {
+                <div class="text-center mb-3">
+                    <i class="ri-error-warning-line text-danger" style="font-size: 2.5rem;"></i>
+                </div>
+                <h4 class="text-center mb-2">Invitation Not Available</h4>
+                <p class="text-muted text-center mb-0">@Model.ErrorMessage</p>
+                <div class="text-center mt-3">
+                    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">Go to Homepage</a>
+                </div>
+            }
+            else
+            {
+                <h4 class="mb-1">Join @Model.CompanyName</h4>
+                <p class="text-muted">You've been invited as <strong>@Model.RoleName</strong> for <strong>@Model.InviteeEmail</strong>.</p>
+
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                @if (Model.AccountAlreadyExists)
+                {
+                    <p class="mb-3">An EINVWORLD account already exists for this email. Sign in with that account to accept.</p>
+                    <form method="post" asp-page-handler="AcceptExisting">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ri-login-box-line me-1"></i> Sign In &amp; Accept
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" asp-page-handler="Register">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input asp-for="Input.FullName" class="form-control" required />
+                            <span asp-validation-for="Input.FullName" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Create a Password</label>
+                            <input asp-for="Input.Password" class="form-control" type="password" required />
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                            <div class="form-text">This is your own password — no one else will know it.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input asp-for="Input.ConfirmPassword" class="form-control" type="password" required />
+                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ri-user-add-line me-1"></i> Create Account &amp; Join
+                        </button>
+                    </form>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

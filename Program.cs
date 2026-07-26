@@ -118,6 +118,10 @@ builder.Services.AddHttpClient(eInvWorld.Services.Webhooks.WebhookDeliveryJobHan
 // Tamper-evident, hash-chained audit trail.
 builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();
 
+// Company workspace (Roles & Permissions tab) authorization.
+builder.Services.AddScoped<EINVWORLD.Services.Authorization.ICompanyAuthorizationService, EINVWORLD.Services.Authorization.CompanyAuthorizationService>();
+builder.Services.AddScoped<EINVWORLD.Services.Authorization.ICompanyInvitationService, EINVWORLD.Services.Authorization.CompanyInvitationService>();
+
 
 // 🔐 Data Protection (Persist Keys)
 // IMPORTANT: keep the key ring OUTSIDE the deployable App folder, otherwise a redeploy that clears
