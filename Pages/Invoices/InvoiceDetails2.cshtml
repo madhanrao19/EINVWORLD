@@ -51,6 +51,19 @@
         width: 100%;
     }
 
+    /* The invoice preview below is a fixed-width A4 facsimile of the generated PDF (deliberately
+     * NOT responsive — it must match the downloaded document exactly). On narrow viewports this
+     * wrapper scrolls horizontally instead of forcing the whole page to overflow. */
+    .invoice-preview-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    @@media print {
+        .invoice-preview-scroll {
+            overflow-x: visible;
+        }
+    }
+
         #invoiceWrapper h4 {
             font-size: 12pt !important;
             font-weight: bold !important;
@@ -383,13 +396,14 @@
     {
         return action switch
         {
-            "StatusChanged" => new HtmlString("<span class='me-1'>🟢</span>"),
-            "EmailSent" => new HtmlString("<span class='me-1'>✉️</span>"),
-            "PDFGenerated" => new HtmlString("<span class='me-1'>📄</span>"),
-            "DateTimeReceived" => new HtmlString("<span class='me-1'>📥</span>"),
-            "DateTimeValidated" => new HtmlString("<span class='me-1'>✅</span>"),
-            "Cancelled" => new HtmlString("<span class='me-1'>❌</span>"),
-            "LongIdUpdated" => new HtmlString("<span class='me-1'>🔗</span>"),
+            "StatusChanged" => new HtmlString("<i class='ri-checkbox-blank-circle-fill text-success me-1' aria-hidden='true'></i>"),
+            "EmailSent" => new HtmlString("<i class='ri-mail-line me-1' aria-hidden='true'></i>"),
+            "PDFGenerated" => new HtmlString("<i class='ri-file-pdf-2-line me-1' aria-hidden='true'></i>"),
+            "DateTimeReceived" => new HtmlString("<i class='ri-inbox-line me-1' aria-hidden='true'></i>"),
+            "DateTimeValidated" => new HtmlString("<i class='ri-checkbox-circle-line text-success me-1' aria-hidden='true'></i>"),
+            "Cancelled" => new HtmlString("<i class='ri-close-circle-line text-danger me-1' aria-hidden='true'></i>"),
+            "RequestReject" => new HtmlString("<i class='ri-forbid-line text-warning me-1' aria-hidden='true'></i>"),
+            "LongIdUpdated" => new HtmlString("<i class='ri-link me-1' aria-hidden='true'></i>"),
             _ => HtmlString.Empty
         };
     }
@@ -438,7 +452,27 @@
                         </div>
                     }
                 </div>
-                <div class="hstack gap-2">
+                <div class="hstack gap-2 flex-wrap">
+                    @{
+                        bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+                        bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+                    }
+                    @if (canReject)
+                    {
+                        var rejectTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN ?? "";
+                        <button type="button" id="rejectInvoiceBtn" class="btn btn-outline-warning btn-sm"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@rejectTin">
+                            <i class="ri-forbid-line align-middle me-1"></i>Request Rejection
+                        </button>
+                    }
+                    @if (canCancel)
+                    {
+                        var cancelTin = invoice.Supplier?.TIN ?? "";
+                        <button type="button" id="cancelInvoiceBtn" class="btn btn-outline-danger btn-sm"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@cancelTin">
+                            <i class="ri-close-circle-line align-middle me-1"></i>Cancel Invoice
+                        </button>
+                    }
                     <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
                         <i class="ri-printer-line align-middle me-1"></i>Print
                     </button>
@@ -456,6 +490,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="col-lg-12">
+                    <div class="invoice-preview-scroll d-print-block">
                     <div class="invoice-web-container">
                         <div id="invoiceWrapper">
 
@@ -726,6 +761,7 @@
 
                             </div>
                         </div><span id="invoiceNumber" style="display:none;">@invoice.InvoiceNo</span>
+                    </div>
                     </div>
                 </div>
             </div>

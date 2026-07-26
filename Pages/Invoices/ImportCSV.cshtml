@@ -22,7 +22,7 @@
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card h-100 border-0 shadow-sm p-3">
-            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: var(--primary-soft, #e9f5ee); color: var(--primary-text, #0c5434);">
+            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: rgba(var(--einv-primary-rgb), .12); color: var(--einv-primary);">
                 <i class="ri-download-2-line fs-5"></i>
             </div>
             <h6 class="fw-bold mb-1">1. Download Template</h6>
@@ -35,7 +35,7 @@
     </div>
     <div class="col-md-4">
         <div class="card h-100 border-0 shadow-sm p-3">
-            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: var(--primary-soft, #e9f5ee); color: var(--primary-text, #0c5434);">
+            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: rgba(var(--einv-primary-rgb), .12); color: var(--einv-primary);">
                 <i class="ri-file-edit-line fs-5"></i>
             </div>
             <h6 class="fw-bold mb-1">2. Complete Data</h6>
@@ -47,7 +47,7 @@
     </div>
     <div class="col-md-4">
         <div class="card h-100 border-0 shadow-sm p-3">
-            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: var(--primary-soft, #e9f5ee); color: var(--primary-text, #0c5434);">
+            <div class="mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 40px; height: 40px; background: rgba(var(--einv-primary-rgb), .12); color: var(--einv-primary);">
                 <i class="ri-qr-code-line fs-5"></i>
             </div>
             <h6 class="fw-bold mb-1">3. Reference Codes</h6>
@@ -89,13 +89,14 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
         <form method="post" asp-page-handler="Upload" enctype="multipart/form-data">
-            <div class="text-center p-4 border border-2 rounded-3 mb-3" style="border-style: dashed !important;">
-                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 48px; height: 48px; background: var(--primary-soft, #e9f5ee); color: var(--primary-text, #0c5434);">
+            <div class="einv-dropzone border rounded-3 p-4 text-center mb-3" id="invoiceImportDropzone" role="button" tabindex="0">
+                <div class="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-3" style="width: 48px; height: 48px; background: rgba(var(--einv-primary-rgb), .12); color: var(--einv-primary);">
                     <i class="ri-upload-cloud-2-line fs-3"></i>
                 </div>
-                <p class="fw-semibold mb-1">Select a CSV or Excel file</p>
-                <p class="text-muted small mb-3">.csv, .xlsx — one row per invoice line</p>
-                <input type="file" asp-for="UploadFile" class="form-control mx-auto" style="max-width: 400px;" accept=".csv,.xlsx" required />
+                <p class="fw-semibold mb-1">Click to choose a CSV or Excel file, or drag it here</p>
+                <p class="text-muted small mb-1">.csv, .xlsx — one row per invoice line</p>
+                <div class="text-muted small" id="invoiceImportFileName">No file selected</div>
+                <input type="file" asp-for="UploadFile" class="d-none" accept=".csv,.xlsx" required />
                 <span asp-validation-for="UploadFile" class="text-danger d-block mt-2"></span>
             </div>
             <div class="text-center">
@@ -233,12 +234,42 @@
 }
 
 @section Scripts {
+    <style>
+        .einv-dropzone { cursor: pointer; border-style: dashed !important; background: var(--einv-page-bg, #f6f8fb); transition: border-color .15s ease, background .15s ease; }
+        .einv-dropzone:hover, .einv-dropzone.dragover { border-color: var(--einv-primary, #006948) !important; background: #fff; }
+    </style>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             var previewBlock = document.getElementById("previewSection");
             if (previewBlock) {
                 previewBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+
+            var dropzone = document.getElementById("invoiceImportDropzone");
+            var fileInput = dropzone.querySelector('input[type="file"]');
+            var fileNameLabel = document.getElementById("invoiceImportFileName");
+
+            dropzone.addEventListener("click", function (e) {
+                if (e.target !== fileInput) fileInput.click();
+            });
+            dropzone.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+            });
+            fileInput.addEventListener("change", function () {
+                fileNameLabel.textContent = fileInput.files.length ? fileInput.files[0].name : "No file selected";
+            });
+            ["dragover", "dragenter"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.add("dragover"); });
+            });
+            ["dragleave", "drop"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.remove("dragover"); });
+            });
+            dropzone.addEventListener("drop", function (e) {
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileNameLabel.textContent = e.dataTransfer.files[0].name;
+                }
+            });
         });
     </script>
 }
