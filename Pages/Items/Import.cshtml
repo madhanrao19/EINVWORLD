@@ -1,178 +1,207 @@
-﻿@page
+@page
 @model eInvWorld.Pages.Items.ImportModel
 @{
     ViewData["Title"] = "Import Items";
-    var backUrl = "/Items/Index";
 }
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">Import Items</h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="@backUrl">Back to List</a></li>
-                    <li class="breadcrumb-item active">Import CSV</li>
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Import Items</h1>
+                <p class="text-muted mb-0">Bulk-add items to your catalogue from a CSV file.</p>
             </div>
+            <a asp-page="./Index" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+            </a>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Step 1: Upload & Validate CSV File</h5>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <span class="nav-link active"><i class="ri-checkbox-circle-line align-bottom me-1"></i> 1. Upload &amp; Validate</span>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link @(Model.PreviewRecords.Any() ? "active" : "")"><i class="ri-file-search-line align-bottom me-1"></i> 2. Review Results</span>
+            </li>
+            <li class="nav-item">
+                <span class="nav-link"><i class="ri-save-3-line align-bottom me-1"></i> 3. Confirm Import</span>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="row g-4 mb-3">
+            <div class="col-lg-8">
+                <p class="fw-semibold mb-2">CSV Format Instructions</p>
+                <p class="text-muted small mb-2">Your CSV file must include the following headers (case-sensitive):</p>
+                <code class="d-block bg-light p-2 rounded mb-2">ClassificationCode, ItemCode, Description, UnitCode, UnitPrice</code>
+                <ul class="small text-muted mb-0">
+                    <li><strong>ClassificationCode:</strong> Must be a valid MSIC Code existing in the LHDN system (e.g. '022', '004').</li>
+                    <li><strong>ItemCode:</strong> Must be unique for your company (e.g. 'SKU-001').</li>
+                    <li><strong>UnitCode:</strong> Optional — LHDN unit-of-measure code (e.g. 'H87' for piece, 'HUR' for hour). Leave blank if not applicable.</li>
+                    <li><strong>UnitPrice:</strong> Optional — a default price in MYR, e.g. '150.00'. Used only to prefill invoice lines; never affects past invoices.</li>
+                    <li><strong>Text Format:</strong> Set every column's format to Text in Excel to avoid scientific-notation corruption of codes.</li>
+                </ul>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <strong>CSV Format Instructions:</strong><br />
-                    Please ensure your CSV file has the exact following headers (case-sensitive):<br />
-                    <code>ClassificationCode, ItemCode, Description</code>
-                    <br /><br />
-                    <ul>
-                        <li><strong>ClassificationCode:</strong> Must be a valid MSIC Code existing in the LHDN system (e.g., '022', '004').</li>
-                        <li><strong>ItemCode:</strong> Must be unique for your company (e.g., 'SKU-001').</li>
-                        <li><strong>Text Format:</strong> Please ensure every field's format is set to Text in Excel.</li>
-                    </ul>
-                </div>
-
-                <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" class="mt-4">
-                    <div class="row mb-3">
-                        <div>
-                            <a href="~/samplecsv/Item_sample.csv" class="btn btn-primary btn-sm" download>
-                                <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Sample CSV
-                            </a>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Select CSV File</label>
-                            <input type="file" asp-for="UploadFile" class="form-control" accept=".csv" required />
-                            <span asp-validation-for="UploadFile" class="text-danger"></span>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <button type="submit" class="btn btn-info">
-                                <i class="ri-refresh-line align-bottom me-1"></i> Preview & Validate
-                            </button>
-                            <a href="@backUrl" class="btn btn-soft-secondary">Cancel</a>
-                        </div>
-                    </div>
-                    <div asp-validation-summary="ModelOnly" class="text-danger mt-2"></div>
-                </form>
+            <div class="col-lg-4 d-flex align-items-start justify-content-lg-end">
+                <a href="~/samplecsv/Item_sample.csv" class="btn btn-outline-primary btn-sm" download>
+                    <i class="ri-download-cloud-2-line align-bottom me-1"></i> Download Sample CSV
+                </a>
             </div>
         </div>
+
+        <form method="post" asp-page-handler="Upload" enctype="multipart/form-data" id="itemImportForm">
+            <div class="einv-dropzone border rounded-3 p-4 text-center mb-3" id="itemDropzone" role="button" tabindex="0">
+                <i class="ri-upload-cloud-2-line fs-24 text-primary d-block mb-2"></i>
+                <span class="fw-semibold">Click to choose a CSV file, or drag it here</span>
+                <div class="text-muted small mt-1" id="itemFileName">No file selected</div>
+                <input type="file" asp-for="UploadFile" class="d-none" accept=".csv" required />
+            </div>
+            <span asp-validation-for="UploadFile" class="text-danger d-block mb-2"></span>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="ri-refresh-line align-bottom me-1"></i> Preview &amp; Validate
+            </button>
+        </form>
     </div>
 </div>
 
-@if (Model.PreviewRecords != null)
+@if (Model.PreviewRecords.Any())
 {
     var validCount = Model.PreviewRecords.Count(r => r.IsValid);
     var invalidCount = Model.PreviewRecords.Count(r => !r.IsValid);
 
-    <div class="row mt-3" id="previewSection">
-        <div class="col-lg-12">
-            <div class="card">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Step 2: Validation Results</h5>
-                    <div>
-                        <span class="badge bg-success fs-13 me-2">@validCount Valid</span>
-                        <span class="badge bg-danger fs-13">@invalidCount Invalid</span>
-                    </div>
+    <div class="card border-0 shadow-sm" id="previewSection">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h3 class="card-title mb-0">Step 2: Review Results</h3>
+            <div class="d-flex gap-2">
+                <span class="einv-badge einv-badge-success">@validCount Valid</span>
+                <span class="einv-badge einv-badge-danger">@invalidCount Invalid</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+                <table class="table align-middle mb-0" id="itemImportPreviewTable">
+                    <thead class="einv-table-head" style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th>Row</th>
+                            <th>Classification</th>
+                            <th>Item Code</th>
+                            <th>Description</th>
+                            <th>Unit</th>
+                            <th class="text-end">Unit Price</th>
+                            <th>Status</th>
+                            <th>Details / Errors</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in Model.PreviewRecords)
+                        {
+                            <tr>
+                                <td>@record.RowNumber</td>
+                                <td>@record.ClassificationCode</td>
+                                <td>@record.ItemCode</td>
+                                <td class="text-truncate" style="max-width: 220px;" title="@record.Description">@record.Description</td>
+                                <td>@(string.IsNullOrEmpty(record.UnitCode) ? "—" : record.UnitCode)</td>
+                                <td class="text-end">@(record.UnitPrice.HasValue ? record.UnitPrice.Value.ToString("N2") : "—")</td>
+                                <td>
+                                    @if (record.IsValid)
+                                    {
+                                        <span class="einv-badge einv-badge-success"><i class="ri-check-line"></i> Valid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="einv-badge einv-badge-danger"><i class="ri-close-line"></i> Invalid</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!record.IsValid)
+                                    {
+                                        <ul class="text-danger mb-0 ps-3 small">
+                                            @foreach (var error in record.Errors)
+                                            {
+                                                <li>@error</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Ready to import</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    @if (invalidCount > 0)
+                    {
+                        <p class="text-muted mb-0 small"><i class="ri-information-line text-info align-bottom"></i> Invalid records will be skipped.</p>
+                    }
                 </div>
-                <div class="card-body">
 
-                    <div style="max-height: 400px; overflow: auto; border: 1px solid #dee2e6; border-radius: 0.25rem;">
-                        <table class="table table-bordered table-striped align-middle mb-0" style="width: 100%; min-width: 800px;">
-                            <thead style="position: sticky; top: 0; z-index: 10; background-color: #f3f6f9; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                                <tr>
-                                    <th style="width: 5%">Row</th>
-                                    <th style="width: 15%">Classification Code</th>
-                                    <th style="width: 20%">Item Code</th>
-                                    <th style="width: 25%">Description</th>
-                                    <th style="width: 10%">Status</th>
-                                    <th style="width: 25%">Details / Errors</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var record in Model.PreviewRecords)
-                                {
-                                    <tr>
-                                        <td>@record.RowNumber</td>
-                                        <td>@record.ClassificationCode</td>
-                                        <td>@record.ItemCode</td>
-                                        <td>@record.Description</td>
-                                        <td>
-                                            @if (record.IsValid)
-                                            {
-                                                <span class="badge bg-success"><i class="ri-check-line"></i> Valid</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger"><i class="ri-close-line"></i> Invalid</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (!record.IsValid)
-                                            {
-                                                <ul class="text-danger mb-0 ps-3">
-                                                    @foreach (var error in record.Errors)
-                                                    {
-                                                        <li>@error</li>
-                                                    }
-                                                </ul>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted">Ready to import</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-4 d-flex justify-content-between align-items-center">
-                        <div>
-                            @if (invalidCount > 0)
-                            {
-                                <p class="text-muted mb-0"><i class="ri-information-line text-info"></i> Invalid records will be skipped.</p>
-                            }
-                        </div>
-
-                        <form method="post" asp-page-handler="Confirm">
-                            <input type="hidden" asp-for="ValidRecordsJson" />
-                            @if (validCount > 0)
-                            {
-                                <button type="submit" class="btn btn-success btn-lg">
-                                    <i class="ri-save-3-line align-bottom me-1"></i> Import @validCount Valid Records
-                                </button>
-                            }
-                            else
-                            {
-                                <button type="button" class="btn btn-success btn-lg" disabled>
-                                    <i class="ri-save-3-line align-bottom me-1"></i> No Valid Records to Import
-                                </button>
-                            }
-                        </form>
-                    </div>
-
-                </div>
+                <form method="post" asp-page-handler="Confirm">
+                    <input type="hidden" asp-for="ValidRecordsJson" />
+                    @if (validCount > 0)
+                    {
+                        <button type="submit" class="btn btn-success">
+                            <i class="ri-save-3-line align-bottom me-1"></i> Import @validCount Valid Records
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-success" disabled>
+                            <i class="ri-save-3-line align-bottom me-1"></i> No Valid Records to Import
+                        </button>
+                    }
+                </form>
             </div>
         </div>
     </div>
 }
 
 @section Scripts {
+    <style>
+        .einv-dropzone { cursor: pointer; border-style: dashed !important; background: var(--einv-page-bg, #f6f8fb); transition: border-color .15s ease, background .15s ease; }
+        .einv-dropzone:hover, .einv-dropzone.dragover { border-color: var(--einv-primary, #006948) !important; background: #fff; }
+    </style>
     <script>
-        // Auto-scroll to preview section if it exists
         document.addEventListener("DOMContentLoaded", function () {
             var previewBlock = document.getElementById("previewSection");
             if (previewBlock) {
                 previewBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+
+            var dropzone = document.getElementById("itemDropzone");
+            var fileInput = dropzone.querySelector('input[type="file"]');
+            var fileNameLabel = document.getElementById("itemFileName");
+
+            dropzone.addEventListener("click", function () { fileInput.click(); });
+            dropzone.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+            });
+            fileInput.addEventListener("change", function () {
+                fileNameLabel.textContent = fileInput.files.length ? fileInput.files[0].name : "No file selected";
+            });
+            ["dragover", "dragenter"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.add("dragover"); });
+            });
+            ["dragleave", "drop"].forEach(function (evt) {
+                dropzone.addEventListener(evt, function (e) { e.preventDefault(); dropzone.classList.remove("dragover"); });
+            });
+            dropzone.addEventListener("drop", function (e) {
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    fileNameLabel.textContent = e.dataTransfer.files[0].name;
+                }
+            });
         });
     </script>
 }

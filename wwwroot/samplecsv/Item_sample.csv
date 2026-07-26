@@ -1,9 +1,9 @@
-ClassificationCode,ItemCode,Description
+ClassificationCode,ItemCode,Description,UnitCode,UnitPrice
 022,SKU-1001,"Standard Office Desk - Wood
 - 120cm x 60cm
-- Includes cable management"
-004,SVC-001,IT Consultation and Support Service
+- Includes cable management",H87,450.00
+004,SVC-001,IT Consultation and Support Service,HUR,150.00
 011,PRD-992,"Ergonomic Mesh Chair
 - Adjustable armrests
-- Lumbar support"
-022,SKU-1005,Wireless Mouse and Keyboard Combo
+- Lumbar support",H87,320.00
+022,SKU-1005,Wireless Mouse and Keyboard Combo,H87,85.50

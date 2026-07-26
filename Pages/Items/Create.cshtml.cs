@@ -30,10 +30,12 @@ namespace eInvWorld.Pages.Items
         public ItemDescription ItemDescription { get; set; } = new();
 
         public List<SelectListItem> ClassificationCodes { get; set; } = new();
+        public List<SelectListItem> UnitOptions { get; set; } = new();
 
         public IActionResult OnGet()
         {
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+            UnitOptions = _dropdownHelper.GetUnitOptions();
             return Page();
         }
 
@@ -43,6 +45,16 @@ namespace eInvWorld.Pages.Items
             {
                 // Repopulate on validation failure
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions();
+                return Page();
+            }
+
+            if (!string.IsNullOrWhiteSpace(ItemDescription.UnitCode)
+                && !await _context.UnitTypes.AnyAsync(u => u.Code == ItemDescription.UnitCode && u.IsActive))
+            {
+                ModelState.AddModelError("ItemDescription.UnitCode", "Selected Unit is not a valid LHDN unit-of-measure code.");
+                ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions();
                 return Page();
             }
 
@@ -64,6 +76,7 @@ namespace eInvWorld.Pages.Items
                 {
                     ModelState.AddModelError("", "You are not assigned to any supplier company.");
                     ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+                    UnitOptions = _dropdownHelper.GetUnitOptions();
                     return Page();
                 }
             }
