@@ -158,6 +158,8 @@ namespace eInvWorld.Data
                 .Property(l => l.Quantity).HasColumnType("decimal(18, 6)");
             modelBuilder.Entity<Models.InputModel.InvoiceLine>()
                 .Property(l => l.UnitPrice).HasColumnType("decimal(18, 4)");
+            modelBuilder.Entity<Models.InputModel.ItemDescription>()
+                .Property(i => i.UnitPrice).HasColumnType("decimal(18, 4)");
 
             // Existing Configurations
             modelBuilder.Entity<LHDNToken>().HasKey(t => t.Id);
