@@ -94,17 +94,22 @@
   text-transform: uppercase;
   color: #8a948d;
 }
-@media (min-width: 992px) {
-  .navbar-vertical .navbar-collapse {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .navbar-vertical .einv-nav-bottom {
-    margin-top: auto;
-    padding-bottom: .75rem;
-    border-top: 1px solid var(--einv-border);
-  }
+/* Bottom-pinned Profile & Settings / Logout. #einv-sidebar-menu carries both `.offcanvas-lg`
+ * (Bootstrap's responsive drawer) and `.navbar-collapse` (Tabler's vertical-nav flex-grow hook) —
+ * the two frameworks' own flex defaults don't agree on direction/growth for this combination, so
+ * this is spelled out explicitly (ID selector to win outright) rather than relying on either. */
+#einv-sidebar-menu.offcanvas-lg {
+  display: flex;
+  flex-direction: column;
+}
+#einv-sidebar-menu .offcanvas-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.navbar-vertical .einv-nav-bottom {
+  margin-top: auto;
+  padding-bottom: .75rem;
+  border-top: 1px solid var(--einv-border);
 }
 
 /* Invoice list: subtle zebra striping (scoped to the invoice table only — the page canvas tone
@@ -262,7 +267,7 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
 }
 
 /* Desktop sidebar collapse-to-icons (toggled by #einv-sidebar-collapse-toggle, einvworld-ui.js).
- * Mobile already auto-collapses the whole nav via Bootstrap's navbar-collapse, so this only
+ * Below lg the sidebar is its own off-canvas drawer (Bootstrap's offcanvas-lg), so this only
  * applies at the lg breakpoint where the sidebar is a fixed 15rem column (see tabler.min.css). */
 @media (min-width: 992px) {
   body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg { width: 4.5rem; }
@@ -277,6 +282,8 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   }
   body.einv-sidebar-collapsed .navbar-vertical .nav-link { justify-content: center; padding: .625rem; }
   body.einv-sidebar-collapsed .navbar-vertical .nav-link-icon { margin-right: 0; }
+  /* Collapsed = icon-only; the expand chevron has nothing left to point at. */
+  body.einv-sidebar-collapsed .navbar-vertical .dropdown-toggle::after { display: none; }
 }
 
 /* Long inline code / tokens (e.g. env-var names on AI Settings, the import-instructions block) and
