@@ -5501,10 +5501,27 @@
                 const classificationSelect = row.querySelector('.item-classification');
                 const codeInput = row.querySelector('.item-code');
                 const descTextarea = row.querySelector('.item-description');
+                const unitSelect = row.querySelector('select[name*=".UnitOfMeasure"]');
+                const priceInput = row.querySelector('.price-input');
 
                 // Fill the fields
                 if (codeInput) codeInput.value = itemData.ItemCode || '';
                 if (descTextarea) descTextarea.value = itemData.Description || '';
+
+                // Unit/Unit Price are the catalogue item's own defaults — only prefill when the
+                // catalogue actually has them set; never blank out whatever the user already typed.
+                if (unitSelect && itemData.UnitCode) {
+                    unitSelect.value = itemData.UnitCode;
+                    if (typeof $ !== 'undefined' && $(unitSelect).hasClass("select2-hidden-accessible")) {
+                        $(unitSelect).trigger('change');
+                    } else {
+                        unitSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }
+                if (priceInput && itemData.UnitPrice !== null && itemData.UnitPrice !== undefined) {
+                    priceInput.value = itemData.UnitPrice;
+                    priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
 
                 if (classificationSelect && itemData.ClassificationCode) {
                     // Check if the document type is self-billed (which locks it to 004)

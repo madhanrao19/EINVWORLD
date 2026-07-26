@@ -72,8 +72,9 @@ namespace eInvWorld.Pages.Items
                 createdByCompanyId = userCompany.PartyInfoId;
             }
 
-            // 2. Pre-load valid Classification Codes from the database
+            // 2. Pre-load valid Classification Codes + Units from the database
             var validClassificationCodes = new HashSet<string>(await _context.ClassificationCodes.Select(x => x.Code).ToListAsync());
+            var validUnitCodes = new HashSet<string>(await _context.UnitTypes.Where(u => u.IsActive).Select(x => x.Code).ToListAsync());
 
             // Optional: Get existing Item Codes for this company to prevent duplicates
             IQueryable<ItemDescription> query = _context.ItemDescriptions;
@@ -121,6 +122,8 @@ namespace eInvWorld.Pages.Items
                         ClassificationCode = record.ClassificationCode,
                         ItemCode = record.ItemCode,
                         Description = record.Description,
+                        UnitCode = record.UnitCode,
+                        UnitPrice = record.UnitPrice,
                         Errors = new List<string>()
                     };
 
@@ -132,10 +135,14 @@ namespace eInvWorld.Pages.Items
                         previewRecord.Errors.AddRange(validationResults.Select(v => v.ErrorMessage ?? ""));
                     }
 
-                    // 2. Database Lookup Validation (Classification Code)
+                    // 2. Database Lookup Validation (Classification Code, Unit)
                     if (!string.IsNullOrWhiteSpace(record.ClassificationCode) && !validClassificationCodes.Contains(record.ClassificationCode))
                     {
                         previewRecord.Errors.Add($"Invalid Classification Code: '{record.ClassificationCode}'. It does not exist in the system.");
+                    }
+                    if (!string.IsNullOrWhiteSpace(record.UnitCode) && !validUnitCodes.Contains(record.UnitCode))
+                    {
+                        previewRecord.Errors.Add($"Invalid Unit: '{record.UnitCode}'. It does not match an active LHDN unit-of-measure code.");
                     }
 
                     // 3. Duplicate Checks
@@ -215,10 +222,12 @@ namespace eInvWorld.Pages.Items
                     ClassificationCode = record.ClassificationCode,
                     ItemCode = record.ItemCode,
                     Description = record.Description,
+                    UnitCode = string.IsNullOrWhiteSpace(record.UnitCode) ? null : record.UnitCode,
+                    UnitPrice = record.UnitPrice,
                     IsActive = true,
                     CreatedByCompanyId = createdByCompanyId,
-                    UpdatedBy = importUser,          
-                    UpdatedDate = malaysiaTime       
+                    UpdatedBy = importUser,
+                    UpdatedDate = malaysiaTime
                 };
 
                 _context.ItemDescriptions.Add(newItem);
@@ -238,6 +247,8 @@ namespace eInvWorld.Pages.Items
             public string ClassificationCode { get; set; } = null!;
             public string ItemCode { get; set; } = null!;
             public string Description { get; set; } = null!;
+            public string? UnitCode { get; set; }
+            public decimal? UnitPrice { get; set; }
             public bool IsValid { get; set; }
             public List<string> Errors { get; set; } = new();
         }
@@ -255,6 +266,14 @@ namespace eInvWorld.Pages.Items
             [Required(ErrorMessage = "Description is required")]
             [StringLength(500)]
             public string Description { get; set; } = null!;
+
+            /// <summary>LHDN unit-of-measure code. Optional — existing/older templates without this
+            /// column still import fine (CsvHelper leaves it null when the header is absent).</summary>
+            [StringLength(50)]
+            public string? UnitCode { get; set; }
+
+            [Range(0, 999999999999.9999, ErrorMessage = "Unit Price must be zero or a positive amount.")]
+            public decimal? UnitPrice { get; set; }
         }
     }
 }
