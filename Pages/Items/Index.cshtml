@@ -87,18 +87,18 @@
                 </div>
             </div>
         </form>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
+        <div class="table-responsive einv-table-scroll-x">
+            <table class="table align-middle mb-0 einv-mobile-stack" id="itemsTable">
+                <thead class="einv-table-head">
                     <tr>
-                        <th>
+                        <th class="col-name">
                             <a href="@GetSortUrl("itemcode")" class="text-dark text-decoration-none">
                                 Item Code @GetSortIcon("itemcode")
                             </a>
                         </th>
                         <th>
                             <a href="@GetSortUrl("classification")" class="text-dark text-decoration-none">
-                                Classification Code @GetSortIcon("classification")
+                                Classification @GetSortIcon("classification")
                             </a>
                         </th>
                         <th>
@@ -106,6 +106,8 @@
                                 Description @GetSortIcon("description")
                             </a>
                         </th>
+                        <th>Unit</th>
+                        <th class="text-end">Unit Price (MYR)</th>
                         @if (Model.IsAdmin)
                         {
                             <th>
@@ -123,7 +125,7 @@
                         </th>
 
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th class="col-action">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -132,34 +134,37 @@
                         @foreach (var wrapper in Model.ItemViewModels)
                         {
                             <tr>
-                                <td class="fw-semibold">@wrapper.Item.ItemCode</td>
-                                <td>
-                                    <span class="badge bg-light text-body border">@wrapper.Item.ClassificationCode</span>
+                                <td class="col-name fw-semibold" data-label="Item Code">@wrapper.Item.ItemCode</td>
+                                <td data-label="Classification">
+                                    <span class="einv-badge einv-badge-neutral">@wrapper.Item.ClassificationCode</span>
                                 </td>
 
-                                <td class="text-truncate" style="max-width: 300px;" title="@wrapper.Item.Description">
+                                <td class="text-truncate" style="max-width: 300px;" title="@wrapper.Item.Description" data-label="Description">
                                     @wrapper.Item.Description
                                 </td>
 
+                                <td data-label="Unit">@(string.IsNullOrEmpty(wrapper.Item.UnitCode) ? "—" : wrapper.Item.UnitCode)</td>
+                                <td class="text-end" data-label="Unit Price (MYR)">@(wrapper.Item.UnitPrice.HasValue ? wrapper.Item.UnitPrice.Value.ToString("N2") : "—")</td>
+
                                 @if (Model.IsAdmin)
                                 {
-                                    <td>@wrapper.CompanyName</td>
+                                    <td data-label="Company">@wrapper.CompanyName</td>
                                 }
 
-                                <td>@(string.IsNullOrEmpty(wrapper.Item.UpdatedBy) ? "-" : wrapper.Item.UpdatedBy)</td>
-                                <td class="text-muted small">@(wrapper.Item.UpdatedDate.HasValue? wrapper.Item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
+                                <td data-label="Updated By">@(string.IsNullOrEmpty(wrapper.Item.UpdatedBy) ? "-" : wrapper.Item.UpdatedBy)</td>
+                                <td class="text-muted small" data-label="Updated Date">@(wrapper.Item.UpdatedDate.HasValue? wrapper.Item.UpdatedDate.Value.ToString("dd MMM yyyy HH:mm") : "-")</td>
 
-                                <td>
+                                <td data-label="Status">
                                     @if (wrapper.Item.IsActive)
                                     {
-                                        <span class="badge rounded-pill bg-success-subtle text-success">Active</span>
+                                        <span class="einv-badge einv-badge-success">Active</span>
                                     }
                                     else
                                     {
-                                        <span class="badge rounded-pill bg-secondary-subtle text-secondary">Inactive</span>
+                                        <span class="einv-badge einv-badge-neutral">Inactive</span>
                                     }
                                 </td>
-                                <td>
+                                <td class="col-action" data-label="Actions">
                                     <div class="d-flex gap-2">
                                         <a asp-page="./Edit" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
                                         <a asp-page="./Delete" asp-route-id="@wrapper.Item.Id" class="btn btn-sm btn-outline-danger">Delete</a>
@@ -171,7 +176,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="@(Model.IsAdmin ? "8" : "7")" class="text-center py-4 text-muted">
+                            <td colspan="@(Model.IsAdmin ? "10" : "9")" class="text-center py-4 text-muted">
                                 <i class="ri-price-tag-3-line fs-24 d-block mb-2"></i>
                                 No items found matching your filter criteria.
                             </td>
