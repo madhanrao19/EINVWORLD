@@ -22,19 +22,19 @@ namespace eInvWorld.Services.Security
     /// columns permanently unreadable, so the key-ring folder must be backed up (see SECRETS-SETUP.md).
     /// </para>
     /// </summary>
-    public sealed class ProtectedStringConverter : ValueConverter<string, string>
+    public sealed class ProtectedStringConverter : ValueConverter<string?, string>
     {
         /// <summary>
         /// Builds the converter over an already-purpose-scoped <see cref="IDataProtector"/>.
         /// </summary>
         public ProtectedStringConverter(IDataProtector protector)
             : base(
-                plaintext => protector.Protect(plaintext),
+                plaintext => protector.Protect(plaintext ?? string.Empty),
                 stored => Unprotect(protector, stored))
         {
         }
 
-        private static string Unprotect(IDataProtector protector, string stored)
+        private static string? Unprotect(IDataProtector protector, string stored)
         {
             if (string.IsNullOrEmpty(stored))
                 return stored;

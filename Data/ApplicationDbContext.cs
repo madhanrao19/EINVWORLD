@@ -57,6 +57,8 @@ namespace eInvWorld.Data
         public DbSet<Status> Statuses { get; set; }
         public DbSet<RegistrationType> RegistrationTypes { get; set; }
         public DbSet<UserCompany> UserCompanies { get; set; }
+        public DbSet<CompanyRole> CompanyRoles { get; set; } = default!;
+        public DbSet<CompanyInvitation> CompanyInvitations { get; set; } = default!;
 
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<PartyInfo> PartyInfos { get; set; } = default!;
@@ -193,6 +195,34 @@ namespace eInvWorld.Data
                 .HasForeignKey(uc => uc.PartyInfoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<UserCompany>()
+                .HasOne(uc => uc.CompanyRole)
+                .WithMany(r => r.UserCompanies)
+                .HasForeignKey(uc => uc.CompanyRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasOne(ci => ci.PartyInfo)
+                .WithMany()
+                .HasForeignKey(ci => ci.PartyInfoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasOne(ci => ci.CompanyRole)
+                .WithMany()
+                .HasForeignKey(ci => ci.CompanyRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasIndex(ci => ci.TokenHash);
+
+            modelBuilder.Entity<CompanyRole>().HasData(
+                new CompanyRole { CompanyRoleId = 1, Name = "Owner", CanManageUsers = true, CanEditProfile = true, CanManageBranding = true, CanViewAudit = true, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 2, Name = "Admin", CanManageUsers = true, CanEditProfile = true, CanManageBranding = true, CanViewAudit = true, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 3, Name = "Editor", CanManageUsers = false, CanEditProfile = true, CanManageBranding = false, CanViewAudit = false, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 4, Name = "Viewer", CanManageUsers = false, CanEditProfile = false, CanManageBranding = false, CanViewAudit = false, IsSystemDefined = true }
+            );
+
             modelBuilder.Entity<Status>().HasData(
                new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft", Description = "Invoice is in draft state" },
                new Status { StatusCode = "Submitted", StatusType = "LHDN", Name = "Submitted", Description = "Invoice has been submitted to LHDN" },
@@ -272,6 +302,12 @@ namespace eInvWorld.Data
                     .HasIndex(p => p.TIN)
                     .IsUnique()
                     .HasFilter("[TIN] <> 'EI00000000010' AND [TIN] <> 'EI00000000020' AND [TIN] <> 'EI00000000030' AND [TIN] <> 'EI00000000040'");
+
+            // Existing companies keep showing bank details on invoices exactly as before — only an
+            // explicit opt-out via the Invoice Branding tab turns this off.
+            modelBuilder.Entity<PartyInfo>()
+                    .Property(p => p.InvoiceShowBankDetails)
+                    .HasDefaultValue(true);
 
             modelBuilder.Entity<SupplierBuyer>()
                             .HasKey(sb => sb.Id);

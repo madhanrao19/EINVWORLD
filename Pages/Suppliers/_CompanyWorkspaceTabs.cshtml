@@ -1,0 +1,56 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@*
+    Shared tab chrome for the "My Company" workspace: Overview, Company Profile, Users,
+    Roles & Permissions, Invoice Branding, Security, Audit. Each tab is a real, separately-routed
+    page with its own PageModel (Details/Edit/Users/RolesPermissions/InvoiceBranding/Security/Audit)
+    — this partial only renders the shared tab bar so they read as one workspace.
+    Include with: <partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+    (build workspaceTabsModel in a code block first — Razor's tag-helper attribute parser chokes on
+    inline object-initializer syntax passed directly as an attribute value).
+*@
+@model eInvWorld.Pages.Suppliers.CompanyWorkspaceTabsModel
+
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "overview" ? "active" : "")"
+           asp-page="/Suppliers/Details" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-building-line me-1 align-bottom"></i> Overview
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "profile" ? "active" : "")"
+           asp-page="/Suppliers/Edit" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-file-list-3-line me-1 align-bottom"></i> Company Profile
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "users" ? "active" : "")"
+           asp-page="/Suppliers/Users" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-team-line me-1 align-bottom"></i> Users
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "roles" ? "active" : "")"
+           asp-page="/Suppliers/RolesPermissions" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-shield-user-line me-1 align-bottom"></i> Roles &amp; Permissions
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "branding" ? "active" : "")"
+           asp-page="/Suppliers/InvoiceBranding" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-palette-line me-1 align-bottom"></i> Invoice Branding
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "security" ? "active" : "")"
+           asp-page="/Suppliers/Security" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-lock-line me-1 align-bottom"></i> Security
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link @(Model.Active == "audit" ? "active" : "")"
+           asp-page="/Suppliers/Audit" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">
+            <i class="ri-history-line me-1 align-bottom"></i> Audit
+        </a>
+    </li>
+</ul>

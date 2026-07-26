@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're invited to {{CompanyName}}</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f5f7; color: #495057; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1); }
+        .header { text-align: center; border-bottom: 2px solid #a5c8b7; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { font-size: 22px; color: #055332; margin: 0; }
+        .content { font-size: 15px; color: #333; line-height: 1.6; }
+        .btn-container { text-align: center; margin: 25px 0; }
+        .btn { background: #006948; color: #fff !important; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; }
+        .footer { text-align: center; font-size: 12px; color: #777; border-top: 2px solid #a5c8b7; padding-top: 15px; margin-top: 20px; }
+        .footer a { color: #055332; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{LogoUrl}}" alt="eInvWorld Logo" style="width: 120px; max-width: 100%; height: auto; display: block; margin: 0 auto;" width="120">
+            <h2>You're invited to join {{CompanyName}}</h2>
+        </div>
+        <div class="content">
+            <p><strong>{{InviterName}}</strong> has invited you to join <strong>{{CompanyName}}</strong>'s e-Invoicing workspace on eInvWorld as a <strong>{{RoleName}}</strong>.</p>
+            <p>Click below to accept and set up your own password. This link expires in 72 hours and can only be used once.</p>
+            <div class="btn-container">
+                <a href="{{AcceptLink}}" class="btn">Accept Invitation</a>
+            </div>
+            <p style="text-align: center; font-size: 13px;">
+                If you weren't expecting this invitation, you can safely ignore this email.
+            </p>
+        </div>
+        <div class="footer">
+            <p><a href="{{ContactLink}}">Contact Us</a></p>
+            <p style="font-size: 11px; color: #999;">This is an automated email. Please do not reply.</p>
+            <p style="font-size: 11px; color: #888;">© {{Year}} <strong>eInvWorld</strong>. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
