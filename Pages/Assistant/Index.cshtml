@@ -19,11 +19,11 @@
             </div>
             @if (Model.Enabled)
             {
-                <span class="badge bg-success-subtle text-success px-3 py-2"><i class="ri-checkbox-circle-line align-bottom me-1"></i>Assistant Enabled</span>
+                <span class="einv-badge einv-badge-success"><i class="ri-checkbox-circle-line"></i> Assistant Enabled</span>
             }
             else
             {
-                <span class="badge bg-secondary-subtle text-secondary px-3 py-2"><i class="ri-pause-circle-line align-bottom me-1"></i>Assistant Disabled</span>
+                <span class="einv-badge einv-badge-neutral"><i class="ri-pause-circle-line"></i> Assistant Disabled</span>
             }
         </div>
     </div>
@@ -44,10 +44,12 @@
 @if (!Model.Enabled)
 {
     <div class="alert alert-warning">
-        <i class="ri-settings-3-line align-bottom me-1"></i>
-        The assistant is currently <strong>disabled</strong>. To enable it, install
-        <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> on the server, pull a model
-        (e.g. <code>ollama pull gemma3:12b</code>), then set <code>AI:Enabled = true</code> in configuration.
+        <i class="ri-settings-3-line"></i>
+        <div>
+            The assistant is currently <strong>disabled</strong>. To enable it, install
+            <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> on the server, pull a model
+            (e.g. <code>ollama pull gemma3:12b</code>), then set <code>AI:Enabled = true</code> in configuration.
+        </div>
     </div>
 }
 
@@ -130,22 +132,22 @@
                     @if (Model.Review is not null)
                     {
                         <div class="mb-2">
-                            <strong>Readiness check</strong>
-                            <ul class="list-unstyled mb-1 mt-1">
+                            <p class="text-uppercase fw-semibold text-muted mb-2" style="font-size: 0.7rem; letter-spacing: 0.05em;">Readiness Check</p>
+                            <div class="d-flex flex-column gap-1 mb-2">
                                 @foreach (var item in Model.Review.Items)
                                 {
-                                    var (icon, css) = item.Severity switch
+                                    var badgeClass = item.Severity switch
                                     {
-                                        CheckSeverity.Error => ("❌", "text-danger"),
-                                        CheckSeverity.Warning => ("⚠️", "text-warning"),
-                                        _ => ("✅", "text-success")
+                                        CheckSeverity.Error => "einv-badge-danger",
+                                        CheckSeverity.Warning => "einv-badge-warning",
+                                        _ => "einv-badge-success"
                                     };
-                                    <li class="@css"><span>@icon</span> @item.Message</li>
+                                    <div><span class="einv-badge @badgeClass">@item.Message</span></div>
                                 }
-                            </ul>
+                            </div>
                             @if (Model.Review.HasErrors)
                             {
-                                <div class="alert alert-danger py-1 px-2 mb-0"><small>This suggestion has blocking issues — fix the description and regenerate before using it.</small></div>
+                                <div class="alert alert-danger py-1 px-2 mb-0"><small><i class="ri-error-warning-line align-bottom me-1"></i>This suggestion has blocking issues — fix the description and regenerate before using it.</small></div>
                             }
                         </div>
                     }
