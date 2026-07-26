@@ -1,8 +1,43 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.10.1`** (`AppInfo:Version` in `appsettings.json`). v1.10.1 is a **patch**
-> release: UI polish (bigger brand logo, cleaner login header, collapsible sidebar) plus a local-dev-only
-> AI enablement and a static-asset caching fix. No schema/migration change.
+> **Current version: `v1.11.0`** (`AppInfo:Version` in `appsettings.json`). v1.11.0 is a **minor**
+> release: Buyer Management, Company Management, AI Assistant, Items & Services, and the Admin sidebar
+> all migrated to the Tabler design system, plus real Company workspace features (roles, invitations,
+> invoice branding). **Ships one additive migration** (`ConsolidatedSchemaCatchup_v1_11_0`, squashed from
+> 22) — see `DEPLOY-NOTES.md` §1 before deploying, especially the Staging note.
+
+## 📅 2026-07-26 — Company Management workspace, Buyer/Items/AI Tabler migration, Admin sidebar off-canvas
+
+> Five-PR stacked release. No breaking changes; the migration is additive. See `DEPLOY-NOTES.md` §1
+> for the squash rationale (a backlog of previously-unapplied migrations found on Production) and the
+> required post-migration PII-encryption backfill step.
+
+- **Buyer Management** (`Pages/PublicCustomer/*`) restyled to Tabler (KPI cards, sortable table, mobile
+  card-stacking). Adds a read-only **Duplicate Review** page for TIN/name collisions. Fixes a Delete IDOR
+  (unlinking a shared buyer record was hard-deleting it even when other suppliers still referenced it)
+  and a pre-existing import-preview bug (`PreviewRecords != null` was always true).
+- **Company Management workspace**: "My Company" is now a tabbed workspace — Overview, Profile, **Users**
+  (token-based invitations; invitees always set their own password), **Roles & Permissions**
+  (company-scoped Owner/Admin/Editor/Viewer roles, falling back to the legacy access flags for
+  unassigned members), **Invoice Branding** (accent color/footer/bank-visibility — settings only, not
+  yet wired into PDF rendering), **Security** (2FA status, recent activity), and **Audit** (paginated,
+  TIN-scoped `AuditLog` view). Removed the old "Create User" modal that let an admin set another user's
+  password directly.
+- **AI Assistant / Document Capture** pages restyled to Tabler; new read-only **Processing History** page.
+- **Items & Services**: added **Unit** (LHDN unit-of-measure code) and **Unit Price** (`decimal(18,4)`)
+  across create/edit/list/import/invoice-line-picker. Restyled to Tabler.
+- **Admin sidebar**: mobile nav is now a true Bootstrap off-canvas drawer (was a plain inline collapse);
+  desktop collapsed (icon-only) state gained tooltips.
+- **Database:** a production backup audit during this release's rollout found the live database was
+  ~3.5 months behind head (last applied: `RemovePreFix`, 2026-04-15) — 22 pending migrations, 2 of which
+  (`AddLhdnIntermediaryRejectedFlag`, `FixPendingModelChanges`) had never had a hand-authored apply
+  script. Rather than ship 22 more individually-numbered migrations on top of that gap, all 22
+  (this release's 4 plus the 18-migration backlog) were **squashed into one**:
+  `20260726135229_ConsolidatedSchemaCatchup_v1_11_0`. Rehearsed against a full restore of the actual
+  production backup in three states — fully behind, fully caught-up (simulating an already-auto-migrated
+  Staging), and re-run for idempotency — zero errors in every case, and confirmed `SystemLogs` (111k+
+  existing rows, owned by the Serilog sink, not EF) is never dropped. See `DEPLOY-NOTES.md` §1 for why
+  Staging needs the new script run manually once before its next deploy.
 
 ## 📅 2026-07-26 — Bigger logo, cleaner login header, collapsible sidebar, local AI enabled
 

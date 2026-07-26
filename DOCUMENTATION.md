@@ -436,11 +436,15 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **84 migrations** under `Migrations/`. In Production migrations apply **automatically on startup**
-  (`AutoMigrateOnStartup=true`) — they are **additive** (new tables/columns/indexes; no `Up()` drops),
-  so existing data is preserved. **Always back up first** and ensure the runtime SQL login has DDL rights.
-- Every migration has an idempotent **`Apply_*.sql`** for the manual path (`AutoMigrateOnStartup=false`);
-  ordered list in [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md).
+- **75 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+  into one, `ConsolidatedSchemaCatchup_v1_11_0` — see `DEPLOY-NOTES.md` §1). Auto-apply on startup
+  (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
+  tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
+  `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not
+  automatically on boot. **Always back up first** and ensure the runtime/migration SQL login has DDL
+  rights.
+- Every migration has an idempotent **`Apply_*.sql`** for the manual path; ordered list and current
+  environment-catch-up guidance in [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md) §1.
 - `SystemLogs` is created/owned by the **Serilog MSSqlServer sink**, not EF.
 - Reference-code tables are seeded at startup from `wwwroot/codes/*.json` (`DataSeeder`).
 
