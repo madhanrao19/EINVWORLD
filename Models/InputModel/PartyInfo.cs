@@ -138,6 +138,17 @@ namespace eInvWorld.Models.InputModel
 
         // ✅ Add LogoPath (Nullable)
         public string? LogoPath { get; set; }
+
+        // Invoice Branding tab (settings only — not yet consumed by PDF rendering; that's a separate,
+        // deliberately deferred PR given PdfTemplate is a money/UBL-adjacent rendering path).
+        [StringLength(7)]
+        public string? InvoiceAccentColorHex { get; set; }
+
+        [StringLength(500)]
+        public string? InvoiceFooterNote { get; set; }
+
+        public bool InvoiceShowBankDetails { get; set; } = true;
+
         // ✅ Timestamps for auditing
         [Required]
         [Display(Name = "Created Date")]

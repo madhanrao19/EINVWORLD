@@ -1,0 +1,145 @@
+@page
+@model eInvWorld.Pages.Suppliers.RolesPermissionsModel
+
+@{
+    ViewData["Title"] = "Roles & Permissions";
+}
+
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Company Management</div>
+            <h2 class="page-title">Roles &amp; Permissions</h2>
+            <p class="text-muted mt-1 mb-0">Control what each team member can do in this company's workspace.</p>
+        </div>
+    </div>
+</div>
+
+@{
+    var workspaceTabsModel = new CompanyWorkspaceTabsModel { PartyInfoId = Model.PartyInfo.PartyInfoId, Active = "roles", From = Model.From };
+}
+<partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form method="post" id="__afForm">@Html.AntiForgeryToken()</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 einv-mobile-stack" id="rolesTable">
+                <thead class="einv-table-head">
+                    <tr>
+                        <th scope="col">Member</th>
+                        <th scope="col">Identity Role</th>
+                        <th scope="col">Company Role</th>
+                        @if (Model.CanManageUsers)
+                        {
+                            <th scope="col" class="col-action">Action</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Memberships.Any())
+                    {
+                        @foreach (var m in Model.Memberships)
+                        {
+                            var identityRole = Model.IdentityRoleByUserId.GetValueOrDefault(m.UserId, "User");
+                            <tr>
+                                <td data-label="Member">
+                                    <span class="fw-semibold d-block">@m.User.FullName</span>
+                                    <span class="text-muted small">@m.User.Email</span>
+                                </td>
+                                <td data-label="Identity Role">
+                                    <span class="einv-badge einv-badge-neutral">@identityRole</span>
+                                </td>
+                                <td data-label="Company Role">
+                                    @if (m.CompanyRole != null)
+                                    {
+                                        <span class="einv-badge einv-badge-success">@m.CompanyRole.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="einv-badge einv-badge-neutral" title="No role assigned yet — falls back to legacy access flags">
+                                            @(m.HasCompanyAccess ? (m.IsViewOnly ? "Legacy: View Only" : "Legacy: Full Access") : "No Access")
+                                        </span>
+                                    }
+                                </td>
+                                @if (Model.CanManageUsers)
+                                {
+                                    <td class="col-action" data-label="Action">
+                                        <form method="post" asp-page-handler="AssignRole" class="d-flex gap-2">
+                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                            <input type="hidden" name="userCompanyId" value="@m.Id" />
+                                            <select name="companyRoleId" class="form-select form-select-sm" style="max-width: 160px;">
+                                                <option value="">-- No role --</option>
+                                                @foreach (var role in Model.AvailableRoles)
+                                                {
+                                                    <option value="@role.CompanyRoleId" selected="@(m.CompanyRoleId == role.CompanyRoleId)">@role.Name</option>
+                                                }
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                                        </form>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="ri-team-line fs-24 d-block mb-2"></i>
+                                No team members found.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-body">
+        <h6 class="card-title">What each role can do</h6>
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th class="text-center">Manage Users</th>
+                        <th class="text-center">Edit Profile</th>
+                        <th class="text-center">Manage Branding</th>
+                        <th class="text-center">View Audit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@role.Name</td>
+                            <td class="text-center">@(role.CanManageUsers ? "✓" : "—")</td>
+                            <td class="text-center">@(role.CanEditProfile ? "✓" : "—")</td>
+                            <td class="text-center">@(role.CanManageBranding ? "✓" : "—")</td>
+                            <td class="text-center">@(role.CanViewAudit ? "✓" : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
