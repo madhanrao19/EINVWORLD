@@ -34,7 +34,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SuppliersId");
 
-                    b.ToTable("BuyerSupplier");
+                    b.ToTable("BuyerSupplier", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -341,7 +341,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("CreatedAtUtc");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Audit.InvoiceHistory", b =>
@@ -378,7 +378,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceNo");
 
-                    b.ToTable("InvoiceHistories");
+                    b.ToTable("InvoiceHistories", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Audit.LHDNTokenLog", b =>
@@ -481,7 +481,7 @@ namespace eInvWorld.Migrations
                     b.HasIndex("TIN")
                         .IsUnique();
 
-                    b.ToTable("LHDNTokens");
+                    b.ToTable("LHDNTokens", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Background.SubmissionRecord", b =>
@@ -514,7 +514,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("PayloadHash", "SubmittedAtUtc");
 
-                    b.ToTable("SubmissionRecords");
+                    b.ToTable("SubmissionRecords", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Background.SyncJob", b =>
@@ -584,7 +584,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SyncJobs");
+                    b.ToTable("SyncJobs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ClassificationCode", b =>
@@ -608,7 +608,133 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("ClassificationCodes");
+                    b.ToTable("ClassificationCodes", (string)null);
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyInvitation", b =>
+                {
+                    b.Property<int>("CompanyInvitationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompanyInvitationId"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CompanyRoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvitedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("CompanyInvitationId");
+
+                    b.HasIndex("CompanyRoleId");
+
+                    b.HasIndex("PartyInfoId");
+
+                    b.HasIndex("TokenHash");
+
+                    b.ToTable("CompanyInvitations", (string)null);
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
+                {
+                    b.Property<int>("CompanyRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompanyRoleId"));
+
+                    b.Property<bool>("CanEditProfile")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanManageBranding")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanManageUsers")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanViewAudit")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemDefined")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("CompanyRoleId");
+
+                    b.ToTable("CompanyRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            CompanyRoleId = 1,
+                            CanEditProfile = true,
+                            CanManageBranding = true,
+                            CanManageUsers = true,
+                            CanViewAudit = true,
+                            IsSystemDefined = true,
+                            Name = "Owner"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 2,
+                            CanEditProfile = true,
+                            CanManageBranding = true,
+                            CanManageUsers = true,
+                            CanViewAudit = true,
+                            IsSystemDefined = true,
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 3,
+                            CanEditProfile = true,
+                            CanManageBranding = false,
+                            CanManageUsers = false,
+                            CanViewAudit = false,
+                            IsSystemDefined = true,
+                            Name = "Editor"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 4,
+                            CanEditProfile = false,
+                            CanManageBranding = false,
+                            CanManageUsers = false,
+                            CanViewAudit = false,
+                            IsSystemDefined = true,
+                            Name = "Viewer"
+                        });
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ContactUs", b =>
@@ -644,7 +770,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ContactUs");
+                    b.ToTable("ContactUs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CountryCode", b =>
@@ -668,7 +794,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("CountryCodes");
+                    b.ToTable("CountryCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CurrencyCode", b =>
@@ -692,7 +818,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("CurrencyCodes");
+                    b.ToTable("CurrencyCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.EInvoiceType", b =>
@@ -716,7 +842,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("EInvoiceTypes");
+                    b.ToTable("EInvoiceTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.EmailNotification", b =>
@@ -756,7 +882,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.AllowanceCharge", b =>
@@ -787,7 +913,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceHeaderInvoiceNo");
 
-                    b.ToTable("AllowanceCharge");
+                    b.ToTable("AllowanceCharge", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.Buyer", b =>
@@ -902,7 +1028,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Buyers");
+                    b.ToTable("Buyers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceHeader", b =>
@@ -1121,7 +1247,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("LHDNStatusId", "LastUpdated");
 
-                    b.ToTable("InvoiceHeaders");
+                    b.ToTable("InvoiceHeaders", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceLine", b =>
@@ -1179,7 +1305,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceHeaderInvoiceNo");
 
-                    b.ToTable("InvoiceLines");
+                    b.ToTable("InvoiceLines", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceTax", b =>
@@ -1210,7 +1336,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceLineId");
 
-                    b.ToTable("InvoiceTaxes");
+                    b.ToTable("InvoiceTaxes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.ItemDescription", b =>
@@ -1247,7 +1373,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ItemDescriptions");
+                    b.ToTable("ItemDescriptions", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.PartyInfo", b =>
@@ -1325,6 +1451,19 @@ namespace eInvWorld.Migrations
                     b.Property<string>("InviteCode")
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("InvoiceAccentColorHex")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("InvoiceFooterNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("InvoiceShowBankDetails")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1406,7 +1545,7 @@ namespace eInvWorld.Migrations
                         .IsUnique()
                         .HasFilter("[TIN] <> 'EI00000000010' AND [TIN] <> 'EI00000000020' AND [TIN] <> 'EI00000000030' AND [TIN] <> 'EI00000000040'");
 
-                    b.ToTable("PartyInfos");
+                    b.ToTable("PartyInfos", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.PublicCustomer", b =>
@@ -1561,7 +1700,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("StateCode");
 
-                    b.ToTable("PublicCustomers");
+                    b.ToTable("PublicCustomers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.RegistrationType", b =>
@@ -1577,7 +1716,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("RegistrationTypes");
+                    b.ToTable("RegistrationTypes", (string)null);
 
                     b.HasData(
                         new
@@ -1717,7 +1856,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers");
+                    b.ToTable("Suppliers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBuyer", b =>
@@ -1745,7 +1884,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("SupplierBuyers");
+                    b.ToTable("SupplierBuyers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.TaxSummary", b =>
@@ -1770,7 +1909,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("TaxSummaryId");
 
-                    b.ToTable("TaxSummaries");
+                    b.ToTable("TaxSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.UserCompany", b =>
@@ -1780,6 +1919,9 @@ namespace eInvWorld.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CompanyRoleId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("HasCompanyAccess")
                         .HasColumnType("bit");
@@ -1802,13 +1944,15 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyRoleId");
+
                     b.HasIndex("PartyInfoId");
 
                     b.HasIndex("PublicCustomerId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserCompanies");
+                    b.ToTable("UserCompanies", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceForm", b =>
@@ -1859,7 +2003,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InvoiceForms");
+                    b.ToTable("InvoiceForms", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceSubmission", b =>
@@ -1909,7 +2053,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("LHDNStatusId");
 
-                    b.ToTable("InvoiceSubmissions");
+                    b.ToTable("InvoiceSubmissions", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceTest", b =>
@@ -1938,7 +2082,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InvoiceTests");
+                    b.ToTable("InvoiceTests", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Logs.ActivityLog", b =>
@@ -1972,7 +2116,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("LogId");
 
-                    b.ToTable("ActivityLogs");
+                    b.ToTable("ActivityLogs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.MSICSubCategoryCode", b =>
@@ -1999,7 +2143,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("MSICSubCategoryCodes");
+                    b.ToTable("MSICSubCategoryCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.PaymentMode", b =>
@@ -2022,7 +2166,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("PaymentMethods");
+                    b.ToTable("PaymentMethods", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Recurring.RecurringProfile", b =>
@@ -2075,7 +2219,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateId");
 
-                    b.ToTable("RecurringProfiles");
+                    b.ToTable("RecurringProfiles", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Recurring.RecurringRunHistory", b =>
@@ -2110,7 +2254,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RecurringRunHistories");
+                    b.ToTable("RecurringRunHistories", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SavedInvoiceView", b =>
@@ -2146,7 +2290,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SavedInvoiceViews");
+                    b.ToTable("SavedInvoiceViews", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Settings.GlobalThemeSettings", b =>
@@ -2221,7 +2365,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GlobalThemeSettings");
+                    b.ToTable("GlobalThemeSettings", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.StateCode", b =>
@@ -2244,7 +2388,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("StateCodes");
+                    b.ToTable("StateCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Status", b =>
@@ -2269,7 +2413,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("StatusCode");
 
-                    b.ToTable("Statuses");
+                    b.ToTable("Statuses", (string)null);
 
                     b.HasData(
                         new
@@ -2343,7 +2487,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("TaxTypes");
+                    b.ToTable("TaxTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplate", b =>
@@ -2453,7 +2597,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("InvoiceTemplates");
+                    b.ToTable("InvoiceTemplates", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplateLine", b =>
@@ -2504,7 +2648,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateId");
 
-                    b.ToTable("InvoiceTemplateLines");
+                    b.ToTable("InvoiceTemplateLines", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplateTax", b =>
@@ -2535,7 +2679,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateLineId");
 
-                    b.ToTable("InvoiceTemplateTaxes");
+                    b.ToTable("InvoiceTemplateTaxes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.UnitType", b =>
@@ -2558,7 +2702,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("UnitTypes");
+                    b.ToTable("UnitTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceByCustomerSummary", b =>
@@ -2581,7 +2725,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceByCustomerSummaries");
+                    b.ToTable("InvoiceByCustomerSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceKpiSummary", b =>
@@ -2616,7 +2760,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceKpiSummaries");
+                    b.ToTable("InvoiceKpiSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceMonthlySummary", b =>
@@ -2639,7 +2783,7 @@ namespace eInvWorld.Migrations
                     b.Property<decimal?>("TotalAmount")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.ToTable("InvoiceMonthlySummaries");
+                    b.ToTable("InvoiceMonthlySummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceRejectedReason", b =>
@@ -2662,7 +2806,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceRejectedReasons");
+                    b.ToTable("InvoiceRejectedReasons", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTaxSummary", b =>
@@ -2691,7 +2835,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTaxSummaries");
+                    b.ToTable("InvoiceTaxSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTopProduct", b =>
@@ -2714,7 +2858,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTopProducts");
+                    b.ToTable("InvoiceTopProducts", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTypeBreakdown", b =>
@@ -2737,7 +2881,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTypeBreakdowns");
+                    b.ToTable("InvoiceTypeBreakdowns", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Webhooks.WebhookSubscription", b =>
@@ -2787,7 +2931,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("Tin");
 
-                    b.ToTable("WebhookSubscriptions");
+                    b.ToTable("WebhookSubscriptions", (string)null);
                 });
 
             modelBuilder.Entity("BuyerSupplier", b =>
@@ -2854,6 +2998,24 @@ namespace eInvWorld.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyInvitation", b =>
+                {
+                    b.HasOne("eInvWorld.Models.CompanyRole", "CompanyRole")
+                        .WithMany()
+                        .HasForeignKey("CompanyRoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
+                        .WithMany()
+                        .HasForeignKey("PartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyRole");
+
+                    b.Navigation("PartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.AllowanceCharge", b =>
@@ -3002,6 +3164,11 @@ namespace eInvWorld.Migrations
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.UserCompany", b =>
                 {
+                    b.HasOne("eInvWorld.Models.CompanyRole", "CompanyRole")
+                        .WithMany("UserCompanies")
+                        .HasForeignKey("CompanyRoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
                         .WithMany("UserCompanies")
                         .HasForeignKey("PartyInfoId")
@@ -3017,6 +3184,8 @@ namespace eInvWorld.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CompanyRole");
 
                     b.Navigation("PartyInfo");
 
@@ -3093,6 +3262,11 @@ namespace eInvWorld.Migrations
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("UserCompanies");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
                 {
                     b.Navigation("UserCompanies");
                 });

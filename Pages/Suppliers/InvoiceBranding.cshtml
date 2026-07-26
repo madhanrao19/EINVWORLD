@@ -1,0 +1,82 @@
+@page
+@model eInvWorld.Pages.Suppliers.InvoiceBrandingModel
+
+@{
+    ViewData["Title"] = "Invoice Branding";
+}
+
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Company Management</div>
+            <h2 class="page-title">Invoice Branding</h2>
+            <p class="text-muted mt-1 mb-0">Customize how future invoices from this company are presented.</p>
+        </div>
+    </div>
+</div>
+
+@{
+    var workspaceTabsModel = new CompanyWorkspaceTabsModel { PartyInfoId = Model.PartyInfo.PartyInfoId, Active = "branding", From = Model.From };
+}
+<partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="alert alert-info">
+    <i class="ri-information-line"></i>
+    <div>
+        These settings are saved now; applying them to generated invoice PDFs is a separate upcoming update.
+        Your company logo is still managed on the <a asp-page="/Suppliers/Edit" asp-route-id="@Model.PartyInfo.PartyInfoId">Company Profile</a> tab.
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <input type="hidden" name="id" value="@Model.PartyInfo.PartyInfoId" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Accent Color</label>
+                    <div class="input-group">
+                        <input type="color" name="InvoiceAccentColorHex" value="@Model.InvoiceAccentColorHex" class="form-control form-control-color" style="max-width: 60px;" @(Model.CanManageBranding ? "" : "disabled") />
+                        <input type="text" class="form-control" value="@Model.InvoiceAccentColorHex" readonly />
+                    </div>
+                    <span asp-validation-for="InvoiceAccentColorHex" class="text-danger"></span>
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label">Footer Note</label>
+                    <input type="text" name="InvoiceFooterNote" value="@Model.InvoiceFooterNote" class="form-control" maxlength="500"
+                           placeholder="e.g. Thank you for your business!" @(Model.CanManageBranding ? "" : "disabled") />
+                </div>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="InvoiceShowBankDetails" value="true" id="showBankDetails"
+                       checked="@Model.InvoiceShowBankDetails" @(Model.CanManageBranding ? "" : "disabled") />
+                <label class="form-check-label" for="showBankDetails">Show bank account details on invoices</label>
+            </div>
+
+            @if (Model.CanManageBranding)
+            {
+                <button type="submit" class="btn btn-primary">
+                    <i class="ri-save-line me-1"></i> Save Branding
+                </button>
+            }
+        </form>
+    </div>
+</div>

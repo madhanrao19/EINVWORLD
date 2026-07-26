@@ -66,6 +66,10 @@ namespace eInvWorld.Pages.Suppliers
 
             if (PartyInfo == null)
                 return NotFound();
+
+            // Display-only masking — this page is read-only, so it's safe to overwrite the in-memory value.
+            PartyInfo.BankAccountNo = EINVWORLD.Helpers.MaskingHelper.MaskLast4(PartyInfo.BankAccountNo);
+
             var currentUserId = _userManager.GetUserId(User);
 
             StateName = await _context.StateCodes
@@ -273,56 +277,6 @@ namespace eInvWorld.Pages.Suppliers
             return new JsonResult(new { success = true, message = "Primary company updated successfully." });
         }
 
-        public async Task<IActionResult> OnPostCreateUserAsync([FromForm] int supplierId, [FromForm] string NewUserFullName, [FromForm] string NewUserEmail, [FromForm] string NewUserPassword)
-        {
-            // 1. Check existing
-            var existingUser = await _userManager.FindByEmailAsync(NewUserEmail);
-            if (existingUser != null)
-            {
-                return new JsonResult(new { success = false, message = "Email already registered. Use 'Assign Existing'." });
-            }
-
-            // 2. Create User
-            var newUser = new ApplicationUser
-            {
-                UserName = NewUserEmail,
-                Email = NewUserEmail,
-                FullName = NewUserFullName,
-                EmailConfirmed = true,
-                IsApproved = true, // Immediately approve the user so they can log in
-                UserType = "Supplier", // Sync custom UserType field
-
-                // ADD AUDIT FIELDS HERE
-                UpdatedBy = User.Identity?.Name ?? "System",
-                UpdatedDate = DateTime.Now
-            };
-
-            var result = await _userManager.CreateAsync(newUser, NewUserPassword);
-
-            if (result.Succeeded)
-            {
-                // THIS IS THE MISSING LINE! Assign the actual Identity Role
-                await _userManager.AddToRoleAsync(newUser, "Supplier");
-
-                // 3. Auto-Assign
-                var newAssignment = new UserCompany
-                {
-                    UserId = newUser.Id,
-                    PartyInfoId = supplierId,
-                    HasCompanyAccess = true, // Grant access immediately
-                    IsViewOnly = false,
-                    IsPrimaryCompany = true  // Set to true so this becomes their primary company
-                };
-
-                _context.UserCompanies.Add(newAssignment);
-                await _context.SaveChangesAsync();
-
-                return new JsonResult(new { success = true, message = "User created, approved, and assigned as primary!" });
-            }
-
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            return new JsonResult(new { success = false, message = "Error: " + errors });
-        }
         public async Task<IActionResult> OnPostChangeUserRoleAsync([FromForm] string userId, [FromForm] string roleName)
         {
             if (roleName != "Supplier" && roleName != "Buyer")
