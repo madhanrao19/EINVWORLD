@@ -441,7 +441,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             i.ItemCode,
                             i.Description,
-                            i.ClassificationCode
+                            i.ClassificationCode,
+                            i.UnitCode,
+                            i.UnitPrice
                         })
                         .ToListAsync();
 
@@ -455,12 +457,16 @@ namespace EINVWORLD.Pages.Invoices
 
                         return new SelectListItem
                         {
-                            // Store the FULL description in the JSON value so auto-fill still works perfectly
+                            // Store the FULL description in the JSON value so auto-fill still works perfectly.
+                            // UnitCode/UnitPrice are the catalogue's own defaults — only used to prefill a NEW
+                            // line; they never touch a line the user has already typed a value into.
                             Value = System.Text.Json.JsonSerializer.Serialize(new
                             {
                                 ItemCode = i.ItemCode,
                                 Description = desc,
-                                ClassificationCode = i.ClassificationCode
+                                ClassificationCode = i.ClassificationCode,
+                                UnitCode = i.UnitCode,
+                                UnitPrice = i.UnitPrice
                             }),
                             // Display the SHORTENED description in the dropdown UI
                             Text = $"{i.ItemCode} - {shortDesc}"
