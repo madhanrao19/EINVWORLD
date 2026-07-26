@@ -57,9 +57,11 @@
 @if (!Model.Enabled)
 {
     <div class="alert alert-warning">
-        <i class="ri-settings-3-line align-bottom me-1"></i>
-        AI Document Capture is <strong>disabled</strong>. Set <code>DocumentCapture:Enabled = true</code> and
-        enable AI (<code>AI:Enabled = true</code> with Ollama running) in configuration.
+        <i class="ri-settings-3-line"></i>
+        <div>
+            AI Document Capture is <strong>disabled</strong>. Set <code>DocumentCapture:Enabled = true</code> and
+            enable AI (<code>AI:Enabled = true</code> with Ollama running) in configuration.
+        </div>
     </div>
 }
 
@@ -71,27 +73,32 @@
 <div class="row g-4">
     <div class="col-lg-5">
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body p-4 text-center border border-2 border-dashed rounded-3 m-3" style="border-style: dashed !important;">
-                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-3" style="width: 56px; height: 56px; background: var(--primary-soft, #e9f5ee); color: var(--primary-text, #0c5434);">
-                    <i class="ri-upload-cloud-2-line fs-3"></i>
-                </div>
-                <h5 class="fw-bold mb-1">Drop a PDF invoice here</h5>
-                <p class="text-muted small mb-3">Or click below to browse your files.</p>
+            <div class="card-body p-4">
                 <form method="post" enctype="multipart/form-data">
-                    <input type="file" name="Upload" accept="application/pdf,.pdf" class="form-control mb-3" />
+                    <label for="captureUpload" class="d-block border border-2 border-dashed rounded-3 p-4 text-center mb-3" style="border-color: var(--einv-border) !important; cursor: pointer;" id="einvCaptureDropzone">
+                        <i class="ri-upload-cloud-2-line fs-24 d-block mb-2 text-primary"></i>
+                        <span class="fw-semibold d-block">Click to choose a PDF invoice, or drag it here</span>
+                        <span class="text-muted small" id="einvCaptureDropzoneFile">No file selected</span>
+                        <input type="file" id="captureUpload" name="Upload" accept="application/pdf,.pdf" class="d-none"
+                               onchange="document.getElementById('einvCaptureDropzoneFile').textContent = this.files.length ? this.files[0].name : 'No file selected';" />
+                    </label>
                     <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
-                        <span class="badge bg-light text-body border"><i class="ri-file-pdf-2-line align-bottom me-1"></i>PDF Only</span>
-                        <span class="badge bg-light text-body border"><i class="ri-database-2-line align-bottom me-1"></i>Max @Model.MaxFileSizeMb MB</span>
+                        <span class="einv-badge einv-badge-neutral"><i class="ri-file-pdf-2-line"></i>PDF Only</span>
+                        <span class="einv-badge einv-badge-neutral"><i class="ri-database-2-line"></i>Max @Model.MaxFileSizeMb MB</span>
                         @if (Model.OcrAvailable)
                         {
-                            <span class="badge bg-light text-body border"><i class="ri-scan-line align-bottom me-1"></i>Scanned PDF OCR On</span>
+                            <span class="einv-badge einv-badge-neutral"><i class="ri-scan-line"></i>Scanned PDF OCR On</span>
                         }
                         else
                         {
-                            <span class="badge bg-light text-body border"><i class="ri-scan-line align-bottom me-1"></i>Digital PDF Only</span>
+                            <span class="einv-badge einv-badge-neutral"><i class="ri-scan-line"></i>Digital PDF Only</span>
                         }
                     </div>
-                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Extract &amp; Suggest</button>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">
+                            <i class="ri-magic-line align-bottom me-1"></i> Extract &amp; Suggest
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -132,16 +139,24 @@
                 <div class="card-body">
                     @if (Model.Review is not null)
                     {
-                        <ul class="list-unstyled mb-2">
+                        <ul class="list-unstyled mb-2 d-flex flex-column gap-2">
                             @foreach (var item in Model.Review.Items)
                             {
-                                var (icon, css) = item.Severity switch
+                                var badgeClass = item.Severity switch
                                 {
-                                    CheckSeverity.Error => ("❌", "text-danger"),
-                                    CheckSeverity.Warning => ("⚠️", "text-warning"),
-                                    _ => ("✅", "text-success")
+                                    CheckSeverity.Error => "einv-badge-danger",
+                                    CheckSeverity.Warning => "einv-badge-warning",
+                                    _ => "einv-badge-success"
                                 };
-                                <li class="@css">@icon @item.Message</li>
+                                var icon = item.Severity switch
+                                {
+                                    CheckSeverity.Error => "ri-close-circle-line",
+                                    CheckSeverity.Warning => "ri-alert-line",
+                                    _ => "ri-checkbox-circle-line"
+                                };
+                                <li>
+                                    <span class="einv-badge @badgeClass"><i class="@icon"></i>@item.Message</span>
+                                </li>
                             }
                         </ul>
                         @if (Model.Review.HasErrors)
@@ -170,6 +185,14 @@
 
 @section Scripts {
     <script>
+        (function () {
+            var dropzone = document.getElementById("einvCaptureDropzone");
+            if (dropzone) {
+                dropzone.addEventListener("dragover", function (e) { e.preventDefault(); dropzone.classList.add("border-primary"); });
+                dropzone.addEventListener("dragleave", function () { dropzone.classList.remove("border-primary"); });
+                dropzone.addEventListener("drop", function () { dropzone.classList.remove("border-primary"); });
+            }
+        })();
         (function () {
             var btn = document.getElementById('useSuggestionBtn');
             if (!btn) return;
