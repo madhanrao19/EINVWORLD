@@ -4,12 +4,16 @@
     ViewData["Title"] = "System Health";
 }
 
-<h3 class="mb-3">🩺 System Health</h3>
-<p class="text-muted">A snapshot for on-prem operators. Times/ages are UTC.</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">System Health</h1>
+        <p class="text-muted mb-0">A snapshot for on-prem operators. Times/ages are UTC.</p>
+    </div>
+</div>
 
 <div class="row g-3">
     <div class="col-md-6">
-        <div class="card h-100">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-header fw-semibold">Application</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -22,7 +26,7 @@
     </div>
 
     <div class="col-md-6">
-        <div class="card h-100">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-header fw-semibold">Background jobs</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -43,7 +47,7 @@
     </div>
 
     <div class="col-md-6">
-        <div class="card h-100">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-header fw-semibold">Data stores</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -57,7 +61,7 @@
     </div>
 
     <div class="col-md-6">
-        <div class="card h-100">
+        <div class="card border-0 shadow-sm h-100">
             <div class="card-header fw-semibold">Infrastructure</div>
             <div class="card-body">
                 <dl class="row mb-0">
@@ -73,8 +77,8 @@
     </div>
 </div>
 
-<div class="card mt-3">
-    <div class="card-header fw-semibold">🔐 PII encryption (maintenance)</div>
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header fw-semibold"><i class="ri-shield-keyhole-line align-bottom me-1"></i> PII Encryption (Maintenance)</div>
     <div class="card-body">
         @if (!string.IsNullOrEmpty(Model.PiiBackfillMessage))
         {
