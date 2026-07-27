@@ -173,12 +173,16 @@ that folder's `_ViewStart.cshtml` (or restore the one line to `_LoginLayout` for
 marketing/Home/Resources use the marketing layout by design; Error pages are standalone (`Layout = null`).
 
 **Re-verify the UI after any deploy (all roles, all modules):**
-1. Set Cloudflare **test** Turnstile keys and `Security__EnforceAdminMfa=false` on the server *temporarily*
-   (exact values in `SECRETS-SETUP.md` / `docs/TABLER-MIGRATION-AUDIT.md`), then `iisreset`.
-2. Run `EINVWORLD_BASE_URL=<url> npx playwright test tests/playwright/10-tabler-modules.spec.js`.
+1. Set Cloudflare **test** Turnstile keys on the server *temporarily* (exact values in `SECRETS-SETUP.md`
+   / `docs/TABLER-MIGRATION-AUDIT.md`), then `iisreset`. `Security:EnforceAdminMfa` ships `false` by
+   default, so it usually needs no change for this — only set it to `false` temporarily if your server
+   has explicitly turned it `true` for Production.
+2. Run `EINVWORLD_BASE_URL=<url> npx playwright test tests/playwright/05-responsive.spec.js
+   tests/playwright/10-tabler-modules.spec.js`.
    ✅ Every module page renders the Tabler shell with no app console/network errors and no unusable
    horizontal overflow (375/768/1366/1920).
-3. **Revert** the two env vars and `iisreset` — never leave test keys / MFA-off on a live host.
+3. **Revert** the Turnstile test keys (and `EnforceAdminMfa`, if you changed it) and `iisreset` — never
+   leave test keys / MFA-off on a live host.
 
-**Known residual:** a small AI-Settings mobile overflow. **Not a theme issue but seen during QA:** company
-logos emitted as `file:///…` paths (Suppliers/Index) and some 404 resource images — track those separately.
+**Not a theme issue but seen during QA — track separately:** company logos emitted as `file:///…` paths
+(Suppliers/Index) and some 404 resource images on `/Admin/Resources/Manage`.
