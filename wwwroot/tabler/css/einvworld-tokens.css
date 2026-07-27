@@ -167,6 +167,18 @@ td .badge.bg-info:not(:has(i))::before { content: "\f0da"; } /* ri-send-plane-li
 td .badge.bg-dark,
 td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; color: #3d4a42 !important; }
 
+/* Solid badges outside table cells (page headers, detail views, status pills): Tabler's own .badge
+ * base rule defaults text to --tblr-secondary (a mid-gray) regardless of background — bg-success/
+ * bg-danger/etc. only ever set the background, never the text colour. Framework-correct pairing only
+ * lives on the separate .text-bg-* classes, which most of the app doesn't use, so solid badges (e.g.
+ * "Valid" on invoice status) rendered gray-on-color with poor contrast. Match Tabler's own
+ * .text-bg-* pairing (#f9fafb) so these badges read the same as buttons. Lower specificity than the
+ * td-scoped tinted rules above, so table badges keep their light-tint/dark-text look untouched. */
+.badge.bg-success, .badge.bg-danger, .badge.bg-warning, .badge.bg-info,
+.badge.bg-primary, .badge.bg-dark, .badge.bg-secondary {
+  color: #f9fafb;
+}
+
 /* Table headers: subtle green-tinted fill with tracking-heavy uppercase labels (DESIGN.md). */
 .table thead th {
   background-color: #e9efe9 !important;
