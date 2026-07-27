@@ -13,12 +13,17 @@
 > | 7 — Auth (`_LoginLayoutTabler`) | ✅ merged | login/2FA/register/manage; Velzon `_LoginLayout` kept as fallback |
 > | Consistency audit — orphans | ✅ merged | Templates + Assistant were the last 2 on Velzon → migrated. **All authenticated pages now Tabler.** |
 > | Post-deploy staging QA + fixes | ✅ merged | logo size, code/pre overflow, invoice-list mobile columns; text verified on all Admin pages |
-> | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | ⛔ **deferred** | destructive; do only after a fully-green re-verification |
+> | 8 — Velzon removal + theme-controller retirement + demo-bloat cleanup | 🟡 **partial** | 189 unused Velzon component-showcase demo pages (`wwwroot/assets/libs/*.html`, 42MB) removed 2026-07-27 — confirmed zero references first. Theme-controller retirement and the remaining Velzon CSS/JS bundle removal still deferred; do only after a fully-green re-verification |
 > | Restyle — "EinvWorld Professional" (Stitch, 2026-07-15) | ✅ done | token-level rebrand `#3AA564`→`#006948`, light sidebar, light auth cards, Google-Fonts CDN removed, CSS links versioned; see CHANGELOG 2026-07-15 |
+> | Residual-markup pass (2026-07-27) | ✅ merged | Invoices, Templates/InvoiceEdit, RecurringInvoices, 9 Admin Codes list pages, Admin ops/monitoring (AuditLog/InvoiceSync/SyncJobs/SystemHealth/Webhooks/Logs), Admin Notifications/Resources/Users, Suppliers/Lead — remaining raw Velzon markup (page-title-box, lord-icon CDN widgets, FontAwesome icons, emoji headers) replaced across all of them. Fixed a real bug: authenticated users hitting `/` saw the marketing homepage inside the legacy `_Layout` fallback with its dev-only Theme Customizer exposed. Fixed 4 genuine horizontal-overflow bugs found by finally running `tests/playwright/05-responsive.spec.js`/`10-tabler-modules.spec.js` with real viewport sizing (prior browser-automation tooling couldn't resize the viewport) — see CHANGELOG 2026-07-27. |
 >
-> **Status (2026-07-11): deployed to staging and Playwright-verified across Supplier/Buyer/Admin.** Every
-> authenticated page renders Tabler; only public marketing/Home/Resources (`_HomeLayout`) and Error pages
-> (`Layout = null`) are intentionally non-Tabler.
+> **Status (2026-07-27): the Velzon→Tabler markup migration is essentially complete.** Every authenticated
+> page renders Tabler with no known remaining raw Velzon markup; only public marketing/Home/Resources
+> (`_HomeLayout`) and Error pages (`Layout = null`) are intentionally non-Tabler. The two large money-path
+> forms (`CreateInvoice.cshtml`, `InvoiceEdit.cshtml`'s dynamic-row JS body) were deliberately left
+> untouched beyond header/icon consistency, per DESIGN.md's priority order (financial correctness over
+> visual polish) — revisit only with a scoped, tested effort. Remaining Phase 8 work (retiring the Velzon
+> theme-controller and CSS/JS bundle itself) stays deferred.
 > **Rollout mechanism:** per-folder `_ViewStart.cshtml` switches a folder to `_LayoutTabler` for
 > authenticated users only (anonymous/public pages keep the marketing layout). **Revert** any area by
 > deleting its `_ViewStart.cshtml`. Velzon utility classes are shimmed in
