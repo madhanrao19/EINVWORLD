@@ -43,17 +43,19 @@ changes are additive and AI/features stay off unless already enabled.
      (company-scoped roles, token-based user invitations, invoice branding settings). **No new required
      secrets** — user invitations reuse the existing `EmailConfiguration` SMTP settings (same sender as
      other app emails). See §1 for the 4 new migrations and the two-step PII encryption note.
-   - **Tabler UI migration (unreleased):** the authenticated UI is being migrated from the Velzon theme
-     to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It ships as a normal
-     build — no extra deploy step. As of 2026-07-11 **all authenticated pages render Tabler** and the build
-     has been Playwright-verified across all three roles on staging. After any deploy, re-run the automated
-     check: set Cloudflare **test** Turnstile keys and disable admin MFA *temporarily* for QA, run
-     `tests/playwright/10-tabler-modules.spec.js` (exact env vars in `docs/TABLER-MIGRATION-AUDIT.md`), then
-     **revert** those env vars. Known residual: a small AI-Settings mobile overflow. Velzon `_Layout`/
-     `_LoginLayout` remain the fallback until Phase 8; to roll a folder back to Velzon, delete its
+   - **Tabler UI migration (v1.12.0, markup complete):** the authenticated UI has been migrated from the
+     Velzon theme to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It
+     ships as a normal build — no extra deploy step. As of 2026-07-27 **all authenticated pages render
+     Tabler with no known remaining raw Velzon markup**, Playwright-verified across all three roles
+     (`tests/playwright/05-responsive.spec.js`, `10-tabler-modules.spec.js`) with real viewport sizing.
+     To re-run the check after a deploy: set Cloudflare **test** Turnstile keys and disable admin MFA
+     *temporarily* for QA (exact env vars in `docs/TABLER-MIGRATION-AUDIT.md`), run the two specs above,
+     then **revert** those env vars. Velzon `_Layout`/`_LoginLayout` remain the fallback until Phase 8
+     (retiring the theme entirely); to roll a folder back to Velzon, delete its
      `Pages/<area>/_ViewStart.cshtml` (or restore the one line in `Areas/Identity/Pages/_ViewStart.cshtml`
-     for the auth pages). **Not Tabler but surfaced during QA — fix separately:** company logos emitted as
-     `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404.
+     for the auth pages). **Not Tabler, still open — fix separately:** company logos emitted as
+     `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404 on
+     `/Admin/Resources/Manage`.
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:
@@ -197,9 +199,10 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 
 ## 5. Security
 
-- **Admin 2FA is enforced** (`Security:EnforceAdminMfa = true`): an admin without 2FA is redirected to
-  the authenticator-setup page until they enrol (no hard lockout). Emergency escape hatch: set it
-  `false` and recycle.
+- **Admin 2FA is optional by default** (`Security:EnforceAdminMfa = false` in `appsettings.json`) —
+  Admins can self-enrol voluntarily from Profile & Settings, but are not forced. **Recommended: set
+  `Security__EnforceAdminMfa = true` on Production** so an admin without 2FA is redirected to the
+  authenticator-setup page until they enrol (no hard lockout either way — recovery codes always work).
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 
@@ -235,7 +238,7 @@ only loaded for the `DinkToPdf` engine.
 
 ## 8. Log retention (`SystemLogs` table)
 
-`LogCleanupService` prunes `SystemLogs` rows older than `LogCleanupSettings:RetentionDays` (default 30)
+`LogCleanupService` prunes `SystemLogs` rows older than `LogCleanupSettings:RetentionDays` (default 365)
 every 4 hours. It deletes in **batches** of `LogCleanupSettings:BatchSize` (default 5000) so it never
 holds a table lock or hits the command timeout on a large table.
 
