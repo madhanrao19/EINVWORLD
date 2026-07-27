@@ -1,36 +1,52 @@
-﻿@page
+@page
 @model EINVWORLD.Pages.Admin.Resources.Types.IndexModel
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Resource Types";
 }
 
-<h1>Index</h1>
+<div class="row mb-4">
+    <div class="col-12 d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+            <h1 class="einv-page-title mb-1">Resource Types</h1>
+            <p class="text-muted mb-0">Categories used to classify public Resources articles.</p>
+        </div>
+        <a asp-page="Create" class="btn btn-primary">
+            <i class="ri-add-line align-bottom me-1"></i> Create New
+        </a>
+    </div>
+</div>
 
-<p>
-    <a asp-page="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.ResourceType[0].Name)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model.ResourceType) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
-            </td>
-            <td>
-                <a asp-page="./Edit" asp-route-id="@item.Code">Edit</a> |
-                <a asp-page="./Details" asp-route-id="@item.Code">Details</a> |
-                <a asp-page="./Delete" asp-route-id="@item.Code">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="einv-table-head">
+                    <tr>
+                        <th>@Html.DisplayNameFor(model => model.ResourceType[0].Name)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.ResourceType.Count == 0)
+                    {
+                        <tr><td colspan="2" class="text-center text-muted py-4">No resource types found.</td></tr>
+                    }
+                    @foreach (var item in Model.ResourceType)
+                    {
+                        <tr>
+                            <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a asp-page="./Edit" asp-route-id="@item.Code" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                    <a asp-page="./Details" asp-route-id="@item.Code" class="btn btn-outline-secondary btn-sm">Details</a>
+                                    <a asp-page="./Delete" asp-route-id="@item.Code" class="btn btn-outline-danger btn-sm">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
