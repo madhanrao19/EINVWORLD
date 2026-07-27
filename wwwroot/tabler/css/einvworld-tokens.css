@@ -83,17 +83,6 @@
   font-weight: 600;
 }
 
-/* Flat sectioned menu (Navigation Master): small tracked section labels between link groups,
- * and a utility block pinned to the sidebar bottom on desktop. */
-.einv-nav-section {
-  list-style: none;
-  padding: 1rem .75rem .25rem;
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #8a948d;
-}
 /* Bottom-pinned Profile & Settings / Logout. #einv-sidebar-menu carries both `.offcanvas-lg`
  * (Bootstrap's responsive drawer) and `.navbar-collapse` (Tabler's vertical-nav flex-grow hook) —
  * the two frameworks' own flex defaults don't agree on direction/growth for this combination, so
@@ -288,7 +277,6 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   body.einv-sidebar-collapsed .navbar-vertical .navbar-brand { margin: 0 0 .5rem; }
   body.einv-sidebar-collapsed #einv-sidebar-collapse-toggle { margin: 0 0 .5rem; transform: rotate(180deg); }
   body.einv-sidebar-collapsed .navbar-vertical .nav-link-title,
-  body.einv-sidebar-collapsed .navbar-vertical .einv-nav-section,
   body.einv-sidebar-collapsed .navbar-vertical .badge:not(.nav-link-icon .badge) {
     display: none;
   }
