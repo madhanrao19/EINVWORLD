@@ -4,9 +4,15 @@
     ViewData["Title"] = "Create Resource";
 }
 
-<section class="container py-5">
-    <h2 class="mb-4 fw-bold">Create New Resource</h2>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Create New Resource</h1>
+        <p class="text-muted mb-0">Publish a new article to the public Resources section.</p>
+    </div>
+</div>
 
+<div class="card border-0 shadow-sm">
+<div class="card-body">
     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
         @Html.AntiForgeryToken()
         
@@ -66,7 +72,8 @@
 
         <button type="submit" class="btn btn-primary">Save Article</button>
     </form>
-</section>
+</div>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
