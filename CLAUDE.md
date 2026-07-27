@@ -24,17 +24,26 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
 - **LHDN:** 8 document types, UBL 2.1 JSON, per-TIN OAuth tokens, `onbehalfof` intermediary header,
   optional XAdES signing (off until a cert is bought), 72h cancel/reject window, HTTP rate limits (429).
 
-## The build reality — CI is the compiler of record
-- **There is no local .NET SDK in this environment.** You cannot `dotnet build`/`dotnet test` locally.
+## The build reality — build/test locally, CI is the merge gate
+- **A local .NET 10 SDK is available in this environment.** Run `dotnet build`/`dotnet test`/`dotnet run`
+  locally before pushing — don't rely solely on CI to discover a compile error. `dotnet run` against
+  the local dev instance hits the **Staging** SQL Server database (see `RUNBOOKS.md`/session notes) —
+  treat it accordingly (real seeded data, not a throwaway sandbox).
+- A stale locked `bin\...\EINVWORLD.exe` from a still-running `dotnet run`/debug session is the most common
+  local build failure (`MSB3021`/`MSB3027` "file is locked by process"). Stop the running `EINVWORLD`
+  process (or the IDE's debug session) before rebuilding.
 - **GitHub Actions** (`.github/workflows/ci.yml`, `build-and-test` on `windows-latest`) restores, builds
-  (Release), and runs `dotnet test`. **A PR's green CI is the only proof it compiles and tests pass.**
+  (Release), and runs `dotnet test` on every push/PR. **A PR's green CI is still required before merging**
+  — it's the authoritative, environment-independent proof, even though you can and should also verify
+  locally first.
 - **CI also runs real SQL Server integration tests** (`EINVWORLD.Tests/Integration/`, SQL Server Express
   LocalDB started in the workflow) — migrations are applied with `Migrate()` against a real database and
   raw-SQL paths (e.g. `InvoiceSubmissionGuard`'s atomic claim) are exercised for real, not just via the
   in-memory provider. They no-op safely wherever `INTEGRATION_SQLSERVER` isn't set. Prefer adding new
   DB-touching logic tests here over asserting against the in-memory provider when raw SQL or a real FK/seed
   is involved.
-- Therefore: write code carefully to compile first-try; every change ships as a PR and is validated by CI.
+- Therefore: write code carefully to compile first-try, verify locally, then let CI confirm it on a clean
+  environment before merging.
 - **Migrations are hand-authored** (no `dotnet ef` locally). Each new migration = **4 artifacts**:
   `Migrations/<timestamp>_<Name>.cs` (Up/Down), `<...>.Designer.cs` (full `BuildTargetModel` snapshot,
   chained from the current head), an idempotent `Migrations/Apply_<Name>.sql` (guard on
@@ -112,7 +121,7 @@ probes · two-layer rate limiting · end-to-end correlation IDs · smart HTTPS-r
 tunnel) · externalized secrets · DataProtection key-ring outside `App\`.
 
 ## Known improvement backlog (deferred — need a scoped, tested effort)
-- **Split the 1,263-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
+- **Split the ~1,300-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
 - **OpenTelemetry metrics** — low value on a single on-prem node with no metrics backend; revisit if scaled.
 - **Future-readiness** — multi-company/tenant, API versioning, message queue, containerization: design new
   work so these stay possible; don't paint the architecture into a corner.
