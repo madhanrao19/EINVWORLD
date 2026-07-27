@@ -1,94 +1,99 @@
-﻿@page "{supplierId:int}"
+@page "{supplierId:int}"
 @model eInvWorld.Pages.Suppliers.AssignBuyersModel
 @{
     ViewData["Title"] = "Assign Buyers to Supplier";
 }
 
-<h1>Assign Buyers to Supplier</h1>
-
-<hr />
-
-<!-- Display Selected Supplier -->
-<fieldset class="mb-4">
-    <legend>Supplier Information</legend>
-    <div class="form-group">
-        <label asp-for="Supplier.CompanyName" class="control-label"></label>
-        <input type="text" class="form-control" value="@(Model.Supplier?.CompanyName ?? "No Supplier Selected")" disabled />
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Assign Buyers to Supplier</h1>
+        <p class="text-muted mb-0">@(Model.Supplier?.CompanyName ?? "No Supplier Selected")</p>
     </div>
-</fieldset>
+</div>
 
-<hr />
-
-<!-- Buyers Selection Table -->
-<fieldset class="mb-4">
-    <legend>Select Buyers</legend>
-    <form method="post">
-        <table id="dataTable" class="table table-bordered table-responsive">
-            <thead class="table-dark">
-                <tr>
-                    <th>Select</th>
-                    <th>Buyer Name</th>
-                    <th>Tax Identification Number</th>
-                    <th>MSIC Code</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Buyers != null && Model.Buyers.Any())
-                {
-                    foreach (var buyer in Model.Buyers)
-                    {
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold">Select Buyers</div>
+    <div class="card-body">
+        <form method="post">
+            <div class="table-responsive">
+                <table id="dataTable" class="table align-middle mb-3">
+                    <thead class="einv-table-head">
                         <tr>
-                            <td>
-                                <input type="checkbox" name="SelectedBuyerIds" value="@buyer.PartyInfoId"
-                                @(Model.SelectedBuyerIds.Contains(buyer.PartyInfoId) ? "checked" : "") />
-                            </td>
-                            <td>@buyer.CompanyName</td>
-                            <td>@buyer.TIN</td>
-                            <td>@buyer.IndustryClassificationCode</td>
+                            <th>Select</th>
+                            <th>Buyer Name</th>
+                            <th>Tax Identification Number</th>
+                            <th>MSIC Code</th>
                         </tr>
-                    }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="4">No buyers available to select.</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-primary">Assign Selected Buyers</button>
-    </form>
-</fieldset>
+                    </thead>
+                    <tbody>
+                        @if (Model.Buyers != null && Model.Buyers.Any())
+                        {
+                            foreach (var buyer in Model.Buyers)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" name="SelectedBuyerIds" value="@buyer.PartyInfoId"
+                                        @(Model.SelectedBuyerIds.Contains(buyer.PartyInfoId) ? "checked" : "") />
+                                    </td>
+                                    <td>@buyer.CompanyName</td>
+                                    <td>@buyer.TIN</td>
+                                    <td>@buyer.IndustryClassificationCode</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No buyers available to select.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn btn-primary">Assign Selected Buyers</button>
+        </form>
+    </div>
+</div>
 
-<hr />
-
-<!-- Assigned Buyers Table -->
-<fieldset class="mb-4">
-    <legend>Assigned Buyers</legend>
-    <form method="post" asp-page-handler="Unassign">
-        <table id="dataTable2" class="table table-striped table-responsive">
-            <thead class="table-dark">
-                <tr>
-                    <th>Unassign</th>
-                    <th>Buyer Name</th>
-                    <th>Tax Identification Number</th>
-                    <th>MSIC Code</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var assignedBuyer in Model.AssignedBuyers)
-                {
-                    <tr>
-                        <td>
-                            <input type="checkbox" name="UnassignedBuyerIds" value="@assignedBuyer.PartyInfoId" />
-                        </td>
-                        <td>@assignedBuyer.CompanyName</td>
-                        <td>@assignedBuyer.TIN</td>
-                        <td>@assignedBuyer.IndustryClassificationCode</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-danger">Unassign Selected Buyers</button>
-    </form>
-</fieldset>
+<div class="card border-0 shadow-sm">
+    <div class="card-header fw-semibold">Assigned Buyers</div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="Unassign">
+            <div class="table-responsive">
+                <table id="dataTable2" class="table align-middle mb-3">
+                    <thead class="einv-table-head">
+                        <tr>
+                            <th>Unassign</th>
+                            <th>Buyer Name</th>
+                            <th>Tax Identification Number</th>
+                            <th>MSIC Code</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.AssignedBuyers.Any())
+                        {
+                            @foreach (var assignedBuyer in Model.AssignedBuyers)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input" name="UnassignedBuyerIds" value="@assignedBuyer.PartyInfoId" />
+                                    </td>
+                                    <td>@assignedBuyer.CompanyName</td>
+                                    <td>@assignedBuyer.TIN</td>
+                                    <td>@assignedBuyer.IndustryClassificationCode</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No buyers assigned yet.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <button type="submit" class="btn btn-outline-danger">Unassign Selected Buyers</button>
+        </form>
+    </div>
+</div>

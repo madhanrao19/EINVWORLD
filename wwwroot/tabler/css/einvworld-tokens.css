@@ -386,6 +386,15 @@ pre { overflow-x: auto; max-width: 100%; }
   color: #fff;
 }
 
+/* Velzon avatar size scale — Tabler has no equivalent, so unsized avatar-* images/containers
+ * (e.g. Suppliers/Index company logos) would otherwise render at native/unconstrained size. */
+.avatar-xxs { height: 1.5rem; width: 1.5rem; }
+.avatar-xs  { height: 2rem;   width: 2rem; }
+.avatar-sm  { height: 3rem;   width: 3rem; }
+.avatar-md  { height: 4.5rem; width: 4.5rem; }
+.avatar-lg  { height: 6rem;   width: 6rem; }
+.avatar-xl  { height: 7.5rem; width: 7.5rem; }
+
 /* ── Auth pages (Phase 7): shim the Velzon auth chrome so login/2FA/register/manage render
  * as a centered card under Tabler. The auth PAGE markup (forms, ids, Turnstile) is unchanged;
  * these are layout-only visual shims. */
