@@ -1,21 +1,23 @@
 @*
-    Buyer role navigation (Tabler, "EinvWorld Professional"). Flat menu per the Navigation Master
-    reference — buyers can only view invoices addressed to their company, the same links as before.
-    Cosmetic only; server-side authorization is unchanged.
+    Buyer role navigation (Tabler). Mirrors the Admin/Supplier navigation's collapsible dropdown-group
+    pattern and module naming ("Invoice Management") for consistency across roles, even though a
+    buyer only sees one item in it — buyers can only view invoices addressed to their company, the
+    same link as before. Cosmetic only; server-side authorization is unchanged.
 *@
 <ul class="navbar-nav pt-lg-2" role="menubar">
     <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard">
+        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard" title="Dashboard">
             <span class="nav-link-icon" aria-hidden="true"><i class="ri-dashboard-2-line"></i></span>
             <span class="nav-link-title">Dashboard</span>
         </a>
     </li>
-
-    <li class="einv-nav-section" role="none" aria-hidden="true">Invoices</li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Invoices/InvoiceLists">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-2-line"></i></span>
-            <span class="nav-link-title">Received e-Invoices</span>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-buyer-invoices" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Invoice Management">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-3-line"></i></span>
+            <span class="nav-link-title">Invoice Management</span>
         </a>
+        <div class="dropdown-menu" id="einv-buyer-invoices">
+            <a class="dropdown-item" href="/Invoices/InvoiceLists">Received e-Invoices</a>
+        </div>
     </li>
 </ul>
