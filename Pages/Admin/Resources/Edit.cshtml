@@ -1,12 +1,17 @@
-﻿@* Pages/Admin/Resources/Edit.cshtml *@
-@page
+﻿@page
 @model EINVWORLD.Pages.Admin.Resources.EditModel
 @{
     ViewData["Title"] = "Edit Resource";
 }
 
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Edit Resource</h1>
+    </div>
+</div>
 
-<h2 class="mb-4">Edit Resource</h2>
+<div class="card border-0 shadow-sm">
+<div class="card-body">
 <form method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Resource.Id" />
@@ -66,13 +71,16 @@
         </select>
     </div>
 
-    <button type="submit" class="btn btn-primary">Update</button>
-    <a asp-page="/Admin/Resources/Manage" class="btn btn-secondary">Cancel</a>
-    <a href="/resources/article/@Model.Resource.Slug" class="btn btn-secondary" target="_blank">
-        Preview Article
-    </a>
-
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Update</button>
+        <a asp-page="/Admin/Resources/Manage" class="btn btn-outline-secondary">Cancel</a>
+        <a href="/resources/article/@Model.Resource.Slug" class="btn btn-outline-secondary" target="_blank">
+            Preview Article
+        </a>
+    </div>
 </form>
+</div>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
