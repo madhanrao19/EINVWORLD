@@ -1,48 +1,57 @@
-﻿@page
+@page
 @model eInvWorld.Pages.Admin.Notifications.CreateModel
 @{
     ViewData["Title"] = "Create Notification Email Template";
 }
 
-<h1>@ViewData["Title"]</h1>
-
-<form method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-    <div class="form-group">
-        <label asp-for="Notification.TemplateName"></label>
-        <input asp-for="Notification.TemplateName" class="form-control" />
-        <span asp-validation-for="Notification.TemplateName" class="text-danger"></span>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">@ViewData["Title"]</h1>
+        <p class="text-muted mb-0">Define a reusable template for outbound system notification emails.</p>
     </div>
+</div>
 
-    <div class="form-group">
-        <label asp-for="Notification.Subject"></label>
-        <input asp-for="Notification.Subject" class="form-control" />
-        <span asp-validation-for="Notification.Subject" class="text-danger"></span>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Notification.TemplateName" class="form-label"></label>
+                <input asp-for="Notification.TemplateName" class="form-control" />
+                <span asp-validation-for="Notification.TemplateName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Notification.Subject" class="form-label"></label>
+                <input asp-for="Notification.Subject" class="form-control" />
+                <span asp-validation-for="Notification.Subject" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Notification.Body" class="form-label"></label>
+                <textarea id="notificationBody" asp-for="Notification.Body" class="form-control" rows="6" placeholder="Enter the notification body here..."></textarea>
+                <span asp-validation-for="Notification.Body" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Notification.NotificationType" class="form-label"></label>
+                <select asp-for="Notification.NotificationType" class="form-select" asp-items="Model.NotificationTypeOptions">
+                    <option value="">Select Notification Type</option>
+                </select>
+                <span asp-validation-for="Notification.NotificationType" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="Notification.IsActive" class="form-check-input" type="checkbox" />
+                <label asp-for="Notification.IsActive" class="form-check-label"></label>
+                <span asp-validation-for="Notification.IsActive" class="text-danger"></span>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a asp-page="./Index" class="btn btn-outline-secondary">Back to List</a>
+            </div>
+        </form>
     </div>
-
-    <div class="form-group">
-        <label asp-for="Notification.Body" class="control-label"></label>
-        <textarea id="notificationBody" asp-for="Notification.Body" class="form-control" placeholder="Enter the notification body here..."></textarea>
-        <span asp-validation-for="Notification.Body" class="text-danger"></span>
-    </div>
-
-    <div class="form-group">
-        <label asp-for="Notification.NotificationType"></label>
-        <select asp-for="Notification.NotificationType" class="form-control" asp-items="Model.NotificationTypeOptions">
-            <option value="">Select Notification Type</option>
-        </select>
-        <span asp-validation-for="Notification.NotificationType" class="text-danger"></span>
-    </div>
-
-    <div class="form-group">
-        <label asp-for="Notification.IsActive"></label>
-        <input asp-for="Notification.IsActive" type="checkbox" />
-        <span asp-validation-for="Notification.IsActive" class="text-danger"></span>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Create</button>
-</form>
-
-
-
+</div>
