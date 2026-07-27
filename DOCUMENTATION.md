@@ -112,7 +112,7 @@ EINVWORLD/                     ASP.NET Core web project
 ├── Migrations/                EF migrations + idempotent Apply_*.sql scripts
 ├── Models/                    Entities, input/view models, JSON DTOs (InputModel, JsonModels, Audit, Background, …)
 ├── Pages/                     Razor Pages (Admin, Invoices, Suppliers, Templates, Assistant, …)
-│   └── Shared/                Layouts, _Sidebar, partials (Velzon + parallel Tabler set — see §4.1)
+│   └── Shared/                Layouts, _Sidebar, partials (Velzon fallback + Tabler set — see §4.1)
 ├── Services/
 │   ├── AI/                    Provider-agnostic AI core (IAiProvider/IAiService; Ollama provider)
 │   ├── Assistant/             AI e-invoice assistant (domain prompts; delegates to IAiService)
@@ -128,9 +128,9 @@ EINVWORLD/                     ASP.NET Core web project
 └── *.md                       README, this doc, deployment & secrets guides, changelog
 ```
 
-### 4.1 Front-end theme (Velzon → Tabler migration, in progress)
+### 4.1 Front-end theme (Velzon → Tabler migration, markup complete)
 
-The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated UI is being migrated from
+The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated UI has been migrated from
 the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) theme; both are self-hosted
 (no CDN). Migration state and plan: `docs/TABLER-MIGRATION-AUDIT.md`; user-visible history: `CHANGELOG.md`.
 
@@ -147,9 +147,9 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
   revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
   Toastr, Chart.js, TinyMCE, lord-icon) and behaviour (idle-timeout, app-search, Turnstile on auth) are
   identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
-- **Coverage:** as of 2026-07-11 **all authenticated pages render Tabler** (deployed + Playwright-verified
-  across Supplier/Buyer/Admin). Only public marketing/Home/Resources (`_HomeLayout`) and Error pages
-  (`Layout = null`) are intentionally non-Tabler.
+- **Coverage:** as of 2026-07-27 **all authenticated pages render Tabler with no known remaining raw
+  Velzon markup** (deployed + Playwright-verified across Supplier/Buyer/Admin). Only public
+  marketing/Home/Resources (`_HomeLayout`) and Error pages (`Layout = null`) are intentionally non-Tabler.
 - **Not migrated / deferred (Phase 8):** removing Velzon and retiring the DB-backed global-theme system
   (`/api/Theme/*`) — held until a fully-green re-verification. Two pre-existing (non-Tabler) app bugs were
   surfaced during QA and remain open: company logos emitted as `file:///` paths and 404 resource images.
