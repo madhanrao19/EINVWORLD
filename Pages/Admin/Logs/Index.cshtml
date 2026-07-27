@@ -5,77 +5,80 @@
     Layout = "_LayoutTabler";
 }
 
-<div class="container-fluid py-4">
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">System Logs</h1>
+        <p class="text-muted mb-0">Structured application logs (Serilog). Times are local server time.</p>
+    </div>
+</div>
 
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Filter Logs</h6>
-        </div>
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" class="form-control" name="SearchTerm" value="@Model.SearchTerm" placeholder="Msg, User, IP...">
-                </div>
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold">Filter Logs</div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="SearchTerm" value="@Model.SearchTerm" placeholder="Msg, User, IP...">
+            </div>
 
-                <div class="col-md-2">
-                    <label class="form-label">Level</label>
-                    <select class="form-select" name="LogLevelFilter" asp-for="LogLevelFilter">
-                        <option value="">All Levels</option>
-                        <option value="Information">Information</option>
-                        <option value="Warning">Warning</option>
-                        <option value="Error">Error</option>
-                    </select>
-                </div>
+            <div class="col-md-2">
+                <label class="form-label">Level</label>
+                <select class="form-select" name="LogLevelFilter" asp-for="LogLevelFilter">
+                    <option value="">All Levels</option>
+                    <option value="Information">Information</option>
+                    <option value="Warning">Warning</option>
+                    <option value="Error">Error</option>
+                </select>
+            </div>
 
-                <div class="col-md-2">
-                    <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="StartDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">End Date</label>
-                    <input type="date" class="form-control" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))">
-                </div>
+            <div class="col-md-2">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control" name="StartDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-control" name="EndDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))">
+            </div>
 
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2 w-100">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
-                    <a asp-page="./Index" class="btn btn-secondary w-50">Reset</a>
-                </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2 w-100">
+                    <i class="ri-search-line align-bottom me-1"></i> Filter
+                </button>
+                <a asp-page="./Index" class="btn btn-outline-secondary w-50">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0 fw-semibold">Log Results (@Model.TotalLogs found)</h5>
+
+        <div class="d-flex gap-2">
+            <form method="post" asp-page-handler="ClearAll" onsubmit="return confirm('ARE YOU SURE?\n\nThis will permanently delete ALL system logs from the database.');" class="d-inline">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="ri-delete-bin-line align-bottom me-1"></i> Delete Logs
+                </button>
             </form>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ri-download-2-line align-bottom me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('csv')">Export as CSV (.csv)</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('txt')">Export as Text (.txt)</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="location.reload();">
+                <i class="ri-refresh-line align-bottom me-1"></i> Refresh
+            </button>
         </div>
     </div>
-
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">Log Results (@Model.TotalLogs found)</h6>
-
-            <div>
-                <form method="post" asp-page-handler="ClearAll" onsubmit="return confirm('⚠️ ARE YOU SURE?\n\nThis will permanently delete ALL system logs from the database.');" class="d-inline me-2">
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        <i class="fas fa-trash"></i> Delete Logs
-                    </button>
-                    <div class="btn-group me-2">
-                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-download"></i> Export
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow">
-                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('csv')">Export as CSV (.csv)</a></li>
-                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('txt')">Export as Text (.txt)</a></li>
-                        </ul>
-                    </div>
-                </form>
-                <button class="btn btn-sm btn-outline-primary" onclick="location.reload();">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="logsTable" width="100%" cellspacing="0">
-                    <thead>
-                        <tr>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="logsTable" width="100%" cellspacing="0">
+                <thead class="einv-table-head">
+                    <tr>
                             <th style="width: 15%">Timestamp</th>
                             <th style="width: 10%">User</th>
                             <th style="width: 10%">IP Address</th>
@@ -200,7 +203,6 @@
             </div>
         </div>
     </div>
-</div>
 
 @section Scripts {
     <script>
