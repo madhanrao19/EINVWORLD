@@ -44,7 +44,7 @@ before moving on. Don't push forward hoping it fixes itself.
 | **Connection string** | One line of text that tells the app how to reach the database (server, database name, login, password). |
 | **`appsettings.json`** | The app's non-secret settings file. **Secrets stay blank here** — real values come from environment variables. |
 | **TLS / SSL / HTTPS** | Encryption so the site is `https://` (padlock). Provided by a certificate on IIS, or by Cloudflare (Part 8b). |
-| **2FA / MFA** | Two-factor authentication — the 6-digit code from a phone app, required for Admin logins. |
+| **2FA / MFA** | Two-factor authentication — the 6-digit code from a phone app. Optional by default for Admin logins; can be enforced (recommended for Production, Part 14). |
 | **DDL rights** | Permission for the app to create/change database tables (it sets up its own tables on first run). |
 
 ---
@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.3.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.12.0.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -201,7 +201,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.3.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.12.0.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
@@ -460,20 +460,26 @@ environment variable).
 
 ## Part 14 — First login + enrol Admin 2FA
 
-The app **requires two-factor authentication for administrator accounts**.
+The app **supports** two-factor authentication for administrator accounts, but it ships **optional/off**
+(`Security:EnforceAdminMfa = false` in `appsettings.json`) — an admin can sign in normally without ever
+enrolling. **We strongly recommend turning enforcement on for Production** (see the box below).
 
 1. On the login page, sign in with the **admin** account given to you.
-2. **First time:** you'll be redirected to a **"Configure authenticator app"** page (this is expected,
-   not an error).
+2. **If enforcement is ON** (see below) and this is the account's first login: you'll be redirected to a
+   **"Configure authenticator app"** page (this is expected, not an error). **If enforcement is OFF**
+   (the shipped default), you land straight on the Dashboard — you can still enrol voluntarily any time
+   from **Profile & Settings → Security**.
 3. On your phone install **Google Authenticator** (or Microsoft Authenticator).
 4. **Scan the QR code** shown on screen, then type the **6-digit code** from the app and submit.
 5. **Save the recovery codes** it shows you somewhere safe — they're your backup if you lose the phone.
-6. You'll land on the **Dashboard**. From now on, admin logins ask for the 6-digit code.
+6. You'll land on the **Dashboard**. From now on, that admin's logins ask for the 6-digit code.
 
-✅ **You should see:** the Dashboard after entering the code.
+✅ **You should see:** the Dashboard after entering the code (or immediately, if 2FA isn't enrolled/enforced).
 
-> Want 2FA off? (not recommended) Add the env var `Security__EnforceAdminMfa` = `false` and restart IIS.
-> There is **no lockout** either way — you always reach the enrolment page and have recovery codes.
+> **To require 2FA for every admin (recommended for Production):** add the env var
+> `Security__EnforceAdminMfa` = `true` and restart IIS. Any admin without 2FA enabled is then redirected
+> to the authenticator-setup page until they enrol — there is **no hard lockout** either way, they always
+> reach the enrolment page and get recovery codes.
 
 ---
 
@@ -645,7 +651,8 @@ Tick each before declaring "done":
 - [ ] (if signing) `.p12` in `Cert\` + signing env vars set
 - [ ] **Database backed up** before first start
 - [ ] Site starts; `/health/ready` = **Healthy**
-- [ ] Admin login works; **2FA enrolled**; recovery codes saved
+- [ ] Admin login works; if `Security__EnforceAdminMfa=true` is set (recommended for Production),
+      **2FA enrolled** and recovery codes saved
 - [ ] **Admin → System Health** all OK
 - [ ] Test invoice **submitted to LHDN** (PREPROD on staging) → Valid + QR
 - [ ] Test email received; test PDF downloads
