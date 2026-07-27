@@ -1,10 +1,36 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.11.0`** (`AppInfo:Version` in `appsettings.json`). v1.11.0 is a **minor**
-> release: Buyer Management, Company Management, AI Assistant, Items & Services, and the Admin sidebar
-> all migrated to the Tabler design system, plus real Company workspace features (roles, invitations,
-> invoice branding). **Ships one additive migration** (`ConsolidatedSchemaCatchup_v1_11_0`, squashed from
-> 22) — see `DEPLOY-NOTES.md` §1 before deploying, especially the Staging note.
+> **Current version: `v1.12.0`** (`AppInfo:Version` in `appsettings.json`). v1.12.0 is a **minor**
+> release completing the Velzon → Tabler migration: Invoices, the entire Admin subsystem (ops/monitoring,
+> Notifications, Resources, Users, Codes), Company/Lead management, and RecurringInvoices/Templates are
+> now all on Tabler. Also fixes a real bug (authenticated users landing on "/" saw the marketing page
+> wrapped in the legacy admin shell with its dev-only Theme Customizer exposed) and four genuine
+> responsive/horizontal-overflow bugs surfaced by running the Playwright suite's viewport tests against a
+> live instance for the first time. **No database migrations** — pure UI/CSS/routing changes.
+
+## 📅 2026-07-27 — Tabler migration completion (Invoices, Admin, Company/Lead), homepage redirect fix, responsive QA fixes
+
+> Nine-PR stacked release, all merged to `main`. No breaking changes, no schema changes.
+> - **Invoices & Templates**: InvoiceDetails2/CreateSBI/CreateCN/CreateSBCN/BulkImport/ImportCSV and
+>   TemplateLists/InvoiceEdit restyled to Tabler; extracted a shared `invoice-line-items.js` module; fixed
+>   a Razor bug rendering subtotal as literal `qty * price` text instead of the computed product.
+> - **Admin subsystem** (ops/monitoring, Notifications, Resources + Types, Users, 9 Codes list pages,
+>   RecurringInvoices): full Tabler restyle, removing remaining emoji headers, FontAwesome icons, and
+>   lord-icon CDN widgets.
+> - **Company/Lead management**: Suppliers/Index (List of Companies), Import, AssignBuyers, Lead/List
+>   restyled. Fixed a real cross-cutting bug — `einvworld-tokens.css` shimmed Velzon's `.avatar-title` but
+>   never its `avatar-xxs`–`xl` size scale, so ~90 avatar-sized images app-wide rendered unconstrained.
+> - **Fix**: `Pages/Index.cshtml` (public homepage) had no auth check — a logged-in user hitting `/` saw
+>   the marketing page rendered inside the legacy Velzon `_Layout` fallback, exposing its dev-only Theme
+>   Customizer panel. Now redirects authenticated users to `/Dashboard/Dashboard`.
+> - **Responsive QA**: ran `tests/playwright/05-responsive.spec.js` and `10-tabler-modules.spec.js` with
+>   real viewport sizing against a live instance for the first time (prior browser-automation tooling
+>   couldn't actually resize the viewport). Found and fixed four overflow bugs: a Dashboard gutter/container
+>   mismatch, a CSS rule that disabled horizontal-scroll containment above the mobile breakpoint on
+>   Items/Index and PublicCustomer/List, an unwrapped button group plus a non-shrinking flex label/value
+>   pair on PublicCustomer/List, and TemplateLists' table wrapped in Velzon-only dead CSS classes.
+> - **Cleanup**: removed 189 unused Velzon component-showcase demo pages (`wwwroot/assets/libs/*.html`,
+>   42MB) — confirmed zero references anywhere in the app before deleting.
 
 ## 📅 2026-07-26 — Company Management workspace, Buyer/Items/AI Tabler migration, Admin sidebar off-canvas
 
