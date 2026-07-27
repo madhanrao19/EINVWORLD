@@ -610,11 +610,15 @@ button.einv-badge { cursor: pointer; }
 
 /* Row-action dropdowns inside .table-responsive get clipped by its overflow-x. Per the CSS overflow
  * spec, `overflow-x: auto` + `overflow-y: visible` is not a valid combination — the UA silently
- * forces both axes to `auto`, so overflow-y can't be freed while overflow-x stays scrollable. The
- * buyer/duplicate-review tables are narrow (<=6 columns) and never need horizontal scroll at any
- * width down to the 767.98px breakpoint where they switch to stacked cards anyway, so drop the
- * scroll wrapper entirely here rather than fight the spec. */
-.einv-table-scroll-x { overflow: visible; }
+ * forces both axes to `auto`, so overflow-y can't be freed while overflow-x stays scrollable.
+ * Below the 767.98px breakpoint the table switches to stacked cards (no tabular layout, so no
+ * scroll is ever needed) — safe to drop the scroll wrapper there. At md+ the table stays tabular
+ * and can genuinely overflow (measured: Items/Index and PublicCustomer/List overflow by 400-600px
+ * at 768px), so keep the scroll containment there instead of fighting the spec. */
+.einv-table-scroll-x { overflow-x: auto; }
+@media (max-width: 767.98px) {
+  .einv-table-scroll-x { overflow: visible; }
+}
 
 /* Round initials avatar for buyer rows (no photo — company/contact initials only). */
 .einv-avatar-initials {
@@ -641,11 +645,20 @@ button.einv-badge { cursor: pointer; }
     background: var(--einv-surface);
     overflow: hidden;
   }
+  /* Flex items default to a content-based min-width even when their text could wrap, so a long
+   * value (e.g. a long company name) refuses to shrink and forces the row — and the whole table —
+   * wider than the viewport. min-width: 0 lets wrapping/truncation actually take effect. The
+   * ::before label (content: attr(data-label)) can't take min-width: 0 since it has no children,
+   * so a long label (e.g. "TIN / Registration") plus its value can still be jointly wider than the
+   * viewport — flex-wrap lets the value drop to its own line under the label instead of overflowing. */
+  .einv-mobile-stack tbody td > * { min-width: 0; }
+  .einv-mobile-stack tbody td .d-flex > * { min-width: 0; }
   .einv-mobile-stack tbody td {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    gap: 1rem;
+    gap: .25rem 1rem;
     border: 0 !important;
     padding: .45rem .75rem;
     text-align: right;
