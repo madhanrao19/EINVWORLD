@@ -17,6 +17,12 @@ It must be followed by all developers, designers, AI coding agents and contribut
 
 This document overrides previous UI conventions including the former Velzon implementation.
 
+> **Superseded: colour palette.** The Navy/Blue/Teal palette in the COLOUR SYSTEM section below was
+> never adopted — the team explicitly chose to keep the existing green "EinvWorld Professional" brand
+> instead (see CHANGELOG 2026-07-15). The actual authoritative colour tokens are
+> `wwwroot/tabler/css/einvworld-tokens.css` (`--einv-primary: #006948` etc.). Everything else in this
+> document (components, spacing, responsive rules, patterns) is still the source of truth.
+
 ---
 
 # PRODUCT OVERVIEW
@@ -170,6 +176,9 @@ Maintain clear space around the logo.
 ---
 
 # COLOUR SYSTEM
+
+> ⚠️ **Not implemented — superseded.** See the note near the top of this document. The live palette is
+> `wwwroot/tabler/css/einvworld-tokens.css`, not the values below.
 
 Primary Navy
 #123B66
