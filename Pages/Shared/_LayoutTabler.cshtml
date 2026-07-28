@@ -99,6 +99,30 @@
 
     <!-- SweetAlert2 (self-hosted) -->
     <script src="~/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        // Sitewide brand default for Swal.fire() calls that don't set their own button color —
+        // without this, SweetAlert2's built-in default (blue/purple) shows through instead of the
+        // eInvWorld green. Individual Swal.fire calls that already pass confirmButtonColor are untouched.
+        (function () {
+            if (typeof Swal === "undefined") return;
+            var originalFire = Swal.fire.bind(Swal);
+            Swal.fire = function () {
+                var args = Array.prototype.slice.call(arguments);
+                var opts = args[0];
+                // Normalize the shorthand Swal.fire(title, text, icon) into the object form so the
+                // color default applies to it too.
+                if (typeof opts === "string") {
+                    opts = { title: args[0], text: args[1], icon: args[2] };
+                    args = [opts];
+                }
+                if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+                    if (opts.confirmButtonColor === undefined) opts.confirmButtonColor = "#006948";
+                    if (opts.showCancelButton && opts.cancelButtonColor === undefined) opts.cancelButtonColor = "#6c757d";
+                }
+                return originalFire.apply(Swal, args);
+            };
+        })();
+    </script>
     <script src="~/assets/js/pages/sweetalerts.init.js"></script>
 
     <!-- Select2 (self-hosted) -->
