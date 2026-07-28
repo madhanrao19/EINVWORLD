@@ -258,74 +258,78 @@
                 </div>
                 <div class="card-body">
                     <h5 class="fw-bold">Invoice Items</h5>
-                    <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead class="einv-table-head">
-                            <tr>
-                                <th>Classification Code</th>
-                                <th>Item Code</th>
-                                <th>Item Description</th>
-                                <th>Quantity</th>
-                                <th>Unit Measurement</th>
-                                <th>Unit Price</th>
-                                <th>Subtotal</th>
-                                <th>Tax</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="lineItems">
-                            @for (int i = 0; i < Model.Invoice.InvoiceLines.Count; i++)
-                            {
-                                <tr data-item-index="@i">
-                                    <td>
-                                        <input asp-for="Invoice.InvoiceLines[i].ClassificationCode" class="form-control" />
-                                        <span asp-validation-for="Invoice.InvoiceLines[i].ClassificationCode" class="text-danger"></span>
-                                    </td>
-                                    <td>
-                                        <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control" />
-                                    </td>
-                                    <td><input asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control" /></td>
-                                    <td><input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" step="any" class="form-control line-qty" /></td>
-                                    <td>
-                                        <input asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="form-control" />
-                                        <span asp-validation-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="text-danger"></span>
-                                    </td>
-                                    <td><input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" step="any" class="form-control line-price" /></td>
-                                    <td><span id="subtotal-@i" class="subtotal">@((Model.Invoice.InvoiceLines[i].Quantity * Model.Invoice.InvoiceLines[i].UnitPrice)?.ToString("N2") ?? "0.00")</span></td>
-                                    <td>
-                                        <table class="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Tax Category</th>
-                                                    <th>Tax Percentage</th>
-                                                    <th>Tax Amount</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="taxes-@i">
+                    <div id="lineItems">
+                        @for (int i = 0; i < Model.Invoice.InvoiceLines.Count; i++)
+                        {
+                            <div class="item-row card mb-3" style="border-left: 4px solid var(--einv-primary, #006948);" data-item-index="@i">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Classification Code</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].ClassificationCode" class="form-control form-control-sm" />
+                                            <span asp-validation-for="Invoice.InvoiceLines[i].ClassificationCode" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Item Code</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="text-uppercase text-muted small mb-1">Item Description</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Quantity</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" step="any" class="form-control form-control-sm line-qty" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Unit Measurement</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="form-control form-control-sm" />
+                                            <span asp-validation-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" step="any" class="form-control form-control-sm line-price" />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="text-uppercase text-muted small mb-1">Subtotal</label>
+                                            <div class="p-2 rounded bg-light text-end fw-bold subtotal" id="subtotal-@i">@((Model.Invoice.InvoiceLines[i].Quantity * Model.Invoice.InvoiceLines[i].UnitPrice)?.ToString("N2") ?? "0.00")</div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="text-uppercase text-muted small mb-1">Tax</label>
+                                            <div class="tax-section" id="taxes-@i">
                                                 @for (int j = 0; j < Model.Invoice.InvoiceLines[i].Taxes.Count; j++)
                                                 {
-                                                    <tr>
-                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" class="form-control" /></td>
-                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" step="any" class="form-control tax-percentage" /></td>
-                                                        <td><input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxAmount" type="number" step="any" class="form-control tax-amount" /></td>
-                                                        <td><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTax(this)"><i class="ri-delete-bin-line align-bottom"></i> Remove</button></td>
-                                                    </tr>
+                                                    <div class="tax-row mb-2 p-2 border rounded">
+                                                        <div class="d-flex flex-wrap gap-1 align-items-start">
+                                                            <div class="flex-fill" style="min-width: 100px;">
+                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" class="form-control form-control-sm tax-category" placeholder="Tax Category" />
+                                                            </div>
+                                                            <div style="min-width: 65px; flex: 0 0 70px;">
+                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" step="any" class="form-control form-control-sm tax-percentage" placeholder="%" />
+                                                            </div>
+                                                            <div style="min-width: 85px; flex: 0 0 90px;">
+                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxAmount" type="number" step="any" class="form-control form-control-sm tax-amount" placeholder="Amount" />
+                                                            </div>
+                                                            <div style="flex: 0 0 auto;">
+                                                                <i class="ri-close-circle-line text-danger" onclick="removeTax(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 }
-                                            </tbody>
-                                        </table>
-                                        <button type="button" class="btn btn-secondary btn-sm" onclick="addTax(@i)"><i class="ri-add-line align-bottom"></i> Add Tax</button>
-                                    </td>
-                                    <td><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)"><i class="ri-delete-bin-line align-bottom"></i> Remove</button></td>
-                                </tr>
-                            }
-                        </tbody>
-
-                    </table>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTax(@i)"><i class="ri-add-line align-bottom"></i> Add Tax</button>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end mt-3 pt-3 border-top">
+                                        <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)"><i class="ri-delete-bin-line me-1"></i>Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                     <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@Model.Invoice.InvoiceLines.Count" />
 
-                    <button type="button" class="btn btn-secondary" id="addItemBtn"><i class="ri-add-line align-bottom me-1"></i>Add Item</button>
+                    <button type="button" class="btn btn-outline-primary" id="addItemBtn"><i class="ri-add-line align-bottom me-1"></i>Add Item</button>
                 </div>
 
                 <!-- Totals Section -->

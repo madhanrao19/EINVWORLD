@@ -1,9 +1,10 @@
 // Shared dynamic line-item / tax-row editor for CreateSBI, CreateCN, and CreateSBCN.
-// These three pages share an identical row structure (#lineItems tbody, #itemCount hidden input,
-// #addItemBtn, per-row #subtotal-{i} span, per-row #taxes-{i} tbody, global addTax(i)/removeTax(this)/
-// removeItem(this)) — they previously referenced a script (create-invoice-ori.js) that does not exist
-// in the repo, so Add Item / Add Tax / Remove were silently non-functional (no console error suppressed
-// it — the onclick handlers simply threw "function is not defined"). This restores that behaviour.
+// These three pages share an identical row structure (#lineItems item-row cards, #itemCount hidden
+// input, #addItemBtn, per-row #subtotal-{i}, per-row #taxes-{i} tax-row divs, global
+// addTax(i)/removeTax(this)/removeItem(this)) — they previously referenced a script
+// (create-invoice-ori.js) that does not exist in the repo, so Add Item / Add Tax / Remove were
+// silently non-functional (no console error suppressed it — the onclick handlers simply threw
+// "function is not defined"). This restores that behaviour.
 //
 // Field names use the exact ASP.NET Core model-binding convention (Invoice.InvoiceLines[i].X,
 // Invoice.InvoiceLines[i].Taxes[j].X) so posted values bind to the same InvoiceLineView/InvoiceTaxView
@@ -14,18 +15,18 @@
     function lineItemsBody() { return document.getElementById("lineItems"); }
 
     function reindexRows() {
-        var rows = lineItemsBody().querySelectorAll(":scope > tr");
+        var rows = lineItemsBody().querySelectorAll(":scope > .item-row");
         rows.forEach(function (row, i) {
             row.setAttribute("data-item-index", i);
             row.querySelectorAll("[name]").forEach(function (el) {
                 el.name = el.name.replace(/InvoiceLines\[\d+\]/, "InvoiceLines[" + i + "]");
             });
-            var subtotal = row.querySelector('span[id^="subtotal-"]');
+            var subtotal = row.querySelector('[id^="subtotal-"]');
             if (subtotal) subtotal.id = "subtotal-" + i;
-            var taxesBody = row.querySelector('tbody[id^="taxes-"]');
-            if (taxesBody) {
-                taxesBody.id = "taxes-" + i;
-                reindexTaxRows(taxesBody, i);
+            var taxesSection = row.querySelector('[id^="taxes-"]');
+            if (taxesSection) {
+                taxesSection.id = "taxes-" + i;
+                reindexTaxRows(taxesSection, i);
             }
             var addTaxBtn = row.querySelector('button[onclick^="addTax("]');
             if (addTaxBtn) addTaxBtn.setAttribute("onclick", "addTax(" + i + ")");
@@ -34,8 +35,8 @@
         if (itemCount) itemCount.value = rows.length;
     }
 
-    function reindexTaxRows(taxesBody, itemIndex) {
-        var rows = taxesBody.querySelectorAll(":scope > tr");
+    function reindexTaxRows(taxesSection, itemIndex) {
+        var rows = taxesSection.querySelectorAll(":scope > .tax-row");
         rows.forEach(function (row, j) {
             row.querySelectorAll("[name]").forEach(function (el) {
                 el.name = el.name
@@ -47,39 +48,50 @@
 
     function newLineRowHtml(i) {
         return "" +
-            '<tr data-item-index="' + i + '">' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].ClassificationCode" class="form-control" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].ItemCode" class="form-control" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].ItemDescription" class="form-control" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].Quantity" type="number" step="any" class="form-control line-qty" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].UnitOfMeasure" class="form-control" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + i + '].UnitPrice" type="number" step="any" class="form-control line-price" /></td>' +
-            '<td><span id="subtotal-' + i + '" class="subtotal">0.00</span></td>' +
-            '<td>' +
-            '<table class="table">' +
-            '<thead><tr><th>Tax Category</th><th>Tax Percentage</th><th>Tax Amount</th><th>Actions</th></tr></thead>' +
-            '<tbody id="taxes-' + i + '"></tbody>' +
-            '</table>' +
-            '<button type="button" class="btn btn-secondary btn-sm" onclick="addTax(' + i + ')"><i class="ri-add-line align-bottom"></i> Add Tax</button>' +
-            '</td>' +
-            '<td><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeItem(this)"><i class="ri-delete-bin-line align-bottom"></i> Remove</button></td>' +
-            "</tr>";
+            '<div class="item-row card mb-3" style="border-left: 4px solid var(--einv-primary, #006948);" data-item-index="' + i + '">' +
+            '<div class="card-body">' +
+            '<div class="row g-3">' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Classification Code</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].ClassificationCode" class="form-control form-control-sm" /></div>' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Item Code</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].ItemCode" class="form-control form-control-sm" /></div>' +
+            '<div class="col-md-6"><label class="text-uppercase text-muted small mb-1">Item Description</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].ItemDescription" class="form-control form-control-sm" /></div>' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Quantity</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].Quantity" type="number" step="any" class="form-control form-control-sm line-qty" /></div>' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Unit Measurement</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].UnitOfMeasure" class="form-control form-control-sm" /></div>' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Unit Price</label>' +
+            '<input name="Invoice.InvoiceLines[' + i + '].UnitPrice" type="number" step="any" class="form-control form-control-sm line-price" /></div>' +
+            '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Subtotal</label>' +
+            '<div class="p-2 rounded bg-light text-end fw-bold subtotal" id="subtotal-' + i + '">0.00</div></div>' +
+            '<div class="col-12"><label class="text-uppercase text-muted small mb-1">Tax</label>' +
+            '<div class="tax-section" id="taxes-' + i + '"></div>' +
+            '<button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTax(' + i + ')"><i class="ri-add-line align-bottom"></i> Add Tax</button></div>' +
+            '</div>' +
+            '<div class="d-flex justify-content-end mt-3 pt-3 border-top">' +
+            '<button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)"><i class="ri-delete-bin-line me-1"></i>Remove</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
     }
 
     function newTaxRowHtml(itemIndex, taxIndex) {
         return "" +
-            "<tr>" +
-            '<td><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxCategory" class="form-control" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxPercentage" type="number" step="any" class="form-control tax-percentage" /></td>' +
-            '<td><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxAmount" type="number" step="any" class="form-control tax-amount" /></td>' +
-            '<td><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTax(this)"><i class="ri-delete-bin-line align-bottom"></i> Remove</button></td>' +
-            "</tr>";
+            '<div class="tax-row mb-2 p-2 border rounded">' +
+            '<div class="d-flex flex-wrap gap-1 align-items-start">' +
+            '<div class="flex-fill" style="min-width: 100px;"><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxCategory" class="form-control form-control-sm tax-category" placeholder="Tax Category" /></div>' +
+            '<div style="min-width: 65px; flex: 0 0 70px;"><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxPercentage" type="number" step="any" class="form-control form-control-sm tax-percentage" placeholder="%" /></div>' +
+            '<div style="min-width: 85px; flex: 0 0 90px;"><input name="Invoice.InvoiceLines[' + itemIndex + '].Taxes[' + taxIndex + '].TaxAmount" type="number" step="any" class="form-control form-control-sm tax-amount" placeholder="Amount" /></div>' +
+            '<div style="flex: 0 0 auto;"><i class="ri-close-circle-line text-danger" onclick="removeTax(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i></div>' +
+            '</div>' +
+            '</div>';
     }
 
     function recalcAll() {
         var lineSubtotals = 0;
         var taxTotal = 0;
-        lineItemsBody().querySelectorAll(":scope > tr").forEach(function (row, i) {
+        lineItemsBody().querySelectorAll(":scope > .item-row").forEach(function (row, i) {
             var qty = parseFloat(row.querySelector(".line-qty")?.value) || 0;
             var price = parseFloat(row.querySelector(".line-price")?.value) || 0;
             var lineSubtotal = qty * price;
@@ -87,9 +99,9 @@
             var subtotalEl = document.getElementById("subtotal-" + i);
             if (subtotalEl) subtotalEl.textContent = lineSubtotal.toFixed(2);
 
-            var taxesBody = document.getElementById("taxes-" + i);
-            if (taxesBody) {
-                taxesBody.querySelectorAll(":scope > tr").forEach(function (taxRow) {
+            var taxesSection = document.getElementById("taxes-" + i);
+            if (taxesSection) {
+                taxesSection.querySelectorAll(":scope > .tax-row").forEach(function (taxRow) {
                     var pct = parseFloat(taxRow.querySelector(".tax-percentage")?.value) || 0;
                     var amountInput = taxRow.querySelector(".tax-amount");
                     var amount = pct > 0 ? (lineSubtotal * pct / 100) : (parseFloat(amountInput?.value) || 0);
@@ -116,25 +128,26 @@
     }
 
     window.addTax = function (itemIndex) {
-        var taxesBody = document.getElementById("taxes-" + itemIndex);
-        if (!taxesBody) return;
-        var nextTaxIndex = taxesBody.querySelectorAll(":scope > tr").length;
-        taxesBody.insertAdjacentHTML("beforeend", newTaxRowHtml(itemIndex, nextTaxIndex));
+        var taxesSection = document.getElementById("taxes-" + itemIndex);
+        if (!taxesSection) return;
+        var nextTaxIndex = taxesSection.querySelectorAll(":scope > .tax-row").length;
+        taxesSection.insertAdjacentHTML("beforeend", newTaxRowHtml(itemIndex, nextTaxIndex));
         recalcAll();
     };
 
     window.removeTax = function (button) {
-        var row = button.closest("tr");
-        var taxesBody = row.closest("tbody");
+        var row = button.closest(".tax-row");
+        var taxesSection = row.closest('[id^="taxes-"]');
+        var itemIndex = parseInt(taxesSection.closest(".item-row").getAttribute("data-item-index"), 10);
         row.remove();
-        reindexTaxRows(taxesBody, parseInt(taxesBody.closest("tr").getAttribute("data-item-index"), 10));
+        reindexTaxRows(taxesSection, itemIndex);
         recalcAll();
     };
 
     window.removeItem = function (button) {
-        var row = button.closest("tr");
+        var row = button.closest(".item-row");
         // Keep at least one line — an invoice needs at least one item.
-        if (lineItemsBody().querySelectorAll(":scope > tr").length <= 1) return;
+        if (lineItemsBody().querySelectorAll(":scope > .item-row").length <= 1) return;
         row.remove();
         reindexRows();
         recalcAll();
@@ -144,7 +157,7 @@
         var addItemBtn = document.getElementById("addItemBtn");
         if (addItemBtn) {
             addItemBtn.addEventListener("click", function () {
-                var nextIndex = lineItemsBody().querySelectorAll(":scope > tr").length;
+                var nextIndex = lineItemsBody().querySelectorAll(":scope > .item-row").length;
                 lineItemsBody().insertAdjacentHTML("beforeend", newLineRowHtml(nextIndex));
                 var itemCount = document.getElementById("itemCount");
                 if (itemCount) itemCount.value = nextIndex + 1;
