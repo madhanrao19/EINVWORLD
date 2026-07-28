@@ -31,7 +31,7 @@
                 Two-Factor Authentication: @(Model.CurrentUserTwoFactorEnabled ? "Enabled" : "Not Enabled")
             </span>
         </div>
-        <a asp-page="/Account/Manage/TwoFactorAuthentication" class="btn btn-outline-primary btn-sm">
+        <a asp-area="Identity" asp-page="/Account/Manage/TwoFactorAuthentication" class="btn btn-outline-primary btn-sm">
             Manage Two-Factor Authentication
         </a>
     </div>
