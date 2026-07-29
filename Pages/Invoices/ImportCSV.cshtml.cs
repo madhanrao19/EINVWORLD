@@ -41,10 +41,11 @@ namespace EINVWORLD.Pages.Invoices
             IOptions<FilePathConfig> filePathConfig,
             ILogger<ImportCSVModel> logger,
             IWebHostEnvironment env,
-            eInvWorld.Services.InvoiceService invoiceService) : base(context)
+            eInvWorld.Services.InvoiceService invoiceService,
+            eInvWorld.Services.IDocumentSigningService signingService) : base(context)
         {
             _context = context;
-            _invoiceMapper = new InvoiceMapper(_context);
+            _invoiceMapper = new InvoiceMapper(_context, signingService);
             _statusMappingService = statusMappingService;
             _invoiceHistoryService = invoiceHistoryService;
             _filePathConfig = filePathConfig.Value;
