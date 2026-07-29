@@ -122,6 +122,18 @@ namespace eInvWorld.Pages.Suppliers
             company.IsAdminCreated = true;
             company.IsApproved = User.IsInRole("Admin");
 
+            // Custom roles this company created (CompanyRole.PartyInfoId) have no meaning once the
+            // company is gone and aren't referenced elsewhere, unlike invoices — remove them up front
+            // rather than blocking the delete (the FK is Restrict, not Cascade; see ApplicationDbContext).
+            var customRoles = await _context.CompanyRoles.Where(r => r.PartyInfoId == id).ToListAsync();
+            if (customRoles.Count > 0)
+            {
+                await _context.UserCompanies
+                    .Where(uc => uc.PartyInfoId == id && customRoles.Select(r => r.CompanyRoleId).Contains(uc.CompanyRoleId ?? 0))
+                    .ForEachAsync(uc => uc.CompanyRoleId = null);
+                _context.CompanyRoles.RemoveRange(customRoles);
+            }
+
             _context.PartyInfos.Remove(company);
             try
             {

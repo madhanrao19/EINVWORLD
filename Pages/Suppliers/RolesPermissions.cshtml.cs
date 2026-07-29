@@ -61,7 +61,11 @@ namespace eInvWorld.Pages.Suppliers
 
             CanManageUsers = isAdmin || (userId != null && await _companyAuth.HasPermissionAsync(userId, id.Value, CompanyPermission.ManageUsers));
 
-            AvailableRoles = await _context.CompanyRoles.OrderBy(r => r.CompanyRoleId).ToListAsync();
+            // System-wide roles (Owner/Admin/Editor/Viewer) plus any custom role this company created.
+            AvailableRoles = await _context.CompanyRoles
+                .Where(r => r.PartyInfoId == null || r.PartyInfoId == id)
+                .OrderBy(r => r.CompanyRoleId)
+                .ToListAsync();
 
             Memberships = await _context.UserCompanies
                 .Include(uc => uc.User)
@@ -123,6 +127,98 @@ namespace eInvWorld.Pages.Suppliers
             });
 
             TempData["SuccessMessage"] = "Role updated.";
+            return RedirectToPage(new { id = partyInfoId });
+        }
+
+        /// <summary>Creates a custom role scoped to this company only — never touches the shared
+        /// system-wide roles (Owner/Admin/Editor/Viewer) other companies also use.</summary>
+        public async Task<IActionResult> OnPostCreateRoleAsync(int partyInfoId, string name,
+            bool canManageUsers, bool canEditProfile, bool canManageBranding, bool canViewAudit)
+        {
+            var userId = _userManager.GetUserId(User);
+            bool isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin)
+            {
+                bool allowed = userId != null && await _companyAuth.HasPermissionAsync(userId, partyInfoId, CompanyPermission.ManageUsers);
+                if (!allowed)
+                {
+                    TempData["ErrorMessage"] = "You do not have permission to manage roles for this company.";
+                    return RedirectToPage(new { id = partyInfoId });
+                }
+            }
+
+            name = (name ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                TempData["ErrorMessage"] = "Enter a role name.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
+            bool nameTaken = await _context.CompanyRoles
+                .AnyAsync(r => (r.PartyInfoId == null || r.PartyInfoId == partyInfoId) && r.Name == name);
+            if (nameTaken)
+            {
+                TempData["ErrorMessage"] = "A role with this name already exists for this company.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
+            _context.CompanyRoles.Add(new CompanyRole
+            {
+                Name = name,
+                CanManageUsers = canManageUsers,
+                CanEditProfile = canEditProfile,
+                CanManageBranding = canManageBranding,
+                CanViewAudit = canViewAudit,
+                IsSystemDefined = false,
+                PartyInfoId = partyInfoId,
+            });
+            await _context.SaveChangesAsync();
+
+            var companyTin = await _context.PartyInfos.Where(p => p.PartyInfoId == partyInfoId).Select(p => p.TIN).FirstOrDefaultAsync();
+            await _auditService.WriteAsync("Company.RoleCreated", new AuditEntry
+            {
+                Tin = companyTin,
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { PartyInfoId = partyInfoId, RoleName = name }),
+            });
+
+            TempData["SuccessMessage"] = $"Role \"{name}\" created.";
+            return RedirectToPage(new { id = partyInfoId });
+        }
+
+        /// <summary>Deletes a custom role this company created. System-wide roles and roles belonging
+        /// to another company can never be removed here. Members holding the role fall back to
+        /// "no role" (legacy access flags), same as unassigning it.</summary>
+        public async Task<IActionResult> OnPostDeleteRoleAsync(int partyInfoId, int companyRoleId)
+        {
+            var userId = _userManager.GetUserId(User);
+            bool isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin)
+            {
+                bool allowed = userId != null && await _companyAuth.HasPermissionAsync(userId, partyInfoId, CompanyPermission.ManageUsers);
+                if (!allowed)
+                {
+                    TempData["ErrorMessage"] = "You do not have permission to manage roles for this company.";
+                    return RedirectToPage(new { id = partyInfoId });
+                }
+            }
+
+            var role = await _context.CompanyRoles.FirstOrDefaultAsync(r => r.CompanyRoleId == companyRoleId);
+            if (role == null || role.IsSystemDefined || role.PartyInfoId != partyInfoId)
+            {
+                TempData["ErrorMessage"] = "This role cannot be deleted.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
+            // Unassign from any member currently holding it — same effect as picking "-- No role --".
+            var holders = await _context.UserCompanies.Where(uc => uc.CompanyRoleId == companyRoleId).ToListAsync();
+            foreach (var m in holders) m.CompanyRoleId = null;
+
+            _context.CompanyRoles.Remove(role);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Role \"{role.Name}\" deleted.";
             return RedirectToPage(new { id = partyInfoId });
         }
     }
