@@ -48,7 +48,7 @@
                             <label class="form-label">Create a Password</label>
                             <input asp-for="Input.Password" class="form-control" type="password" required />
                             <span asp-validation-for="Input.Password" class="text-danger"></span>
-                            <div class="form-text">This is your own password — no one else will know it.</div>
+                            <div class="form-text">This is your own password — no one else will know it. At least 6 characters, with an uppercase letter, a lowercase letter, a number, and a symbol.</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Confirm Password</label>
