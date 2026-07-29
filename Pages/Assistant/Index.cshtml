@@ -55,7 +55,7 @@
 
 @if (!string.IsNullOrEmpty(Model.ErrorText))
 {
-    <div class="alert alert-danger">@Model.ErrorText</div>
+    <div class="alert @(Model.IsSoftError ? "alert-warning" : "alert-danger")">@Model.ErrorText</div>
 }
 
 <div class="row g-4">
@@ -87,32 +87,40 @@
     </div>
 
     <div class="col-lg-9">
-        <div class="card border-0 shadow-sm assistant-panel" data-panel="ask" style="display: none;">
-            <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-chat-3-line align-bottom me-1"></i>Ask a Question</h5></div>
-            <div class="card-body">
+        <div class="card border-0 shadow-sm assistant-panel einv-chat-card" data-panel="ask" style="display: none;">
+            <div class="card-header-clean d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 fw-bold text-dark"><i class="ri-chat-3-line align-bottom me-1"></i>Ask a Question</h5>
                 @if (Model.Conversation.Count > 0)
                 {
-                    <div class="mb-3" style="max-height: 360px; overflow-y: auto;">
-                        @foreach (var turn in Model.Conversation)
-                        {
-                            var isUser = turn.Role == "user";
-                            <div class="mb-2">
-                                <span class="badge @(isUser ? "bg-primary" : "bg-secondary")">@(isUser ? "You" : "Assistant")</span>
-                                <div class="border rounded p-2 mt-1 @(isUser ? "bg-white" : "bg-light")" style="white-space:pre-wrap;">@turn.Content</div>
-                            </div>
-                        }
-                    </div>
-                    <hr />
+                    <button type="submit" form="askForm" formaction="?handler=NewChat" class="btn btn-sm btn-outline-secondary"><i class="ri-add-line align-bottom"></i> New chat</button>
                 }
-                <form method="post" asp-page-handler="Ask">
-                    <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
-                    <textarea name="Question" class="form-control mb-2" rows="3"
-                              placeholder="e.g. When should I use a Credit Note vs a Refund Note?">@Model.Question</textarea>
-                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Ask</button>
-                    @if (Model.Conversation.Count > 0)
+            </div>
+            <div class="einv-chat-thread">
+                @if (Model.Conversation.Count == 0)
+                {
+                    <div class="einv-chat-empty text-muted text-center">
+                        <i class="ri-chat-3-line" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2">Ask anything about Malaysian e-invoicing — try "When should I use a Credit Note vs a Refund Note?"</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var turn in Model.Conversation)
                     {
-                        <button type="submit" asp-page-handler="NewChat" class="btn btn-outline-secondary">New chat</button>
+                        var isUser = turn.Role == "user";
+                        <div class="einv-chat-msg @(isUser ? "einv-chat-msg-user" : "einv-chat-msg-assistant")">
+                            <div class="einv-chat-avatar"><i class="@(isUser ? "ri-user-3-fill" : "ri-robot-2-fill")"></i></div>
+                            <div class="einv-chat-bubble">@turn.Content</div>
+                        </div>
                     }
+                }
+            </div>
+            <div class="einv-chat-composer">
+                <form method="post" asp-page-handler="Ask" id="askForm" class="d-flex align-items-end gap-2">
+                    <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
+                    <textarea name="Question" id="askTextarea" class="form-control einv-chat-input" rows="1"
+                              placeholder="Message the assistant..." disabled="@(!Model.Enabled)">@Model.Question</textarea>
+                    <button type="submit" class="btn btn-primary einv-chat-send" disabled="@(!Model.Enabled)"><i class="ri-send-plane-2-fill"></i></button>
                 </form>
             </div>
         </div>
@@ -120,11 +128,11 @@
         <div class="card border-0 shadow-sm assistant-panel" data-panel="suggest" style="display: none;">
             <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-file-text-line align-bottom me-1"></i>Create from Description</h5></div>
             <div class="card-body">
-                <form method="post" asp-page-handler="Suggest">
+                <form method="post" asp-page-handler="Suggest" class="d-flex align-items-end gap-2">
                     <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
-                    <textarea name="Description" class="form-control mb-2" rows="3"
-                              placeholder="e.g. Sold 3 laptops to Acme Sdn Bhd in Penang at RM4500 each, 8% SST.">@Model.Description</textarea>
-                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Suggest Invoice</button>
+                    <textarea name="Description" class="form-control einv-chat-input" rows="1"
+                              placeholder="e.g. Sold 3 laptops to Acme Sdn Bhd in Penang at RM4500 each, 8% SST." disabled="@(!Model.Enabled)">@Model.Description</textarea>
+                    <button type="submit" class="btn btn-primary einv-chat-send" disabled="@(!Model.Enabled)"><i class="ri-send-plane-2-fill"></i></button>
                 </form>
                 @if (!string.IsNullOrEmpty(Model.SuggestionJson))
                 {
@@ -162,11 +170,11 @@
             <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-error-warning-line align-bottom me-1"></i>Fix an Error (LHDN)</h5></div>
             <div class="card-body">
                 <p class="text-muted mb-2"><small>Paste the rejection / validation error from MyInvois (or from the invoice's status) and get a plain-English explanation plus how to fix it.</small></p>
-                <form method="post" asp-page-handler="ExplainRejection">
+                <form method="post" asp-page-handler="ExplainRejection" class="d-flex align-items-end gap-2">
                     <input type="hidden" name="ChatHistoryJson" value="@Model.ChatHistoryJson" />
-                    <textarea name="RejectionText" class="form-control mb-2" rows="4"
-                              placeholder="e.g. CF321 - The TIN does not match the registered taxpayer for the supplied registration number.">@Model.RejectionText</textarea>
-                    <button type="submit" class="btn btn-primary" disabled="@(!Model.Enabled)">Explain &amp; Suggest Fix</button>
+                    <textarea name="RejectionText" class="form-control einv-chat-input" rows="1"
+                              placeholder="e.g. CF321 - The TIN does not match the registered taxpayer for the supplied registration number." disabled="@(!Model.Enabled)">@Model.RejectionText</textarea>
+                    <button type="submit" class="btn btn-primary einv-chat-send" disabled="@(!Model.Enabled)"><i class="ri-send-plane-2-fill"></i></button>
                 </form>
                 @if (!string.IsNullOrEmpty(Model.RejectionExplanation))
                 {
@@ -184,6 +192,86 @@
         color: var(--primary-text, #0c5434);
         font-weight: 600;
     }
+
+    /* Chat-style thread (Ask panel): scrolling message list + sticky bottom composer, like Gemini/ChatGPT. */
+    .einv-chat-card {
+        display: flex;
+        flex-direction: column;
+        height: 70vh;
+        min-height: 420px;
+    }
+
+    .einv-chat-thread {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .einv-chat-empty {
+        margin: auto;
+        max-width: 360px;
+    }
+
+    .einv-chat-msg {
+        display: flex;
+        gap: 0.6rem;
+        max-width: 85%;
+    }
+
+    .einv-chat-msg-user {
+        flex-direction: row-reverse;
+        align-self: flex-end;
+        text-align: right;
+    }
+
+    .einv-chat-avatar {
+        flex: 0 0 auto;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-soft, #e9f5ee);
+        color: var(--primary-text, #0c5434);
+    }
+
+    .einv-chat-bubble {
+        white-space: pre-wrap;
+        padding: 0.65rem 0.9rem;
+        border-radius: 0.9rem;
+        background: #f4f6f8;
+    }
+
+    .einv-chat-msg-user .einv-chat-bubble {
+        background: var(--primary-soft, #e9f5ee);
+        color: var(--primary-text, #0c5434);
+    }
+
+    .einv-chat-composer {
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 0.75rem 1rem;
+    }
+
+    .einv-chat-input {
+        resize: none;
+        max-height: 160px;
+        overflow-y: auto;
+    }
+
+    .einv-chat-send {
+        flex: 0 0 auto;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        padding: 0;
+    }
 </style>
 
 @section Scripts {
@@ -200,6 +288,24 @@
             });
             activate('@activeMode');
         })();
+
+        // Auto-resize every chat composer textarea, and let Enter submit (Shift+Enter = newline),
+        // like Gemini/ChatGPT's message box.
+        document.querySelectorAll('.einv-chat-input').forEach(function (ta) {
+            function resize() { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'; }
+            ta.addEventListener('input', resize);
+            resize();
+            ta.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    ta.form.requestSubmit();
+                }
+            });
+        });
+
+        // Keep the conversation scrolled to the latest message.
+        var thread = document.querySelector('.einv-chat-thread');
+        if (thread) thread.scrollTop = thread.scrollHeight;
 
         var btn = document.getElementById('useSuggestionBtn');
         if (btn) {

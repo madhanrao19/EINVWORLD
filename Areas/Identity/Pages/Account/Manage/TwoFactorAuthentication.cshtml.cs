@@ -86,5 +86,26 @@ namespace eInvWorld.Areas.Identity.Pages.Account.Manage
             StatusMessage = "The current browser has been forgotten. When you login again from this browser you will be prompted for your 2fa code.";
             return RedirectToPage();
         }
+
+        // Re-enables 2FA for a user who already has an authenticator configured but disabled it
+        // (e.g. via Disable2fa) — a one-click toggle instead of forcing a full re-setup.
+        public async Task<IActionResult> OnPostEnableAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
+            }
+
+            if (await _userManager.GetAuthenticatorKeyAsync(user) == null)
+            {
+                StatusMessage = "Error: set up an authenticator app before enabling 2FA.";
+                return RedirectToPage();
+            }
+
+            await _userManager.SetTwoFactorEnabledAsync(user, true);
+            StatusMessage = "Two-factor authentication has been enabled.";
+            return RedirectToPage();
+        }
     }
 }
