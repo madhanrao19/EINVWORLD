@@ -79,7 +79,7 @@ else
                                                 View
                                             </button>
                                             <div class="collapse" id="detail-@entry.Id">
-                                                <pre class="small bg-light p-2 rounded mt-1 mb-0">@entry.NewValueJson</pre>
+                                                <pre class="small text-dark bg-light border p-2 rounded mt-1 mb-0 einv-audit-detail">@entry.NewValueJson</pre>
                                             </div>
                                         }
                                         else
@@ -118,4 +118,16 @@ else
             }
         </div>
     </div>
+}
+
+@section Scripts {
+    <script>
+        // Audit "Details" blobs are stored as compact JSON; pretty-print for readability.
+        // Falls back to the raw text unchanged if it isn't valid JSON.
+        document.querySelectorAll('.einv-audit-detail').forEach(function (el) {
+            try {
+                el.textContent = JSON.stringify(JSON.parse(el.textContent), null, 2);
+            } catch { /* not JSON — leave as-is */ }
+        });
+    </script>
 }
