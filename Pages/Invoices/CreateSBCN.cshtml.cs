@@ -51,11 +51,12 @@ namespace EINVWORLD.Pages.Invoices
             IOptions<FilePathConfig> filePathConfig,
             IConfiguration configuration,
             IStatusMappingService statusMappingService,
-            EINVWORLD.Services.Background.ISyncJobTracker jobTracker)
+            EINVWORLD.Services.Background.ISyncJobTracker jobTracker,
+            eInvWorld.Services.IDocumentSigningService signingService)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
-            _invoiceMapper = new InvoiceMapper(_context);
+            _invoiceMapper = new InvoiceMapper(_context, signingService);
             _invoiceService = invoiceService;
             _lhdnApiService = lhdnApiService ?? throw new ArgumentNullException(nameof(lhdnApiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

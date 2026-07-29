@@ -1,5 +1,6 @@
 using System.Net;
 using System.Threading.RateLimiting;
+using Microsoft.Extensions.Configuration;
 
 namespace EINVWORLD.Services
 {
@@ -8,14 +9,19 @@ namespace EINVWORLD.Services
     /// per-API request limits. One token-bucket per endpoint class, each capped a little under
     /// the official RPM so we never trip the server-side 429 in normal operation.
     ///
-    /// The buckets are process-wide (static). On a SINGLE-INSTANCE deployment this is correct and
-    /// safe: a global cap that is &lt;= the per-TIN limit can never exceed any single TIN's limit.
-    /// If this app is ever scaled to multiple instances behind a load balancer, this must move to a
-    /// shared/distributed limiter (e.g. Redis) — see PRODUCTION-READINESS-REVIEW.md §2.6.
+    /// Registered as a DI singleton (see Program.cs) so the SAME limiter instances back every
+    /// HttpClient built from it — including across IHttpClientFactory's periodic handler-pool
+    /// rotation (default every 2 minutes), which would otherwise silently reset the buckets.
+    /// On a SINGLE-INSTANCE deployment this is correct and safe: a global cap that is &lt;= the
+    /// per-TIN limit can never exceed any single TIN's limit. If this app is ever scaled to
+    /// multiple instances behind a load balancer, this must move to a shared/distributed limiter
+    /// (e.g. Redis) — see PRODUCTION-READINESS-REVIEW.md §2.6.
     ///
-    /// Official limits (verify against the current MyInvois SDK portal — they change and differ
-    /// between preprod/prod): token 12 · validate 60 · submit 100 · get-submission 300 ·
-    /// search/recent 12 · get-document 60 · cancel/reject 12.
+    /// Per-minute limits are configurable via LHDNApiConfig:RateLimits:* (see appsettings.json) —
+    /// the SDK's official limits differ between preprod/sandbox and production, so an environment
+    /// can override any of them without a code change. Values below are the defaults when a key
+    /// isn't set, matched to the current SDK's preprod limits: token 12 · validate 60 · submit 100 ·
+    /// get-submission 300 · search/recent 12 · get-document 60 · cancel/reject 12.
     ///
     /// IMPORTANT — requests are PACED EVENLY, not bursted. A token bucket sized at the full per-minute
     /// limit (e.g. 50 tokens) lets 50 requests fire in one instant; LHDN enforces a tighter window and
@@ -25,15 +31,31 @@ namespace EINVWORLD.Services
     /// </summary>
     public class LhdnRateLimitHandler : DelegatingHandler
     {
-        // PacedBucket(perMinute, burst): sustained ≈ perMinute, max instantaneous burst = burst.
-        private static readonly RateLimiter _token    = PacedBucket(10,  burst: 1);  // official 12  (/connect/token)
-        private static readonly RateLimiter _validate = PacedBucket(50,  burst: 2);  // official 60  (/taxpayer/validate)
-        private static readonly RateLimiter _submit   = PacedBucket(60,  burst: 3);  // official 100 (POST /documentsubmissions)
-        private static readonly RateLimiter _poll     = PacedBucket(200, burst: 5);  // official 300 (GET  /documentsubmissions/{id})
-        private static readonly RateLimiter _search   = PacedBucket(10,  burst: 1);  // official 12  (/documents/search)
-        private static readonly RateLimiter _getDoc   = PacedBucket(50,  burst: 2);  // official ~60 (/documents/{uuid}/raw) — main 429 source
-        private static readonly RateLimiter _state    = PacedBucket(10,  burst: 1);  // official 12  (PUT /documents/state/{id}/state)
-        private static readonly RateLimiter _general  = PacedBucket(20,  burst: 2);  // fallback for anything else
+        private readonly RateLimiter _token;
+        private readonly RateLimiter _validate;
+        private readonly RateLimiter _submit;
+        private readonly RateLimiter _poll;
+        private readonly RateLimiter _search;
+        private readonly RateLimiter _getDoc;
+        private readonly RateLimiter _state;
+        private readonly RateLimiter _general;
+
+        public LhdnRateLimitHandler(IConfiguration configuration)
+        {
+            const string section = "LHDNApiConfig:RateLimits:";
+            int PerMinute(string key, int fallback) => configuration.GetValue($"{section}{key}", fallback);
+
+            // (perMinute, burst): sustained ≈ perMinute, max instantaneous burst = burst. Burst sizes
+            // are an internal pacing detail (not an LHDN-published limit), so they stay fixed.
+            _token = PacedBucket(PerMinute("TokenPerMinute", 10), burst: 1);       // official 12  (/connect/token)
+            _validate = PacedBucket(PerMinute("ValidatePerMinute", 50), burst: 2); // official 60  (/taxpayer/validate)
+            _submit = PacedBucket(PerMinute("SubmitPerMinute", 60), burst: 3);     // official 100 (POST /documentsubmissions)
+            _poll = PacedBucket(PerMinute("PollPerMinute", 200), burst: 5);        // official 300 (GET  /documentsubmissions/{id})
+            _search = PacedBucket(PerMinute("SearchPerMinute", 10), burst: 1);     // official 12  (/documents/search)
+            _getDoc = PacedBucket(PerMinute("GetDocPerMinute", 50), burst: 2);     // official ~60 (/documents/{uuid}/raw) — main 429 source
+            _state = PacedBucket(PerMinute("StatePerMinute", 10), burst: 1);       // official 12  (PUT /documents/state/{id}/state)
+            _general = PacedBucket(PerMinute("GeneralPerMinute", 20), burst: 2);   // fallback for anything else
+        }
 
         private static RateLimiter PacedBucket(int perMinute, int burst) => new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
@@ -63,7 +85,7 @@ namespace EINVWORLD.Services
             return await base.SendAsync(request, cancellationToken);
         }
 
-        private static RateLimiter SelectLimiter(HttpRequestMessage request)
+        private RateLimiter SelectLimiter(HttpRequestMessage request)
         {
             var path = request.RequestUri?.AbsolutePath.ToLowerInvariant() ?? string.Empty;
             var method = request.Method;

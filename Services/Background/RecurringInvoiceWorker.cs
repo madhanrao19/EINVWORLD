@@ -56,6 +56,7 @@ namespace eInvWorld.Services.Background
             var lhdnApiService = scope.ServiceProvider.GetRequiredService<LHDNApiService>();
             var filePathConfig = scope.ServiceProvider.GetRequiredService<IOptions<FilePathConfig>>().Value;
             var statusMappingService = scope.ServiceProvider.GetRequiredService<IStatusMappingService>();
+            var signingService = scope.ServiceProvider.GetRequiredService<eInvWorld.Services.IDocumentSigningService>();
 
             var mytTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur");
             var mytNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, mytTimeZone);
@@ -175,7 +176,7 @@ namespace eInvWorld.Services.Background
                     context.InvoiceHeaders.Add(newInvoice);
                     historyLog.GeneratedInvoiceNo = newInvoiceNo;
 
-                    var invoiceMapper = new InvoiceMapper(context);
+                    var invoiceMapper = new InvoiceMapper(context, signingService);
                     string invoiceJson = invoiceMapper.MapToJsonModel(newInvoice);
 
                     var draftsFolder = filePathConfig.DraftFolder;
