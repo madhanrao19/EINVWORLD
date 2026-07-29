@@ -177,6 +177,13 @@ Persisted via `ApplicationDbContext` (database `EINVWORLD`). Key entities:
 - `LHDNToken` (per-TIN cached OAuth token, unique on TIN) / `LHDNTokenLog`.
 - `SubmissionRecord` — idempotency: hash of a submitted payload + the response (replay-on-duplicate).
 - `SyncJob` — durable background job rows (queue + retry + lock fields).
+- `CompanyRole` — a company-scoped permission set (ManageUsers/EditProfile/ManageBranding/ViewAudit)
+  assignable to a `UserCompany` membership. 4 system rows (Owner/Admin/Editor/Viewer, `PartyInfoId =
+  null`) are shared by every company; a Supplier Owner/Admin can additionally create custom roles
+  scoped to just their own company (`PartyInfoId` set) via Roles & Permissions.
+- `RoleModulePermission` — whether a global Identity role (Supplier/Buyer; Admin always has full access)
+  may access a given app module (Invoices, Recurring Invoices, Company Management, ...). Managed on
+  **Admin → Role Management**; a missing row defaults to allowed.
 
 **Reference data** (seeded from `wwwroot/codes/*.json`)
 - `ClassificationCode`, `TaxType`, `CurrencyCode`, `CountryCode`, `StateCode`, `UnitType`,
@@ -201,6 +208,11 @@ submit/cancel/reject/poll/search.
 **Document types** (8): `01` Invoice, `02` Credit Note, `03` Debit Note, `04` Refund Note, `11`
 Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed RN.
 
+**Field validation** — `InvoiceMapper` enforces LHDN SDK constraints before building the UBL JSON:
+currency exchange rate required when the currency isn't MYR, and every invoice line's unit-of-measure
+code validated against the active `UnitType` table (the official LHDN unit-code list) — not just the
+Create Invoice form's dropdown, so CSV import, templates, and recurring invoices are covered too.
+
 **Endpoints used** (`api/v1.0/…`): `taxpayer/validate`, `documentsubmissions` (submit + poll by
 `submissionUid`), `documents/search`, `documents/state/{id}/state` (cancel/reject), document details.
 
@@ -209,7 +221,12 @@ Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed 
 `TokenRenewalService` keeps tokens warm.
 
 **Rate limiting** — `LhdnRateLimitHandler` is attached to **every** LHDN client (incl. the token
-client) and paces each endpoint below MyInvois' per-minute limits to avoid `429` storms.
+client) and paces each endpoint below MyInvois' per-minute limits to avoid `429` storms. Per-endpoint
+ceilings are read from `LHDNApiConfig:RateLimits:*` (`TokenPerMinute`, `ValidatePerMinute`,
+`SubmitPerMinute`, `PollPerMinute`, `SearchPerMinute`, `GetDocPerMinute`, `StatePerMinute`,
+`GeneralPerMinute`), falling back to the current SDK's preprod limits if unset — override per
+environment if production limits are confirmed to differ. Registered as a DI **singleton** (not
+transient) so the token buckets survive `IHttpClientFactory`'s periodic handler-pool rotation.
 > **Single-instance assumption:** these rate-limit buckets are **per process** (in-memory). The app is
 > designed to run as a **single instance**. If you ever scale to multiple instances behind a load
 > balancer, the per-instance buckets would multiply the effective LHDN call rate — move to a shared
@@ -225,6 +242,9 @@ POST could create a duplicate document).
 **`ICertificateProvider`** (`Services/Signing/`), selected by `LHDNApiConfig:SigningKeyProvider` —
 `"File"` (default) loads the `.p12` from `CertPath`; a vault/HSM provider (e.g. Azure Key Vault) is a
 drop-in registration with no signing-service change (see SECRETS-SETUP.md "Signing-key custody").
+`InvoiceMapper` reads `IDocumentSigningService.Enabled`/`DocVersion` to pick the document version it
+declares: 1.0 (unsigned) / 1.1 (signed) normally, 1.2 (unsigned) / 1.3 (signed) for SVDP — so enabling
+signing correctly upgrades both regular and SVDP submissions to their signed version.
 
 ---
 
@@ -297,6 +317,16 @@ Appends are serialised and isolated (own DbContext); writing never throws to the
 access; `SafePath.TryResolve` blocks path traversal on all file-serving endpoints; uploads are
 extension/size/magic-byte validated and stored outside `wwwroot`.
 
+**Module access (Role Management)** — a global Razor Pages filter (`ModuleAccessPageFilter`) runs after
+each page's own `[Authorize(Roles=...)]` gate and checks the `RoleModulePermission` grid (**Admin →
+Role Management**) for the current user's role. Admin always passes; a module with no configured row
+defaults to allowed, so this is purely additive on top of existing authorization — it only ever
+narrows access an Admin has explicitly restricted, never widens it.
+
+**Company user management** — a Supplier Owner/Admin (`CompanyPermission.ManageUsers`) can invite,
+remove, and reassign the role of members within their own company (`Pages/Suppliers/Users.cshtml.cs` /
+`RolesPermissions.cshtml.cs`); guarded against self-removal and removing the last Owner.
+
 **Transport / headers** — HTTPS + HSTS; security headers (`X-Content-Type-Options`, `X-Frame-Options`,
 `Referrer-Policy`, …); **CSP in Report-Only** mode with a `/csp-report` collector (to be promoted to
 enforcing once violations are reviewed); antiforgery on state-changing forms; Cloudflare Turnstile on
@@ -366,8 +396,9 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 - **Admin → Webhooks** manages subscriptions (register / rotate secret / enable-disable / delete / test).
   Secrets are generated server-side, shown once, and stored encrypted (DataProtection). Config: `Webhooks`.
 
-**Admin & ops** — user/company management, resources (CMS), system logs, **Sync Jobs**, **Audit Trail**,
-**System Health**, **Webhooks**, global theme, dashboards/KPIs.
+**Admin & ops** — user/company management, **Role Management** (global role catalog + per-role module
+access grid), resources (CMS), system logs, **Sync Jobs**, **Audit Trail**, **System Health**,
+**Webhooks**, global theme, dashboards/KPIs.
 
 ---
 
@@ -412,7 +443,7 @@ blank in files and supplied via env vars / user-secrets.
 | `SyncFailureAlerts` | Optional email when failed sync jobs pile up: `Enabled` (default false), `RecipientEmail`, `Threshold`, `CheckMinutes`, `CooldownHours`. Throttled. |
 | `Webhooks` | Outbound customer-ERP webhooks (default OFF): `Enabled`, `DeliveryTimeoutSeconds` (default 15), `BlockPrivateNetworks` (SSRF guard, default true), `RequireHttps` (default true). Subscriptions managed in Admin → Webhooks; signing secrets encrypted at rest. |
 | `PDFGenerationSettings:TimeoutSeconds` | Max wait for a DinkToPdf render before abandoning it (default 60) so a hung render can't block the request. |
-| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (1.2 unsigned / 1.3 signed), `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`, `RateLimits:*` (per-endpoint requests-per-minute; see §6). |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |
 | `EmailConfiguration` | SMTP (**`SmtpPassword` secret**), base URLs, per-event subjects, notification toggles. |
 | `PDFGenerationSettings` | `Engine` (DinkToPdf/Puppeteer), `BaseUrl`, render delay, `ChromiumExecutablePath`. |
@@ -436,8 +467,10 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **75 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
-  into one, `ConsolidatedSchemaCatchup_v1_11_0` — see `DEPLOY-NOTES.md` §1). Auto-apply on startup
+- **77 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+  into one, `ConsolidatedSchemaCatchup_v1_11_0`). Two new additive migrations in v1.13.0:
+  `AddRoleModulePermissions` (new `RoleModulePermissions` table) and `AddCompanyRolePartyInfoScope`
+  (nullable `CompanyRole.PartyInfoId`) — see `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
   (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
   tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
   `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not

@@ -13,7 +13,8 @@ writes up how to *use* what's there under pressure.
 to a newly issued cert for any other reason.
 
 **Impact if you do nothing:** once the cert expires, every **signed** submission (`SigningEnabled=true`)
-will fail. Unsigned (v1.0) submission is unaffected — this only applies once signing is turned on.
+will fail — regular (1.1) and SVDP (1.3) alike. Unsigned submission (1.0, or 1.2 for SVDP) is
+unaffected — this only applies once signing is turned on.
 
 **Steps:**
 1. Obtain the new `.p12` certificate + password from your Malaysian CA (LHDNM/MCMC-recognised).
@@ -46,8 +47,9 @@ zero-downtime rotation via the dual `ClientSecret`/`ClientSecret2` slots — see
 or the Admin → Sync Jobs page shows a growing Failed backlog.
 
 **What already protects you (no action needed):**
-- `LhdnRateLimitHandler` paces outbound calls below LHDN's published per-endpoint RPM limits, so normal
-  traffic shouldn't trigger 429s in the first place.
+- `LhdnRateLimitHandler` paces outbound calls below LHDN's published per-endpoint RPM limits
+  (`LHDNApiConfig:RateLimits:*` — overridable per environment without a code change), so normal traffic
+  shouldn't trigger 429s in the first place.
 - `SendWithRetryAsync` (submission calls) honours LHDN's `Retry-After` and retries with growing,
   jittered backoff before giving up.
 - An interactive submission that still fails **automatically queues a `SubmitDocument` background retry**

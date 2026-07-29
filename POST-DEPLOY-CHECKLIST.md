@@ -19,6 +19,7 @@ bottom; stop and investigate on the first ❌.
 - [ ] First boot applied pending migrations (or you ran `Apply_*.sql`). ✅ no migration error; `__EFMigrationsHistory` up to date — compare its last row against the newest filename in `Migrations\*.cs`.
 - [ ] Spot-check a few tables load in the app (invoice list, users). ✅ data intact (migrations are additive — no data loss).
 - [ ] **v1.11.0 one-time step:** after migrations land, go to **Admin → System Health → Encrypt PII** and run the backfill (once per environment). ✅ existing bank-account/address data is now encrypted at rest, not just the schema widened. Safe to click again if unsure — it's idempotent.
+- [ ] **v1.13.0:** confirm `__EFMigrationsHistory` includes `AddRoleModulePermissions` and `AddCompanyRolePartyInfoScope` (last row). ✅ both additive — no data loss expected.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
@@ -54,6 +55,13 @@ bottom; stop and investigate on the first ❌.
 - [ ] Create/Edit an Item with a **Unit** and **Unit Price**. ✅ Unit validates against active LHDN unit codes; Unit Price stores 4 decimal places (`decimal(18,4)`) — check a fractional price like `12.3456` round-trips exactly, not rounded to 2dp.
 - [ ] Select a saved item on **Create Invoice**. ✅ the line's unit and price auto-fill from the item.
 
+## 2d. Role Management & company user administration (v1.13.0)
+- [ ] **Admin → User Management → Role Management** loads. ✅ shows the Identity role list (with `Admin`/`Supplier`/`Buyer` marked "Core") and the Module Access grid.
+- [ ] Create a new role, then delete it. ✅ appears in Manage Users' "Change Role" dropdown immediately; delete succeeds since unassigned.
+- [ ] Try to delete `Admin`, `Supplier`, or `Buyer`, or a role currently assigned to a user. ✅ blocked with a clear message.
+- [ ] Restrict a module for the Supplier role (uncheck it, Save), then log in as a Supplier and visit that module. ✅ redirected to Access Denied; re-check the box and access is restored. ✅ Admin is never affected by any restriction.
+- [ ] **Company Management → Users**: as a Supplier Owner/Admin, remove a team member. ✅ succeeds; trying to remove yourself or the last Owner ✅ blocked with a clear message.
+- [ ] **Company Management → Roles & Permissions**: create a custom role scoped to your company (name + permission checkboxes), assign it to a member, then delete it. ✅ the role and its "Custom" badge only appear for your own company; assigned members fall back to "no role" after deletion.
 
 - [ ] Create a **standard invoice (01)** with ≥2 lines + tax. ✅ totals correct (line extension / tax-exclusive / tax-inclusive / payable); draft saved with a `.json` file.
 - [ ] Create one of each remaining type used: **02 credit, 03 debit, 04 refund**, and **11–14 self-billed**. ✅ each maps and the `BillingReference` shape is right (01 = additional ref; 02–04 = invoice ref; 11–14 = both).
@@ -73,6 +81,8 @@ bottom; stop and investigate on the first ❌.
 - [ ] **Cancel/Reject** within the 72h window. ✅ succeeds; outside the window ✅ blocked with a clear message.
 - [ ] **Cancel vs background sync (v1.8.2):** cancel an invoice while background sync is enabled, then wait one sync cycle. ✅ the invoice stays **Cancelled** (concurrency token prevents a stale sync overwriting it; sync log may show a benign "concurrency conflict … skipping" warning).
 - [ ] Intermediary submit with `onbehalfof`. ✅ uses the right per-TIN token.
+- [ ] **(v1.13.0) Unit-code validation:** try to create/import an invoice line with an invalid/blank unit code (e.g. via CSV import, bypassing the Create Invoice dropdown). ✅ submission is rejected with a clear "invalid or missing unit of measure" error, not silently accepted.
+- [ ] **(v1.13.0) Signed SVDP, only if `SigningEnabled=true`:** submit an SVDP-flagged invoice. ✅ document declares version `1.3` (not `1.2`) and carries a valid XAdES signature; with `SigningEnabled=false`, SVDP invoices still submit as unsigned `1.2` as before.
 
 ## 5. Bulk import & connectors
 - [ ] **Bulk Import** a CSV and an XLSX (download the template first). ✅ per-row validation report against LHDN codes; valid rows create drafts.
