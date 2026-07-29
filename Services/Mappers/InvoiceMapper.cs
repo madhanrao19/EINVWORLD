@@ -2,6 +2,7 @@
 using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
+using eInvWorld.Services;
 using iTextSharp.text;
 using Newtonsoft.Json;
 using Serilog;
@@ -17,14 +18,20 @@ namespace eInvWorld.Services.Mappers
     public class InvoiceMapper
     {
         private readonly ApplicationDbContext? _context;
+        private readonly IDocumentSigningService? _signingService;
 
         /// <param name="context">Optional. When supplied, each line's <c>UnitOfMeasure</c> is validated
         /// against the official LHDN unit-code list (<see cref="eInvWorld.Models.UnitType"/>) before the
         /// UBL JSON is built. Omit only in contexts with no DB access (e.g. unit tests) — validation is
         /// then skipped, matching the previous behavior.</param>
-        public InvoiceMapper(ApplicationDbContext? context = null)
+        /// <param name="signingService">Optional. When supplied and <see cref="IDocumentSigningService.Enabled"/>
+        /// is true, documents are built as the signed version (1.1 normally, 1.3 for SVDP) instead of the
+        /// unsigned default (1.0 / 1.2) — see the <c>InvoiceTypeCode.listVersionID</c> assignment below.
+        /// Omit to always build the unsigned version, matching the previous behavior.</param>
+        public InvoiceMapper(ApplicationDbContext? context = null, IDocumentSigningService? signingService = null)
         {
             _context = context;
+            _signingService = signingService;
         }
 
         public string MapToJsonModel(InputModel.InvoiceHeader header)
@@ -76,6 +83,17 @@ namespace eInvWorld.Services.Mappers
 
             Log.Debug("InvoiceMapper: IsSelfBilled={IsSelfBilled}, SupplierTIN={SupplierTIN}, CustomerTIN={CustomerTIN}", isSelfBilledInvoice, EINVWORLD.Helpers.LogSanitizer.MaskTin(supplier?.TIN), EINVWORLD.Helpers.LogSanitizer.MaskTin(customer?.TIN));
 
+            // Document version: 1.0/1.2 (unsigned) unless v1.1 signing is enabled, in which case the
+            // signed variant is used — 1.1 normally, 1.3 for SVDP (LHDN SDK: SVDP 1.3 requires a digital
+            // signature). The signature itself is injected later, at submission time
+            // (IDocumentSigningService.PrepareDocumentForSubmission) — this only selects the version
+            // string the document must declare to match what will actually be sent.
+            bool signingEnabled = _signingService?.Enabled ?? false;
+            string signedVersion = string.IsNullOrWhiteSpace(_signingService?.DocVersion) ? "1.1" : _signingService!.DocVersion;
+            string listVersionId = header.IsSvdp
+                ? (signingEnabled ? "1.3" : "1.2")
+                : (signingEnabled ? signedVersion : "1.0");
+
             var root = new JsonModels.Root
             {
                 _D = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
@@ -90,11 +108,11 @@ namespace eInvWorld.Services.Mappers
                         IssueTime = new List<JsonModels.IssueTime> { new JsonModels.IssueTime { _ = header.IssueDate?.ToUniversalTime().ToString("HH:mm:ssZ") ?? string.Empty } },
                         InvoiceTypeCode = new List<JsonModels.InvoiceTypeCode>
                         {
-                            // "1.2" = e-Invoice Special Voluntary Disclosure Programme, unsigned (LHDN SDK
-                            // 8 Jul 2026, valid to 31 Dec 2027) — same UBL payload as 1.0, different version.
-                            // SVDP 1.3 (signed) is not emitted here; it additionally requires the signing
-                            // pipeline (LHDNApiConfig:SigningEnabled) which is off until a cert is bought.
-                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = header.IsSvdp ? "1.2" : "1.0" }
+                            // 1.0/1.1 = standard e-Invoice (unsigned/signed). 1.2/1.3 = e-Invoice Special
+                            // Voluntary Disclosure Programme (LHDN SDK 8 Jul 2026, valid to 31 Dec 2027),
+                            // unsigned/signed — same UBL payload as 1.0/1.1, different version. See
+                            // listVersionId computation above.
+                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = listVersionId }
                         },
                         DocumentCurrencyCode = new List<JsonModels.DocumentCurrencyCode> { new JsonModels.DocumentCurrencyCode { _ = header.Currency } },
                     InvoicePeriod = (header.StartDate == null && header.EndDate == null && header.InvoicePeriod == null)
