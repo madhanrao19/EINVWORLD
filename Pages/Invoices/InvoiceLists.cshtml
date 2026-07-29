@@ -884,7 +884,7 @@
                                                                         </a>
                                                                     </li>
                                                                 }
-                                                                @if (invoice.InternalStatusId == "Draft")
+                                                                @if (invoice.InternalStatusId == "Draft" || invoice.InternalStatusId == "TransmissionError")
                                                                 {
                                                                     <li>
                                                                         <a class="dropdown-item" href="@GetEditUrl(invoice.DocTypeCode, invoice.InvoiceNo)">

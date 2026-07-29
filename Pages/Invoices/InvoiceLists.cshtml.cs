@@ -492,14 +492,16 @@ namespace eInvWorld.Pages.Invoices
             var selfBilledTypes = new[] { "11", "12", "13", "14" };
             return direction switch
             {
+                // TransmissionError (submission never reached LHDN) is kept alongside Draft — the user
+                // needs to be able to fix and resubmit it exactly like a draft, not chase it into Sent.
                 "Draft" => query.Where(i =>
-                    i.InternalStatusId == "Draft" &&
+                    (i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError") &&
                     (
                         (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
                         (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
                     )),
                 "Sent" => query.Where(i =>
-                    i.InternalStatusId != "Draft" &&
+                    i.InternalStatusId != "Draft" && i.InternalStatusId != "TransmissionError" &&
                     (
                         (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
                         (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
@@ -681,7 +683,7 @@ namespace eInvWorld.Pages.Invoices
             try
             {
                 var invoice = await _context.InvoiceHeaders
-                    .FirstOrDefaultAsync(i => i.InvoiceNo == input.InvoiceNo && i.InternalStatusId == "Draft");
+                    .FirstOrDefaultAsync(i => i.InvoiceNo == input.InvoiceNo && (i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError"));
 
                 if (invoice == null)
                 {
@@ -1270,69 +1272,10 @@ namespace eInvWorld.Pages.Invoices
                     .Include(i => i.InvoiceLines).ThenInclude(l => l.InvoiceTaxes)
                     .AsQueryable();
 
-                // Apply Invoice Direction Filtering
-                if (!string.IsNullOrEmpty(invoiceDirection) && invoiceDirection != "All")
-                {
-                    var selfBilledTypes = new[] { "11", "12", "13", "14" };
-
-                    // ✅ ADDED SUPPORT FOR DRAFT EXPORTS
-                    if (invoiceDirection == "Draft")
-                    {
-                        query = query.Where(i =>
-                            i.InternalStatusId == "Draft" &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                            )
-                        );
-                    }
-                    else if (invoiceDirection == "Sent")
-                    {
-                        // Note: Standard 'Sent' excludes drafts.
-                        // If you want Sent to INCLUDE drafts, remove: i.InternalStatusId != "Draft" &&
-                        query = query.Where(i =>
-                            i.InternalStatusId != "Draft" &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                            )
-                        );
-                    }
-                    else if (invoiceDirection == "Received")
-                    {
-                        query = query.Where(i =>
-                            i.InternalStatusId != "Draft" &&
-                            i.InternalStatusId != "Invalid" &&
-                            i.LHDNStatusId != "Invalid" &&
-                            !string.IsNullOrEmpty(i.UUID) &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
-                            )
-                        );
-                    }
-                    else
-                    {
-                        // "All" (or any other value): still MUST scope to the user's own company TINs,
-                        // otherwise the export leaks every company's invoices. The user's TIN may be on
-                        // either party (issuer or counterparty), so accept a match on either side.
-                        query = query.Where(i =>
-                            userTINs.Contains(i.Supplier.TIN) ||
-                            (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                            (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                        );
-                    }
-                }
-                else
-                {
-                    // Empty direction: same mandatory company scope as "All" above (defense against
-                    // dropping the filter entirely via a blank invoiceDirection query param).
-                    query = query.Where(i =>
-                        userTINs.Contains(i.Supplier.TIN) ||
-                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                    );
-                }
+                // Apply Invoice Direction Filtering — reuses the same per-tab scoping the page and its
+                // badge counts use, so an export can never drift out of sync with what a tab shows
+                // (this used to be a hand-duplicated copy of ApplyDirectionFilter and had drifted).
+                query = ApplyDirectionFilter(query, invoiceDirection ?? "All", userTINs);
 
                 // ✅ FIXED: Date range bug. Make the EndDate inclusive to 23:59:59
                 if (submissionDateFrom.HasValue && submissionDateTo.HasValue)
@@ -1635,7 +1578,7 @@ namespace eInvWorld.Pages.Invoices
                     return SubmitDraftResult.Fail($"Invoice {invoiceNo} not found.");
                 }
 
-                if (invoice.InternalStatusId != "Draft")
+                if (invoice.InternalStatusId != "Draft" && invoice.InternalStatusId != "TransmissionError")
                 {
                     return SubmitDraftResult.Fail($"Invoice {invoiceNo} is not in Draft status.");
                 }
