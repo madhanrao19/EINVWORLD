@@ -16,10 +16,12 @@ using Microsoft.Extensions.Options;
 using eInvWorld.Models;
 using EINVWORLD.Helpers;
 using EINVWORLD.Services.Audit;
+using EINVWORLD.Services.Authorization;
+using Microsoft.AspNetCore.Identity;
 
 namespace eInvWorld.Pages.Suppliers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Supplier")]
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -28,8 +30,10 @@ namespace eInvWorld.Pages.Suppliers
         private readonly ILogger<EditModel> _logger; // Inject Logger
         private readonly FilePathConfig _filePathConfig;
         private readonly IAuditService _auditService;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ICompanyAuthorizationService _companyAuth;
 
-        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig, IAuditService auditService)
+        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig, IAuditService auditService, UserManager<ApplicationUser> userManager, ICompanyAuthorizationService companyAuth)
         {
             _context = context;
             _env = env;
@@ -37,6 +41,24 @@ namespace eInvWorld.Pages.Suppliers
             _logger = logger;
             _filePathConfig = filePathConfig.Value;
             _auditService = auditService;
+            _userManager = userManager;
+            _companyAuth = companyAuth;
+        }
+
+        /// <summary>Tenant-scoping guard for non-Admin users — same pattern as Users.cshtml.cs.
+        /// Returns null when access is allowed, or the IActionResult to return otherwise.</summary>
+        private async Task<IActionResult?> CheckAccessAsync(int partyInfoId)
+        {
+            if (User.IsInRole("Admin")) return null;
+
+            var userId = _userManager.GetUserId(User);
+            var isMember = userId != null && await _context.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == partyInfoId);
+            if (!isMember) return Forbid();
+
+            var canEdit = userId != null && await _companyAuth.HasPermissionAsync(userId, partyInfoId, CompanyPermission.EditProfile);
+            if (!canEdit) return Forbid();
+
+            return null;
         }
 
         [BindProperty(SupportsGet = true)]
@@ -75,6 +97,15 @@ namespace eInvWorld.Pages.Suppliers
                 return NotFound();
             }
 
+            // Any member of the company may view the profile; only EditProfile permission (checked
+            // again in OnPostAsync) allows saving.
+            if (!User.IsInRole("Admin"))
+            {
+                var userId = _userManager.GetUserId(User);
+                var isMember = userId != null && await _context.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == id);
+                if (!isMember) return Forbid();
+            }
+
             PartyInfo = partyInfo;
 
             // Mask the bank account for display; never render the decrypted value into the page.
@@ -104,6 +135,9 @@ namespace eInvWorld.Pages.Suppliers
                 _logger.LogWarning($"PartyInfo with ID {PartyInfo.PartyInfoId} not found during update.");
                 return NotFound();
             }
+
+            var accessDenied = await CheckAccessAsync(existingParty.PartyInfoId);
+            if (accessDenied != null) return accessDenied;
 
             // ✅ TIN is immutable once the company has submitted at least one invoice to LHDN — re-check
             // server-side (defense in depth) even though the field is also rendered readonly in the view.

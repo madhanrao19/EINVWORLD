@@ -28,6 +28,8 @@ namespace EINVWORLD.Pages.Invoices
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILHDNApiService _lhdnApiService;
         private readonly EINVWORLD.Services.Audit.IAuditService _audit;
+        private readonly IConfiguration _configuration;
+        private readonly IEInvoiceNotificationService _eInvoiceEmailService;
 
         public InvoiceHeader? InvoiceDetail { get; set; }
         public List<InvoiceLine> InvoiceLines { get; set; } = new();
@@ -48,7 +50,9 @@ namespace EINVWORLD.Pages.Invoices
             IPdfGeneratorService pdfGeneratorService,
             UserManager<ApplicationUser> userManager,
             ILHDNApiService lhdnApiService,
-            EINVWORLD.Services.Audit.IAuditService audit
+            EINVWORLD.Services.Audit.IAuditService audit,
+            IConfiguration configuration,
+            IEInvoiceNotificationService eInvoiceEmailService
         )
         {
             _context = context;
@@ -59,6 +63,8 @@ namespace EINVWORLD.Pages.Invoices
             _userManager = userManager;
             _lhdnApiService = lhdnApiService;
             _audit = audit;
+            _configuration = configuration;
+            _eInvoiceEmailService = eInvoiceEmailService;
         }
 
         public async Task<IActionResult> OnGetAsync(string uuid, bool fromEmail = false)
@@ -345,6 +351,23 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 _logger.LogInformation("✅ Document {documentId} successfully rejected in LHDN API", documentId);
+
+                var invoice = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer).Include(i => i.PublicCustomer)
+                    .FirstOrDefaultAsync(i => i.UUID == documentId);
+
+                var rejectedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+                if (invoice != null)
+                {
+                    invoice.InternalStatusId = "RequestReject";
+                    invoice.RejectedBy = user.UserName ?? "";
+                    invoice.RejectedReason = rejectionReason;
+                    invoice.RejectedTimestamp = rejectedTime;
+                    invoice.LastUpdated = rejectedTime;
+                    _context.InvoiceHeaders.Update(invoice);
+                }
+
                 var history = new InvoiceHistory
                 {
                     InvoiceNo = documentId, // Or the appropriate InvoiceNo field
@@ -355,6 +378,35 @@ namespace EINVWORLD.Pages.Invoices
                 };
                 _context.InvoiceHistories.Add(history);
                 await _context.SaveChangesAsync();
+
+                // Email notification — mirrors InvoiceListsModel.RejectDocumentAndSaveAsync, sent
+                // immediately after the LHDN status update above is committed.
+                if (invoice != null && _configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableRejectionEmails"))
+                {
+                    try
+                    {
+                        var buyerEmail = invoice.Customer != null ? invoice.Customer.Email : invoice.PublicCustomer?.Email;
+                        if (!string.IsNullOrEmpty(buyerEmail) && invoice.Supplier != null && !string.IsNullOrEmpty(invoice.Supplier.Email))
+                        {
+                            var customerParty = invoice.Customer ?? new PartyInfo
+                            {
+                                CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
+                                Email = invoice.PublicCustomer?.Email ?? "",
+                                TIN = invoice.PublicCustomer?.TIN ?? ""
+                            };
+                            await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                            _eInvoiceEmailService.SendRejectionNotificationEmail(customerParty, invoice.Supplier, invoice.InvoiceNo, rejectionReason, rejectedTime);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Skipping rejection email for {DocumentId}: buyer or supplier email missing.", documentId);
+                        }
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send rejection email for document {DocumentId}", documentId);
+                    }
+                }
 
                 return new JsonResult(new { message = "Document rejection successfully processed." });
             }
@@ -409,6 +461,22 @@ namespace EINVWORLD.Pages.Invoices
                 _logger.LogInformation($"📡 Calling LHDN CancelDocument API for document {documentId} with user TIN {userTin}...");
                 string response = await _lhdnApiService.CancelDocumentAsync(documentId, cancellationReason, userTin);
                 _logger.LogInformation($"✅ LHDN API cancellation successful for document {documentId}");
+
+                var invoice = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer).Include(i => i.PublicCustomer)
+                    .FirstOrDefaultAsync(i => i.UUID == documentId);
+
+                var cancelTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+                if (invoice != null)
+                {
+                    invoice.InternalStatusId = "Cancelled";
+                    invoice.LHDNStatusId = "Cancelled";
+                    invoice.CancelDateTime = cancelTime;
+                    invoice.LastUpdated = cancelTime;
+                    _context.InvoiceHeaders.Update(invoice);
+                }
+
                 var history = new InvoiceHistory
                 {
                     InvoiceNo = documentId,
@@ -419,6 +487,36 @@ namespace EINVWORLD.Pages.Invoices
                 };
                 _context.InvoiceHistories.Add(history);
                 await _context.SaveChangesAsync();
+
+                // Email notification — mirrors InvoiceListsModel.CancelDocumentAndSaveAsync, sent
+                // immediately after the LHDN status update above is committed.
+                if (invoice != null && _configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableCancellationEmails"))
+                {
+                    try
+                    {
+                        var buyerEmail = invoice.Customer != null ? invoice.Customer.Email : invoice.PublicCustomer?.Email;
+                        if (!string.IsNullOrEmpty(buyerEmail) && invoice.Supplier != null && !string.IsNullOrEmpty(invoice.Supplier.Email))
+                        {
+                            var customerParty = invoice.Customer ?? new PartyInfo
+                            {
+                                CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
+                                Email = invoice.PublicCustomer?.Email ?? "",
+                                TIN = invoice.PublicCustomer?.TIN ?? ""
+                            };
+                            await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                            _eInvoiceEmailService.SendCancellationNotificationEmail(customerParty, invoice.Supplier, invoice.InvoiceNo, cancellationReason, cancelTime);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Skipping cancellation email for {DocumentId}: buyer or supplier email missing.", documentId);
+                        }
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send cancellation email for document {DocumentId}", documentId);
+                    }
+                }
+
                 return new JsonResult(new { message = "Document cancellation successfully processed.", response });
             }
             catch (Exception ex)
