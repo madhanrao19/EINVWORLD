@@ -14,7 +14,8 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 - **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). Authenticated theme migrated from Velzon
   to the free MIT **Tabler** — markup migration complete; see `docs/TABLER-MIGRATION-AUDIT.md`.
 - **EF Core 10** on **SQL Server**
-- **ASP.NET Core Identity** (roles: Admin, Supplier, Buyer)
+- **ASP.NET Core Identity** (core roles: Admin, Supplier, Buyer — Admins can add further assignable
+  roles via **Admin → Role Management**)
 - **Serilog** (file + SQL `SystemLogs`)
 - PDF: **DinkToPdf** (default) or **Puppeteer** (switchable)
 - Excel export: **ClosedXML**; images: **Magick.NET**
@@ -26,8 +27,10 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   `14` Self-billed Refund Note.
 - Submit to MyInvois (UBL 2.1 JSON), poll validation status, capture **LongId** (QR code), cancel/reject.
 - **Centralised LHDN rate limiting** (`LhdnRateLimitHandler`) — evenly paced per endpoint so the system
-  stays under MyInvois limits and avoids `429` storms. _Buckets are per-process — the app is designed for
-  **single-instance** deployment (scale-out needs a shared/Redis limiter)._
+  stays under MyInvois limits and avoids `429` storms. Per-minute ceilings are configurable per
+  environment (`LHDNApiConfig:RateLimits:*`) so production and sandbox tiers can differ without a code
+  change. _Buckets are per-process — the app is designed for **single-instance** deployment (scale-out
+  needs a shared/Redis limiter)._
 - **Durable background jobs** — manual sync/import/refresh run as **SQL-backed** jobs that survive an
   IIS app-pool recycle / reboot: a worker claims each job, retries with backoff, and recovers orphaned
   jobs on startup. Progress + **Retry/Cancel** on the **Sync Jobs** admin page (`/Admin/SyncJobs`).
@@ -50,7 +53,12 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   and submission continue normally. Verify connectivity at **Admin → AI Settings** ("Test connection").
   It only suggests, never submits. See deployment guide PART O.
 - **v1.1 digital signing** (XAdES) is built and config-gated **OFF** until a signing certificate is
-  purchased — flip `LHDNApiConfig:SigningEnabled` to enable.
+  purchased — flip `LHDNApiConfig:SigningEnabled` to enable. Also signs SVDP invoices (version 1.3
+  instead of the unsigned 1.2) automatically once enabled.
+- **Role Management** (Admin → User Management → Role Management) — manage the assignable Identity role
+  catalog and restrict which app modules the Supplier/Buyer roles can reach. Supplier Owners/Admins can
+  additionally define custom roles scoped to just their own company (Company Management → Roles &
+  Permissions).
 - Security: per-TIN ownership checks (IDOR protection), secrets externalised, security response headers,
   client-side rate limiting, configurable DataProtection key-ring path.
 
@@ -107,7 +115,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | Section | Purpose |
 |---|---|
 | `ConnectionStrings` | Database connections (**secret** — left blank, supplied via user-secrets / env vars). |
-| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP 1.2 switch; programme runs until 31 Dec 2027), `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP switch — 1.2 unsigned / 1.3 signed; programme runs until 31 Dec 2027), `SyncRetentionDays`, `RateLimits:*` (per-endpoint requests-per-minute ceilings, overridable per environment). |
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
 | `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` by default (Development/Staging); **`false` in `appsettings.Production.json`** — Production always applies migrations manually via `Apply_*.sql` (see `DEPLOY-NOTES.md` §1). Migrations are additive (data preserved), but **back up first** either way. |
 | `CodeTableSync` | Daily additive sync of the 9 LHDN code tables from the official SDK JSON files (`Enabled` default `true`, `IntervalHours` 24). Inserts/renames only — never deletes or deactivates, admin `IsActive` choices preserved. |

@@ -1,12 +1,55 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.12.0`** (`AppInfo:Version` in `appsettings.json`). v1.12.0 is a **minor**
-> release completing the Velzon → Tabler migration: Invoices, the entire Admin subsystem (ops/monitoring,
-> Notifications, Resources, Users, Codes), Company/Lead management, and RecurringInvoices/Templates are
-> now all on Tabler. Also fixes a real bug (authenticated users landing on "/" saw the marketing page
-> wrapped in the legacy admin shell with its dev-only Theme Customizer exposed) and four genuine
-> responsive/horizontal-overflow bugs surfaced by running the Playwright suite's viewport tests against a
-> live instance for the first time. **No database migrations** — pure UI/CSS/routing changes.
+> **Current version: `v1.13.0`** (`AppInfo:Version` in `appsettings.json`). v1.13.0 is a **minor**
+> release: a bug-fix pass across the supplier invitation flow, LHDN status-change emails, and several
+> role/permission access-denied issues, plus a new **Admin → Role Management** feature (global role
+> catalog + per-role module access, and company-scoped custom roles for Supplier Owners/Admins) and full
+> **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
+> **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
+
+## 📅 2026-07-29 — Role Management, company user removal, LHDN SDK 1.0 compliance, bug fixes
+
+> Five-PR stacked release, all merged to `main`. Additive migrations only (`AddRoleModulePermissions`,
+> `AddCompanyRolePartyInfoScope`) — no drops, no breaking changes. See `DEPLOY-NOTES.md` §1 for the
+> manual-apply scripts (Production requires them; Staging/dev auto-migrate).
+
+- **Fixed: supplier invitation "Create Account & Join" silently failing.** `AcceptInvite`'s forms were
+  missing hidden `Id`/`Token` fields — `asp-page-handler` posts lost the route data, so every submission
+  looked like an invalid/expired invitation even with a fresh link.
+- **Fixed: no email on invoice Reject/Cancel.** The `InvoiceDetails2` reject/cancel handlers updated LHDN
+  and logged history but never sent the notification email (that logic only existed on the other
+  invoice-list page). Now sends immediately once the LHDN status update is committed.
+- **Fixed: RBAC access-denied bugs** — Recurring Invoices denied Owner-role access (checked legacy
+  `HasCompanyAccess`/`IsViewOnly` flags, ignored `CompanyRole` assignments); Company Profile was
+  Admin-only by omission even though its sibling Company Management tabs already allow Supplier, with
+  proper tenant-membership + `EditProfile` permission checks added.
+- **Added: Supplier Owner/Admin can remove a company member** (blocks self-removal and removing the last
+  Owner) — the capability existed for invite/revoke but not removal.
+- **UI**: one-click "Enable 2FA" for a user who disabled it but kept their authenticator (previously
+  forced a full re-setup); Received/Buyer tab actions cleaned up (removed supplier-only actions leaking
+  into the buyer view, added the missing Print action); E-Invoice Assistant restyled into a
+  scrolling message-bubble chat thread, and disabled/unreachable states now render as a warning instead
+  of an indistinguishable-from-a-crash red error alert.
+- **New: Admin → Role Management** (User Management → Role Management) — manage the global Identity role
+  catalog (create/delete roles assignable via Manage Users' "Change Role"; `Admin`/`Supplier`/`Buyer` are
+  protected as core roles) and a **Module Access** grid restricting which app modules the Supplier/Buyer
+  roles can reach, enforced by a new `ModuleAccessPageFilter` layered on top of each page's existing
+  `[Authorize(Roles=...)]` gate. A module with no configured row defaults to allowed — purely additive.
+- **New: company-scoped custom roles.** A Supplier Owner/Admin can create a custom role (name + the 4
+  permission flags) scoped to just their own company (`CompanyRole.PartyInfoId`, nullable — `null` =
+  the shared system roles every company sees), alongside Roles & Permissions' existing role assignment.
+- **LHDN MyInvois SDK 1.0 compliance** (audited against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`):
+  - **Unit-of-measure validation**: `InvoiceMapper` now validates every invoice line's unit code against
+    the official LHDN code list before building the UBL JSON — previously only enforced client-side by
+    the Create Invoice form's dropdown, with no server-side check and no check at all for CSV import,
+    templates, or recurring invoices.
+  - **Signed SVDP 1.3**: document version is now correctly computed from `SigningEnabled`/`DocVersion` —
+    previously hardcoded to "1.0"/"1.2" regardless of config, so turning on v1.1 signing (once the
+    certificate is purchased) would inject a valid signature but the document would still declare the
+    unsigned version, and signed SVDP (1.3) was unreachable entirely.
+  - **Configurable rate limits**: `LhdnRateLimitHandler`'s per-endpoint limits moved from hardcoded
+    constants to `LHDNApiConfig:RateLimits:*` in `appsettings.json` (existing values kept as defaults),
+    so production and sandbox tiers can differ without a code change.
 
 ## 📅 2026-07-27 — Tabler migration completion (Invoices, Admin, Company/Lead), homepage redirect fix, responsive QA fixes
 
