@@ -46,6 +46,14 @@ namespace eInvWorld.Pages.Assistant
         public SuggestionReview? Review { get; private set; }
         public string? RejectionExplanation { get; private set; }
         public string? ErrorText { get; private set; }
+        public EINVWORLD.Services.AI.AiErrorKind ErrorKind { get; private set; }
+
+        /// <summary>Soft/expected failures (feature off, Ollama unreachable, model not pulled) should read
+        /// as informational, not a red "something broke" alert.</summary>
+        public bool IsSoftError => ErrorKind is EINVWORLD.Services.AI.AiErrorKind.Disabled
+            or EINVWORLD.Services.AI.AiErrorKind.Unreachable
+            or EINVWORLD.Services.AI.AiErrorKind.Timeout
+            or EINVWORLD.Services.AI.AiErrorKind.ModelUnavailable;
 
         public void OnGet() { }
 
@@ -65,7 +73,7 @@ namespace eInvWorld.Pages.Assistant
             }
             else
             {
-                ErrorText = result.Error;
+                ErrorText = result.Error; ErrorKind = result.ErrorKind;
             }
 
             Conversation = history;
@@ -113,7 +121,7 @@ namespace eInvWorld.Pages.Assistant
             }
             else
             {
-                ErrorText = result.Error;
+                ErrorText = result.Error; ErrorKind = result.ErrorKind;
             }
             return Page();
         }
@@ -124,7 +132,7 @@ namespace eInvWorld.Pages.Assistant
 
             var result = await _assistant.ExplainRejectionAsync(RejectionText ?? string.Empty, ct);
             if (result.Ok) RejectionExplanation = result.Content;
-            else ErrorText = result.Error;
+            else { ErrorText = result.Error; ErrorKind = result.ErrorKind; }
             return Page();
         }
 

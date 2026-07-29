@@ -611,9 +611,6 @@
                         }
                         @if (Model.invoiceDirection == "Received")
                         {
-                            <button id="bulkValidateBtn" class="btn btn-outline-primary btn-sm d-none" title="Re-check LHDN validation status for the selected invoices">
-                                <i class="ri-refresh-line"></i> Bulk Validate
-                            </button>
                             <button id="bulkRejectBtn" class="btn btn-danger btn-sm d-none">
                                 <i class="ri-close-circle-line"></i> Request Reject e-Invoice
                             </button>
@@ -876,7 +873,7 @@
                                                                         <i class="ri-eye-fill me-1"></i> View
                                                                     </a>
                                                                 </li>
-                                                                @if (invoice.InternalStatusId == "Draft" || invoice.LHDNStatusId == "Valid" || invoice.LHDNStatusId == "Invalid" || invoice.LHDNStatusId == "Cancelled")
+                                                                @if (invoiceDirection != "Received" && (invoice.InternalStatusId == "Draft" || invoice.LHDNStatusId == "Valid" || invoice.LHDNStatusId == "Invalid" || invoice.LHDNStatusId == "Cancelled"))
                                                                 {
                                                                     <li>
                                                                         <a class="dropdown-item text-info" asp-page="./CreateInvoice" asp-route-cloneId="@invoice.InvoiceNo">
@@ -910,7 +907,7 @@
 
                                                                 else if (invoice.LHDNStatusId == "Valid")
                                                                 {
-                                                                    @if (!string.IsNullOrEmpty(invoice.UUID) && !string.IsNullOrEmpty(invoice.InvoiceNo))
+                                                                    @if (invoiceDirection != "Received" && !string.IsNullOrEmpty(invoice.UUID) && !string.IsNullOrEmpty(invoice.InvoiceNo))
                                                                     {
                                                                         @if (invoice.DocTypeCode == "01" || invoice.DocTypeCode == "Invoice") // Standard Invoice
                                                                         {
@@ -975,6 +972,16 @@
                                                                         <li>
                                                                             <a href="#" class="dropdown-item cancel-btn" data-uuid="@invoice.UUID" data-invoiceno="@invoice.InvoiceNo" data-tin="@invoice.Supplier.TIN">
                                                                                 <i class="ri-close-circle-fill me-1"></i> Cancel e-Invoice
+                                                                            </a>
+                                                                        </li>
+                                                                    }
+
+                                                                    @if (invoiceDirection == "Received")
+                                                                    {
+                                                                        <!-- Print Invoice -->
+                                                                        <li>
+                                                                            <a href="#" class="dropdown-item print-item-btn" onclick="printInvoicePdf('@invoice.InvoiceNo'); return false;">
+                                                                                <i class="ri-printer-line me-1 fs-16"></i> Print
                                                                             </a>
                                                                         </li>
                                                                     }
@@ -1441,6 +1448,26 @@
     <script type="module" src="~/js/date-picker.js"></script>
     
     <script>
+    // The download endpoint sends Content-Disposition: attachment, so opening it directly in a
+    // tab just downloads the file instead of rendering it for print. Fetch it as a blob instead —
+    // blob URLs render inline regardless of the original response's disposition header.
+    function printInvoicePdf(invoiceNo) {
+        fetch('?handler=DownloadPdf&invoiceNo=' + encodeURIComponent(invoiceNo))
+            .then(res => res.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                iframe.onload = () => {
+                    iframe.contentWindow.print();
+                    setTimeout(() => { iframe.remove(); URL.revokeObjectURL(url); }, 60000);
+                };
+            })
+            .catch(() => alert('Unable to load the PDF for printing.'));
+    }
+
     function changePageSize(pageSize) {
         const url = new URL(window.location.href);
         url.searchParams.set('pageSize', pageSize);

@@ -45,6 +45,12 @@
             <a asp-page="./Disable2fa" class="btn btn-primary">Disable 2FA</a>
             <a asp-page="./GenerateRecoveryCodes" class="btn btn-primary">Reset recovery codes</a>
         }
+        else if (Model.HasAuthenticator)
+        {
+            <form method="post" asp-page-handler="Enable" style="display: inline-block">
+                <button type="submit" class="btn btn-primary">Enable 2FA</button>
+            </form>
+        }
 
         <h4>Authenticator app</h4>
         @if (!Model.HasAuthenticator)
