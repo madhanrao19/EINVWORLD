@@ -123,7 +123,15 @@ namespace eInvWorld.Pages.Suppliers
             company.IsApproved = User.IsInRole("Admin");
 
             _context.PartyInfos.Remove(company);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Number == 547)
+            {
+                _logger.LogWarning(ex, "Cannot delete company {Id}: still referenced by existing invoices.", id);
+                return new JsonResult(new { success = false, message = "This company can't be deleted — it still has invoices referencing it. Remove or reassign those invoices first." });
+            }
             _logger.LogInformation($"Company with ID {id} deleted successfully.");
 
             return new JsonResult(new { success = true, message = "Supplier deleted successfully!" });
