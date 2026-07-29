@@ -53,7 +53,7 @@ namespace EINVWORLD.Pages.Invoices
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
-            _invoiceMapper = new InvoiceMapper();
+            _invoiceMapper = new InvoiceMapper(_context);
             _invoiceService = invoiceService;
             _lhdnApiService = lhdnApiService ?? throw new ArgumentNullException(nameof(lhdnApiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

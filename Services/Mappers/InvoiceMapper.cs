@@ -1,4 +1,5 @@
-﻿using eInvWorld.Models;
+﻿using eInvWorld.Data;
+using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
 using iTextSharp.text;
@@ -15,6 +16,17 @@ namespace eInvWorld.Services.Mappers
 {
     public class InvoiceMapper
     {
+        private readonly ApplicationDbContext? _context;
+
+        /// <param name="context">Optional. When supplied, each line's <c>UnitOfMeasure</c> is validated
+        /// against the official LHDN unit-code list (<see cref="eInvWorld.Models.UnitType"/>) before the
+        /// UBL JSON is built. Omit only in contexts with no DB access (e.g. unit tests) — validation is
+        /// then skipped, matching the previous behavior.</param>
+        public InvoiceMapper(ApplicationDbContext? context = null)
+        {
+            _context = context;
+        }
+
         public string MapToJsonModel(InputModel.InvoiceHeader header)
         {
             if (header == null)
@@ -30,6 +42,29 @@ namespace eInvWorld.Services.Mappers
                 var currencyError = $"Currency Exchange Rate (to MYR) is required and must be greater than zero when the invoice currency is {header.Currency}.";
                 Log.Warning("InvoiceMapper validation: {ErrorMessage}", currencyError);
                 throw new InvalidOperationException($"Validation failed for Invoice: {currencyError}");
+            }
+
+            // LHDN SDK: unit-of-measure codes must match the official code list. Validate here (once,
+            // for every submission path) rather than trusting whatever a line was saved with — the
+            // manual Create Invoice UI already only offers valid codes via a dropdown, but CSV import,
+            // templates, and recurring invoices don't go through that UI.
+            if (_context != null)
+            {
+                var validUnitCodes = new HashSet<string>(
+                    _context.UnitTypes.Where(u => u.IsActive).Select(u => u.Code),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var invalidUnits = header.InvoiceLines
+                    .Where(l => string.IsNullOrEmpty(l.UnitOfMeasure) || !validUnitCodes.Contains(l.UnitOfMeasure))
+                    .Select(l => $"line {l.LineNumber}: \"{l.UnitOfMeasure}\"")
+                    .ToList();
+
+                if (invalidUnits.Count > 0)
+                {
+                    var unitError = $"Invalid or missing unit of measure ({string.Join(", ", invalidUnits)}). Must match an active LHDN unit code.";
+                    Log.Warning("InvoiceMapper validation: {ErrorMessage}", unitError);
+                    throw new InvalidOperationException($"Validation failed for Invoice: {unitError}");
+                }
             }
 
             Log.Debug("InvoiceMapper: RefUUID={RefUUID}, LineCount={LineCount}", header.RefUUID, header.InvoiceLines.Count);

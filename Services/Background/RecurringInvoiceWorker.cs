@@ -175,7 +175,7 @@ namespace eInvWorld.Services.Background
                     context.InvoiceHeaders.Add(newInvoice);
                     historyLog.GeneratedInvoiceNo = newInvoiceNo;
 
-                    var invoiceMapper = new InvoiceMapper();
+                    var invoiceMapper = new InvoiceMapper(context);
                     string invoiceJson = invoiceMapper.MapToJsonModel(newInvoice);
 
                     var draftsFolder = filePathConfig.DraftFolder;
