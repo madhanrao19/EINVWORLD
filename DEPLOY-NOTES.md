@@ -56,6 +56,12 @@ changes are additive and AI/features stay off unless already enabled.
      for the auth pages). **Not Tabler, still open — fix separately:** company logos emitted as
      `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404 on
      `/Admin/Resources/Manage`.
+   - **v1.13.0 (this release):** new Admin → Role Management (global role catalog + per-role module
+     access grid) and company-scoped custom roles (Supplier Owners/Admins can define a role limited to
+     just their own company). Also a bug-fix pass (supplier invitation join, LHDN reject/cancel emails,
+     several access-denied fixes) and MyInvois SDK 1.0 compliance work (unit-code validation, signed
+     SVDP 1.3, configurable LHDN rate limits — see `LHDNApiConfig:RateLimits:*`). **No new required
+     secrets.** See §1 for the 2 new migrations — both additive, no data loss, safe to auto-migrate.
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:
@@ -156,6 +162,32 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 > The durable job worker, idempotency guard, and audit service all **degrade gracefully** (log a
 > warning, pause/skip) if their table is missing — a slightly-late migration won't crash the app, but
 > the corresponding feature won't work until applied.
+
+### v1.13.0 migrations — Role Management + company-scoped custom roles
+
+Two new migrations, both purely additive (new table / nullable column — no drops, no data loss):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddRoleModulePermissions.sql"
+sqlcmd %DB% -i "Migrations\Apply_AddCompanyRolePartyInfoScope.sql"
+```
+
+> **`AddRoleModulePermissions`** — creates `RoleModulePermissions` (empty on a fresh apply). A missing
+> row for a role/module means "allowed" (see `ModuleAccessPageFilter`), so this migration alone changes
+> no existing behavior — it only creates the table Admin → Role Management writes to.
+
+> **`AddCompanyRolePartyInfoScope`** — adds nullable `CompanyRole.PartyInfoId` (existing system rows
+> stay `NULL` = visible to every company). The FK to `PartyInfos` is `NO ACTION`, not cascade — deleting
+> a company that has custom roles requires the app to delete those roles first (already handled in
+> `Pages/Suppliers/Index.cshtml.cs`'s delete handler), since SQL Server rejects a second cascade path to
+> the same table (`PartyInfo` already cascades to `UserCompany`, which also references `CompanyRole`).
+
+Verify both are recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260729092236_AddCompanyRolePartyInfoScope
+```
 
 ## 2. Secrets & configuration (never commit these)
 
