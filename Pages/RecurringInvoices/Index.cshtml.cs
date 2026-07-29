@@ -81,13 +81,17 @@ namespace eInvWorld.Pages.RecurringInvoices
             }
 
             var userCompany = await _context.UserCompanies
+                .Include(uc => uc.CompanyRole)
                 .Where(uc => uc.UserId == userId)
                 .OrderByDescending(uc => uc.IsPrimaryCompany)
                 .FirstOrDefaultAsync();
 
-            // Added a null check here (userCompany != null) to prevent a NullReferenceException 
-            // just in case FirstOrDefaultAsync() doesn't find a record!
-            if (userCompany == null || !userCompany.HasCompanyAccess || userCompany.IsViewOnly)
+            // A CompanyRole assignment (Owner/Admin/Editor/Viewer) always grants at least read
+            // access; fall back to the legacy flags only for memberships never migrated to a role.
+            bool hasAccess = userCompany != null &&
+                (userCompany.CompanyRole != null || (userCompany.HasCompanyAccess && !userCompany.IsViewOnly));
+
+            if (!hasAccess)
             {
                 return Redirect("/Identity/Account/AccessDenied");
             }

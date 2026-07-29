@@ -31,6 +31,8 @@
                 {
                     <p class="mb-3">An EINVWORLD account already exists for this email. Sign in with that account to accept.</p>
                     <form method="post" asp-page-handler="AcceptExisting">
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="Token" />
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="ri-login-box-line me-1"></i> Sign In &amp; Accept
                         </button>
@@ -39,6 +41,8 @@
                 else
                 {
                     <form method="post" asp-page-handler="Register">
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="Token" />
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
                             <input asp-for="Input.FullName" class="form-control" required />
