@@ -14,8 +14,13 @@ namespace EINVWORLD.Services.Assistant
         public string Content { get; init; } = string.Empty;
         public string? Error { get; init; }
 
+        /// <summary>Why the call failed (Disabled/Unreachable/etc are expected states, not crashes) —
+        /// lets the page render a soft warning instead of a red "error" alert for non-fault cases.</summary>
+        public AiErrorKind ErrorKind { get; init; }
+
         public static AssistantResult Success(string content) => new() { Ok = true, Content = content };
-        public static AssistantResult Fail(string error) => new() { Ok = false, Error = error };
+        public static AssistantResult Fail(string error, AiErrorKind kind = AiErrorKind.Unexpected) =>
+            new() { Ok = false, Error = error, ErrorKind = kind };
     }
 
     public interface IEInvoiceAssistantService
@@ -281,7 +286,7 @@ namespace EINVWORLD.Services.Assistant
             var result = await _ai.ChatAsync(new AiChatRequest { Messages = messages, JsonMode = jsonMode }, ct);
             return result.Ok
                 ? AssistantResult.Success(result.Content)
-                : AssistantResult.Fail(result.Error ?? "Unexpected error talking to the AI service.");
+                : AssistantResult.Fail(result.Error ?? "Unexpected error talking to the AI service.", result.ErrorKind);
         }
 
         private sealed class ClassificationCodeDto
