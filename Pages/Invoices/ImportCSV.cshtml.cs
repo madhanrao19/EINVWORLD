@@ -44,7 +44,7 @@ namespace EINVWORLD.Pages.Invoices
             eInvWorld.Services.InvoiceService invoiceService) : base(context)
         {
             _context = context;
-            _invoiceMapper = new InvoiceMapper();
+            _invoiceMapper = new InvoiceMapper(_context);
             _statusMappingService = statusMappingService;
             _invoiceHistoryService = invoiceHistoryService;
             _filePathConfig = filePathConfig.Value;
