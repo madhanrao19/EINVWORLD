@@ -17,7 +17,7 @@ namespace eInvWorld.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -690,7 +690,12 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("PartyInfoId")
+                        .HasColumnType("int");
+
                     b.HasKey("CompanyRoleId");
+
+                    b.HasIndex("PartyInfoId");
 
                     b.ToTable("CompanyRoles");
 
@@ -2263,6 +2268,35 @@ namespace eInvWorld.Migrations
                     b.ToTable("RecurringRunHistories");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.RoleModulePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModuleKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleName", "ModuleKey")
+                        .IsUnique();
+
+                    b.ToTable("RoleModulePermissions");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.SavedInvoiceView", b =>
                 {
                     b.Property<int>("Id")
@@ -3020,6 +3054,16 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("CompanyRole");
+
+                    b.Navigation("PartyInfo");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
+                        .WithMany()
+                        .HasForeignKey("PartyInfoId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("PartyInfo");
                 });
