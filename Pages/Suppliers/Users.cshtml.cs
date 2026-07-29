@@ -44,6 +44,7 @@ namespace eInvWorld.Pages.Suppliers
         public List<CompanyInvitation> PendingInvitations { get; set; } = new();
         public List<CompanyRole> AvailableRoles { get; set; } = new();
         public bool CanManageUsers { get; set; }
+        public string? CurrentUserId { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? From { get; set; }
@@ -63,6 +64,7 @@ namespace eInvWorld.Pages.Suppliers
 
             var userId = _userManager.GetUserId(User);
             bool isAdmin = User.IsInRole("Admin");
+            CurrentUserId = userId;
 
             if (!isAdmin)
             {
@@ -72,7 +74,10 @@ namespace eInvWorld.Pages.Suppliers
 
             CanManageUsers = isAdmin || (userId != null && await _companyAuth.HasPermissionAsync(userId, id.Value, CompanyPermission.ManageUsers));
 
-            AvailableRoles = await _context.CompanyRoles.OrderBy(r => r.CompanyRoleId).ToListAsync();
+            AvailableRoles = await _context.CompanyRoles
+                .Where(r => r.PartyInfoId == null || r.PartyInfoId == id)
+                .OrderBy(r => r.CompanyRoleId)
+                .ToListAsync();
 
             Members = await _context.UserCompanies
                 .Include(uc => uc.User)
@@ -180,6 +185,59 @@ namespace eInvWorld.Pages.Suppliers
 
             await _invitationService.RevokeAsync(invitationId, partyInfoId);
             TempData["SuccessMessage"] = "Invitation revoked.";
+            return RedirectToPage(new { id = partyInfoId });
+        }
+
+        public async Task<IActionResult> OnPostRemoveMemberAsync(int partyInfoId, int userCompanyId)
+        {
+            var userId = _userManager.GetUserId(User);
+            bool isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin)
+            {
+                bool allowed = userId != null && await _companyAuth.HasPermissionAsync(userId, partyInfoId, CompanyPermission.ManageUsers);
+                if (!allowed)
+                {
+                    TempData["ErrorMessage"] = "You do not have permission to remove members from this company.";
+                    return RedirectToPage(new { id = partyInfoId });
+                }
+            }
+
+            var membership = await _context.UserCompanies
+                .Include(uc => uc.CompanyRole)
+                .FirstOrDefaultAsync(uc => uc.Id == userCompanyId && uc.PartyInfoId == partyInfoId);
+            if (membership == null)
+            {
+                TempData["ErrorMessage"] = "Member not found.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
+            if (membership.UserId == userId)
+            {
+                TempData["ErrorMessage"] = "You cannot remove yourself from the company.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
+            if (membership.CompanyRole?.Name == "Owner")
+            {
+                var otherOwners = await _context.UserCompanies
+                    .CountAsync(uc => uc.PartyInfoId == partyInfoId && uc.Id != userCompanyId && uc.CompanyRole!.Name == "Owner");
+                if (otherOwners == 0)
+                {
+                    TempData["ErrorMessage"] = "Cannot remove the last Owner of the company.";
+                    return RedirectToPage(new { id = partyInfoId });
+                }
+            }
+
+            _context.UserCompanies.Remove(membership);
+            await _context.SaveChangesAsync();
+
+            await _auditService.WriteAsync("Company.UserRemoved", new AuditEntry
+            {
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { PartyInfoId = partyInfoId, RemovedUserId = membership.UserId }),
+            });
+
+            TempData["SuccessMessage"] = "Member removed from the company.";
             return RedirectToPage(new { id = partyInfoId });
         }
     }

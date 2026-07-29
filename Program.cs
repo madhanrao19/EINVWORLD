@@ -169,8 +169,12 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Register");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPassword");
-
 });
+
+// Enforces the Role Management module grid (Admin > User Management > Role Management) on top of
+// each page's own [Authorize(Roles=...)] gate.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+    options.Filters.Add(typeof(EINVWORLD.Services.Authorization.ModuleAccessPageFilter)));
 
 builder.Services.Configure<GoogleAnalyticsSettings>(
     builder.Configuration.GetSection("GoogleAnalytics"));

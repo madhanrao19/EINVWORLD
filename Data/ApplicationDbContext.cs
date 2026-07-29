@@ -59,6 +59,7 @@ namespace eInvWorld.Data
         public DbSet<UserCompany> UserCompanies { get; set; }
         public DbSet<CompanyRole> CompanyRoles { get; set; } = default!;
         public DbSet<CompanyInvitation> CompanyInvitations { get; set; } = default!;
+        public DbSet<RoleModulePermission> RoleModulePermissions { get; set; } = default!;
 
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<PartyInfo> PartyInfos { get; set; } = default!;
@@ -217,6 +218,20 @@ namespace eInvWorld.Data
 
             modelBuilder.Entity<CompanyInvitation>()
                 .HasIndex(ci => ci.TokenHash);
+
+            modelBuilder.Entity<RoleModulePermission>()
+                .HasIndex(p => new { p.RoleName, p.ModuleKey })
+                .IsUnique();
+
+            // Restrict, not Cascade: PartyInfo already cascades to UserCompany, which also references
+            // CompanyRole — a second cascade path from PartyInfo to CompanyRole creates the "multiple
+            // cascade paths" error SQL Server refuses to build. Company-scoped custom roles are instead
+            // deleted explicitly in code right before the company itself (Suppliers/Index.cshtml.cs).
+            modelBuilder.Entity<CompanyRole>()
+                .HasOne(r => r.PartyInfo)
+                .WithMany()
+                .HasForeignKey(r => r.PartyInfoId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CompanyRole>().HasData(
                 new CompanyRole { CompanyRoleId = 1, Name = "Owner", CanManageUsers = true, CanEditProfile = true, CanManageBranding = true, CanViewAudit = true, IsSystemDefined = true },

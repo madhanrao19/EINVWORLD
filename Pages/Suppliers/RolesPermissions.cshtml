@@ -125,21 +125,77 @@
                         <th class="text-center">Edit Profile</th>
                         <th class="text-center">Manage Branding</th>
                         <th class="text-center">View Audit</th>
+                        @if (Model.CanManageUsers)
+                        {
+                            <th class="col-action">Action</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var role in Model.AvailableRoles)
                     {
                         <tr>
-                            <td class="fw-semibold">@role.Name</td>
+                            <td class="fw-semibold">
+                                @role.Name
+                                @if (!role.IsSystemDefined)
+                                {
+                                    <span class="einv-badge einv-badge-neutral ms-1">Custom</span>
+                                }
+                            </td>
                             <td class="text-center">@(role.CanManageUsers ? "✓" : "—")</td>
                             <td class="text-center">@(role.CanEditProfile ? "✓" : "—")</td>
                             <td class="text-center">@(role.CanManageBranding ? "✓" : "—")</td>
                             <td class="text-center">@(role.CanViewAudit ? "✓" : "—")</td>
+                            @if (Model.CanManageUsers)
+                            {
+                                <td class="col-action">
+                                    @if (!role.IsSystemDefined && role.PartyInfoId == Model.PartyInfo.PartyInfoId)
+                                    {
+                                        <form method="post" asp-page-handler="DeleteRole" onsubmit="return confirm('Delete the &quot;@role.Name&quot; role? Members holding it will fall back to no role.');">
+                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                            <input type="hidden" name="companyRoleId" value="@role.CompanyRoleId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    }
+                                </td>
+                            }
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        @if (Model.CanManageUsers)
+        {
+            <hr />
+            <h6 class="card-title">Create a custom role</h6>
+            <p class="text-muted small mb-2">Only available to this company — other companies never see it.</p>
+            <form method="post" asp-page-handler="CreateRole" class="row g-2 align-items-end">
+                <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                <div class="col-md-3">
+                    <label class="form-label small">Role name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" required maxlength="50" placeholder="e.g. Accountant" />
+                </div>
+                <div class="col-md-2 form-check">
+                    <input type="checkbox" class="form-check-input" name="canManageUsers" value="true" id="crCanManageUsers" />
+                    <label class="form-check-label small" for="crCanManageUsers">Manage Users</label>
+                </div>
+                <div class="col-md-2 form-check">
+                    <input type="checkbox" class="form-check-input" name="canEditProfile" value="true" id="crCanEditProfile" />
+                    <label class="form-check-label small" for="crCanEditProfile">Edit Profile</label>
+                </div>
+                <div class="col-md-2 form-check">
+                    <input type="checkbox" class="form-check-input" name="canManageBranding" value="true" id="crCanManageBranding" />
+                    <label class="form-check-label small" for="crCanManageBranding">Manage Branding</label>
+                </div>
+                <div class="col-md-2 form-check">
+                    <input type="checkbox" class="form-check-input" name="canViewAudit" value="true" id="crCanViewAudit" />
+                    <label class="form-check-label small" for="crCanViewAudit">View Audit</label>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Add</button>
+                </div>
+            </form>
+        }
     </div>
 </div>

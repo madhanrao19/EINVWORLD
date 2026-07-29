@@ -130,6 +130,10 @@
                         <th scope="col">Member</th>
                         <th scope="col">Company Role</th>
                         <th scope="col" class="text-center">Primary</th>
+                        @if (Model.CanManageUsers)
+                        {
+                            <th scope="col" class="col-action">Action</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -153,13 +157,26 @@
                                     }
                                 </td>
                                 <td class="text-center" data-label="Primary">@(m.IsPrimaryCompany ? "✓" : "—")</td>
+                                @if (Model.CanManageUsers)
+                                {
+                                    <td class="col-action" data-label="Action">
+                                        @if (m.UserId != Model.CurrentUserId)
+                                        {
+                                            <form method="post" asp-page-handler="RemoveMember" onsubmit="return confirm('Remove @m.User.FullName from this company?');">
+                                                <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                                <input type="hidden" name="userCompanyId" value="@m.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                            </form>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     }
                     else
                     {
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">No team members yet.</td>
+                            <td colspan="4" class="text-center py-4 text-muted">No team members yet.</td>
                         </tr>
                     }
                 </tbody>

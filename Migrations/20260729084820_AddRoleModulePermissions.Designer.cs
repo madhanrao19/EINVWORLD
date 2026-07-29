@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eInvWorld.Data;
 
@@ -11,9 +12,11 @@ using eInvWorld.Data;
 namespace eInvWorld.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260729084820_AddRoleModulePermissions")]
+    partial class AddRoleModulePermissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -690,12 +693,7 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int?>("PartyInfoId")
-                        .HasColumnType("int");
-
                     b.HasKey("CompanyRoleId");
-
-                    b.HasIndex("PartyInfoId");
 
                     b.ToTable("CompanyRoles");
 
@@ -3054,16 +3052,6 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("CompanyRole");
-
-                    b.Navigation("PartyInfo");
-                });
-
-            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
-                {
-                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
-                        .WithMany()
-                        .HasForeignKey("PartyInfoId")
-                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("PartyInfo");
                 });
