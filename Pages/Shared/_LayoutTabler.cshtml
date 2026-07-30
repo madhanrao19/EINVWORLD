@@ -34,7 +34,6 @@
     <link href="~/assets/libs/select2/css/select2.min.css" rel="stylesheet" />
     <link href="~/assets/libs/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
-    <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
     <link rel="stylesheet" href="~/assets/libs/font-awesome/css/all.min.css" />
 
@@ -42,6 +41,9 @@
 
     <!-- jQuery (self-hosted) — required by Select2 and inline app scripts -->
     <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>
+
+    <!-- Page-specific CSS (e.g. TinyMCE's skin, only needed on the 2 pages with a rich-text editor) -->
+    @RenderSection("Styles", required: false)
 </head>
 <body>
     <script>
@@ -180,8 +182,10 @@
         })();
     </script>
 
-    <!-- TinyMCE (self-hosted) -->
-    <script src="~/assets/js/tinymce/tinymce.min.js"></script>
+    <!-- TinyMCE is NOT loaded here — it's a 436 KB script used on exactly 2 pages
+         (Admin/Resources/Edit + Create). Those pages load and init it themselves in their
+         own Scripts section. Loading it globally cost every other page (Dashboard,
+         User Management, etc.) its full parse/init time for nothing. -->
 
     <!-- Topbar app-search (calls /api/Search) — element ids match _TablerTopbar -->
     <script>
