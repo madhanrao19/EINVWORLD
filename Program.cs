@@ -372,9 +372,12 @@ if (string.IsNullOrWhiteSpace(baseUrl))
     Log.Warning("LHDN API BaseUrl configuration is missing.");
 }
 
-// Singleton, not Transient: the rate limiter's token buckets must survive IHttpClientFactory's
-// periodic handler-pool rotation (default every 2 minutes) — see LhdnRateLimitHandler's doc comment.
-builder.Services.AddSingleton<EINVWORLD.Services.LhdnRateLimitHandler>();
+// Buckets are Singleton (state must survive IHttpClientFactory's periodic handler-pool rotation and
+// be shared across both typed clients below); the DelegatingHandler itself is Transient (default for
+// AddHttpMessageHandler<T>) since IHttpClientFactory requires a distinct handler instance per pipeline
+// — see LhdnRateLimitHandler's doc comment.
+builder.Services.AddSingleton<EINVWORLD.Services.LhdnRateLimitBuckets>();
+builder.Services.AddTransient<EINVWORLD.Services.LhdnRateLimitHandler>();
 
 // Single consolidated registration for the LHDNApiService typed client (was previously
 // registered twice with conflicting config).
