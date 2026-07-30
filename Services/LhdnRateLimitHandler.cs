@@ -9,13 +9,13 @@ namespace EINVWORLD.Services
     /// per-API request limits. One token-bucket per endpoint class, each capped a little under
     /// the official RPM so we never trip the server-side 429 in normal operation.
     ///
-    /// Registered as a DI singleton (see Program.cs) so the SAME limiter instances back every
-    /// HttpClient built from it — including across IHttpClientFactory's periodic handler-pool
-    /// rotation (default every 2 minutes), which would otherwise silently reset the buckets.
-    /// On a SINGLE-INSTANCE deployment this is correct and safe: a global cap that is &lt;= the
-    /// per-TIN limit can never exceed any single TIN's limit. If this app is ever scaled to
-    /// multiple instances behind a load balancer, this must move to a shared/distributed limiter
-    /// (e.g. Redis) — see PRODUCTION-READINESS-REVIEW.md §2.6.
+    /// Registered as a DI singleton (see Program.cs) so the SAME buckets back every HttpClient
+    /// built from it — including across IHttpClientFactory's periodic handler-pool rotation
+    /// (default every 2 minutes), which would otherwise silently reset them. On a SINGLE-INSTANCE
+    /// deployment this is correct and safe: a global cap that is &lt;= the per-TIN limit can never
+    /// exceed any single TIN's limit. If this app is ever scaled to multiple instances behind a
+    /// load balancer, this must move to a shared/distributed limiter (e.g. Redis) — see
+    /// PRODUCTION-READINESS-REVIEW.md §2.6.
     ///
     /// Per-minute limits are configurable via LHDNApiConfig:RateLimits:* (see appsettings.json) —
     /// the SDK's official limits differ between preprod/sandbox and production, so an environment
@@ -29,7 +29,7 @@ namespace EINVWORLD.Services
     /// guidance we instead release ONE request every (60s / rate) with only a tiny burst — staying under
     /// the limit at all times so 429s do not occur. Excess requests queue (and wait) rather than fail.
     /// </summary>
-    public class LhdnRateLimitHandler : DelegatingHandler
+    public class LhdnRateLimitBuckets
     {
         private readonly RateLimiter _token;
         private readonly RateLimiter _validate;
@@ -40,7 +40,7 @@ namespace EINVWORLD.Services
         private readonly RateLimiter _state;
         private readonly RateLimiter _general;
 
-        public LhdnRateLimitHandler(IConfiguration configuration)
+        public LhdnRateLimitBuckets(IConfiguration configuration)
         {
             const string section = "LHDNApiConfig:RateLimits:";
             int PerMinute(string key, int fallback) => configuration.GetValue($"{section}{key}", fallback);
@@ -67,25 +67,7 @@ namespace EINVWORLD.Services
             AutoReplenishment = true
         });
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var limiter = SelectLimiter(request);
-
-            using var lease = await limiter.AcquireAsync(1, cancellationToken);
-            if (!lease.IsAcquired)
-            {
-                // Our internal queue is saturated. Surface a 429 so the existing retry/back-off logic
-                // in LHDNApiService / TokenService waits instead of hammering LHDN.
-                return new HttpResponseMessage(HttpStatusCode.TooManyRequests)
-                {
-                    ReasonPhrase = "Client-side rate limit (queue full)"
-                };
-            }
-
-            return await base.SendAsync(request, cancellationToken);
-        }
-
-        private RateLimiter SelectLimiter(HttpRequestMessage request)
+        public RateLimiter SelectLimiter(HttpRequestMessage request)
         {
             var path = request.RequestUri?.AbsolutePath.ToLowerInvariant() ?? string.Empty;
             var method = request.Method;
@@ -100,6 +82,41 @@ namespace EINVWORLD.Services
             if (path.Contains("/documents/")) return _getDoc; // /documents/{uuid}/raw and other reads
 
             return _general;
+        }
+    }
+
+    /// <summary>
+    /// Thin per-pipeline DelegatingHandler. Must be Transient (never Singleton): IHttpClientFactory
+    /// requires a distinct handler instance for every client pipeline it builds — reusing one instance
+    /// across pipelines (e.g. attaching the same singleton handler to two typed HttpClients) throws
+    /// "InnerHandler must be null" on the second build. The actual rate-limit state lives in the
+    /// singleton <see cref="LhdnRateLimitBuckets"/> so it still survives handler-pool rotation.
+    /// </summary>
+    public class LhdnRateLimitHandler : DelegatingHandler
+    {
+        private readonly LhdnRateLimitBuckets _buckets;
+
+        public LhdnRateLimitHandler(LhdnRateLimitBuckets buckets)
+        {
+            _buckets = buckets;
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var limiter = _buckets.SelectLimiter(request);
+
+            using var lease = await limiter.AcquireAsync(1, cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                // Our internal queue is saturated. Surface a 429 so the existing retry/back-off logic
+                // in LHDNApiService / TokenService waits instead of hammering LHDN.
+                return new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+                {
+                    ReasonPhrase = "Client-side rate limit (queue full)"
+                };
+            }
+
+            return await base.SendAsync(request, cancellationToken);
         }
     }
 }
