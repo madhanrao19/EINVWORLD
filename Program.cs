@@ -552,6 +552,17 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+// Gzip/Brotli compress responses (HTML + the ~6.7 MB of unminified-transfer CSS/JS/fonts under
+// wwwroot). Built into the framework, no new dependency. EnableForHttps is safe here — the app
+// only ever serves HTTPS via an edge/tunnel that already terminates TLS (see ForwardedHeaders
+// above), so this process's own HTTPS responses (if any) aren't subject to BREACH-style concerns.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+
 var app = builder.Build();
 
 // Fail fast on broken/missing critical config (blank connection string, missing DataProtection key
@@ -704,7 +715,17 @@ if (httpsRedirectPort > 0)
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles(); // Serves static files from wwwroot
+app.UseResponseCompression();
+app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+{
+    // Not every asset under wwwroot is cache-busted (asp-append-version covers the Tabler
+    // layouts' core CSS/JS, but images/fonts aren't), so a moderate 7-day cache — not a
+    // year-long "immutable" — bounds staleness after a logo/icon change to a week.
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.CacheControl = "public,max-age=604800";
+    }
+}); // Serves static files from wwwroot
 // Structured per-request log (method, path, status, elapsed ms) — one tidy line per request instead of
 // the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
 app.UseSerilogRequestLogging();
