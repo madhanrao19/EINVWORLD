@@ -7,6 +7,32 @@
 > **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
 > **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — DESIGN.md system-wide audit + skip-navigation links
+
+> Audited the app against the just-expanded `docs/DESIGN.md` (TABLES/FORMS/ACCESSIBILITY/
+> COMPONENT LIBRARY sections). The Velzon→Tabler migration itself is effectively complete — every
+> functional module already defaults to `_LayoutTabler`/`_LoginLayoutTabler` via folder-level
+> `_ViewStart.cshtml`; only the public marketing pages (Home, Resources) intentionally use a
+> different layout. Two real gaps found; one fixed here, one deferred pending scoping.
+
+### Fixed
+- **No skip-navigation link anywhere** (WCAG 2.2 AA gap). Added a "Skip to main content" link — the
+  first focusable element on the page — to `_LayoutTabler.cshtml`, `_LoginLayoutTabler.cshtml`, and
+  `_HomeLayout.cshtml`, targeting a `tabindex="-1"` anchor (`#einv-main-content`) on each layout's
+  content container. Uses Bootstrap's standard `.visually-hidden-focusable` utility, already present
+  in both `tabler.min.css` and the public site's `bootstrap.min.css` — no new CSS. Verified in a real
+  browser: hidden by default, becomes visible on focus, `#einv-main-content` target resolves.
+
+### Deferred (needs scoping, not fixed here)
+- **49 files use inline `style="..."` attributes**, spread across every module (Invoices 11,
+  Suppliers 8, Admin 8, PublicCustomer 5, Items 4, RecurringInvoices 3, Dashboard 3, Templates 2,
+  Profile 2, Lead 2, Assistant 1) — violates `CLAUDE-UI-RULES.md` §14. Each needs individual review
+  (some may be legitimate dynamic/computed values) rather than a blind find-replace; not actioned in
+  this change per CLAUDE.md's "surface a scoped plan and get agreement first" for high-blast-radius
+  changes touching every module.
+- Minor: the FAB button's hover transition (`einvworld-tokens.css`) has no `prefers-reduced-motion`
+  guard — low priority, single rule.
+
 ## 📅 2026-08-02 — Dark mode for the Tabler app (authenticated pages only)
 
 > Adds a light/dark toggle to the Tabler-based authenticated app (Admin/Supplier/Buyer). Public

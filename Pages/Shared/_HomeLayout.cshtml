@@ -56,6 +56,7 @@
 </head>
 
 <body>
+    <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>
     <!-- Non-authenticated user header -->
     <!-- Begin page -->
     <div class="layout-wrapper landing">
@@ -104,7 +105,7 @@
            layout's padded .page-content. Without that padding they spill ~24px past the
            viewport; clip the horizontal excess here so the banner still reaches both edges
            without creating a page-wide horizontal scrollbar. *@
-        <div style="overflow-x: clip;">
+        <div id="einv-main-content" style="overflow-x: clip;" tabindex="-1">
             @RenderBody()
         </div>
 
