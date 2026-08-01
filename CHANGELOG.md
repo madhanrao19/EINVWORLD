@@ -7,6 +7,42 @@
 > **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
 > **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — Dark mode for the Tabler app (authenticated pages only)
+
+> Adds a light/dark toggle to the Tabler-based authenticated app (Admin/Supplier/Buyer). Public
+> marketing pages and the Velzon fallback layout are unchanged.
+
+### Added
+- **Theme toggle** in the topbar (`_TablerTopbar.cshtml`) — sun/moon icon button using Tabler's
+  built-in `.hide-theme-dark` / `.hide-theme-light` convention (already shipped in `tabler.min.css`,
+  no new CSS needed for the icon swap).
+- **`_LayoutTabler.cshtml`**: reads an `einv-theme` cookie server-side and renders `data-bs-theme`
+  directly on `<html>` for returning visitors — zero flash of the wrong theme, works even before JS
+  runs. First-time visitors (no cookie) get a blocking inline script, first thing in `<head>`, that
+  follows `prefers-color-scheme` instead (Tabler's own CSS has no pure-CSS auto-dark fallback, so this
+  has to be JS). Cookie value is allowlisted (`"dark"`/`"light"` only) before touching the HTML attribute.
+- **`einvworld-ui.js`**: `initThemeToggle()` — click handler flips `data-bs-theme` and persists the
+  choice as a 1-year cookie so the next server render already knows it.
+- **`einvworld-tokens.css`**: `--einv-page-bg`/`--einv-surface`/`--einv-text`/`--einv-text-muted`/
+  `--einv-border` now flip under `[data-bs-theme="dark"]`, matched to Tabler's own dark gray-900/800/700
+  palette so the rebrand blends with Tabler's built-in dark components instead of introducing a second
+  dark palette. A handful of rules used hardcoded (non-variable) light colors and needed explicit dark
+  overrides: the green-tinted table headers (`.table thead th`, `#invoiceTable`/`.einv-mobile-stack`
+  `thead.einv-table-head th`) and the topbar search pill.
+- Verified in a real browser (dev server, self-hosted asset files) against a smoke-test page built from
+  the actual shipped markup/CSS/JS: light→dark→light toggle, cookie persistence, icon swap, card/table/
+  badge/sidebar/pagination legibility all confirmed correct.
+
+### Not changed (deliberately)
+- Public marketing pages and Velzon fallback pages are out of scope — Velzon already has its own,
+  separate dark-mode toggle from before the Tabler migration.
+
+### QA note (unrelated to this change)
+- The local/Staging demo accounts `buyer@einvworld.com` and `supplier@einvworld.com` both currently fail
+  login with "Your company TIN is missing. Please contact support." — a pre-existing seeded-data issue on
+  this Staging DB snapshot, not caused by this change. Blocked authenticated-page Playwright verification
+  for this PR; flagging in case it's blocking other QA too.
+
 ## 📅 2026-08-01 — Diagnosed remaining page-load stall: Cloudflare Web Analytics beacon (not CSP)
 
 > Investigated a "site still feels slow" report using staging HAR captures (`/`, `/login` ×2) and
