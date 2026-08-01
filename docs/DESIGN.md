@@ -1,7 +1,7 @@
 # EINVWORLD Enterprise Design System
 ## Tabler-Based Enterprise SaaS Design System
 
-Version: 1.0
+Version: 1.1
 Status: Source of Truth
 Framework: Latest Project-Approved Tabler Version
 Platform: ASP.NET Core Razor Pages
@@ -351,20 +351,57 @@ Never overload page headers.
 
 # TABLES
 
-Invoice tables are first-class components.
+Invoice tables are first-class components. Use the shared enterprise table pattern
+(`einv-table-head` header + `einv-badge` status pills + `einv-mobile-stack` responsive
+fallback — see `wwwroot/tabler/css/einvworld-tokens.css`) for every data table, not a
+per-page reimplementation.
 
-Support:
+Support where applicable:
 
+- Sticky header
+- Comfortable density (default) and compact density option
+- Column resizing where useful
+- Column visibility controls
+- Sort indicators
 - Search
-- Filters
-- Sorting
+- Filter chips (show active filters as removable chips, not just a hidden filter panel)
+- Bulk selection + a bulk action bar (appears only when rows are selected)
 - Pagination
 - Export
-- Bulk Actions
-- Sticky Header
-- Responsive
+- Saved views
+- Row actions
+- Loading state
+- Empty state (no data at all)
+- No-results state (data exists, current filters matched nothing)
+- Error state
+- Keyboard accessibility (arrow/tab navigation, operable row actions)
+- Responsive fallback
 
-Never shrink financial tables until unreadable.
+Row hierarchy: primary identifying column (e.g. Invoice No) reads clearly against
+secondary/metadata columns — do not give every column equal visual weight.
+
+Right-align:
+
+- Currency
+- Quantity
+- Tax
+- Percentages
+- Totals
+
+Do not put every row action as an always-visible button. Use one clear primary
+inline action (e.g. View) and a row-actions menu (`einv-action-btn`) for everything
+else. Never shrink financial tables until unreadable.
+
+On smaller screens, choose one of:
+
+- Horizontal scroll
+- Sticky key column
+- Priority columns (hide secondary columns progressively, per breakpoint)
+- Stacked-card layout (`einv-mobile-stack`)
+- Detail drawer
+
+Do not automatically convert every table into cards below a fixed breakpoint —
+choose the pattern that fits the table's column count and content.
 
 ---
 
@@ -372,19 +409,45 @@ Never shrink financial tables until unreadable.
 
 Always use:
 
-Labels above controls
+- Labels above controls (never rely on placeholders as labels)
+- Logical grouping into sections (e.g. Buyer Details, Line Items, Totals — not one
+  undifferentiated wall of fields)
+- Helper text only where it adds information the label doesn't already convey —
+  don't pad every field with boilerplate helper text
+- Required-field indicators applied consistently across the whole app (same marker,
+  same position, every form)
+- Inline validation as the user completes a field
+- An error summary at the top for long forms (invoice creation, company setup),
+  linking down to each invalid field
+- Preserved entered data after a validation error — never clear the form
+- An unsaved-changes warning before navigating away with pending edits
+- Autosave for long invoice drafts, with a visible save-state indicator
+  (Saving… / Saved / Save failed)
+- Searchable selects (Select2, already self-hosted) for long code lists — country,
+  currency, tax type, classification, MSIC, unit-of-measure
+- Code and description shown together in list options, e.g. `MYR — Malaysian Ringgit`,
+  not the bare code alone
+- Worked examples for Malaysian identifiers next to the field: TIN format
+  (`C1234567890` / `IG12345678901`), Business Registration Number format, phone
+  format (`+60…`)
+- Sticky action bar for long forms so Save/Submit stays reachable while scrolling
 
-Grouped sections
+Clearly distinguish, using a consistent visual convention across the app (not
+one-off styling per page):
 
-Validation
+- Required
+- Optional
+- Conditional (only required given another field's value)
+- Read-only
+- Disabled
+- System-generated
+- Internal-only (never leaves EINVWORLD)
+- Submitted to LHDN (the value is now part of a filed document — treat as
+  effectively locked, and say so)
 
-Autosave for long forms
-
-Sticky action bar
-
-Required indicators
-
-Never rely on placeholders as labels.
+Do not hide important fields behind unexplained icons — an icon-only affordance for
+something that changes what gets submitted to LHDN must carry a visible label or
+persistent tooltip, not rely on discovery.
 
 ---
 
@@ -424,21 +487,37 @@ Never rely on colour alone.
 
 # ACCESSIBILITY
 
-Target WCAG 2.2 AA
+Target WCAG 2.2 AA.
 
 Support:
 
-Keyboard
+- High colour contrast (meet AA contrast ratios for text and meaningful UI, not
+  just decorative elements)
+- Visible keyboard focus on every interactive element — never `outline: none`
+  without a replacement focus style
+- Full keyboard navigation (tab order follows visual/reading order; every mouse
+  action has a keyboard equivalent)
+- Semantic headings (one `<h1>` per page, no skipped levels, headings describe
+  actual structure — not chosen for font size)
+- Proper `<label>`/`aria-label` on every form control, not placeholder-as-label
+- Accessible validation (errors are programmatically associated with their field
+  via `aria-describedby`, not conveyed by colour/icon alone)
+- Screen-reader status announcements for async state changes (`aria-live` regions
+  for toasts, save-state, submission results) — a sighted user seeing a toast
+  appear must have a screen-reader equivalent
+- Accessible modals (focus trapped inside while open, focus returns to the
+  trigger on close, `Esc` closes, labelled via `aria-labelledby`)
+- Skip-navigation link to jump past the sidebar/topbar to main content
+- Minimum 44×44px touch targets on interactive controls where practical
+- Reduced-motion support — honour `prefers-reduced-motion`, disable non-essential
+  transitions/animations for users who request it
+- Charts with a text summary/data-table alternative — a chart's information must
+  not be locked inside a canvas/SVG only a sighted user can read
+- Status conveyed by text + icon, never colour alone (see STATUS SYSTEM)
 
-Screen readers
-
-Focus states
-
-Reduced motion
-
-Proper labels
-
-Minimum 44px touch targets
+Do not rely on tooltips for essential information — a tooltip is a supplement,
+never the only place a required fact appears. Icons must support, not replace,
+understandable text.
 
 ---
 
@@ -494,43 +573,168 @@ Never silently modify invoices.
 
 # COMPONENT LIBRARY
 
-Create reusable components only.
+Create reusable components only — one implementation per component, shared across
+Supplier, Buyer, and Admin. Never duplicate a component's markup per page, and
+never build a second version of something Tabler or an already-self-hosted library
+already provides.
 
-Examples:
+Each entry below is tagged with its implementation source:
 
-Page Header
+- **Tabler** — use the framework component as-is (or with `einvworld-tokens.css`
+  brand overrides only). Do not rebuild it.
+- **Lib: `<name>`** — an EINVWORLD-specific wrapper around a library already
+  self-hosted in `wwwroot/assets/libs/` (see that library's existing usage before
+  adding new markup).
+- **Custom** — no existing Tabler component or self-hosted library covers this;
+  it must be built as an EINVWORLD component, kept small and reused everywhere.
+- **Gap** — not implemented anywhere in the app today and no library is
+  self-hosted for it. Building it requires either a new FOSS library (per
+  CLAUDE.md's FOSS-only dependency policy) or a small custom implementation —
+  decide per the size of the actual need, don't add a dependency for one page.
 
-Summary Card
+### Actions
+- **Buttons** — Tabler (`.btn-primary/-secondary/-outline/-danger`). One dominant
+  primary action per section (see BUTTONS).
+- **Button groups** — Tabler (`.btn-group`).
+- **Icon buttons** — Tabler icon-only `.btn`/`.nav-link` pattern (see the theme
+  toggle in `_TablerTopbar.cshtml` for a worked example). Always carries an
+  accessible name (`aria-label` or `visually-hidden` text) — an icon alone is
+  never a sufficient label.
 
-Data Table
+### Text & selection inputs
+- **Inputs** — Tabler `.form-control`.
+- **Text areas** — Tabler `.form-control` (textarea).
+- **Search boxes** — Custom (`app-search`, already themed in
+  `einvworld-tokens.css`) — debounced, with a clear/close affordance.
+- **Select menus** — Lib: Select2, themed `bootstrap-5`. Use for any list with
+  more than ~8 options.
+- **Multi-select** — Lib: Select2 (`multiple` mode) with code+description shown
+  per selected chip.
 
-Filter Bar
+### Date & time inputs
+- **Date pickers** — Lib: Flatpickr.
+- **Date-range pickers** — Lib: Flatpickr (`mode: "range"`).
+- **Time pickers** — Lib: Flatpickr (`enableTime`).
 
-Search Box
+### Specialized inputs
+- **Currency input** — Lib: Cleave.js for input masking/grouping, paired with
+  server-side decimal(18,2) validation — the mask is a UX aid, never the source
+  of truth for precision (see CLAUDE.md decimal-precision rule).
+- **Percentage input** — Lib: Cleave.js, decimal(18,6) rate precision server-side.
+- **Phone input** — **Gap.** No international phone library is self-hosted today.
+  Until one is added, use a plain `.form-control` with a Malaysian-format example
+  in helper text (`+60 12-345 6789`) and server-side format validation. Don't add
+  a phone-input library for a single field — only if a real multi-country need
+  emerges.
 
-Invoice Totals
+### File inputs
+- **File upload** — Lib: FilePond (already self-hosted) for single/simple
+  uploads.
+- **Drag-and-drop upload** — Lib: Dropzone.js (already self-hosted) — use where
+  bulk/multi-file drag-drop is the actual interaction (e.g. CSV import,
+  attachments), not as a default replacement for a plain file input.
 
-Status Badge
+### Choice controls
+- **Checkboxes** — Tabler `.form-check`.
+- **Radio buttons** — Tabler `.form-check` (radio).
+- **Switches** — Tabler `.form-switch`.
 
-Alert
+### Navigation & disclosure
+- **Tabs** — Tabler `.nav-tabs`, brand underline styling already in
+  `einvworld-tokens.css`.
+- **Accordions** — Tabler `.accordion`.
+- **Breadcrumbs** — Tabler `.breadcrumb`.
+- **Pagination** — Tabler `.pagination`, brand active-state styling already in
+  `einvworld-tokens.css`.
 
-Drawer
+### Data display
+- **Tables** — Custom shared pattern on top of Tabler `.table` — see TABLES.
+- **Editable tables** — Custom — inline-editable cells built on the same shared
+  table pattern; edit affordance is explicit (not silently editable on click),
+  and every edit follows the same validate → save → confirm flow as a form field.
+- **Cards** — Tabler `.card`.
+- **KPI cards** — Custom (`.card.einv-kpi-*`, 4px semantic left-accent, already
+  in `einvworld-tokens.css`).
+- **Charts** — Lib: Chart.js (already self-hosted). Every chart needs a text/data
+  summary alternative (see ACCESSIBILITY).
 
-Modal
+### Status
+- **Badges** — Tabler `.badge`, semantic tint/icon pairing already in
+  `einvworld-tokens.css` (table-scoped) — never colour alone (see STATUS SYSTEM).
+- **Status chips** — Custom (`.einv-badge-*`) for compact inline status pills
+  outside table cells.
 
-Timeline
+### Overlays
+- **Tooltips** — Tabler/Bootstrap tooltip. Supplement only — never the sole
+  carrier of essential information (see ACCESSIBILITY).
+- **Popovers** — Tabler/Bootstrap popover.
+- **Dropdown menus** — Tabler `.dropdown-menu`.
+- **Modals** — Tabler `.modal`. Focus-trapped, labelled, closable via `Esc`
+  (see ACCESSIBILITY).
+- **Confirmation dialogs** — Lib: SweetAlert2 (already self-hosted, brand button
+  colour applied globally in `_LayoutTabler.cshtml`). Required for destructive or
+  regulated actions (see SECURITY UX, LHDN UX).
+- **Side drawers** — Tabler `.offcanvas`.
 
-Audit Card
+### Feedback
+- **Toasts** — Custom, built on the Bootstrap Toast component (`toast-success`
+  host already in `_LayoutTabler.cshtml`, `window.einvworld.toast()` helper).
+- **Banners** — Tabler `.alert` used page-wide/persistent (e.g. environment
+  indicator — see SECURITY UX).
+- **Alerts** — Tabler `.alert`.
+- **Empty states** — Custom — explain why there's no data and what to do next
+  (see EMPTY, ERROR & PERMISSION STATES pattern in `CLAUDE-UI-RULES.md`).
+- **Skeleton loading states** — Tabler `.placeholder`/`.placeholder-glow`.
 
-Statistics Card
+### Progress & sequence
+- **Timelines** — Tabler `.timeline` (used for invoice status history/audit
+  trail).
+- **Step indicators** — Tabler `.steps`.
+- **Progress bars** — Tabler `.progress`.
 
-Loading Skeleton
+### Identity
+- **Avatars** — Tabler `.avatar` + the `.avatar-xxs`…`.avatar-xl` size scale
+  already in `einvworld-tokens.css`.
+- **Organisation logos** — Custom — company/supplier logo display, falls back to
+  initials avatar (`.einv-avatar-initials`) when no logo is set. Never stretch,
+  recolour, or distort an uploaded logo.
 
-Empty State
+### Utility
+- **Command menu** — **Gap.** No command-palette library is self-hosted. Only
+  build this if there's a concrete navigation/search need it solves that the
+  existing topbar search doesn't — don't add it speculatively.
+- **QR-code container** — Lib: qrcodejs (already self-hosted, used today on
+  invoice PDF/detail pages for the LHDN validation QR). Reuse the existing
+  pattern rather than a new implementation.
+- **Code and JSON viewer** — **Gap.** No syntax-highlighting library is
+  self-hosted. For the rare page that needs it (e.g. raw LHDN payload for
+  support/debugging), a plain `<pre><code>` block with `overflow-wrap`/`overflow-x`
+  handling (already in `einvworld-tokens.css`) is sufficient — don't add a
+  highlighting library for occasional internal-only use.
+- **Copy-to-clipboard control** — Custom — small icon-button wrapper around the
+  Clipboard API, with a toast/tooltip confirming the copy succeeded (never silent
+  — a screen-reader user needs the same confirmation).
 
-Error State
+## State variants
 
-Permission State
+Not every component has every state — apply only the states that are meaningful
+for that component:
+
+- **Default, Hover, Focus, Active, Disabled** — apply to every interactive
+  component (buttons, inputs, selects, tabs, links, menu items).
+- **Loading** — applies to anything that triggers an async action: buttons,
+  forms, tables, file uploads, search, command menu.
+- **Success, Warning, Error** — apply where the component itself carries a
+  validation or outcome state: inputs/text areas (validation), file upload
+  (accepted/rejected), badges/status chips (business status), banners/alerts
+  (message severity), buttons (rare — e.g. a save button briefly confirming
+  success). They do not apply to purely structural components (breadcrumbs,
+  avatars, pagination, tabs, dividers).
+
+Focus state must always be visible (see ACCESSIBILITY) — do not implement a
+component whose only visual difference from Default is colour, since that fails
+users who can't perceive colour and users navigating by keyboard on a low-contrast
+display.
 
 ---
 

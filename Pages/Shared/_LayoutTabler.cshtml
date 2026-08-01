@@ -68,6 +68,7 @@
     @RenderSection("Styles", required: false)
 </head>
 <body>
+    <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>
     <script>
         // Applied synchronously (before the sidebar paints) to avoid a flash of the expanded
         // sidebar on desktop; einvworld-ui.js owns the toggle button + persistence afterwards.
@@ -97,7 +98,7 @@
                 @await Html.PartialAsync("_TablerTopbar")
             }
             <div class="page-body">
-                <div class="container-fluid">
+                <div id="einv-main-content" class="container-fluid" tabindex="-1">
                     @RenderBody()
                 </div>
             </div>
