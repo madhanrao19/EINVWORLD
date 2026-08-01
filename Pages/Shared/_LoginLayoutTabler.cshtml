@@ -88,6 +88,7 @@
     @await Html.PartialAsync("_GoogleAnalytics")
 </head>
 <body data-logout-reason="@logoutReason" class="einv-auth">
+    <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>
     <div class="auth-page-wrapper">
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -99,7 +100,7 @@
         </script>
 
         <div class="auth-page-content">
-            <div class="container">
+            <div id="einv-main-content" class="container" tabindex="-1">
                 @RenderBody()
             </div>
         </div>
