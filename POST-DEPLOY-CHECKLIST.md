@@ -114,6 +114,16 @@ bottom; stop and investigate on the first ❌.
 - [ ] **Rocket Loader is OFF** in the Cloudflare zone (*Speed → Optimization*). With it on, every page's
       `DOMContentLoaded` stalls ~20 s and Turnstile becomes unreliable (documented incompatibility).
       Verify: page source must NOT contain `rocket-loader.min.js` / `type="…-text/javascript"` rewrites.
+- [x] **Web Analytics / Browser Insights is OFF** in the Cloudflare zone (*Analytics & Logs → Web Analytics*,
+      or wherever the zone exposes the auto-injected beacon toggle). Cloudflare auto-injects a `defer`
+      `<script src="https://static.cloudflareinsights.com/beacon.min.js/...">` into every response; on
+      networks where that host is slow/unreachable this stalls `DOMContentLoaded` 20-35 s — same failure
+      class as Rocket Loader, confirmed via HAR on `/` and `/login` (2026-08-01). The app already has its
+      own GTM-based analytics, so this beacon is redundant. Not fixable from app code — it is not referenced
+      anywhere in our HTML/JS; Cloudflare injects it at the edge. Verify: page source must NOT contain
+      `static.cloudflareinsights.com/beacon.min.js`.
+      **Done and re-verified 2026-08-01: RUM disabled for `einvworld.com`; HAR confirms `DOMContentLoaded`
+      down from 21-34 s to 0.9-2.5 s.**
 
 ---
 
