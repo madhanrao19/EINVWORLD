@@ -46,6 +46,18 @@
   --tblr-info-rgb: 14, 165, 233;
 }
 
+/* Dark mode: only the canvas/surface/text/border tokens need to flip — every rule elsewhere in this
+ * file that uses var(--einv-page-bg|surface|text|text-muted|border) picks this up automatically.
+ * Values match Tabler's own dark palette (tabler.min.css gray-900/800/700/200/400) so the rebrand
+ * blends with Tabler's built-in dark-mode components instead of introducing a second dark palette. */
+[data-bs-theme="dark"] {
+  --einv-page-bg: #111827;
+  --einv-surface: #1f2937;
+  --einv-text: #e5e7eb;
+  --einv-text-muted: #9ca3af;
+  --einv-border: #374151;
+}
+
 /* Primary buttons: explicit hover/active so the darker brand step is used instead of a derived tint. */
 .btn-primary:hover, .btn-primary:focus-visible, .btn-primary:active,
 .btn-primary.active, .btn-primary.show {
@@ -176,6 +188,9 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   letter-spacing: .04em;
   text-transform: uppercase;
 }
+[data-bs-theme="dark"] .table thead th {
+  background-color: rgba(var(--einv-primary-rgb), .16) !important;
+}
 
 /* Topbar search: quiet rounded pill with an inline magnifier, brand focus ring. */
 .app-search .form-control {
@@ -190,6 +205,13 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   background-color: #fff;
   border-color: var(--einv-primary);
   box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .10);
+}
+[data-bs-theme="dark"] .app-search .form-control {
+  background-color: rgba(255, 255, 255, .06);
+  color: var(--einv-text);
+}
+[data-bs-theme="dark"] .app-search .form-control:focus {
+  background-color: rgba(255, 255, 255, .09);
 }
 
 /* KPI metric cards: 4px semantic left-accent (Stitch dashboard). Cards opt in via einv-kpi-*.
@@ -602,6 +624,10 @@ button.einv-badge { cursor: pointer; }
   white-space: nowrap;
   border-bottom: 1px solid var(--einv-border);
   padding: .6rem .6rem;
+}
+[data-bs-theme="dark"] #invoiceTable thead.einv-table-head th,
+[data-bs-theme="dark"] .einv-mobile-stack thead.einv-table-head th {
+  background-color: rgba(var(--einv-primary-rgb), .16);
 }
 .einv-mobile-stack thead.einv-table-head th a { color: inherit; text-decoration: none; }
 .einv-mobile-stack thead.einv-table-head th a:hover { color: var(--einv-primary); }
