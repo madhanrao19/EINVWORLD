@@ -12,11 +12,33 @@
     JS is intentionally not loaded (avoids a double-Bootstrap load); interactivity is standard Bootstrap 5.
 *@
 
+@{
+    // Dark mode: an explicit user choice (cookie, set by the topbar toggle) is rendered server-side
+    // so there's no flash of the wrong theme for returning visitors — validated against an allowlist
+    // before going anywhere near an HTML attribute. First-time visitors with no cookie get the
+    // system-preference fallback below (must run client-side; the server has no way to know it).
+    var einvThemeCookie = Context.Request.Cookies["einv-theme"];
+    var einvTheme = einvThemeCookie == "dark" || einvThemeCookie == "light" ? einvThemeCookie : null;
+}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"@(einvTheme != null ? $" data-bs-theme=\"{einvTheme}\"" : "")>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    @if (einvTheme == null)
+    {
+        <script>
+            // First-time visitor, no saved preference: follow the OS/browser setting. Must be the very
+            // first thing in <head> and run synchronously (blocking, no defer/async) so the attribute
+            // lands before anything paints — same FOUC-avoidance approach as the sidebar-collapse
+            // script further down, just needed earlier here since it affects the whole page's CSS.
+            (function () {
+                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                document.documentElement.setAttribute("data-bs-theme", dark ? "dark" : "light");
+            })();
+        </script>
+    }
 
     @await Html.PartialAsync("_Favicons")
 

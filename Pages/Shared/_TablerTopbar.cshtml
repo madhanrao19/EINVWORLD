@@ -5,6 +5,13 @@
 <header class="navbar navbar-expand-md d-print-none" aria-label="Top bar">
     <div class="container-fluid">
         <div class="navbar-nav flex-row order-md-last">
+            <div class="nav-item me-2">
+                <button type="button" class="nav-link px-2" id="einv-theme-toggle" aria-pressed="false" title="Switch to dark mode">
+                    <i class="ri-moon-line fs-18 hide-theme-dark" aria-hidden="true"></i>
+                    <i class="ri-sun-line fs-18 hide-theme-light" aria-hidden="true"></i>
+                    <span class="visually-hidden">Toggle dark mode</span>
+                </button>
+            </div>
             @await Html.PartialAsync("_UserMenu")
         </div>
         <div class="collapse navbar-collapse" id="einv-topbar-content">
