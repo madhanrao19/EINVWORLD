@@ -7,6 +7,49 @@
 > **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
 > **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-01 — Diagnosed remaining page-load stall: Cloudflare Web Analytics beacon (not CSP)
+
+> Investigated a "site still feels slow" report using staging HAR captures (`/`, `/login` ×2) and
+> `SystemLogs`. The reported hypothesis (CSP causing the slowdown) does not hold: CSP ships as
+> `Content-Security-Policy-**Report-Only**` (`Program.cs`), which never blocks a request — it only logs
+> violations to `/csp-report`. It cannot be the cause of a network-level stall.
+
+### Root cause (confirmed via HAR, no code bug)
+- All three captured page loads show the identical pattern: `DOMContentLoaded` delayed **21–34 s** by
+  `https://static.cloudflareinsights.com/beacon.min.js` (status 0, fully spent in the browser's `blocked`
+  phase — a hung/slow fetch, not a CSP block), followed by `www.googletagmanager.com/gtm.js` adding another
+  20-35 s to `onLoad`. The GTM half is already mitigated (`_GoogleAnalytics.cshtml` injects GTM only after
+  `DOMContentLoaded`, per the 2026-07-09/#144 fixes) — the CF beacon is a **new, third instance** of the
+  same failure class as the Rocket Loader issue in v1.9.6: an uncontrolled third-party script gating the
+  page lifecycle.
+- `static.cloudflareinsights.com/beacon.min.js` is **not referenced anywhere in our HTML/JS** (confirmed —
+  only a Playwright analytics-noise filter matches the hostname). It is injected directly by the
+  **Cloudflare edge** (the zone's "Web Analytics"/"Browser Insights" auto-beacon), the same mechanism as
+  Rocket Loader, and is outside application code entirely.
+
+### Required operator action (Cloudflare dashboard — cannot be fixed from code)
+- **Disable Web Analytics / Browser Insights auto-injection** for the zone (*Analytics & Logs → Web
+  Analytics*, or the equivalent toggle exposing the auto-beacon). The app already has its own GTM-based
+  analytics, so this beacon is redundant — same reasoning as disabling Rocket Loader in v1.9.6. See
+  `POST-DEPLOY-CHECKLIST.md`.
+- **Done and verified 2026-08-01.** RUM was set to "Disable" for the `einvworld.com` Web Analytics site.
+  Re-captured HAR on `/` and `/login` confirms `DOMContentLoaded` dropped from 21-34 s to **0.9-2.5 s**,
+  and `static.cloudflareinsights.com/beacon.min.js` no longer appears at all.
+- **`gtm.js` still hung 23-57 s** in the same network path (same `status: 0`, fully-`blocked` pattern as the
+  CF beacon had) even after the Cloudflare fix above — it no longer stalls `DOMContentLoaded` (the existing
+  post-DCL-injection fix already isolates it), but it delayed `onLoad`. **Fix:** `appsettings.Staging.json`
+  now overrides `GoogleAnalytics.MeasurementId` to empty, the same mitigation already in place for
+  `appsettings.Development.json` — GTM never loads on Staging, so this hang can't happen there either.
+  **Trade-off (accepted):** Staging can no longer be used to smoke-test GTM/GA tag behavior before a
+  Production release; Production is unaffected — this override applies to Staging only, and Production
+  never had a mitigation removing it.
+
+### Not changed (deliberately)
+- CSP was **not** promoted from Report-Only to enforcing, and `cloudflareinsights.com` was **not** added to
+  the CSP allowlist — Report-Only never blocked the beacon in the first place (so allowlisting it would not
+  improve speed), and promoting to enforcing is a separate, higher-blast-radius change gated behind the CDN
+  cleanup already noted in `Program.cs`.
+
 ## 📅 2026-07-29 — Role Management, company user removal, LHDN SDK 1.0 compliance, bug fixes
 
 > Five-PR stacked release, all merged to `main`. Additive migrations only (`AddRoleModulePermissions`,
