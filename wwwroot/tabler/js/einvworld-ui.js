@@ -71,6 +71,35 @@
     });
   }
 
+  // Dark mode toggle. The initial data-bs-theme attribute is already set before this script runs
+  // (server-side from the cookie for returning visitors, or a blocking inline script in <head> for
+  // first-time visitors following the OS preference) — this only handles the click, persisting the
+  // explicit choice as a cookie so the next server render already knows it (see _LayoutTabler).
+  function initThemeToggle() {
+    var COOKIE_NAME = "einv-theme";
+    var btn = document.getElementById("einv-theme-toggle");
+    if (!btn) return;
+
+    function currentTheme() {
+      return document.documentElement.getAttribute("data-bs-theme") === "dark" ? "dark" : "light";
+    }
+    function reflectState() {
+      var isDark = currentTheme() === "dark";
+      btn.setAttribute("aria-pressed", String(isDark));
+      btn.setAttribute("title", isDark ? "Switch to light mode" : "Switch to dark mode");
+    }
+
+    reflectState();
+    btn.addEventListener("click", function () {
+      var next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-bs-theme", next);
+      // 1 year, site-wide, readable/writable by JS (no HttpOnly) since only this script uses it;
+      // no Secure flag forced — the app is also served over plain HTTP behind the Cloudflare tunnel.
+      document.cookie = COOKIE_NAME + "=" + next + "; Path=/; Max-Age=31536000; SameSite=Lax";
+      reflectState();
+    });
+  }
+
   window.einvworld = window.einvworld || {};
   window.einvworld.toast = makeToast;
 
@@ -78,9 +107,11 @@
     document.addEventListener("DOMContentLoaded", function () {
       highlightCurrentRoute();
       initSidebarCollapse();
+      initThemeToggle();
     });
   } else {
     highlightCurrentRoute();
     initSidebarCollapse();
+    initThemeToggle();
   }
 })();
