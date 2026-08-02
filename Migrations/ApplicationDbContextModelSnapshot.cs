@@ -1106,6 +1106,9 @@ namespace eInvWorld.Migrations
                     b.Property<int?>("InvoicePeriod")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsNewInvoiceReceivedEmailSent")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPdfGenerated")
                         .HasColumnType("bit");
 
@@ -1129,6 +1132,13 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("LongId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("NewInvoiceReceivedEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewInvoiceReceivedEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)

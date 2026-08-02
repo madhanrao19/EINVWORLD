@@ -189,6 +189,28 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260729092236_AddCompanyRolePartyInfoScope
 ```
 
+### Post-v1.13.0 migration — new-invoice-received email tracking
+
+One new migration, purely additive (3 new nullable/defaulted columns — no drops, no data loss):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader.sql"
+```
+
+> **`AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`** — adds `InvoiceHeader.IsNewInvoiceReceivedEmailSent`
+> (`bit NOT NULL DEFAULT 1`), `NewInvoiceReceivedEmailSentAt`, `NewInvoiceReceivedEmailSentTo`. The
+> `DEFAULT 1` backfills every existing row as "not applicable" — this migration cannot retroactively
+> email anyone about invoices already in the database; only new buyer-side invoices synced in from LHDN
+> after this deploy start out eligible (`false`) and get emailed by the existing background finalizer
+> loop.
+
+Verify it's recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader
+```
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:
