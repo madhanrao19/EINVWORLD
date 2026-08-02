@@ -7,6 +7,7 @@ using eInvWorld.Data;
 using eInvWorld.Models;
 using eInvWorld.Models.Audit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,6 +26,7 @@ namespace eInvWorld.Services
         private readonly IPdfGeneratorService _pdfService;
         private readonly IEInvoiceNotificationService _notificationService;
         private readonly FilePathConfig _filePathConfig;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<InvoiceFinalizer> _logger;
 
         public InvoiceFinalizer(
@@ -32,12 +34,14 @@ namespace eInvWorld.Services
             IPdfGeneratorService pdfService,
             IEInvoiceNotificationService notificationService,
             IOptions<FilePathConfig> filePathConfig,
+            IConfiguration configuration,
             ILogger<InvoiceFinalizer> logger)
         {
             _context = context;
             _pdfService = pdfService;
             _notificationService = notificationService;
             _filePathConfig = filePathConfig.Value;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -189,6 +193,111 @@ namespace eInvWorld.Services
                 EmailSent = emailSent,
                 Completed = completed
             };
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SendNewInvoiceReceivedEmailAsync(string invoiceNo, CancellationToken cancellationToken = default)
+        {
+            var invoice = await _context.InvoiceHeaders
+                .AsNoTracking()
+                .Include(i => i.Customer)
+                .Include(i => i.Supplier)
+                .Include(i => i.PublicCustomer)
+                .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo, cancellationToken);
+
+            if (invoice == null || invoice.IsNewInvoiceReceivedEmailSent)
+            {
+                return false;
+            }
+
+            // "Claim and mark done, no send" for the disabled/expired cases — these are permanent
+            // decisions for this invoice, not transient failures, so they must not keep reappearing in
+            // every future background pass.
+            async Task<bool> MarkDoneWithoutSendingAsync(string reason)
+            {
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo && !i.IsNewInvoiceReceivedEmailSent)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.IsNewInvoiceReceivedEmailSent, true)
+                        .SetProperty(i => i.NewInvoiceReceivedEmailSentAt, DateTime.Now)
+                        .SetProperty(i => i.NewInvoiceReceivedEmailSentTo, reason), cancellationToken);
+                return false;
+            }
+
+            if (!_configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails"))
+            {
+                return await MarkDoneWithoutSendingAsync("Skipped (feature disabled)");
+            }
+
+            int maxAgeDays = _configuration.GetValue<int?>("EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification") ?? 7;
+            var referenceDate = invoice.DateTimeReceived ?? invoice.IssueDate ?? invoice.CreatedDate;
+            if (referenceDate < DateTime.Now.AddDays(-maxAgeDays))
+            {
+                _logger.LogDebug("New-invoice-received email for {InvoiceNo} expired: reference date {ReferenceDate} older than the {MaxAgeDays}-day window.",
+                    invoiceNo, referenceDate, maxAgeDays);
+                return await MarkDoneWithoutSendingAsync("Skipped (expired)");
+            }
+
+            // Atomic claim — mirrors the Valid-status email claim above: flips the flag to true only if
+            // still false, so exactly one concurrent finalizer wins the right to send; rolled back if the
+            // send then fails, so a later pass retries.
+            var claimed = await _context.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo && !i.IsNewInvoiceReceivedEmailSent)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.IsNewInvoiceReceivedEmailSent, true)
+                    .SetProperty(i => i.NewInvoiceReceivedEmailSentAt, DateTime.Now), cancellationToken);
+
+            if (claimed != 1)
+            {
+                _logger.LogInformation("New-invoice-received email for {InvoiceNo} already claimed by a concurrent finalizer; skipping.", invoiceNo);
+                return false;
+            }
+
+            try
+            {
+                _logger.LogInformation("📧 Sending new-invoice-received email for invoice {InvoiceNo}", invoiceNo);
+                bool sent = await _notificationService.SendNewInvoiceReceivedNotificationEmail(
+                    invoice.Customer, invoice.Supplier, invoice.InvoiceNo, invoice.IssueDate ?? DateTime.Now, invoice.PublicCustomer);
+
+                var recipient = sent ? (invoice.Customer?.Email ?? invoice.PublicCustomer?.Email) : "Skipped (no valid buyer email)";
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo)
+                    .ExecuteUpdateAsync(s => s.SetProperty(i => i.NewInvoiceReceivedEmailSentTo, recipient), cancellationToken);
+
+                if (sent)
+                {
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoiceNo,
+                        Action = "NewInvoiceReceivedEmailSent",
+                        PerformedBy = "Finalizer",
+                        Remarks = recipient,
+                        Timestamp = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                return sent;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to send new-invoice-received email for {InvoiceNo}; releasing the claim for retry.", invoiceNo);
+
+                try
+                {
+                    await _context.InvoiceHeaders
+                        .Where(i => i.InvoiceNo == invoiceNo)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(i => i.IsNewInvoiceReceivedEmailSent, false)
+                            .SetProperty(i => i.NewInvoiceReceivedEmailSentAt, (DateTime?)null), CancellationToken.None);
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError(rollbackEx, "❌ Failed to release the new-invoice-received email claim for {InvoiceNo}; it will not be retried automatically.", invoiceNo);
+                }
+
+                return false;
+            }
         }
     }
 }

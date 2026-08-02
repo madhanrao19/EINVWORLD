@@ -222,6 +222,11 @@ namespace EINVWORLD.Helpers
                                     .ThenInclude(y => y.InvoiceTaxes)
                                     .FirstOrDefaultAsync(i => i.UUID == summary.uuid);
 
+                // Captured before `invoice` gets assigned below — drives the "new e-invoice received"
+                // notification further down, which must only fire the one time a document is first
+                // discovered, not on every periodic re-sync of an already-known invoice.
+                bool isNewInvoice = invoice == null;
+
                 var docTypeCode = await EInvoiceTypeHelper.GetCodeFromDescriptionAsync(summary.typeName, _dbContext);
 
                 decimal? calculatedTaxAmount = null;
@@ -258,6 +263,11 @@ namespace EINVWORLD.Helpers
                         IsValidationEmailSent = true,
                         ValidationEmailSentAt = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow),
                         ValidationEmailSentTo = "System (Skipped for Sync)",
+
+                        // Opt a genuinely new buyer-side (received) invoice into the "new e-invoice
+                        // received" notification's retry pass (InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync);
+                        // a sent invoice discovered via sync is not applicable (matches the C# default anyway).
+                        IsNewInvoiceReceivedEmailSent = isSentInvoice,
 
                         UUID = summary.uuid,
                         SubmissionID = summary.submissionUid,
@@ -407,6 +417,12 @@ namespace EINVWORLD.Helpers
 
                 await _dbContext.SaveChangesAsync();
                 await txn.CommitAsync();
+
+                // The "new e-invoice received" notification itself is NOT sent inline here — only the
+                // IsNewInvoiceReceivedEmailSent flag above decides eligibility. Actually sending (with the
+                // recency check, atomic claim, and rollback-on-failure retry) is InvoiceFinalizer's job,
+                // run by the same background pass that already handles the Valid-status PDF/email — see
+                // InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync and InvoiceStatusUpdater.RunFinalizerAsync.
 
                 return true;
 
