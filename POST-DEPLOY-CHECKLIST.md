@@ -20,6 +20,7 @@ bottom; stop and investigate on the first ❌.
 - [ ] Spot-check a few tables load in the app (invoice list, users). ✅ data intact (migrations are additive — no data loss).
 - [ ] **v1.11.0 one-time step:** after migrations land, go to **Admin → System Health → Encrypt PII** and run the backfill (once per environment). ✅ existing bank-account/address data is now encrypted at rest, not just the schema widened. Safe to click again if unsure — it's idempotent.
 - [ ] **v1.13.0:** confirm `__EFMigrationsHistory` includes `AddRoleModulePermissions` and `AddCompanyRolePartyInfoScope` (last row). ✅ both additive — no data loss expected.
+- [ ] **v1.14.0:** confirm `__EFMigrationsHistory` includes `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader` (last row). ✅ additive — existing `InvoiceHeaders` rows backfill `IsNewInvoiceReceivedEmailSent = 1` (not applicable), no retroactive emails sent.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
@@ -40,6 +41,13 @@ bottom; stop and investigate on the first ❌.
 - [ ] (Automated) With Turnstile **test** keys + `Security__EnforceAdminMfa=false` set temporarily, run
       `tests/playwright/10-tabler-modules.spec.js` — ✅ all module pages pass; then revert those env vars.
       (See DEPLOY-NOTES / `docs/TABLER-MIGRATION-AUDIT.md`.)
+- [ ] **(v1.14.0) Dark mode toggle** (topbar sun/moon icon, authenticated Tabler pages only): click it —
+      ✅ theme flips instantly, persists across a page reload (cookie), and legibility holds across
+      cards/tables/badges/sidebar/pagination. First visit in a fresh/incognito session with the OS set to
+      dark ✅ loads dark by default, no flash of the wrong theme.
+- [ ] **(v1.14.0) Skip-navigation link:** press Tab once on page load (before clicking anything). ✅ a
+      "Skip to main content" link becomes visible as the first focusable element; activating it moves
+      focus past the sidebar/topbar into the page content.
 
 ## 2b. Company Management workspace (v1.11.0)
 - [ ] **My Company** shows the tabbed workspace (Overview/Profile/Users/Roles & Permissions/Invoice Branding/Security/Audit). ✅ all tabs load without error.
@@ -99,6 +107,13 @@ bottom; stop and investigate on the first ❌.
 ## 7. Email & notifications
 - [ ] Trigger a notification email (e.g. account confirm, validated invoice). ✅ delivered; links use the configured public base URL (not localhost).
 - [ ] Confirm SMTP creds are supplied via **env vars** (not committed). ✅ (`appsettings.json` ships blank).
+- [ ] **(v1.14.0) New-e-invoice-received email:** trigger an LHDN sync for a company that has a genuinely
+      new buyer-side invoice from an external ERP (or use "Refresh from API" on the Received tab shortly
+      after one lands). ✅ the buyer gets a "New e-Invoice Received" email (not the "Validated" one).
+      Temporarily stop the SMTP relay and repeat — ✅ the send fails, is logged, and
+      `InvoiceHeader.IsNewInvoiceReceivedEmailSent` stays `false` so the next background cycle (every
+      `InvoiceStatusUpdaterSettings:PollingIntervalSeconds`) retries it once SMTP is back, with no manual
+      resend needed.
 
 ## 8. Admin & observability
 - [ ] Admin → **Audit Trail** → Verify Chain. ✅ hash chain intact (tamper-evident).

@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.13.0.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.14.0.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -201,7 +201,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.13.0.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.14.0.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
