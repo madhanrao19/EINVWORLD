@@ -9,6 +9,41 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — Review cleanup: dead variable + duplicate audit row in the new-invoice-received email
+
+> Follow-up from a full review of this session's recent PRs (#150-154): confirmed correct via a
+> fresh build, full test run, and Playwright checks (public pages, supplier/buyer login, the
+> reverted-file A/B check below). Two small, low-severity findings fixed; nothing else needed
+> changing. No functional behavior change to the notification itself.
+
+### Fixed
+- **`InvoiceFullSyncHelper.cs`** — removed an unused `isNewInvoice` local variable left over from
+  an earlier draft of the new-invoice-received email logic; its comment claimed to "drive" the
+  notification but the actual behavior is governed entirely by the `if (invoice == null)` branch
+  structure a few lines below. Dead code, not a functional bug.
+- **`EInvoiceNotificationService.SendNewInvoiceReceivedNotificationEmail`** — removed a duplicate
+  `InvoiceHistory` write. The method wrote its own "NewInvoiceReceivedEmailSent" history row, and
+  its caller (`InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync`) *also* wrote one after a
+  successful send — every send produced two near-identical audit rows on the invoice's activity
+  timeline. (The pre-existing `SendValidatedNotificationEmail`/`FinalizeInvoiceAsync` pair has the
+  same double-write; left untouched here as out of scope for this cleanup — flagged as a follow-up.)
+
+### Verified (no code change needed)
+- Migration `20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader` — additive, correct
+  `DEFAULT 1` backfill, `.Designer.cs`/`ModelSnapshot.cs` consistent.
+- `InvoiceFinalizer`'s atomic-claim-then-send pattern (both the existing Valid-email flow and the
+  new one) — correctly claims via `ExecuteUpdateAsync WHERE <flag> = false` and rolls back on a
+  thrown exception for indefinite retry.
+- Dark mode cookie handling (`_LayoutTabler.cshtml`) — the cookie value is validated against an
+  exact `"dark"`/`"light"` allowlist before being interpolated into the `<html>` tag; no injection
+  path even if the cookie were tampered with.
+- A pre-existing, unrelated Playwright failure (`12-create-invoice-parity.spec.js`, step-1 → step-2
+  navigation) was confirmed present on the pre-PR-154 file versions too (reverted-file A/B test) —
+  not a regression from this session's UI fixes.
+- Full test suite (186/186) and `dotnet build` pass; ad hoc Playwright checks confirmed the Step 1
+  KPI tile updates live and all three E-Invoice Assistant mode panels hold a consistent height, with
+  zero browser console errors on either page.
+
 ## 📅 2026-08-02 — UI balance/layout fixes: Create/Edit Invoice wizard, E-Invoice Assistant
 
 > User-reported, screenshot-annotated UI issues across the invoice-creation wizard and the AI
