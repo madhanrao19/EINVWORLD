@@ -40,5 +40,15 @@ namespace eInvWorld.Services
         /// <param name="performedBy">Actor recorded in the invoice history entries.</param>
         /// <param name="cancellationToken">Cancellation for the DB operations.</param>
         Task<InvoiceFinalizeResult> FinalizeInvoiceAsync(string invoiceNo, string performedBy = "Finalizer", CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends the "new e-invoice received" notification for a buyer-side invoice synced in from an
+        /// external ERP, if still eligible (<c>IsNewInvoiceReceivedEmailSent == false</c>). Same
+        /// atomic-claim-and-rollback-on-failure pattern as the Valid-status email in
+        /// <see cref="FinalizeInvoiceAsync"/>, so a later background pass retries a failed send. An
+        /// invoice past the configured recency window, or with the feature disabled, is claimed and
+        /// marked done without sending — it will not be retried once expired/disabled.
+        /// </summary>
+        Task<bool> SendNewInvoiceReceivedEmailAsync(string invoiceNo, CancellationToken cancellationToken = default);
     }
 }

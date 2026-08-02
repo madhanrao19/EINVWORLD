@@ -139,6 +139,18 @@ namespace eInvWorld.Models.InputModel
         public bool IsPdfGenerated { get; set; } = false;
         public DateTime? PdfGeneratedAt { get; set; }
 
+        // "New e-invoice received" notification (buyer-side, for invoices synced in from LHDN that an
+        // external ERP submitted directly). Defaults to true ("not applicable") so every other invoice
+        // creation path in the app — normal Sent-invoice submission, Credit/Debit notes, etc. — is
+        // automatically exempt without touching those files; InvoiceFullSyncHelper explicitly sets this
+        // to false only for a genuinely new, buyer-side synced invoice, opting it into the retry pass
+        // in InvoiceFinalizer/InvoiceStatusUpdater (same atomic-claim-and-rollback pattern as the
+        // ValidationEmailSent fields above).
+        public bool IsNewInvoiceReceivedEmailSent { get; set; } = true;
+        [MaxLength(500)]
+        public string? NewInvoiceReceivedEmailSentTo { get; set; }
+        public DateTime? NewInvoiceReceivedEmailSentAt { get; set; }
+
         /// <summary>
         /// The last terminal LHDN status for which an outbound webhook was enqueued. Used by the webhook
         /// dispatcher to fire exactly once per status transition (e.g. Valid → later Cancelled fires twice,
