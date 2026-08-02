@@ -1,11 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.13.0`** (`AppInfo:Version` in `appsettings.json`). v1.13.0 is a **minor**
-> release: a bug-fix pass across the supplier invitation flow, LHDN status-change emails, and several
-> role/permission access-denied issues, plus a new **Admin → Role Management** feature (global role
-> catalog + per-role module access, and company-scoped custom roles for Supplier Owners/Admins) and full
-> **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
-> **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
+> **Current version: `v1.14.0`** (`AppInfo:Version` in `appsettings.json`). v1.14.0 is a **minor**
+> release: **dark mode** for the Tabler authenticated app (topbar toggle, cookie-persisted, follows OS
+> preference for first-time visitors); an expanded `docs/DESIGN.md` component/table/form/accessibility
+> spec plus app-wide **skip-navigation links**; a **new-e-invoice-received email** for buyer-side
+> invoices an external ERP submitted directly to LHDN, with the same indefinite-retry robustness as the
+> existing validated-invoice email; a **configurable lookback** for the automatic LHDN full-import job;
+> and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
+> beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
 ## 📅 2026-08-02 — Email notification (with retry) for new e-invoices received from external ERPs
 
