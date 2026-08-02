@@ -661,7 +661,7 @@
                     </div>
 
                     <!-- Step Navigation -->
-                    <div class="d-flex justify-content-end mt-4">
+                    <div class="d-flex justify-content-end mt-4 pt-3 border-top">
                         <button type="button" class="btn btn-outline-danger me-2" onclick="location.reload()">
                             <i class="ri-refresh-line me-1"></i>Reset
                         </button>
@@ -743,13 +743,13 @@
                                                                 for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
                                                                 {
                                                                     <div class="tax-row mb-2 p-2 border rounded">
-                                                                        <div class="d-flex flex-wrap gap-1 align-items-start">
+                                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
                                                                             <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                                                                                 <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
                                                                                     <option value="">Tax Category</option>
                                                                                 </select>
                                                                             </div>
-                                                                            <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
+                                                                            <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                                                                                 <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                                                                             </div>
                                                                             <div class="tax-action-wrapper" style="flex: 0 0 auto;">
@@ -825,7 +825,7 @@
                 </div> *@
 
                 <!-- Step Navigation -->
-                <div class="d-flex justify-content-between mt-4">
+                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
                     <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
                         <i class="ri-arrow-left-line me-1"></i>Previous
                     </button>
@@ -3254,14 +3254,14 @@
             const taxRow = document.createElement('div');
             taxRow.className = 'tax-row mb-2 p-2 border rounded';
             taxRow.innerHTML = `
-                <div class="d-flex flex-wrap gap-1 align-items-start">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
                     <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                         <select name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxCategory" class="form-select form-select-sm tax-category">
                             <option value="">Tax Category</option>
                             ${taxCategoryOptionsHtml}
                         </select>
                     </div>
-                    <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
+                    <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                         <input name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                     </div>
                     <div class="tax-action-wrapper" style="flex: 0 0 auto;">
@@ -3786,14 +3786,14 @@
                                 const taxRow = document.createElement('div');
                                 taxRow.className = 'tax-row mb-2 p-2 border rounded';
                                 taxRow.innerHTML = `
-                                    <div class="d-flex flex-wrap gap-1 align-items-start">
+                                    <div class="d-flex flex-wrap gap-2 align-items-center">
                                         <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                                             <select name="Invoice.InvoiceLines[${itemCount}].Taxes[${taxIndex}].TaxCategory" class="form-select form-select-sm tax-category">
                                                 <option value="">Tax Category</option>
                                                 ${taxCategoryOptionsHtml}
                                             </select>
                                         </div>
-                                        <div class="tax-percentage-wrapper" style="min-width: 50px; flex: 0 0 50px;">
+                                        <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                                             <input name="Invoice.InvoiceLines[${itemCount}].Taxes[${taxIndex}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" value="${tax.percentage}" />
                                         </div>
                                         <div class="tax-action-wrapper" style="flex: 0 0 auto;">

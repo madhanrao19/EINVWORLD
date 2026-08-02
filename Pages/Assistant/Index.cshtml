@@ -193,6 +193,14 @@
         font-weight: 600;
     }
 
+    /* Keep all three mode panels the same height when switching tabs — without this, the
+       Suggest/Explain panels (which are just a header + one input row until a result is shown)
+       collapse to a sliver at the top of the page, leaving the rest of the viewport looking empty
+       and unbalanced next to the fixed-height chat panel. */
+    .assistant-panel {
+        min-height: 420px;
+    }
+
     /* Chat-style thread (Ask panel): scrolling message list + sticky bottom composer, like Gemini/ChatGPT. */
     .einv-chat-card {
         display: flex;
