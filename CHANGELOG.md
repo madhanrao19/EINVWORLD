@@ -7,6 +7,24 @@
 > **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
 > **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — Configurable lookback for the automatic LHDN full-document-search import
+
+> Follow-up to a question about whether externally-submitted e-invoices (an external ERP submitting
+> directly to LHDN, with the local company as Buyer) show up in the Received tab. Confirmed they do —
+> `InvoiceFullSyncHelper.SyncAllFromApiAsync` already handles the "we are the buyer" case, creating the
+> supplier's `PartyInfo` from LHDN's data if EINVWORLD has never seen them. The automatic background
+> import (`InvoiceStatusUpdater.RunLhdnImportAsync`, every 10th 600s poll cycle) is what catches these,
+> but its lookback window was hardcoded to 3 days with no way to widen it if a sync cycle is missed for
+> longer (app restart, LHDN outage).
+
+### Added
+- `InvoiceStatusUpdaterSettings.BackgroundImportLookbackDays` (default `3`, matching prior hardcoded
+  behaviour — no behaviour change unless the config is edited). Wired into the
+  `RunFullImportFromLhdnAsync` call in `InvoiceStatusUpdater.cs`. Kept separate from
+  `LHDNApiConfig:SyncRetentionDays` (a much longer one-time deep-backfill window used only by the
+  Admin-triggered manual "Import All Invoices from LHDN" — the two settings serve different purposes
+  and shouldn't share a value).
+
 ## 📅 2026-08-02 — DESIGN.md system-wide audit + skip-navigation links
 
 > Audited the app against the just-expanded `docs/DESIGN.md` (TABLES/FORMS/ACCESSIBILITY/
