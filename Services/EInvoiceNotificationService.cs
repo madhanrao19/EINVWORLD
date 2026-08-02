@@ -131,6 +131,76 @@ namespace eInvWorld.Services
         }
 
 
+        public async Task<bool> SendNewInvoiceReceivedNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, PublicCustomer? publicCustomer = null)
+        {
+            try
+            {
+                string baseSubject = _configuration["EmailConfiguration:NewInvoiceReceivedEmailSettings:Subject"]
+                    ?? throw new InvalidOperationException("Missing configuration: NewInvoiceReceivedEmailSettings:Subject");
+
+                var emailGeneratedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+                string subject = $"{baseSubject} | {documentId} | {emailGeneratedTime:dd-MM-yyyy hh:mm tt}";
+
+                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"] ?? string.Empty;
+                string[] adminEmails = adminEmailRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (adminEmails.Length == 0)
+                {
+                    _logger.LogWarning("GlobalBccEmail is not configured; sending new-invoice-received email for {DocumentId} without the admin BCC.", documentId);
+                }
+
+                string invoiceLink = InvoiceLink(documentId);
+                string accountLink = AccountLink;
+                string contactLink = ContactLink;
+
+                _logger.LogInformation("Preparing new-invoice-received email for document {DocumentId}", documentId);
+
+                // Buyer-only: the supplier already knows they sent it, so no supplier email here (unlike
+                // SendValidatedNotificationEmail, which notifies both parties).
+                var buyerEmail = !string.IsNullOrWhiteSpace(buyer?.Email) ? buyer!.Email : publicCustomer?.Email;
+                var buyerName = buyer?.CompanyName ?? publicCustomer?.CompanyName ?? "Valued Customer";
+                if (!IsValidEmail(buyerEmail))
+                {
+                    // Not an error — there's nothing to retry. The caller (InvoiceFinalizer) treats
+                    // false as "resolved, mark done", distinct from a thrown exception ("retry later").
+                    _logger.LogWarning("No valid buyer email for new-invoice-received notification on {DocumentId}; skipping.", documentId);
+                    return false;
+                }
+
+                var body = GenerateNewInvoiceReceivedEmailBody(buyerName, supplier?.CompanyName ?? "your supplier", documentId, issueDate, invoiceLink, accountLink, contactLink);
+                // No PDF: this fires the moment the invoice is first discovered via sync, before the
+                // separate PDF-generation pass (InvoiceFinalizer) has had a chance to run.
+                SendEmailWithBcc(buyerEmail!, subject, body, null, adminEmails);
+                LogInvoiceHistory(documentId, "NewInvoiceReceivedEmailSent", "System", $"To Buyer: {buyerEmail}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Propagate: InvoiceFinalizer uses the outcome to decide whether to roll back its atomic
+                // claim so a real failure (SMTP down, bad config) is retried on the next background pass —
+                // swallowing here would make a failed send look successful and it would never be retried.
+                _logger.LogError(ex, "Error occurred while sending new-invoice-received email for {DocumentId}.", documentId);
+                throw;
+            }
+        }
+
+        private string GenerateNewInvoiceReceivedEmailBody(string recipientName, string supplierName, string documentId, DateTime issueDate, string invoiceLink, string accountLink, string contactLink)
+        {
+            var placeholders = new Dictionary<string, string>
+            {
+                { "RecipientName", recipientName },
+                { "SupplierName", supplierName },
+                { "DocumentId", documentId },
+                { "IssueDate", issueDate.ToString("yyyy-MM-dd HH:mm:ss") },
+                { "InvoiceLink", invoiceLink ?? "#" },
+                { "AccountLink", accountLink ?? "#" },
+                { "ContactLink", contactLink ?? "#" },
+                { "Year", DateTime.Now.Year.ToString() }
+            };
+
+            string template = LoadEmailTemplate("NewInvoiceReceivedEmailTemplate.html");
+            return ReplaceTemplatePlaceholders(template, placeholders);
+        }
+
         public void SendRejectionNotificationEmail(PartyInfo buyer, PartyInfo supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp)
         {
             try

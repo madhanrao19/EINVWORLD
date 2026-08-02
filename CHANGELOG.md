@@ -7,6 +7,60 @@
 > **MyInvois SDK 1.0** compliance (unit-of-measure validation, signed SVDP 1.3, configurable rate limits).
 > **Two new additive database migrations** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — Email notification (with retry) for new e-invoices received from external ERPs
+
+> Follow-up to the LHDN-sync questions above. `InvoiceFullSyncHelper` was already correctly detecting
+> and importing e-invoices submitted directly to LHDN by an external ERP (buyer-side sync), but it
+> deliberately set `IsValidationEmailSent = true` on creation specifically to suppress the "Validated"
+> email — reusing that email for a first-time-received invoice would have been misleading copy ("your
+> invoice has been validated" implies we submitted it). Added a distinct notification, then — per a
+> follow-up question about whether the existing Valid-status email has a completion/retry check — gave
+> it the same atomic-claim-and-retry robustness as that flow, rather than shipping it best-effort.
+
+### Added
+- **`InvoiceHeader.IsNewInvoiceReceivedEmailSent`/`NewInvoiceReceivedEmailSentAt`/`NewInvoiceReceivedEmailSentTo`**
+  (migration `20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`, additive, 4 artifacts
+  incl. idempotent `Apply_*.sql`) — mirrors the existing `IsValidationEmailSent` trio exactly. Defaults
+  to `true` ("not applicable") both in the C# model and via the migration's column default, so every
+  other invoice-creation path in the app (normal Sent-invoice submission, Credit/Debit notes, and every
+  pre-existing row backfilled by the migration) is automatically exempt without touching those files.
+  `InvoiceFullSyncHelper` explicitly sets it to `false` only for a genuinely new, buyer-side invoice
+  synced from LHDN, opting that one row into the retry pipeline below.
+- **`IInvoiceFinalizer.SendNewInvoiceReceivedEmailAsync`** (`InvoiceFinalizer.cs`) — same
+  atomic-claim-then-send, roll-back-on-failure pattern already used for the Valid-status email:
+  claims the row (`ExecuteUpdateAsync WHERE !IsNewInvoiceReceivedEmailSent`), attempts the send, and on
+  a thrown exception (SMTP down, bad config) rolls the claim back so the **next background pass retries
+  it — indefinitely, no age cutoff**, exactly like the existing Valid-email safety net. Distinguishes
+  "no valid buyer email" (permanent, marks done, never retried) from a transient send failure (retried).
+  Also handles the disabled-feature and expired-recency cases by claiming and marking done without
+  sending, so neither keeps reappearing in every future pass.
+- **`InvoiceStatusUpdater.RunNewInvoiceReceivedFinalizerAsync`** — new step in the existing background
+  loop (runs every poll cycle, alongside the pre-existing `RunFinalizerAsync` safety net for the
+  Valid-status email), querying simply `WHERE !IsNewInvoiceReceivedEmailSent` — no other precondition
+  needed, since the flag itself is only ever set `false` for the exact rows that should get this email.
+- **`SendNewInvoiceReceivedNotificationEmail`** (`IEInvoiceNotificationService`/`EInvoiceNotificationService`)
+  — buyer-only (the supplier already knows they sent it), new template
+  `wwwroot/EmailTemplates/NewInvoiceReceivedEmailTemplate.html`, new
+  `EmailConfiguration:NewInvoiceReceivedEmailSettings:Subject` config (environment-prefixed in
+  Staging/Production, matching every other email type). Returns `false` (not an error) when there's no
+  valid buyer email; throws on an actual send failure so `InvoiceFinalizer` can tell the two apart. Sent
+  without a PDF attachment — fires before the separate PDF-generation pass has necessarily run.
+- **`EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`** kill switch (default `true`).
+- **Recency guard** — `EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification`
+  (default `7`), checked in `SendNewInvoiceReceivedEmailAsync` at send time. Only genuinely recent
+  invoices (by `IssueDate`/`DateTimeReceived`) get emailed; older invoices that are merely new to
+  EINVWORLD's database (e.g. pulled in by the Admin's 60-day historical "Import All Invoices from LHDN")
+  are claimed and marked done without sending. Without this, a large backfill would email buyers about
+  invoices they already know about — a spam risk, not a helpful notification.
+
+### Tests
+- `dotnet build`: 0 errors (pre-existing unrelated warnings only).
+- `dotnet test`: 186/186 passing, no regressions.
+- Migration **not** applied locally against the real Staging DB (local `dotnet run` uses
+  `AutoMigrateOnStartup: true` against the live shared Staging database — not something to trigger
+  without being asked). CI's SQL Server LocalDB integration tests apply it with `Migrate()` for real,
+  which is the intended verification path per `CLAUDE.md`.
+
 ## 📅 2026-08-02 — Configurable lookback for the automatic LHDN full-document-search import
 
 > Follow-up to a question about whether externally-submitted e-invoices (an external ERP submitting
