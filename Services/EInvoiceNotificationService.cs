@@ -170,7 +170,8 @@ namespace eInvWorld.Services
                 // No PDF: this fires the moment the invoice is first discovered via sync, before the
                 // separate PDF-generation pass (InvoiceFinalizer) has had a chance to run.
                 SendEmailWithBcc(buyerEmail!, subject, body, null, adminEmails);
-                LogInvoiceHistory(documentId, "NewInvoiceReceivedEmailSent", "System", $"To Buyer: {buyerEmail}");
+                // History row is written by the caller (InvoiceFinalizer), on the same DbContext/
+                // SaveChanges as its claim update — not here, to avoid a duplicate "sent" row.
                 return true;
             }
             catch (Exception ex)

@@ -222,11 +222,6 @@ namespace EINVWORLD.Helpers
                                     .ThenInclude(y => y.InvoiceTaxes)
                                     .FirstOrDefaultAsync(i => i.UUID == summary.uuid);
 
-                // Captured before `invoice` gets assigned below — drives the "new e-invoice received"
-                // notification further down, which must only fire the one time a document is first
-                // discovered, not on every periodic re-sync of an already-known invoice.
-                bool isNewInvoice = invoice == null;
-
                 var docTypeCode = await EInvoiceTypeHelper.GetCodeFromDescriptionAsync(summary.typeName, _dbContext);
 
                 decimal? calculatedTaxAmount = null;
