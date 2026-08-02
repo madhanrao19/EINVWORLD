@@ -603,9 +603,14 @@
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
     }
 
-    .form-control:valid,
+    /* Scoped to [required] — an optional field with no constraints is always :valid per the HTML5
+       spec (even empty), so the unscoped selector this replaced highlighted every optional plain
+       input (Reference Document Number, PO/DO No, Exchange Rate, ...) permanently green while
+       Select2-based dropdowns (which hide the native <select> Bootstrap targets) never got it —
+       an inconsistent, unexplained highlight with no visible logic to the user. */
+    .form-control[required]:valid,
     .form-control.is-valid,
-    .form-select:valid,
+    .form-select[required]:valid,
     .form-select.is-valid {
         background-image: none !important;
         border-color: #198754 !important;
@@ -768,10 +773,15 @@
     }
 
     #refUUIDSelect + .select2-container .select2-selection__rendered {
-        padding: 0 !important;
+        /* Reserve room on the right for the clear ("x") and dropdown-arrow icons — without it, a
+           long reference UUID runs text right up against/under them with no breathing room. */
+        padding: 0 42px 0 0 !important;
         height: auto !important;
         line-height: 1.5 !important;
         color: #495057 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     #refUUIDSelect + .select2-container .select2-selection__placeholder {
@@ -1395,7 +1405,7 @@
                     </div>
                     <!-- /two-column layout -->
 
-                    <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
                         <button type="button" class="btn btn-outline-danger" onclick="location.reload()">
                             <i class="ri-delete-bin-line me-1"></i>Discard Draft
                         </button>
@@ -1480,13 +1490,13 @@
                                                                 for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
                                                                 {
                                                                     <div class="tax-row mb-2 p-2 border rounded">
-                                                                        <div class="d-flex flex-wrap gap-1 align-items-start">
+                                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
                                                                             <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                                                                                 <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
                                                                                     <option value="">Tax Category</option>
                                                                                 </select>
                                                                             </div>
-                                                                            <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
+                                                                            <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                                                                                 <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                                                                             </div>
                                                                             <div class="tax-action-wrapper" style="flex: 0 0 auto;">
@@ -1574,7 +1584,7 @@
                 </div> *@
 
                 <!-- Step Navigation -->
-                <div class="d-flex justify-content-between mt-4">
+                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
                     <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
                         <i class="ri-arrow-left-line me-1"></i>Previous
                     </button>
@@ -4080,6 +4090,12 @@
             if (step2TotalAmount) step2TotalAmount.textContent = totalAmount.toFixed(2);
             if (step2AmountPayable) step2AmountPayable.textContent = totalAmount.toFixed(2);
 
+            // Step 1 "Running Total" KPI tile — the only summary display calculateTotals() didn't
+            // already update, so it stayed frozen at its initial "RM 0.00" no matter how many items
+            // were added on Step 2.
+            const kpiRunningTotal = document.getElementById('kpiRunningTotal');
+            if (kpiRunningTotal) kpiRunningTotal.textContent = 'RM ' + totalAmount.toFixed(2);
+
             // Update hidden fields
             const totalAmountExclTax = document.getElementById('totalAmountExclTax');
             const totalTaxAmount = document.getElementById('totalTaxAmount');
@@ -4201,14 +4217,14 @@
             const taxRow = document.createElement('div');
             taxRow.className = 'tax-row mb-2 p-2 border rounded';
             taxRow.innerHTML = `
-                <div class="d-flex flex-wrap gap-1 align-items-start">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
                     <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                         <select name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxCategory" class="form-select form-select-sm tax-category">
                             <option value="">Tax Category</option>
                             ${taxCategoryOptionsHtml}
                         </select>
                     </div>
-                    <div class="tax-percentage-wrapper" style="min-width: 65px; flex: 0 0 50px;">
+                    <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                         <input name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                     </div>
                     <div class="tax-action-wrapper" style="flex: 0 0 auto;">
@@ -4754,14 +4770,14 @@
                         const taxRow = document.createElement('div');
                         taxRow.className = 'tax-row mb-2 p-2 border rounded';
                         taxRow.innerHTML = `
-                            <div class="d-flex flex-wrap gap-1 align-items-start">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
                                 <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
                                     <select name="Invoice.InvoiceLines[${itemCount}].Taxes[${taxIndex}].TaxCategory" class="form-select form-select-sm tax-category">
                                         <option value="">Tax Category</option>
                                         ${taxCategoryOptionsHtml}
                                     </select>
                                 </div>
-                                <div class="tax-percentage-wrapper" style="min-width: 50px; flex: 0 0 50px;">
+                                <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
                                     <input name="Invoice.InvoiceLines[${itemCount}].Taxes[${taxIndex}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" value="${tax.percentage}" />
                                 </div>
                                 <div class="tax-action-wrapper" style="flex: 0 0 auto;">

@@ -9,6 +9,34 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-02 — UI balance/layout fixes: Create/Edit Invoice wizard, E-Invoice Assistant
+
+> User-reported, screenshot-annotated UI issues across the invoice-creation wizard and the AI
+> assistant page. No functional/data changes — CSS and markup only.
+
+### Fixed
+- **`CreateInvoice.cshtml`** — Step 1 "Running Total" KPI tile now updates live as items are added
+  (`calculateTotals()` previously never wrote to it, so it stayed frozen at "RM 0.00"). An unscoped
+  `.form-control:valid`/`.form-select:valid` rule painted every optional field (Reference Document
+  Number, PO/DO No, Exchange Rate) with a permanent green border, since HTML5 treats a
+  constraint-free field as always-valid even when empty — scoped to `[required]` fields only,
+  matching the pattern already used for the invalid-state rules. The Reference UUID Select2 dropdown
+  (Credit Note flow) had its internal padding zeroed out, so a long UUID ran straight into the clear
+  (×) and dropdown-arrow icons — reserved space for both icons and added ellipsis truncation. The
+  line-item tax row's percentage input was squeezed into a 50–65px box (conflicting
+  `min-width`/`flex-basis`) — widened to a consistent 90px with more breathing room. Step 1/Step 2
+  Previous/Next button footers had no visual separation from the content above — added a top border.
+- **`InvoiceEdit.cshtml`** — same tax-row width/spacing and button-footer separator fixes (shares the
+  same wizard markup as `CreateInvoice.cshtml`); its `:valid` CSS was already correctly scoped, no
+  change needed there.
+- **`Assistant/Index.cshtml`** (E-Invoice Assistant) — the "Create from Description" and "Fix an
+  Error" mode panels are just a header + one input row until a result appears, while "Ask a
+  Question" is a fixed-height chat panel; switching to either of the shorter panels collapsed the
+  card to a sliver at the top of the page. Gave all three mode panels a shared minimum height so
+  switching modes no longer causes a jarring size collapse.
+- `CreateCN.cshtml`, `CreateSBI.cshtml`, `CreateSBCN.cshtml` were checked and don't share any of the
+  above code paths (simpler single-form pages) — no changes needed.
+
 ## 📅 2026-08-02 — Email notification (with retry) for new e-invoices received from external ERPs
 
 > Follow-up to the LHDN-sync questions above. `InvoiceFullSyncHelper` was already correctly detecting
