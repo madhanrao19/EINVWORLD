@@ -61,6 +61,11 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   Permissions).
 - Security: per-TIN ownership checks (IDOR protection), secrets externalised, security response headers,
   client-side rate limiting, configurable DataProtection key-ring path.
+- **Dark mode** (authenticated Tabler app) — topbar toggle, follows the OS/browser preference for
+  first-time visitors and remembers an explicit choice via cookie (no flash of the wrong theme).
+- **New-e-invoice-received email** — a buyer is notified when EINVWORLD's LHDN sync discovers an invoice
+  an external ERP submitted directly to LHDN (not through EINVWORLD), with the same indefinite-retry
+  robustness as the validated-invoice email.
 
 ---
 
@@ -127,7 +132,8 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
-| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. |
+| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `3`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. |
+| `EmailConfiguration:NewInvoiceReceivedEmailSettings` | "New e-Invoice Received" notification (buyer-side, for invoices synced in from an external ERP) — `Subject`, `MaxAgeDaysForNotification` (default `7`, avoids emailing about invoices merely new to EINVWORLD's database from a large historical import). Kill switch: `EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`. |
 
 > **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
 > upstream, but it is kept as the default because it renders fully **offline** — the right choice for an
