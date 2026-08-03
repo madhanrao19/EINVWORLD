@@ -9,6 +9,23 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Fix stale resource-image 404 tolerance in `10-tabler-modules.spec.js` (test-only)
+
+> Investigated the last remaining Playwright failure — turned out to be a real, fixable test bug,
+> not an environment gap as first suspected. The test author had already anticipated "some
+> article/company images are missing on staging (404)" and added a tolerance regex for it
+> (`/\/images\/resources\/|\/Companies\/Logos\//i`), but that regex was written for the **old**
+> static-file route. `ResourcesMigrationController`/`Pages/Admin/Resources/Create.cshtml.cs`/
+> `Edit.cshtml.cs` all moved resource images to a new API-served route,
+> `/api/resources/images/{category}/{size}/{fileName}` (segment order reversed, `/api/` prefix
+> added) — so the tolerance silently stopped matching anything created after that migration, and
+> `/Admin/Resources/Manage` started failing on 404s it was always meant to ignore.
+
+### Fixed
+- `tests/playwright/10-tabler-modules.spec.js` — extended the tolerance regex to also match
+  `/api/resources/images/`, alongside the still-valid old `/images/resources/` pattern (for any
+  resource rows that predate the migration) and `/Companies/Logos/`.
+
 ## 📅 2026-08-03 — Investigate & skip admin-2FA demo-data drift (test-only)
 
 > Root-caused the last remaining pre-existing Playwright failure from the full-suite pass above.
