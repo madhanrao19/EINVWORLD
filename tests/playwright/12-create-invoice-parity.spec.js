@@ -8,6 +8,19 @@
 const { test, expect } = require('@playwright/test');
 const { login, logout } = require('./helpers/auth');
 
+// Select2 hides the real <select> (display:none), which fails Playwright's actionability/visibility
+// check for .selectOption(). The fields themselves are ordinary <select required> elements though, so
+// setting .value + dispatching 'change' directly reproduces what a real Select2 pick does as far as
+// the wizard's own validateCurrentStep()/nextStep() JS (which only reads element.value) can tell.
+async function selectFirstRealOption(page, selector) {
+  await page.locator(selector).evaluate((el) => {
+    const option = Array.from(el.options).find((o) => o.value);
+    if (!option) throw new Error(`No selectable option found for ${el.id || el.name}`);
+    el.value = option.value;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
 test('Create e-Invoice: Stitch layout + wizard navigation works', async ({ page }, testInfo) => {
   await login(page, 'supplier');
   const res = await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
@@ -37,6 +50,14 @@ test('Create e-Invoice: Stitch layout + wizard navigation works', async ({ page 
   await expect(page.locator('#buyerSelect')).toBeVisible();
   await expect(page.locator('#currency')).toBeVisible();
 
+  // Step 1 has more [required] fields than the wizard shows filled by default (DocTypeCode,
+  // InvoicePeriod, IssueDate and the primary Supplier are pre-selected server-side; Currency and
+  // Buyer are not) — nextStep()'s validateCurrentStep() blocks advancing until every [required]
+  // field in #step1 has a value, exactly like a real user would need to pick them.
+  await selectFirstRealOption(page, '#docTypeCode');
+  await selectFirstRealOption(page, '#currency');
+  await selectFirstRealOption(page, '#buyerSelect');
+
   // --- Functionality: Next advances to step 2 (validates + toggles visibility) ---
   await page.locator('#step1 .btn-primary').click(); // Next: Invoice Items
   await expect(page.locator('#step2')).toBeVisible();
@@ -48,8 +69,23 @@ test('Create e-Invoice: Stitch layout + wizard navigation works', async ({ page 
   await expect(page.locator('#lineItemsTable')).toBeVisible();
   await expect(page.locator('#addItemBtn')).toBeVisible();
 
+  // Step 2 ships with one default blank line item (classification/description/price all empty) —
+  // fill its [required] fields the same way, so validateItemRequirements() lets Next proceed.
+  await selectFirstRealOption(page, '.item-classification');
+  await page.locator('.item-description').first().fill('Playwright QA test item');
+  await page.locator('.quantity-input').first().fill('1');
+  await selectFirstRealOption(page, '#lineItemsTable select[name*=".UnitOfMeasure"]');
+  await page.locator('.price-input').first().fill('100');
+  await selectFirstRealOption(page, '.tax-category');
+  // Any category + a positive percentage satisfies validateItemRequirements()'s taxValid check
+  // regardless of category (including "Not Applicable"/"Exemption", which only need percentage
+  // to be exactly 0 as an alternative path) — 0 was tried first and failed for the default "01"
+  // category, which needs percentage > 0.
+  await page.locator('input[name*=".TaxPercentage"]').first().fill('6');
+
   // --- Functionality: Next to step 3 (review) ---
-  await page.locator('#step2 .btn-primary').click();
+  // Scoped by onclick, not just .btn-primary — the per-tax-row "+ Tax" button is also .btn-primary.
+  await page.locator('#step2 button[onclick="nextStep()"]').click();
   await expect(page.locator('#step3')).toBeVisible();
   await expect(page.locator('#step2')).toHaveClass(/d-none/);
 
