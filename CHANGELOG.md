@@ -9,6 +9,31 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Diagnose & mitigate E-Invoice Assistant timeout on Staging
+
+> User report: `Admin/AiSettings` "Test Connection" showed Reachable + Model Ready in ~2s, but
+> asking a real question in `/Assistant` timed out after 120s ("AI chat failed via Ollama/gemma3:12b
+> (Timeout)"). Root cause: the two calls do very different things. "Test Connection" hits Ollama's
+> `/api/tags` — a cheap metadata list, no model loading. A real chat hits `/api/chat`, which forces
+> Ollama to load the full `gemma3:12b` (12B params) from disk into memory first if it isn't already
+> resident — and Ollama unloads an idle model after 5 minutes by default, so a question asked after
+> any gap pays that full cold-load cost again. On Staging's hardware that's evidently taking longer
+> than the 120s timeout.
+
+### Added
+- **`AI:KeepAliveMinutes`** (default 30, `AiSettings.cs`) — sent as Ollama's own `keep_alive`
+  parameter on every chat request (`OllamaAiProvider.ChatAsync`), keeping the model resident for
+  this long after each use instead of Ollama's 5-minute default. Only a genuinely long idle gap
+  pays the cold-load cost again; every question asked within the window reuses the loaded model.
+  Surfaced read-only on `Admin/AiSettings` next to the other AI config values.
+
+### Operator action (no deploy needed, do this now if Staging is still timing out)
+- Bump `AI__TimeoutSeconds` (env var) or `AI:TimeoutSeconds` (`appsettings.Production.json`/
+  `appsettings.Staging.json`) on the Staging server to something like `240`–`300` and restart the
+  app pool, so *today's* first cold load has enough time to finish. The `KeepAliveMinutes` fix
+  above (once deployed) prevents this from recurring on every subsequent question, but doesn't
+  change how long that unavoidable first cold load takes.
+
 ## 📅 2026-08-03 — Fix stale resource-image 404 tolerance in `10-tabler-modules.spec.js` (test-only)
 
 > Investigated the last remaining Playwright failure — turned out to be a real, fixable test bug,
