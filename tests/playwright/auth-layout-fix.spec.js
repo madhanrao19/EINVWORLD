@@ -2,7 +2,8 @@ const { test, expect } = require('@playwright/test');
 
 // Verifies the auth-page layout fix: logo above a properly-sized, horizontally-centred card
 // (no collapsed/side-pinned card) and no horizontal overflow, across device widths.
-const BASE = process.env.EINVWORLD_BASE_URL || 'http://localhost:5280';
+// Uses relative paths + playwright.config.js's shared `baseURL` (like every other spec) instead of
+// a locally hardcoded port, so this doesn't silently ERR_CONNECTION_REFUSED against a stale port.
 
 const VIEWPORTS = [
   { name: 'mobile-360', width: 360, height: 800 },
@@ -24,7 +25,7 @@ for (const vp of VIEWPORTS) {
   for (const pageDef of PAGES) {
     test(`auth layout: ${pageDef.path} @ ${vp.name} (${vp.width}px)`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto(BASE + pageDef.path, { waitUntil: 'domcontentloaded' });
+      await page.goto(pageDef.path, { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(800);
 
       // No horizontal overflow.
@@ -58,7 +59,7 @@ for (const vp of VIEWPORTS) {
 // Password visibility toggle works (keyboard, preserves value, does not submit).
 test('auth: password toggle works on login', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(500);
   const pw = page.locator('#password-input');
   await pw.fill('secret-value');
@@ -71,10 +72,12 @@ test('auth: password toggle works on login', async ({ page }) => {
   expect(await pw.getAttribute('type')).toBe('password');
 });
 
-// Forgot-password neutral info box present.
-test('auth: forgot-password shows "What happens next?" reassurance', async ({ page }) => {
+// Forgot-password explains what the reset link does. The page went through the Stitch
+// auth-pages restyle after this test was written, which replaced the old "What happens next?"
+// info box with a single descriptive sentence under the title — updated to match.
+test('auth: forgot-password explains the reset link', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto(BASE + '/forgot-password', { waitUntil: 'domcontentloaded' });
+  await page.goto('/forgot-password', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(500);
-  await expect(page.getByText('What happens next?').first()).toBeVisible();
+  await expect(page.getByText(/we.ll email you a link to reset your password/i).first()).toBeVisible();
 });
