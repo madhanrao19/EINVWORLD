@@ -9,6 +9,39 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Full Playwright suite pass: 82/112 → 106/110 (test-only)
+
+> Ran the entire suite for the first time in a while. Went from 82 passed/28 failed/2 skipped to
+> 106 passed/2 failed/2 skipped. The 2 remaining failures are confirmed pre-existing/environment,
+> not app bugs (see below) — nothing in this pass touched app code.
+
+### Fixed
+- `auth-layout-fix.spec.js` — hardcoded its own `BASE = 'http://localhost:5280'` fallback instead
+  of using the shared `playwright.config.js` `baseURL` every other spec relies on, so all 23 of its
+  tests were failing with `ERR_CONNECTION_REFUSED` against the real dev server (port 5210). Switched
+  to relative `page.goto()` calls. Also updated a stale assertion — `auth: forgot-password shows
+  "What happens next?" reassurance` expected an info box that no longer exists; the page went
+  through the Stitch auth-pages restyle since this test was written and now uses a single
+  descriptive sentence instead. Updated the assertion to match the current, intentional design.
+- `stitch-create-invoice-stepper.spec.js` — same hardcoged-port problem (`BASE_URL` env var,
+  defaulting to port 5261), *and* asserted markup (`#stepDot1..3`, `#formProgressLine`) that no
+  longer exists in `CreateInvoice.cshtml` — fully superseded by `12-create-invoice-parity.spec.js`
+  (which already covers the stepper plus full wizard navigation, and actually logs in). Deleted
+  rather than patched, to avoid two overlapping stepper tests.
+- `11-company-details-parity.spec.js` — the "Verified" status pill assertion failed because
+  `COMPANY_ID=1` (the test's default) isn't owned by the logged-in `supplier@einvworld.com` account
+  in this environment's DB, so the per-company IDOR guard correctly denied access ("Access denied")
+  — the guard working as intended, not a bug. Added the same honest-skip pattern the test already
+  uses for a missing PartyInfo row (404/500), so an access denial skips gracefully too instead of
+  failing.
+
+### Confirmed pre-existing, not fixed (out of scope — no app code involved)
+- `02-auth.spec.js` admin-2FA test — documented demo-data drift from an earlier session.
+- `10-tabler-modules.spec.js` — `/Admin/Resources/Manage` 404s on `/api/resources/images/...`: the
+  app correctly points `ResourceImagesFolder` at Staging's `E:\EINVWORLD_STAGING\...` path (shared
+  DB), but that folder only exists on the real Staging server, not a local dev machine — an
+  environment/file-storage gap, not a code defect.
+
 ## 📅 2026-08-03 — Fix pre-existing `12-create-invoice-parity.spec.js` failure (test-only)
 
 > Flagged in the prior review pass as pre-existing (reproduced identically on pre-#154 file
