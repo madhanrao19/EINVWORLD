@@ -211,6 +211,32 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader
 ```
 
+### Post-v1.14.0 migration — rejection/cancellation email tracking
+
+One new migration, purely additive (6 new nullable/defaulted columns + 1 nullable text column — no
+drops, no data loss). **Run this before deploying the new app code** — the app's EF model expects
+these columns to exist, so running the new code against an un-migrated database will fail every query
+touching `InvoiceHeaders`:
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddRejectionCancellationEmailTrackingToInvoiceHeader.sql"
+```
+
+> **`AddRejectionCancellationEmailTrackingToInvoiceHeader`** — adds `InvoiceHeader.IsRejectionEmailSent`/
+> `RejectionEmailSentAt`/`RejectionEmailSentTo` and `IsCancellationEmailSent`/`CancellationEmailSentAt`/
+> `CancellationEmailSentTo` (all `DEFAULT 1`/`NULL`, same "not applicable until actually rejected/
+> cancelled" pattern as the new-invoice-received columns above), plus `CancellationReason`. Backfills
+> every existing row as "not applicable" — cannot retroactively email anyone about invoices already in
+> the database; only a document rejected/cancelled after this deploy becomes eligible for the
+> background retry pass if its immediate send attempt fails.
+
+Verify it's recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260803200000_AddRejectionCancellationEmailTrackingToInvoiceHeader
+```
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:

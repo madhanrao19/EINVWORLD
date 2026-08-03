@@ -44,7 +44,7 @@ namespace eInvWorld.Services
 
             // Engine (DinkToPdf default, or Puppeteer) is selected by config and injected as IPdfRenderer.
             var pdfBytes = await _renderer.RenderHtmlToPdfAsync(htmlContent);
-            await File.WriteAllBytesAsync(pdfPath, pdfBytes);
+            await WriteFileWithRetryAsync(pdfPath, pdfBytes);
 
             _logger.LogInformation("✅ PDF generated ({Engine}) for {InvoiceNo} at: {PdfPath}",
                 _pdfSettings.Engine, invoiceNo, pdfPath);
@@ -113,6 +113,22 @@ namespace eInvWorld.Services
             return await GeneratePdfFromHtmlAsync(invoiceNo, html);
         }
 
-
+        // A same-named PDF being regenerated (e.g. reject/cancel emailing a "fresh" copy) can race a
+        // still-open handle from the previous write — a virus scanner, another concurrent request for
+        // the same invoice, etc. That's transient, so one short-delay retry clears it without the
+        // caller (an interactive reject/cancel request) seeing a spurious failure.
+        private async Task WriteFileWithRetryAsync(string path, byte[] bytes)
+        {
+            try
+            {
+                await File.WriteAllBytesAsync(path, bytes);
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "PDF write to {PdfPath} hit a locked file; retrying once after a short delay.", path);
+                await Task.Delay(500);
+                await File.WriteAllBytesAsync(path, bytes);
+            }
+        }
     }
 }

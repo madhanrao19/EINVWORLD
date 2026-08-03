@@ -50,5 +50,17 @@ namespace eInvWorld.Services
         /// marked done without sending — it will not be retried once expired/disabled.
         /// </summary>
         Task<bool> SendNewInvoiceReceivedEmailAsync(string invoiceNo, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends the rejection notification for an invoice, if still eligible
+        /// (<c>IsRejectionEmailSent == false</c>). Same atomic-claim-and-rollback-on-failure pattern as
+        /// <see cref="SendNewInvoiceReceivedEmailAsync"/> — this is the background safety net for when
+        /// the interactive reject handler's own immediate send attempt fails (SMTP down, a locked PDF
+        /// file, etc.), so the notification is never silently lost.
+        /// </summary>
+        Task<bool> SendRejectionEmailAsync(string invoiceNo, CancellationToken cancellationToken = default);
+
+        /// <summary>Cancellation counterpart of <see cref="SendRejectionEmailAsync"/>.</summary>
+        Task<bool> SendCancellationEmailAsync(string invoiceNo, CancellationToken cancellationToken = default);
     }
 }

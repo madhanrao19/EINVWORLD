@@ -299,5 +299,182 @@ namespace eInvWorld.Services
                 return false;
             }
         }
+
+        /// <inheritdoc />
+        public async Task<bool> SendRejectionEmailAsync(string invoiceNo, CancellationToken cancellationToken = default)
+        {
+            var invoice = await _context.InvoiceHeaders
+                .AsNoTracking()
+                .Include(i => i.Customer)
+                .Include(i => i.Supplier)
+                .Include(i => i.PublicCustomer)
+                .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo, cancellationToken);
+
+            if (invoice == null || invoice.IsRejectionEmailSent)
+            {
+                return false;
+            }
+
+            if (!_configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableRejectionEmails"))
+            {
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo && !i.IsRejectionEmailSent)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.IsRejectionEmailSent, true)
+                        .SetProperty(i => i.RejectionEmailSentAt, DateTime.Now)
+                        .SetProperty(i => i.RejectionEmailSentTo, "Skipped (feature disabled)"), cancellationToken);
+                return false;
+            }
+
+            // Atomic claim — same pattern as SendNewInvoiceReceivedEmailAsync above.
+            var claimed = await _context.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo && !i.IsRejectionEmailSent)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.IsRejectionEmailSent, true)
+                    .SetProperty(i => i.RejectionEmailSentAt, DateTime.Now), cancellationToken);
+
+            if (claimed != 1)
+            {
+                _logger.LogInformation("Rejection email for {InvoiceNo} already claimed by a concurrent finalizer; skipping.", invoiceNo);
+                return false;
+            }
+
+            try
+            {
+                _logger.LogInformation("📧 Sending rejection email for invoice {InvoiceNo}", invoiceNo);
+                bool sent = await _notificationService.SendRejectionNotificationEmail(
+                    invoice.Customer, invoice.Supplier, invoice.InvoiceNo,
+                    invoice.RejectedReason ?? "Not specified", invoice.RejectedTimestamp ?? DateTime.Now);
+
+                var recipient = sent
+                    ? string.Join(", ", new[] { invoice.Customer?.Email ?? invoice.PublicCustomer?.Email, invoice.Supplier?.Email }.Where(e => !string.IsNullOrWhiteSpace(e)))
+                    : "Skipped (no valid buyer/supplier email)";
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo)
+                    .ExecuteUpdateAsync(s => s.SetProperty(i => i.RejectionEmailSentTo, recipient), cancellationToken);
+
+                if (sent)
+                {
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoiceNo,
+                        Action = "RejectionEmailSent",
+                        PerformedBy = "Finalizer",
+                        Remarks = recipient,
+                        Timestamp = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                return sent;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to send rejection email for {InvoiceNo}; releasing the claim for retry.", invoiceNo);
+
+                try
+                {
+                    await _context.InvoiceHeaders
+                        .Where(i => i.InvoiceNo == invoiceNo)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(i => i.IsRejectionEmailSent, false)
+                            .SetProperty(i => i.RejectionEmailSentAt, (DateTime?)null), CancellationToken.None);
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError(rollbackEx, "❌ Failed to release the rejection email claim for {InvoiceNo}; it will not be retried automatically.", invoiceNo);
+                }
+
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> SendCancellationEmailAsync(string invoiceNo, CancellationToken cancellationToken = default)
+        {
+            var invoice = await _context.InvoiceHeaders
+                .AsNoTracking()
+                .Include(i => i.Customer)
+                .Include(i => i.Supplier)
+                .Include(i => i.PublicCustomer)
+                .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo, cancellationToken);
+
+            if (invoice == null || invoice.IsCancellationEmailSent)
+            {
+                return false;
+            }
+
+            if (!_configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableCancellationEmails"))
+            {
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo && !i.IsCancellationEmailSent)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(i => i.IsCancellationEmailSent, true)
+                        .SetProperty(i => i.CancellationEmailSentAt, DateTime.Now)
+                        .SetProperty(i => i.CancellationEmailSentTo, "Skipped (feature disabled)"), cancellationToken);
+                return false;
+            }
+
+            var claimed = await _context.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo && !i.IsCancellationEmailSent)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(i => i.IsCancellationEmailSent, true)
+                    .SetProperty(i => i.CancellationEmailSentAt, DateTime.Now), cancellationToken);
+
+            if (claimed != 1)
+            {
+                _logger.LogInformation("Cancellation email for {InvoiceNo} already claimed by a concurrent finalizer; skipping.", invoiceNo);
+                return false;
+            }
+
+            try
+            {
+                _logger.LogInformation("📧 Sending cancellation email for invoice {InvoiceNo}", invoiceNo);
+                bool sent = await _notificationService.SendCancellationNotificationEmail(
+                    invoice.Customer, invoice.Supplier, invoice.InvoiceNo,
+                    invoice.CancellationReason ?? "Not specified", invoice.CancelDateTime ?? DateTime.Now);
+
+                var recipient = sent
+                    ? string.Join(", ", new[] { invoice.Customer?.Email ?? invoice.PublicCustomer?.Email, invoice.Supplier?.Email }.Where(e => !string.IsNullOrWhiteSpace(e)))
+                    : "Skipped (no valid buyer/supplier email)";
+                await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoiceNo)
+                    .ExecuteUpdateAsync(s => s.SetProperty(i => i.CancellationEmailSentTo, recipient), cancellationToken);
+
+                if (sent)
+                {
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoiceNo,
+                        Action = "CancellationEmailSent",
+                        PerformedBy = "Finalizer",
+                        Remarks = recipient,
+                        Timestamp = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                return sent;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to send cancellation email for {InvoiceNo}; releasing the claim for retry.", invoiceNo);
+
+                try
+                {
+                    await _context.InvoiceHeaders
+                        .Where(i => i.InvoiceNo == invoiceNo)
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(i => i.IsCancellationEmailSent, false)
+                            .SetProperty(i => i.CancellationEmailSentAt, (DateTime?)null), CancellationToken.None);
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogError(rollbackEx, "❌ Failed to release the cancellation email claim for {InvoiceNo}; it will not be retried automatically.", invoiceNo);
+                }
+
+                return false;
+            }
+        }
     }
 }

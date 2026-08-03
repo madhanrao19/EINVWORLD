@@ -1007,63 +1007,65 @@ namespace eInvWorld.Pages.Invoices
             string rejectedByUser = User.Identity?.Name ?? "Unknown";
             var rejectedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
 
-            // Update invoice
+            // Update invoice. IsRejectionEmailSent=false opts this row into the atomic-claim/retry
+            // pass (InvoiceFinalizer.SendRejectionEmailAsync / InvoiceStatusUpdater) — set here, in the
+            // SAME save as the status change, so a later failure to send the email can never also
+            // lose the fact that LHDN already accepted the rejection.
             invoice.InternalStatusId = "RequestReject";
             invoice.RejectedBy = rejectedByUser;
             invoice.RejectedReason = rejectionReason;
             invoice.RejectedTimestamp = rejectedTime;
             invoice.LastUpdated = rejectedTime;
+            invoice.IsRejectionEmailSent = false;
             _context.InvoiceHeaders.Update(invoice);
 
-            // Email notifications
+            // The DB write must succeed regardless of the email outcome — LHDN already accepted the
+            // rejection by the time this method is called, so this save is the one thing that must
+            // not be skipped or rolled back by an email failure (that used to abort this save
+            // entirely, leaving the invoice showing as not-yet-rejected locally even though LHDN had
+            // already processed it).
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // A concurrent writer (e.g. the background status sync) updated this invoice between
+                // our read and save. LHDN has already accepted the rejection, so the reject must win:
+                // refresh the concurrency token from the database, keep our values, retry once.
+                _logger.LogWarning(
+                    "Concurrency conflict recording rejection for {DocumentId}; retrying with fresh row version.",
+                    documentId);
+                foreach (var entry in ex.Entries)
+                {
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+                    if (databaseValues == null)
+                    {
+                        throw; // row deleted concurrently — surface it, don't invent state
+                    }
+                    entry.OriginalValues.SetValues(databaseValues);
+                }
+                await _context.SaveChangesAsync();
+            }
+            _logger.LogInformation($"Local database updated successfully for document {documentId}");
+
+            // Email notification — best-effort, never blocks the response now that the status update
+            // above is already durably saved. A failure here is retried by the background finalizer
+            // pass (IsRejectionEmailSent stays false).
             if (_configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableRejectionEmails"))
             {
                 try
                 {
-                    if (_eInvoiceEmailService == null)
-                    {
-                        _logger.LogError("_eInvoiceEmailService is null.");
-                        return StatusCode(500, "Email service unavailable.");
-                    }
-
-                    var buyerEmail = invoice.Customer != null
-                        ? invoice.Customer.Email
-                        : invoice.PublicCustomer?.Email;
-
-                    if (string.IsNullOrEmpty(buyerEmail) || string.IsNullOrEmpty(invoice.Supplier?.Email))
-                    {
-                        return BadRequest("Customer or supplier email missing.");
-                    }
-
-                    var customerParty = invoice.Customer ?? new PartyInfo
-                    {
-                        CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
-                        Email = invoice.PublicCustomer?.Email ?? "",
-                        TIN = invoice.PublicCustomer?.TIN ?? ""
-                    };
-
                     _logger.LogInformation($"📄 Generating fresh PDF for rejected invoice {invoice.InvoiceNo} before emailing...");
                     await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
-
-                    // Send the email with the newly generated PDF
-                    _eInvoiceEmailService.SendRejectionNotificationEmail(
-                        customerParty,
-                        invoice.Supplier,
-                        invoice.InvoiceNo,
-                        rejectionReason,
-                        rejectedTime
-                    );
-
+                    await _invoiceFinalizer.SendRejectionEmailAsync(invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error sending rejection email.");
-                    return StatusCode(500, "Failed to send rejection email.");
+                    _logger.LogWarning(ex, "⚠️ Error sending rejection email for document {DocumentId}. Database update succeeded, but email failed.", documentId);
                 }
             }
 
-            await _context.SaveChangesAsync();
-            _logger.LogInformation($"Local database updated successfully for document {documentId}");
             return null; // Success
         }
 
@@ -1131,6 +1133,10 @@ namespace eInvWorld.Pages.Invoices
             invoice.LHDNStatusId = "Cancelled";
             invoice.CancelDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
             invoice.LastUpdated = invoice.CancelDateTime;
+            invoice.CancellationReason = cancellationReason;
+            // Opts this row into the atomic-claim/retry pass (InvoiceFinalizer.SendCancellationEmailAsync
+            // / InvoiceStatusUpdater) — see the matching comment in UpdateLocalDatabaseForRejection above.
+            invoice.IsCancellationEmailSent = false;
 
             _context.InvoiceHeaders.Update(invoice);
 
@@ -1185,46 +1191,9 @@ namespace eInvWorld.Pages.Invoices
             {
                 try
                 {
-                    if (_eInvoiceEmailService == null)
-                    {
-                        _logger.LogWarning("Email service is null. Skipping cancellation email notification.");
-                    }
-                    else
-                    {
-                        // 🔥 HYBRID FIX: Retrieve the correct email
-                        var buyerEmail = invoice.Customer != null ? invoice.Customer.Email : invoice.PublicCustomer?.Email;
-
-                        if (string.IsNullOrEmpty(buyerEmail))
-                        {
-                            _logger.LogWarning($"Customer email is missing for invoice {documentId}. Skipping email notification.");
-                        }
-                        else if (invoice.Supplier == null || string.IsNullOrEmpty(invoice.Supplier.Email))
-                        {
-                            _logger.LogWarning($"Supplier email is missing for invoice {documentId}. Skipping email notification.");
-                        }
-                        else
-                        {
-                            var customerParty = invoice.Customer ?? new PartyInfo
-                            {
-                                CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
-                                Email = invoice.PublicCustomer?.Email ?? "",
-                                TIN = invoice.PublicCustomer?.TIN ?? ""
-                            };
-
-                            _logger.LogInformation($"📄 Generating fresh PDF for cancelled invoice {invoice.InvoiceNo} before emailing...");
-                            await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
-
-                            // Send the email with the newly generated PDF
-                            _eInvoiceEmailService.SendCancellationNotificationEmail(
-                                customerParty,
-                                invoice.Supplier,
-                                invoice.InvoiceNo,
-                                cancellationReason,
-                                invoice.LastUpdated ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"))
-                            );
-                            _logger.LogInformation($" Cancellation email sent successfully for document {documentId}");
-                        }
-                    }
+                    _logger.LogInformation($"📄 Generating fresh PDF for cancelled invoice {invoice.InvoiceNo} before emailing...");
+                    await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                    await _invoiceFinalizer.SendCancellationEmailAsync(invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {

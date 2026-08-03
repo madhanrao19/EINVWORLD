@@ -1,13 +1,78 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.14.0`** (`AppInfo:Version` in `appsettings.json`). v1.14.0 is a **minor**
-> release: **dark mode** for the Tabler authenticated app (topbar toggle, cookie-persisted, follows OS
-> preference for first-time visitors); an expanded `docs/DESIGN.md` component/table/form/accessibility
-> spec plus app-wide **skip-navigation links**; a **new-e-invoice-received email** for buyer-side
-> invoices an external ERP submitted directly to LHDN, with the same indefinite-retry robustness as the
-> existing validated-invoice email; a **configurable lookback** for the automatic LHDN full-import job;
-> and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
-> beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
+> **Current version: `v1.14.1`** (`AppInfo:Version` in `appsettings.json`). v1.14.1 is a **patch**
+> release: fixes Rejection/Cancellation notification emails, which were **silently failing for both
+> Supplier and Buyer** whenever `GlobalBccEmail` was blank — the exact production symptom reported —
+> and gives both emails the same atomic-claim/background-retry durability the Valid-status and
+> new-invoice-received emails already have, so a transient failure is retried instead of lost. Also
+> fixes a related bug where a failed rejection email could abort the *entire* local database update
+> even though LHDN had already accepted the rejection, adds a concurrency-retry to the reject path
+> (cancel already had one), a one-retry mitigation for a transient PDF file-lock, and a conservative
+> Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
+> database migration** — see `DEPLOY-NOTES.md` §1.
+
+## 📅 2026-08-03 — Fix Rejection/Cancellation email delivery + related reject/cancel reliability bugs
+
+> Investigated a production report: "RejectionEmails and CancellationEmails not received by both
+> Supplier and Buyer" despite MyInvois's own emails arriving immediately, plus a review of the day's
+> log file for other errors worth fixing. Root cause of the email issue: `SendRejectionNotificationEmail`/
+> `SendCancellationNotificationEmail` threw `InvalidOperationException: GlobalBccEmail is empty`
+> **before reaching the buyer/supplier send logic at all** — confirmed by every single occurrence in
+> the log. This exact class of bug (an optional admin-CC address treated as required) was already
+> found and fixed for the Valid-status email in an earlier session, but the fix was never applied to
+> Rejection/Cancellation.
+>
+> Investigating further surfaced a second, more serious bug: in `InvoiceListsModel.
+> UpdateLocalDatabaseForRejection`, the rejection email was sent *before* `SaveChangesAsync()`, inside
+> the same try block — so the GlobalBccEmail exception (or any other email failure) aborted the local
+> database update entirely, even though LHDN had already accepted the rejection. The interactive
+> request then returned HTTP 500 to the user, who — seeing an apparent failure — retried the same
+> reject action, which LHDN correctly rejected a second time with `IncorrectState` ("already requested
+> for rejection"), matching a repeated failure pattern for the same document seen in the log across
+> several hours. The equivalent Cancel handler in the same file already saved first and emailed
+> best-effort afterward (with its own concurrency retry) — this fix brings Reject up to the same
+> standard, and extends it to both handlers in `InvoiceDetails2.cshtml.cs` for consistency.
+
+### Fixed
+- **`EInvoiceNotificationService.SendRejectionNotificationEmail`/`SendCancellationNotificationEmail`**
+  — no longer throw when `GlobalBccEmail` is blank; log a warning and send without the BCC, matching
+  `SendValidatedNotificationEmail`. Converted to `async Task<bool>` (was `void`, synchronous,
+  catch-and-swallow) so the caller can tell success from failure and retry — same contract as
+  `SendNewInvoiceReceivedNotificationEmail`. Sends to whichever of buyer/supplier has a valid email
+  independently (previously some call sites required *both* to be present or sent to neither).
+- **`InvoiceListsModel.UpdateLocalDatabaseForRejection`** — the local status-update save no longer
+  depends on the email succeeding; it's saved first (with a concurrency-conflict retry, matching the
+  Cancel handler's existing pattern), then the email is attempted best-effort afterward.
+- **`InvoiceDetails2Model.OnPutRejectDocumentAsync`/`OnPutCancelDocumentAsync`** — added the same
+  concurrency-conflict retry-once as the `InvoiceLists` handlers, for parity/defense in depth against
+  a concurrent background status-sync write.
+- **`PDFGeneratorService.GeneratePdfFromHtmlAsync`** — retries once after a short delay on `IOException`
+  writing the PDF file, mitigating a transient Windows file-sharing-violation seen once in the log
+  (another process briefly holding the same freshly-written PDF).
+- **`appsettings.Staging.json`** — added a `LHDNApiConfig:RateLimits` override, roughly halving
+  `SearchPerMinute`/`GetDocPerMinute`, after the log showed ~20 real 429 responses from LHDN across
+  the day (all recovered within the existing retry/backoff budget — no permanent failures, but
+  frequent delays). This is a conservative empirical adjustment, not a guaranteed fix; keep
+  monitoring and tune further if 429s are still frequent.
+
+### Added
+- **`InvoiceHeader.IsRejectionEmailSent`/`RejectionEmailSentAt`/`RejectionEmailSentTo`** and
+  **`IsCancellationEmailSent`/`CancellationEmailSentAt`/`CancellationEmailSentTo`** (migration
+  `20260803200000_AddRejectionCancellationEmailTrackingToInvoiceHeader`, additive, 4 artifacts incl.
+  idempotent `Apply_*.sql`) — same "`true` = not applicable" default pattern as
+  `IsNewInvoiceReceivedEmailSent`, so every existing invoice is automatically exempt; the reject/cancel
+  handlers set the relevant flag to `false` in the *same save* as the status transition, opting that
+  row into the retry pipeline below.
+- **`InvoiceHeader.CancellationReason`** — persisted (Reject already had `RejectedReason`) so a
+  background retry of a failed cancellation email can rebuild the email body without the original
+  interactive request's in-memory value.
+- **`IInvoiceFinalizer.SendRejectionEmailAsync`/`SendCancellationEmailAsync`** — same atomic-claim
+  (`ExecuteUpdateAsync WHERE !IsXEmailSent`) and rollback-on-failure pattern as
+  `SendNewInvoiceReceivedEmailAsync`, so a failed immediate send is retried by the next background
+  pass instead of being lost. The interactive handlers still attempt the send immediately for a
+  snappy, MyInvois-like experience — these are the safety net for when that attempt fails.
+- **`InvoiceStatusUpdater.RunRejectionCancellationFinalizerAsync`** — new step in the existing
+  background loop, alongside the pre-existing Valid-status and new-invoice-received finalizer passes.
 
 ## 📅 2026-08-03 — Diagnose & mitigate E-Invoice Assistant timeout on Staging
 
