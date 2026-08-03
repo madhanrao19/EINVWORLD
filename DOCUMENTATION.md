@@ -476,7 +476,7 @@ blank in files and supplied via env vars / user-secrets.
 | `LogCleanupSettings` | `RetentionDays` (default 30) and `BatchSize` (default 5000) for the batched `SystemLogs` prune. |
 | `InvoiceSettings` | e.g. `BackdateSeconds`. |
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
-| `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
+| `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120 — may need raising for a large model's first cold load), `KeepAliveMinutes` (default 30; sent as Ollama's `keep_alive` so the model stays resident between requests instead of unloading after Ollama's own 5-minute default, avoiding a repeat cold-load penalty), `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
 | `DocumentCapture` | AI Document Capture: `Enabled`, `MaxFileSizeMb`, `MaxPages`. |
 | `WatchedFolderImport` | `Enabled`, `InboxPath`, `PollSeconds`. |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate`. |

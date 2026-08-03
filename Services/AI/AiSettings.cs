@@ -29,6 +29,15 @@ namespace EINVWORLD.Services.AI
         /// <summary>Per-request timeout. A cold model load can take a while on first use.</summary>
         public int TimeoutSeconds { get; set; } = 120;
 
+        /// <summary>
+        /// How long Ollama keeps the model resident in memory after a request (its own "keep_alive"
+        /// setting, sent with every chat call). Ollama's own default is 5 minutes; a larger value here
+        /// means only the first request after a genuinely long idle period pays the full cold-load
+        /// cost — every request within this window reuses the already-loaded model. Ignored by
+        /// providers other than Ollama.
+        /// </summary>
+        public int KeepAliveMinutes { get; set; } = 30;
+
         /// <summary>Sampling temperature (0 = deterministic). Low by default for structured, repeatable output.</summary>
         public double Temperature { get; set; } = 0.2;
 

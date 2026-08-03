@@ -35,6 +35,7 @@ namespace eInvWorld.Pages.Admin
         public string BaseUrl => _settings.BaseUrl;
         public string Model => _settings.Model;
         public int TimeoutSeconds => _settings.TimeoutSeconds;
+        public int KeepAliveMinutes => _settings.KeepAliveMinutes;
         public double Temperature => _settings.Temperature;
         public int MaxTokens => _settings.MaxTokens;
 

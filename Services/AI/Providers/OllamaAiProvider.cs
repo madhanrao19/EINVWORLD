@@ -49,6 +49,9 @@ namespace EINVWORLD.Services.AI.Providers
                 Messages = request.Messages
                     .Select(m => new OllamaMessage { Role = m.Role, Content = m.Content })
                     .ToList(),
+                // Keeps the model resident well past Ollama's own 5-minute default, so only a
+                // genuinely long idle gap pays the full cold-load cost again.
+                KeepAlive = $"{Math.Max(1, _settings.KeepAliveMinutes)}m",
             };
 
             try
@@ -160,6 +163,7 @@ namespace EINVWORLD.Services.AI.Providers
             [JsonPropertyName("stream")] public bool Stream { get; set; }
             [JsonPropertyName("format")][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Format { get; set; }
             [JsonPropertyName("options")][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public OllamaOptions? Options { get; set; }
+            [JsonPropertyName("keep_alive")][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? KeepAlive { get; set; }
         }
 
         private sealed class OllamaOptions
