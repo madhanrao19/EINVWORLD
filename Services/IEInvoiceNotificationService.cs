@@ -7,8 +7,15 @@ namespace eInvWorld.Services
     public interface IEInvoiceNotificationService
     {
         Task SendValidatedNotificationEmail(string recipientName, PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, DateTime validatedTimestamp, PublicCustomer? publicCustomer = null);
-        void SendRejectionNotificationEmail(PartyInfo buyer, PartyInfo supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp);
-        void SendCancellationNotificationEmail(PartyInfo buyer, PartyInfo supplier, string documentId, string cancellationReason, DateTime cancelledTimestamp);
+
+        /// <summary>Notifies both buyer and supplier that a document was rejected. Returns <c>false</c>
+        /// (not an error — nothing to retry) when neither has a valid email. Throws on an actual send
+        /// failure so the caller (InvoiceFinalizer) can roll back its atomic claim and retry.</summary>
+        Task<bool> SendRejectionNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp);
+
+        /// <summary>Notifies both buyer and supplier that a document was cancelled. Same
+        /// success/failure contract as <see cref="SendRejectionNotificationEmail"/>.</summary>
+        Task<bool> SendCancellationNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string cancellationReason, DateTime cancelledTimestamp);
 
         /// <summary>Notifies the buyer that a new e-invoice from a supplier was just discovered via
         /// LHDN sync (submitted directly to LHDN by the supplier's own system, not through EINVWORLD).

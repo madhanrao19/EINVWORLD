@@ -1056,6 +1056,16 @@ namespace eInvWorld.Migrations
                     b.Property<DateTime?>("CancelDateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CancellationEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancellationEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1106,10 +1116,16 @@ namespace eInvWorld.Migrations
                     b.Property<int?>("InvoicePeriod")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsCancellationEmailSent")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsNewInvoiceReceivedEmailSent")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsPdfGenerated")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRejectionEmailSent")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSvdp")
@@ -1186,6 +1202,13 @@ namespace eInvWorld.Migrations
 
                     b.Property<DateTime?>("RejectedTimestamp")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RejectionEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
