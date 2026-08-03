@@ -2,6 +2,7 @@
 using eInvWorld.Models;
 using eInvWorld.Models.Settings;
 using eInvWorld.Services.PdfRendering;
+using EINVWORLD.Helpers;
 using EINVWORLD.Models.ViewModels;
 using EINVWORLD.Services.Mappers;
 using Microsoft.Extensions.Options;
@@ -40,11 +41,18 @@ namespace eInvWorld.Services
             string pdfFolder = _filePathConfig.GeneratedPdfFolder;
             Directory.CreateDirectory(pdfFolder);
 
-            string pdfPath = Path.Combine(pdfFolder, $"{invoiceNo}.pdf");
+            // invoiceNo reaches here from user-facing routes/query values (e.g. the PDF-download
+            // handler) — resolve it through SafePath (same guard used for resource/logo/editor
+            // uploads elsewhere) instead of a raw Path.Combine, so it can never escape the PDF
+            // folder via "..", a path separator, or another invalid-filename character.
+            if (!SafePath.TryResolve(pdfFolder, out var pdfPath, $"{invoiceNo}.pdf"))
+            {
+                throw new ArgumentException($"Invalid invoice number for PDF generation: '{invoiceNo}'.", nameof(invoiceNo));
+            }
 
             // Engine (DinkToPdf default, or Puppeteer) is selected by config and injected as IPdfRenderer.
             var pdfBytes = await _renderer.RenderHtmlToPdfAsync(htmlContent);
-            await File.WriteAllBytesAsync(pdfPath, pdfBytes);
+            await WriteFileWithRetryAsync(pdfPath, pdfBytes);
 
             _logger.LogInformation("✅ PDF generated ({Engine}) for {InvoiceNo} at: {PdfPath}",
                 _pdfSettings.Engine, invoiceNo, pdfPath);
@@ -113,6 +121,22 @@ namespace eInvWorld.Services
             return await GeneratePdfFromHtmlAsync(invoiceNo, html);
         }
 
-
+        // A same-named PDF being regenerated (e.g. reject/cancel emailing a "fresh" copy) can race a
+        // still-open handle from the previous write — a virus scanner, another concurrent request for
+        // the same invoice, etc. That's transient, so one short-delay retry clears it without the
+        // caller (an interactive reject/cancel request) seeing a spurious failure.
+        private async Task WriteFileWithRetryAsync(string path, byte[] bytes)
+        {
+            try
+            {
+                await File.WriteAllBytesAsync(path, bytes);
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "PDF write to {PdfPath} hit a locked file; retrying once after a short delay.", EINVWORLD.Helpers.LogSanitizer.ForLog(path));
+                await Task.Delay(500);
+                await File.WriteAllBytesAsync(path, bytes);
+            }
+        }
     }
 }

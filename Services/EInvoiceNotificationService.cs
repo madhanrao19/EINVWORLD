@@ -202,7 +202,7 @@ namespace eInvWorld.Services
             return ReplaceTemplatePlaceholders(template, placeholders);
         }
 
-        public void SendRejectionNotificationEmail(PartyInfo buyer, PartyInfo supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp)
+        public async Task<bool> SendRejectionNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp)
         {
             try
             {
@@ -212,13 +212,17 @@ namespace eInvWorld.Services
                 var emailGeneratedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 string subject = $"{baseSubject} | {documentId} | {emailGeneratedTime:dd-MM-yyyy hh:mm tt}";
 
-                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"]
-                    ?? throw new InvalidOperationException("Missing configuration: EmailConfiguration:Default:GlobalBccEmail");
-
-                if (string.IsNullOrWhiteSpace(adminEmailRaw))
-                    throw new InvalidOperationException("GlobalBccEmail is empty. Please configure a valid BCC email.");
-
+                // An unset GlobalBccEmail must not block the Buyer/Supplier emails — send without the
+                // BCC and warn, exactly like SendValidatedNotificationEmail/SendNewInvoiceReceivedNotificationEmail.
+                // This previously THREW here, which — combined with the catch-and-swallow this method
+                // used to have — meant a blank GlobalBccEmail silently dropped every single rejection
+                // email, to both parties, with the caller never finding out.
+                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"] ?? string.Empty;
                 string[] adminEmails = adminEmailRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (adminEmails.Length == 0)
+                {
+                    _logger.LogWarning("GlobalBccEmail is not configured; sending rejection email for {DocumentId} without the admin BCC.", documentId);
+                }
 
                 string invoiceLink = InvoiceLink(documentId);
                 string accountLink = AccountLink;
@@ -231,11 +235,14 @@ namespace eInvWorld.Services
                     pdfFilePath = null;
                 }
 
+                var recipients = new List<string>();
+
                 var buyerEmail = buyer?.Email;
                 if (IsValidEmail(buyerEmail))
                 {
                     var body = GenerateRejectEmailBody(buyer?.CompanyName ?? "Valued Customer", documentId, rejectionReason, rejectedTimestamp, invoiceLink, accountLink, contactLink);
                     SendEmailWithBcc(buyerEmail!, subject, body, pdfFilePath, adminEmails);
+                    recipients.Add($"Buyer: {buyerEmail}");
                 }
 
                 var supplierEmail = supplier?.Email;
@@ -243,16 +250,33 @@ namespace eInvWorld.Services
                 {
                     var body = GenerateRejectEmailBody(supplier?.CompanyName ?? "Valued Supplier", documentId, rejectionReason, rejectedTimestamp, invoiceLink, accountLink, contactLink);
                     SendEmailWithBcc(supplierEmail!, subject, body, pdfFilePath, adminEmails);
+                    recipients.Add($"Supplier: {supplierEmail}");
                 }
+
+                if (recipients.Count == 0)
+                {
+                    // Not an error — there's nothing to retry. The caller (InvoiceFinalizer) treats
+                    // false as "resolved, mark done", distinct from a thrown exception ("retry later").
+                    _logger.LogWarning("No valid buyer/supplier email for rejection notification on {DocumentId}; skipping.", documentId);
+                    return false;
+                }
+
+                // History row is written by the caller (InvoiceFinalizer), on the same DbContext/
+                // SaveChanges as its claim update.
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while sending rejection notification email.");
+                // Propagate: the caller (InvoiceFinalizer) uses the outcome to decide whether to roll
+                // back its atomic claim so a real failure (SMTP down, bad config) is retried on the
+                // next background pass — swallowing here would make a failed send look successful.
+                _logger.LogError(ex, "Error occurred while sending rejection notification email for {DocumentId}.", documentId);
+                throw;
             }
         }
 
 
-        public void SendCancellationNotificationEmail(PartyInfo buyer, PartyInfo supplier, string documentId, string cancellationReason, DateTime cancelledTimestamp)
+        public async Task<bool> SendCancellationNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string cancellationReason, DateTime cancelledTimestamp)
         {
             try
             {
@@ -262,13 +286,14 @@ namespace eInvWorld.Services
                 var emailGeneratedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 string subject = $"{baseSubject} | {documentId} | {emailGeneratedTime:dd-MM-yyyy hh:mm tt}";
 
-                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"]
-                    ?? throw new InvalidOperationException("Missing configuration: EmailConfiguration:Default:GlobalBccEmail");
-
-                if (string.IsNullOrWhiteSpace(adminEmailRaw))
-                    throw new InvalidOperationException("GlobalBccEmail is empty. Please configure a valid BCC email.");
-
+                // See SendRejectionNotificationEmail above — an unset GlobalBccEmail must not block
+                // the Buyer/Supplier emails.
+                string adminEmailRaw = _configuration["EmailConfiguration:Default:GlobalBccEmail"] ?? string.Empty;
                 string[] adminEmails = adminEmailRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (adminEmails.Length == 0)
+                {
+                    _logger.LogWarning("GlobalBccEmail is not configured; sending cancellation email for {DocumentId} without the admin BCC.", documentId);
+                }
 
                 string invoiceLink = InvoiceLink(documentId);
                 string accountLink = AccountLink;
@@ -281,11 +306,14 @@ namespace eInvWorld.Services
                     pdfFilePath = null;
                 }
 
+                var recipients = new List<string>();
+
                 var buyerEmail = buyer?.Email;
                 if (IsValidEmail(buyerEmail))
                 {
                     var body = GenerateCancelEmailBody(buyer?.CompanyName ?? "Valued Customer", documentId, cancellationReason, cancelledTimestamp, invoiceLink, accountLink, contactLink);
                     SendEmailWithBcc(buyerEmail!, subject, body, pdfFilePath, adminEmails);
+                    recipients.Add($"Buyer: {buyerEmail}");
                 }
 
                 var supplierEmail = supplier?.Email;
@@ -293,11 +321,21 @@ namespace eInvWorld.Services
                 {
                     var body = GenerateCancelEmailBody(supplier?.CompanyName ?? "Valued Supplier", documentId, cancellationReason, cancelledTimestamp, invoiceLink, accountLink, contactLink);
                     SendEmailWithBcc(supplierEmail!, subject, body, pdfFilePath, adminEmails);
+                    recipients.Add($"Supplier: {supplierEmail}");
                 }
+
+                if (recipients.Count == 0)
+                {
+                    _logger.LogWarning("No valid buyer/supplier email for cancellation notification on {DocumentId}; skipping.", documentId);
+                    return false;
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while sending cancellation notification email.");
+                _logger.LogError(ex, "Error occurred while sending cancellation notification email for {DocumentId}.", documentId);
+                throw;
             }
         }
 
