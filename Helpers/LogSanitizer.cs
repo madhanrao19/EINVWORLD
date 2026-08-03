@@ -30,5 +30,13 @@ namespace EINVWORLD.Helpers
             if (v.Length <= 6) return new string('*', v.Length);
             return $"{v[..4]}{new string('*', v.Length - 6)}{v[^2..]}";
         }
+
+        /// <summary>
+        /// Strips CR/LF from a value that came from user/route input before it reaches a log sink,
+        /// so it can't forge extra-looking lines in a text log file (log injection / CWE-117). Not for
+        /// PII — use <see cref="MaskTin"/>/<see cref="MaskId"/> for that.
+        /// </summary>
+        public static string ForLog(string? value) =>
+            string.IsNullOrEmpty(value) ? "(none)" : value.Replace("\r", "").Replace("\n", "");
     }
 }

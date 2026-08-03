@@ -95,6 +95,7 @@ public class InvoiceStatusUpdater : BackgroundService
                 var finalizer = scope.ServiceProvider.GetRequiredService<IInvoiceFinalizer>();
                 await RunFinalizerAsync(dbContext, finalizer, stoppingToken);
                 await RunNewInvoiceReceivedFinalizerAsync(dbContext, finalizer, stoppingToken);
+                await RunRejectionCancellationFinalizerAsync(dbContext, finalizer, stoppingToken);
 
                 // Enqueue outbound webhooks for invoices that reached a terminal LHDN status (no-op unless
                 // Webhooks:Enabled and at least one enabled subscription exists).
@@ -154,6 +155,38 @@ public class InvoiceStatusUpdater : BackgroundService
         {
             if (stoppingToken.IsCancellationRequested) break;
             await finalizer.SendNewInvoiceReceivedEmailAsync(invoiceNo, stoppingToken);
+        }
+    }
+
+    // Safety net for Rejection/Cancellation notification emails. The interactive reject/cancel
+    // handlers already attempt the send immediately (for a snappy, MyInvois-like experience) and
+    // only fall through to IsRejectionEmailSent/IsCancellationEmailSent == false when that immediate
+    // attempt fails (SMTP down, a locked PDF file, misconfiguration, etc.) — this loop is what
+    // actually retries it, exactly like the other finalizer passes above.
+    private async Task RunRejectionCancellationFinalizerAsync(ApplicationDbContext dbContext, IInvoiceFinalizer finalizer, CancellationToken stoppingToken)
+    {
+        var pendingRejection = await dbContext.InvoiceHeaders
+            .AsNoTracking()
+            .Where(i => !i.IsRejectionEmailSent)
+            .Select(i => i.InvoiceNo)
+            .ToListAsync(stoppingToken);
+
+        foreach (var invoiceNo in pendingRejection)
+        {
+            if (stoppingToken.IsCancellationRequested) break;
+            await finalizer.SendRejectionEmailAsync(invoiceNo, stoppingToken);
+        }
+
+        var pendingCancellation = await dbContext.InvoiceHeaders
+            .AsNoTracking()
+            .Where(i => !i.IsCancellationEmailSent)
+            .Select(i => i.InvoiceNo)
+            .ToListAsync(stoppingToken);
+
+        foreach (var invoiceNo in pendingCancellation)
+        {
+            if (stoppingToken.IsCancellationRequested) break;
+            await finalizer.SendCancellationEmailAsync(invoiceNo, stoppingToken);
         }
     }
 
