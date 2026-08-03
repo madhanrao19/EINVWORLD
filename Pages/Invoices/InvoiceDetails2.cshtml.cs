@@ -394,7 +394,7 @@ namespace EINVWORLD.Pages.Invoices
                 {
                     _logger.LogWarning(
                         "Concurrency conflict recording rejection for {DocumentId}; retrying with fresh row version.",
-                        documentId);
+                        EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
                     foreach (var entry in ex.Entries)
                     {
                         var databaseValues = await entry.GetDatabaseValuesAsync();
@@ -514,7 +514,7 @@ namespace EINVWORLD.Pages.Invoices
                 {
                     _logger.LogWarning(
                         "Concurrency conflict recording cancellation for {DocumentId}; retrying with fresh row version.",
-                        documentId);
+                        EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
                     foreach (var entry in ex.Entries)
                     {
                         var databaseValues = await entry.GetDatabaseValuesAsync();

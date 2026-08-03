@@ -11,6 +11,22 @@
 > Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
 > database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — CodeQL follow-up: path-traversal + log-injection hardening on the new reject/cancel code
+
+> CI's CodeQL scan flagged 8 new alerts (2 high, 6 medium) in the PR above — all genuinely in the new
+> code, not pre-existing findings resurfacing. Fixed all 8 before merging.
+
+### Fixed
+- **`PDFGeneratorService.GeneratePdfFromHtmlAsync`** (high, CWE-22 path traversal) — `invoiceNo`
+  reaches this method from user-facing routes (e.g. the PDF-download handler) and was combined into
+  the file path with a raw `Path.Combine`. Switched to `SafePath.TryResolve` (the same guard already
+  used for resource/logo/editor-upload paths) so it can never escape the PDF folder.
+- **6 new log statements** (medium, CWE-117 log injection) added by the reject/cancel concurrency-retry
+  and PDF-retry code in the PR above logged a route/query value (`documentId`, the resolved PDF path)
+  without stripping CR/LF, which could forge extra-looking lines in the text log file. Added
+  `LogSanitizer.ForLog` (strips CR/LF; existing `MaskTin`/`MaskId` are for PII, a different concern)
+  and applied it at all 6 sites.
+
 ## 📅 2026-08-03 — Fix Rejection/Cancellation email delivery + related reject/cancel reliability bugs
 
 > Investigated a production report: "RejectionEmails and CancellationEmails not received by both

@@ -1035,7 +1035,7 @@ namespace eInvWorld.Pages.Invoices
                 // refresh the concurrency token from the database, keep our values, retry once.
                 _logger.LogWarning(
                     "Concurrency conflict recording rejection for {DocumentId}; retrying with fresh row version.",
-                    documentId);
+                    EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
                 foreach (var entry in ex.Entries)
                 {
                     var databaseValues = await entry.GetDatabaseValuesAsync();
@@ -1047,7 +1047,7 @@ namespace eInvWorld.Pages.Invoices
                 }
                 await _context.SaveChangesAsync();
             }
-            _logger.LogInformation($"Local database updated successfully for document {documentId}");
+            _logger.LogInformation("Local database updated successfully for document {DocumentId}", EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
 
             // Email notification — best-effort, never blocks the response now that the status update
             // above is already durably saved. A failure here is retried by the background finalizer
@@ -1056,13 +1056,13 @@ namespace eInvWorld.Pages.Invoices
             {
                 try
                 {
-                    _logger.LogInformation($"📄 Generating fresh PDF for rejected invoice {invoice.InvoiceNo} before emailing...");
+                    _logger.LogInformation("📄 Generating fresh PDF for rejected invoice {InvoiceNo} before emailing...", invoice.InvoiceNo);
                     await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
                     await _invoiceFinalizer.SendRejectionEmailAsync(invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "⚠️ Error sending rejection email for document {DocumentId}. Database update succeeded, but email failed.", documentId);
+                    _logger.LogWarning(ex, "⚠️ Error sending rejection email for document {DocumentId}. Database update succeeded, but email failed.", EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
                 }
             }
 
