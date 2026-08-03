@@ -95,8 +95,11 @@ function watchAppErrors(page) {
       const u = new URL(resp.url());
       if (ANALYTICS.test(u.href)) return;
       // Pre-existing content issue: some article/company images are missing on staging (404).
-      // Not a Tabler layout defect — tracked separately.
-      if (/\/images\/resources\/|\/Companies\/Logos\//i.test(u.pathname)) return;
+      // Not a Tabler layout defect — tracked separately. Resource images moved from the old
+      // static-file route (/images/resources/...) to the new API-served route
+      // (/api/resources/images/...) per ResourcesMigrationController; match both so this
+      // tolerance doesn't silently stop applying to resources created after that migration.
+      if (/\/images\/resources\/|\/api\/resources\/images\/|\/Companies\/Logos\//i.test(u.pathname)) return;
       if (u.host === appHost() && resp.status() >= 400) failedRequests.push(`${resp.status()} ${u.pathname}`);
     } catch { /* ignore */ }
   });
