@@ -61,6 +61,12 @@
                 <p class="mb-0">@Model.TimeoutSeconds s</p>
             </div>
             <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                    Keep Alive <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="How long Ollama keeps the model loaded in memory after a request. A larger value avoids repeated slow cold-loads between requests."></i>
+                </p>
+                <p class="mb-0">@Model.KeepAliveMinutes min</p>
+            </div>
+            <div class="col-md-6 mb-3">
                 <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Temperature</p>
                 <p class="mb-0">@Model.Temperature</p>
             </div>
