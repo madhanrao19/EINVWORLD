@@ -9,6 +9,25 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Investigate & skip admin-2FA demo-data drift (test-only)
+
+> Root-caused the last remaining pre-existing Playwright failure from the full-suite pass above.
+> Not a code bug: `Login.cshtml.cs`'s 2FA redirect (`result.RequiresTwoFactor`) is standard,
+> correct ASP.NET Identity behavior driven entirely by the account's `TwoFactorEnabled` flag.
+> Confirmed via the account's own Manage > Two-factor authentication page ("Add authenticator
+> app", not "Disable 2FA") that the shared demo `admin@einvworld.com` account currently has 2FA
+> **disabled** in this DB — the test's name/assumption ("admin with 2FA enrolled") predates that.
+
+### Fixed
+- `tests/playwright/02-auth.spec.js` — the admin-2FA test now accepts landing on either
+  `LoginWith2fa` (enrolled) or `Dashboard` (not enrolled) and skips gracefully in the latter case,
+  matching the honest-skip pattern already used elsewhere in this suite, instead of failing on a
+  precondition the test can't control. Deliberately did **not** enable 2FA on the account directly
+  — TOTP enrollment is a one-time interactive step (scan a QR code, can't be seeded via
+  migration/script) on a *shared* demo account, and doing it silently would break anyone else's
+  manual login with that account, who'd suddenly be asked for a code they don't have. Enrolling it
+  through the app's own UI, by whoever owns that shared credential, re-enables the real check.
+
 ## 📅 2026-08-03 — Full Playwright suite pass: 82/112 → 106/110 (test-only)
 
 > Ran the entire suite for the first time in a while. Went from 82 passed/28 failed/2 skipped to
