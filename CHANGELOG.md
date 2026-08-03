@@ -9,6 +9,26 @@
 > and a diagnosis (no code fix needed) that Staging's page-load stalls were a Cloudflare Web Analytics
 > beacon, not CSP. **One new additive database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Fix pre-existing `12-create-invoice-parity.spec.js` failure (test-only)
+
+> Flagged in the prior review pass as pre-existing (reproduced identically on pre-#154 file
+> versions). Root cause: the test clicked "Next: Invoice Items" without filling every
+> `[required]` field in Step 1 first — `validateCurrentStep()` correctly blocks the wizard from
+> advancing until they're set, exactly like it would for a real user. Not an app bug; the test
+> never simulated filling them in.
+
+### Fixed
+- `tests/playwright/12-create-invoice-parity.spec.js` — Select2 hides the underlying `<select>`
+  (`display:none`), which fails Playwright's `.selectOption()` actionability check, so added a
+  `selectFirstRealOption()` helper that sets `.value` + dispatches `change` directly (matching what
+  the wizard's own validation JS reads). Used it to pick a Document Type, Currency, and Buyer before
+  advancing from Step 1, and to fill the default blank line item's classification/description/
+  quantity/unit/price/tax before advancing from Step 2. Also fixed an unrelated locator collision —
+  `#step2 .btn-primary` matched both the "+ Tax" button and "Next: Review & Submit"; scoped to
+  `button[onclick="nextStep()"]`.
+- Verified stable over repeated runs, and re-ran the public + auth Playwright suites alongside it —
+  no other regressions.
+
 ## 📅 2026-08-02 — Review cleanup: dead variable + duplicate audit row in the new-invoice-received email
 
 > Follow-up from a full review of this session's recent PRs (#150-154): confirmed correct via a
