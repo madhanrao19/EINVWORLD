@@ -10,7 +10,7 @@ bottom; stop and investigate on the first ❌.
 
 ## 0. Startup & configuration (fail-fast gates)
 - [ ] App pool starts; site responds. ✅ no crash on boot.
-- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, AutoMigrate=…`). ✅ flags match what you intend.
+- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, SmartCapture=…, MalwareScanRequired=…, AutoMigrate=…`). ✅ flags match what you intend — in particular, `MalwareScanRequired=True` on any server with `SmartCapture=True`.
 - [ ] No **config-validation** error in the log. ✅ the fail-fast validator passed (connection string, `DataProtection:KeyRingPath` set outside `App\`, LHDN BaseUrl, signing cert if `SigningEnabled`, no localhost URLs in Production).
 - [ ] `GET /health` ✅ returns Healthy (DB reachable + writable folders).
 - [ ] `DataProtection:KeyRingPath` folder exists, is **outside** `App\`, and the app-pool identity has Modify. ✅ existing users stay logged in across a redeploy (keys not rotated).
@@ -24,6 +24,9 @@ bottom; stop and investigate on the first ❌.
 - [ ] **v1.14.1:** confirm `__EFMigrationsHistory` includes `AddRejectionCancellationEmailTrackingToInvoiceHeader` (last row) **before** the new app code goes live — the EF model expects these columns, so running the new code against an un-migrated DB will error on every `InvoiceHeaders` query. ✅ additive — existing rows backfill `IsRejectionEmailSent`/`IsCancellationEmailSent = 1` (not applicable), no retroactive emails sent.
 - [ ] **v1.14.1:** confirm `EmailConfiguration:Default:GlobalBccEmail` is set to a real address (or intentionally blank) on this server. ✅ either way, Rejection/Cancellation emails to Supplier/Buyer now send regardless — a blank BCC only skips the admin copy and logs a warning, it no longer blocks the notification entirely.
 - [ ] **v1.14.1:** reject a test document, then check both the Supplier and Buyer received the rejection email (and the Cancel flow, cancelling a different test document). ✅ both parties receive it; if the immediate send fails, `InvoiceHeader.IsRejectionEmailSent`/`IsCancellationEmailSent` stays `false` so the next background cycle (`InvoiceStatusUpdater.RunRejectionCancellationFinalizerAsync`) retries it — indefinitely, no age cutoff.
+- [ ] **v1.15.0:** confirm `__EFMigrationsHistory` includes `AddSmartCaptureDocument` (last row). ✅ additive — new `SmartCaptureDocuments` table only, no existing table altered.
+- [ ] **v1.15.0:** before enabling `SmartCapture:Enabled=true`, confirm ClamAV (`clamd`) is installed and running (see `IIS-DEPLOYMENT-GUIDE.md` PART 17d) and `SmartCapture:MalwareScanRequired=true` on this server. ✅ upload a real test PDF — it should queue and process; then upload the [EICAR test file](https://www.eicar.org/download-anti-malware-testfile/) — it must be **rejected**, proving the scanner is actually wired in, not just installed.
+- [ ] **v1.15.0:** Smart Capture end-to-end — upload a supplier invoice at `/Invoices/SmartCapture`, wait for it to leave "Processing", confirm the LHDN document type and a registered buyer on the review screen, create the draft, and confirm it opens correctly in the normal `InvoiceEdit` page. ✅ draft is fully editable and submits through the unchanged MyInvois path — Smart Capture never bypasses review or submission.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.

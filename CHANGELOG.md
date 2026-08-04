@@ -1,15 +1,16 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.14.1`** (`AppInfo:Version` in `appsettings.json`). v1.14.1 is a **patch**
-> release: fixes Rejection/Cancellation notification emails, which were **silently failing for both
-> Supplier and Buyer** whenever `GlobalBccEmail` was blank — the exact production symptom reported —
-> and gives both emails the same atomic-claim/background-retry durability the Valid-status and
-> new-invoice-received emails already have, so a transient failure is retried instead of lost. Also
-> fixes a related bug where a failed rejection email could abort the *entire* local database update
-> even though LHDN had already accepted the rejection, adds a concurrency-retry to the reject path
-> (cancel already had one), a one-retry mitigation for a transient PDF file-lock, and a conservative
-> Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
-> database migration** — see `DEPLOY-NOTES.md` §1.
+> **Current version: `v1.15.0`** (`AppInfo:Version` in `appsettings.json`). v1.15.0 is a **minor**
+> release: adds **Smart Capture (Stage 1)** — a persisted, asynchronous successor to the AI Document
+> Capture beta. Upload a supplier invoice (PDF/JPG/PNG) → malware-scanned, `SafePath`-stored, processed
+> via the durable `SyncJobs` queue (not the request thread) → the same LHDN-aware
+> `InvoiceSuggestionValidator` review, with an **explicit** document-type and buyer confirmation (never
+> inferred) → a real Draft via the **unchanged** `InvoiceDraftService.SaveDraft` → the normal
+> `InvoiceEdit` page → the unchanged MyInvois submission path. Adds ClamAV malware scanning (a direct
+> `clamd` client — no new NuGet dependency), tiered retention enforced by a scheduled sweep job, and a
+> monthly processed-page quota. OFF by default (`SmartCapture:Enabled=false`); **requires ClamAV in
+> Staging/Production**, see `IIS-DEPLOYMENT-GUIDE.md` PART 17d. **One new additive database migration**
+> — see `DEPLOY-NOTES.md` §1. PR: [#164](https://github.com/madhanrao19/EINVWORLD/pull/164).
 
 ## 📅 2026-08-04 — Smart Capture (Stage 1): persisted, async supplier-invoice capture → draft
 

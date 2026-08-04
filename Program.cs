@@ -584,13 +584,15 @@ EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Envi
 // One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
 // (no secrets — just feature/mode flags).
 Log.Information(
-    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, AutoMigrate={AutoMigrate}",
+    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, SmartCapture={SmartCaptureEnabled}, MalwareScanRequired={MalwareScanRequired}, AutoMigrate={AutoMigrate}",
     app.Configuration["AppInfo:Version"] ?? "?",
     app.Environment.EnvironmentName,
     app.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf",
     app.Configuration.GetValue("AI:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
+    app.Configuration.GetValue("SmartCapture:Enabled", false),
+    app.Configuration.GetValue("SmartCapture:MalwareScanRequired", true),
     app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
 
 // Apply migrations and seed data

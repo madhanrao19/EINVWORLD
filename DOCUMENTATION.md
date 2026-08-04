@@ -398,6 +398,15 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
   customers). Suggest-only; never submits. (`AI` config; Ollama provider by default.)
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — upload a digital PDF → extract text (PdfPig) →
   suggestion → review. Draft-safe. (`DocumentCapture` config; needs `AI:Enabled`.)
+- **Smart Capture** (`/Invoices/SmartCapture`) — Stage 1 of the persisted/async successor to AI Document
+  Capture: upload a PDF/JPG/PNG → malware-scanned, `SafePath`-stored, and processed via the durable
+  `SyncJobs` queue (not the request thread) → the same `InvoiceSuggestionValidator` review, with an
+  **explicit** document-type and buyer confirmation (never inferred) → a real Draft via the unchanged
+  `InvoiceDraftService.SaveDraft` → the normal `InvoiceEdit` page → the unchanged MyInvois submission
+  path. Tiered retention (a scheduled sweep, not a dead setting) and a monthly processed-page quota.
+  Draft-safe; never touches `InvoiceMapper` or the submission pipeline directly. (`SmartCapture` config;
+  needs `DocumentCapture` + `AI:Enabled`; requires ClamAV in Staging/Production, see deployment guide
+  PART 17d.)
 - **Admin → AI Settings** (`/Admin/AiSettings`) — read-only view of the active AI config + a **Test
   connection** probe (reachable / model pulled / latency). Never shows the API key.
 
@@ -482,6 +491,7 @@ blank in files and supplied via env vars / user-secrets.
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
 | `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120 — may need raising for a large model's first cold load), `KeepAliveMinutes` (default 30; sent as Ollama's `keep_alive` so the model stays resident between requests instead of unloading after Ollama's own 5-minute default, avoiding a repeat cold-load penalty), `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
 | `DocumentCapture` | AI Document Capture: `Enabled`, `MaxFileSizeMb`, `MaxPages`. |
+| `SmartCapture` | Persisted/async Smart Capture: `Enabled`, `AllowedExtensions`, `MaxFileSizeMb`, `MaxPages`, `MalwareScanRequired` (fail-closed against a `clamd` daemon at `ClamAvHost`/`ClamAvPort` — must be `true` in Staging/Production), `RetentionDays*` (Failed/AbandonedReview/DraftLinked/SubmittedLinked), `MonthlyProcessedPageQuota`. |
 | `WatchedFolderImport` | `Enabled`, `InboxPath`, `PollSeconds`. |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate`. |
 | `ExtractInvoice:ServiceUrl` | Legacy OCR service endpoint. |
@@ -493,14 +503,15 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **79 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+- **80 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
   into one, `ConsolidatedSchemaCatchup_v1_11_0`). Two new additive migrations in v1.13.0:
   `AddRoleModulePermissions` (new `RoleModulePermissions` table) and `AddCompanyRolePartyInfoScope`
   (nullable `CompanyRole.PartyInfoId`). One more in v1.14.0: `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`
   (3 new `InvoiceHeaders` columns backing the new-e-invoice-received notification, §8). One more in
   v1.14.1: `AddRejectionCancellationEmailTrackingToInvoiceHeader` (7 new `InvoiceHeaders` columns
-  backing retry-safe rejection/cancellation emails, same section) — see `DEPLOY-NOTES.md` §1 for the
-  apply order. Auto-apply on startup
+  backing retry-safe rejection/cancellation emails, same section). One more in v1.15.0:
+  `AddSmartCaptureDocument` (new `SmartCaptureDocuments` table backing the persisted/async Smart
+  Capture pipeline, §10) — see `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
   (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
   tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
   `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not
