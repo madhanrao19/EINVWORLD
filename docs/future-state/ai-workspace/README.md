@@ -1,6 +1,8 @@
 # eInvWorld AI Workspace — future-state UX reference
 
-**Status: approved future-state UX reference only. Not implemented. Not scheduled.**
+**Status: reference-only material, kept for future consideration. The AI Workspace itself is NOT
+approved for implementation and is not scheduled — only keeping this folder as a design reference
+is approved.**
 
 ## What's here
 
