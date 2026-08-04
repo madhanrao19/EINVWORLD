@@ -560,9 +560,9 @@ public class LHDNApiService : ILHDNApiService
         }
     }
 
-    public async Task<List<string>> GetAllUuidsForTinAsync(string tin, string accessToken, int lookbackDays = 3)
+    public async Task<List<DocumentSummary>> GetAllUuidsForTinAsync(string tin, string accessToken, int lookbackDays = 3)
     {
-        var uuids = new List<string>();
+        var summaries = new List<DocumentSummary>();
         if (lookbackDays < 1) lookbackDays = 1;
         DateTime start = DateTime.Today.AddDays(-lookbackDays);
         DateTime end = DateTime.Today;
@@ -579,7 +579,11 @@ public class LHDNApiService : ILHDNApiService
 
             while (hasMore)
             {
-                string url = $"api/v1.0/documents/search?issueDateFrom={start:yyyy-MM-dd}&issueDateTo={chunkEnd:yyyy-MM-dd}&page={page}&size={pageSize}";
+                // Param names per LHDN's documented /documents/search contract are "pageNo"/"pageSize"
+                // (not "page"/"size") — using the wrong names silently made LHDN ignore pagination and
+                // always return page 1, so this loop only ever terminated because docs.Count < pageSize
+                // (true for every TIN seen so far) rather than because pagination actually advanced.
+                string url = $"api/v1.0/documents/search?issueDateFrom={start:yyyy-MM-dd}&issueDateTo={chunkEnd:yyyy-MM-dd}&pageNo={page}&pageSize={pageSize}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
 
                 try
@@ -597,12 +601,11 @@ public class LHDNApiService : ILHDNApiService
                     }
                     else
                     {
-                        foreach (var doc in docs)
-                        {
-                            var uuid = doc["uuid"]?.ToString();
-                            if (!string.IsNullOrWhiteSpace(uuid))
-                                uuids.Add(uuid);
-                        }
+                        // Keep the full summary (status/longId/dateTimeValidated/etc.) — the search
+                        // response already carries everything RunFullImportFromLhdnAsync needs to skip
+                        // re-fetching the raw document for invoices that can no longer change status.
+                        var pageSummaries = docs.ToObject<List<DocumentSummary>>() ?? new List<DocumentSummary>();
+                        summaries.AddRange(pageSummaries.Where(s => !string.IsNullOrWhiteSpace(s.uuid)));
 
                         hasMore = docs.Count == pageSize;
                         page++;
@@ -618,8 +621,8 @@ public class LHDNApiService : ILHDNApiService
             start = chunkEnd.AddDays(1); // move to next 10-day window
         }
 
-        _logger.LogInformation("✅ Retrieved {Count} UUIDs from LHDN for TIN: {TIN}", uuids.Count, LogSanitizer.MaskTin(tin));
-        return uuids;
+        _logger.LogInformation("✅ Retrieved {Count} UUIDs from LHDN for TIN: {TIN}", summaries.Count, LogSanitizer.MaskTin(tin));
+        return summaries;
     }
 
 
