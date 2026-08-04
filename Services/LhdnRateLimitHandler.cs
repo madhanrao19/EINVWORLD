@@ -52,7 +52,13 @@ namespace EINVWORLD.Services
             _submit = PacedBucket(PerMinute("SubmitPerMinute", 60), burst: 3);     // official 100 (POST /documentsubmissions)
             _poll = PacedBucket(PerMinute("PollPerMinute", 200), burst: 5);        // official 300 (GET  /documentsubmissions/{id})
             _search = PacedBucket(PerMinute("SearchPerMinute", 10), burst: 1);     // official 12  (/documents/search)
-            _getDoc = PacedBucket(PerMinute("GetDocPerMinute", 50), burst: 2);     // official ~60 (/documents/{uuid}/raw) — main 429 source
+            _getDoc = PacedBucket(PerMinute("GetDocPerMinute", 50), burst: 1);     // official ~60 (/documents/{uuid}/raw) — main 429 source.
+                                                                                    // burst was 2: two requests could leave with zero spacing,
+                                                                                    // which trips LHDN's short-window limit even though the
+                                                                                    // per-minute average stays under quota (observed in prod
+                                                                                    // logs — 45s penalty from a 2-request burst). burst:1 means
+                                                                                    // every request, including the first after an idle bucket,
+                                                                                    // waits the full replenishment interval.
             _state = PacedBucket(PerMinute("StatePerMinute", 10), burst: 1);       // official 12  (PUT /documents/state/{id}/state)
             _general = PacedBucket(PerMinute("GeneralPerMinute", 20), burst: 2);   // fallback for anything else
         }
