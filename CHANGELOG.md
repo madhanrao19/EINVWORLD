@@ -11,6 +11,31 @@
 > Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
 > database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-03 — Restyle: finish rolling the "EinvWorld Professional" tokens onto Create/Edit Invoice
+
+> A Stitch mockup (`stitch_einvworld_tabler_redesign/`) proposed a much larger "AI Workspace" product
+> redesign (per-field AI suggestion cards, inline compliance checks, a collaborative audit timeline,
+> etc.) — that's a multi-phase product initiative with no existing data model or AI backend to support
+> it, not a UI ticket, so it was **not** implemented (see the written assessment from this
+> conversation). What *was* in scope: `CreateInvoice.cshtml`/`InvoiceEdit.cshtml` still had leftover
+> hardcoded Bootstrap-default colors (`#dc3545`/`#198754` for validation, `#e9ecef`/`#ced4da` for
+> borders) predating the earlier "EinvWorld Professional" rebrand (`einvworld-tokens.css`), and a local
+> `.card, .card-body { box-shadow: none; }` override that flattened these two pages' cards relative to
+> the rest of the app. Visual-only fix — same data, same backend, no new features.
+
+### Fixed
+- `CreateInvoice.cshtml`/`InvoiceEdit.cshtml`: replaced hardcoded validation colors
+  (`#dc3545`/`#198754` + their `rgba()` focus-ring shadows) with `var(--einv-error)`/
+  `var(--einv-success)`, and border colors (`#e9ecef`/`#ced4da`) with `var(--einv-border)`, in both
+  the CSS and the two JS validation-state assignments (`field.style.borderColor = ...`).
+- `CreateInvoice.cshtml`: removed a local `.card, .card-body { box-shadow: none; }` override that
+  killed the app-wide soft card shadow (`0 2px 4px rgba(0,0,0,.02)`, from `einvworld-tokens.css`) on
+  this page only — restored to match; also fixed `.page-title-box`/`.form-group-card`/
+  `.table-responsive`/`.tax-row`/`.progress` to the same border/shadow tokens.
+- Checked `CreateCN.cshtml`/`CreateSBI.cshtml`/`CreateSBCN.cshtml` — none have this legacy CSS
+  (simpler pages), no changes needed. Left the SweetAlert submission-success popup's own color set
+  untouched — a self-contained decorative treatment, out of scope for this pass.
+
 ## 📅 2026-08-03 — CodeQL follow-up: path-traversal + log-injection hardening on the new reject/cancel code
 
 > CI's CodeQL scan flagged 8 new alerts (2 high, 6 medium) in the PR above — all genuinely in the new
