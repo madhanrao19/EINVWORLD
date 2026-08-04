@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="EINVWORLD.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="EINVWORLD.Tests\**" />
     <Compile Remove="csharp Helpers\**" />
     <Compile Remove="Documents\**" />
