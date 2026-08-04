@@ -11,6 +11,66 @@
 > Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
 > database migration** — see `DEPLOY-NOTES.md` §1.
 
+## 📅 2026-08-04 — Smart Capture (Stage 1): persisted, async supplier-invoice capture → draft
+
+> Productionises the existing "AI Document Capture" beta (`CreateFromFile.cshtml`, left untouched as a
+> fallback) into a persisted, asynchronous pipeline: upload → durable background OCR/LLM extraction
+> (reuses the existing `SyncJobs` queue and `InvoiceSuggestionValidator`) → human review with **explicit**
+> document-type confirmation and buyer selection (never auto-decided) → draft creation via the
+> **unchanged** `InvoiceDraftService.SaveDraft` → the normal `InvoiceEdit` page → the unchanged MyInvois
+> submission path. New: malware scanning (ClamAV via a direct `clamd` INSTREAM client — no new NuGet
+> dependency), tiered retention (failed/abandoned/draft-linked/submitted-linked windows, enforced by a
+> scheduled sweep job, not a dead setting), a monthly processed-page quota, and field-level encryption on
+> the stored extraction result (reuses the existing `ApplicationDbContext.Encrypt<T>` PII-protection
+> pattern). Scope explicitly deferred to later PRs: bounding-box/confidence UI, formal supplier matching,
+> duplicate-invoice detection, bulk upload, and an exception-queue dashboard.
+>
+> **One new additive database migration** (`SmartCaptureDocuments`) — see `DEPLOY-NOTES.md`.
+> **New Windows service dependency in Staging/Production: ClamAV (`clamd`)** — see
+> `IIS-DEPLOYMENT-GUIDE.md`. Off by default (`SmartCapture:Enabled = false`).
+
+### Added
+- `Pages/Invoices/SmartCapture.cshtml(.cs)` — upload page + per-user document list (new page, alongside
+  the existing `CreateFromFile.cshtml` — not a replacement, so the beta flow keeps working as a fallback).
+- `Pages/Invoices/SmartCaptureReview.cshtml(.cs)` — live status while processing; once extracted, shows
+  the `InvoiceSuggestionValidator` checklist, requires an explicit LHDN document-type confirmation and an
+  explicit buyer selection (from this company's existing registered buyers only — never auto-matched or
+  silently created), then creates the draft and hands off to `InvoiceEdit` for full correction.
+- `Services/SmartCapture/SmartCaptureDocumentService.cs` — the single place `SmartCaptureDocument` is
+  queried or written; centralises the `UserCompanies`-based tenant-scoping join so no call site can forget
+  it, plus upload validation (size/extension/magic-byte/malware-scan/quota) and `SafePath`-based storage.
+- `Services/SmartCapture/SmartCaptureExtractionJobHandler.cs` — new `ISyncJobHandler` (`SmartCaptureExtraction`
+  job type) reusing `IDocumentTextExtractor`, `IDocumentOcrService`, `IEInvoiceAssistantService`, and
+  `InvoiceSuggestionValidator` unchanged. Idempotent against a retried/duplicated job run.
+- `Services/SmartCapture/SmartCaptureRetentionJobHandler.cs` + `SmartCaptureRetentionScheduler.cs` — a
+  daily-scheduled sweep (new `SmartCaptureRetention` job type) that deletes the physical file once a
+  document's tier-specific retention window has elapsed; the database row is kept for audit history.
+- `Services/Security/IMalwareScanner.cs` + `ClamAvMalwareScanner.cs` — talks to a `clamd` daemon over its
+  documented INSTREAM TCP protocol directly (no third-party package). Fails **closed** by default in
+  Staging/Production (`SmartCapture:MalwareScanRequired = true`) — an unreachable scanner rejects the
+  upload rather than silently skipping the scan.
+- `IDocumentOcrService.OcrImage` / `IDocumentTextExtractor.TryGetPdfPageCount` — small additive interface
+  members (existing `IDocumentOcrService`/`IDocumentTextExtractor`, one implementer each) so Smart Capture
+  can OCR a raw JPG/PNG upload directly (the existing `OcrPdf` rasterizes via PDFium and needs real PDF
+  bytes) and account quota in actual processed pages.
+- `Models/SmartCapture/SmartCaptureDocument.cs` — new table (`CompanyPartyInfoId`, not an ambiguous
+  `TenantId`/`CompanyId` pair; `RelatedInvoiceHeaderInvoiceNo` FK, matching `InvoiceLine`'s existing
+  `InvoiceHeaderInvoiceNo` naming since `InvoiceHeader.InvoiceNo` **is** its primary key — there is no
+  separate surrogate id; `FailureCode` + `UserSafeFailureMessage`, never a raw exception message).
+- `EINVWORLD.Tests/Integration/SmartCaptureDocumentIntegrationTests.cs` — real-SQL-Server tenant-isolation
+  test: a user outside the owning company gets `null` (not the row) from `GetOwnedAsync`.
+
+### Changed
+- `ApplicationDbContext` — new `SmartCaptureDocuments` DbSet; `NormalizedExtractionJson` added to the
+  existing field-level encryption list (may contain a supplier's own bank details, per the fields
+  `InvoiceSuggestion` can carry — same protection as `InvoiceHeader.BankAccountNo`).
+- `Models/FilePathConfig.cs` — new `SmartCaptureFolder`.
+- `Pages/Assistant/ProcessingHistory.cshtml.cs` — the capture-activity list now also includes the new
+  Smart Capture audit actions (`SmartCaptureUploaded`, `SmartCaptureExtracted`, `SmartCaptureDraftCreated`,
+  etc.), not just the original `DocumentCaptured`.
+- Navigation (`_AdminNavigation.cshtml`, `_SupplierNavigation.cshtml`, `_Sidebar.cshtml`) — added a
+  "Smart Capture" link alongside the existing "AI Document Capture" link.
+
 ## 📅 2026-08-03 — CodeQL follow-up: path-traversal + log-injection hardening on the new reject/cancel code
 
 > CI's CodeQL scan flagged 8 new alerts (2 high, 6 medium) in the PR above — all genuinely in the new

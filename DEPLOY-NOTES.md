@@ -73,6 +73,13 @@ changes are additive and AI/features stay off unless already enabled.
 
 ## 1. Database migrations
 
+### Smart Capture (Stage 1): `20260804080345_AddSmartCaptureDocument`
+
+Purely additive — one new table (`SmartCaptureDocuments`), no changes to any existing table. Apply with
+`Migrations/Apply_AddSmartCaptureDocument.sql` (idempotent, safe to re-run) if not relying on
+`AutoMigrateOnStartup`. No manual data steps required. Feature stays off (`SmartCapture:Enabled=false`
+by default) even after the schema is present.
+
 ### ⚠️ v1.11.0 pre-flight: confirm how far behind each environment is
 
 A production backup taken 2026-07-26 (`__EFMigrationsHistory` check) showed the live database was on
@@ -293,6 +300,14 @@ Draft-safe — they validate/suggest only; none creates or submits invoices auto
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — set `DocumentCapture:Enabled=true` **and**
   `AI:Enabled=true` (needs Ollama; see IIS guide PART O). Verify with Admin → AI Settings → Test
   connection. Digital (text-layer) PDFs only; scanned images report "needs OCR".
+- **Smart Capture (Stage 1)** (`/Invoices/SmartCapture`) — persisted/async version of AI Document Capture;
+  requires `DocumentCapture:Enabled=true` and `AI:Enabled=true` too (it reuses those services). Set
+  `SmartCapture:Enabled=true` when ready. **Before enabling in Staging/Production**, install and start
+  ClamAV (`clamd`) — see IIS guide PART P — because `SmartCapture:MalwareScanRequired` defaults to `true`
+  there (fail-closed: uploads are rejected, not silently unscanned, if `clamd` is unreachable). Also set
+  `FilePathConfig:SmartCaptureFolder` (a new folder alongside the existing `DraftFolder` etc.) and grant
+  the app-pool **Modify** on it. Retention runs automatically once enabled (no separate scheduler setup
+  needed) — see `SmartCapture:RetentionDays*` / `MonthlyProcessedPageQuota` in `appsettings.json` to tune.
 - **Bulk Import** (`/Invoices/BulkImport`) — always available to Admin/Supplier; download the template,
   upload CSV/XLSX, get a per-row validation report. No config needed.
 - **Watched-folder importer** — set `WatchedFolderImport:Enabled=true` and `InboxPath`

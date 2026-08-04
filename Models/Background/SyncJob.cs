@@ -90,5 +90,15 @@ namespace eInvWorld.Models.Background
         /// UI, so a receiver being down is retried automatically and surfaces as Failed if all attempts are
         /// exhausted.</summary>
         public const string WebhookDelivery = "WebhookDelivery";
+
+        /// <summary>Smart Capture: OCR + LLM structuring + LHDN-aware validation of an uploaded supplier
+        /// invoice (SmartCaptureDocument.Id carried via SyncJobPayload). Never creates or submits an invoice
+        /// itself — it only persists a reviewable suggestion; draft creation stays a synchronous, session-
+        /// backed user action.</summary>
+        public const string SmartCaptureExtraction = "SmartCaptureExtraction";
+
+        /// <summary>Smart Capture: scheduled cleanup of expired uploaded documents per the tiered retention
+        /// rules (failed/abandoned/draft-linked/submitted-linked retain for different windows).</summary>
+        public const string SmartCaptureRetention = "SmartCaptureRetention";
     }
 }
