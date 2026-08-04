@@ -2,6 +2,7 @@
 using eInvWorld.Helpers;
 using EINVWORLD.Helpers;
 using eInvWorld.Models;
+using eInvWorld.Models.Document;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Services;
 using Microsoft.EntityFrameworkCore;
@@ -376,24 +377,65 @@ namespace EINVWORLD.Helpers
             return true;
         }
 
+        // Statuses LHDN will never move an invoice out of once reached.
+        private static readonly HashSet<string> TerminalLhdnStatuses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Rejected", "Cancelled", "Invalid"
+        };
+
+        /// <summary>
+        /// True once an invoice can no longer change status: fully terminal (Rejected/Cancelled/
+        /// Invalid), or Valid with its QR (<see cref="DocumentSummary.longId"/>) already captured and
+        /// more than 72 hours past validation — LHDN only allows cancel (supplier) / reject (buyer)
+        /// within 72 hours of validation, so a Valid invoice past that window can never change again.
+        /// </summary>
+        internal static bool IsStable(DocumentSummary summary)
+        {
+            if (TerminalLhdnStatuses.Contains(summary.status ?? string.Empty)) return true;
+
+            return string.Equals(summary.status, "Valid", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(summary.longId)
+                && summary.dateTimeValidated.HasValue
+                && summary.dateTimeValidated.Value < DateTime.UtcNow.AddHours(-72);
+        }
+
         public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3)
         {
             var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
-            var allUuids = await GetAllUuidsForSubmitterAsync(tin, accessToken, lookbackDays);
+            var allSummaries = await GetAllUuidsForSubmitterAsync(tin, accessToken, lookbackDays);
 
-            if (allUuids == null || !allUuids.Any())
+            if (allSummaries == null || !allSummaries.Any())
                 return $"No documents found for TIN: {tin}";
 
+            // Only invoices we already have locally can be safely skipped — an unseen UUID always needs
+            // the raw-document fetch, since /documents/search never carries line-item content.
+            var uuidsInBatch = allSummaries.Select(s => s.uuid).ToList();
+            var existingUuids = (await _context.InvoiceHeaders
+                .Where(i => uuidsInBatch.Contains(i.UUID))
+                .Select(i => i.UUID)
+                .ToListAsync())
+                .ToHashSet();
+
             int imported = 0;
+            int skipped = 0;
             int errors = 0;
 
             // REMOVED Parallel.ForEachAsync to prevent 429 DDoS penalties from LHDN
-            foreach (var uuid in allUuids)
+            foreach (var summary in allSummaries)
             {
+                if (existingUuids.Contains(summary.uuid) && IsStable(summary))
+                {
+                    // Already synced locally and can no longer change status (per LHDN's own status/
+                    // longId/dateTimeValidated from this same search response) — skip the raw-document
+                    // fetch (GetDocumentDetailsAsync), the endpoint that hits LHDN's strict rate limit.
+                    skipped++;
+                    continue;
+                }
+
                 try
                 {
                     // Pacing is handled centrally by LhdnRateLimitHandler (even-paced per endpoint).
-                    var docSummary = await _lhdnService.GetDocumentDetailsAsync(uuid, accessToken);
+                    var docSummary = await _lhdnService.GetDocumentDetailsAsync(summary.uuid, accessToken);
                     if (docSummary != null)
                     {
                         await _fullSyncHelper.SyncAllFromApiAsync(docSummary);
@@ -402,17 +444,17 @@ namespace EINVWORLD.Helpers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to sync UUID: {Uuid}", uuid);
+                    _logger.LogError(ex, "Failed to sync UUID: {Uuid}", summary.uuid);
                     errors++;
                 }
             }
 
-            return $"Imported {imported} documents, Errors: {errors} (submitted by TIN)";
+            return $"Imported {imported} documents, Skipped (already stable): {skipped}, Errors: {errors} (submitted by TIN)";
         }
         /// <summary>
-        /// Gets all document UUIDs submitted by the specified TIN (both regular and self-billed)
+        /// Gets all documents submitted by the specified TIN (both regular and self-billed)
         /// </summary>
-        private async Task<List<string>?> GetAllUuidsForSubmitterAsync(string tin, string accessToken, int lookbackDays = 3)
+        private async Task<List<DocumentSummary>?> GetAllUuidsForSubmitterAsync(string tin, string accessToken, int lookbackDays = 3)
         {
             // Use the existing method that searches by date range and gets all submitted documents
             // This will include both regular invoices (where tin is issuer) and self-billed invoices (where tin is submitter but receiver)
