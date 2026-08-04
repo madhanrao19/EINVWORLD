@@ -334,16 +334,16 @@
     }
 
     .form-control.is-valid {
-        border-color: #198754;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94 2.89 2.89 2.89-2.89.94.94L6.12 9.62z'/%3e%3c/svg%3e");
+        border-color: var(--einv-success);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2310b981' d='m2.3 6.73.94-.94 2.89 2.89 2.89-2.89.94.94L6.12 9.62z'/%3e%3c/svg%3e");
         background-repeat: no-repeat;
         background-position: right calc(0.375em + 0.1875rem) center;
         background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
     }
 
         .form-control.is-valid:focus {
-            border-color: #198754;
-            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+            border-color: var(--einv-success);
+            box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25);
         }
 
     /* Debug panel styles */
@@ -559,14 +559,14 @@
     }
 
     .btn-outline-success:hover {
-        background-color: #198754;
-        border-color: #198754;
+        background-color: var(--einv-success);
+        border-color: var(--einv-success);
         color: white;
     }
 
     .btn-outline-danger:hover {
-        background-color: #dc3545;
-        border-color: #dc3545;
+        background-color: var(--einv-error);
+        border-color: var(--einv-error);
         color: white;
     }
 
@@ -599,8 +599,8 @@
     .form-select:invalid,
     .form-select.is-invalid {
         background-image: none !important;
-        border-color: #dc3545 !important;
-        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        border-color: var(--einv-error) !important;
+        box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important;
     }
 
     /* Scoped to [required] — an optional field with no constraints is always :valid per the HTML5
@@ -613,8 +613,8 @@
     .form-select[required]:valid,
     .form-select.is-valid {
         background-image: none !important;
-        border-color: #198754 !important;
-        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+        border-color: var(--einv-success) !important;
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25) !important;
     }
 
     /* Force validation for required empty fields */
@@ -622,8 +622,8 @@
     .form-select[required]:invalid:not(:focus),
     input[required]:invalid:not(:focus),
     select[required]:invalid:not(:focus) {
-        border-color: #dc3545 !important;
-        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        border-color: var(--einv-error) !important;
+        box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important;
     }
 
     /* Specific validation for empty required fields */
@@ -633,16 +633,16 @@
     input[required]:placeholder-shown:not(:focus),
     select[required]:invalid:not(:focus),
     textarea[required]:placeholder-shown:not(:focus) {
-        border-color: #dc3545 !important;
-        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        border-color: var(--einv-error) !important;
+        box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important;
     }
 
     /* Force validation for truly empty invoice line items only */
     #lineItemsTable select[required]:invalid:not(:focus):not(.is-valid),
     #lineItemsTable input[required]:invalid:not(:focus):not(.is-valid),
     #lineItemsTable textarea[required]:invalid:not(:focus):not(.is-valid) {
-        border-color: #dc3545 !important;
-        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        border-color: var(--einv-error) !important;
+        box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important;
     }
 
     /* Override CSS validation for fields with values - force normal appearance */
@@ -656,7 +656,7 @@
     #lineItemsTable .form-control.is-valid,
     #lineItemsTable .form-select:valid,
     #lineItemsTable .form-select.is-valid {
-        border-color: #ced4da !important;
+        border-color: var(--einv-border) !important;
         box-shadow: none !important;
         background-image: none !important;
     }
@@ -665,7 +665,7 @@
     #lineItemsTable .is-valid,
     #lineItemsTable .was-validated .form-control:valid,
     #lineItemsTable .was-validated .form-select:valid {
-        border-color: #ced4da !important;
+        border-color: var(--einv-border) !important;
         box-shadow: none !important;
         background-image: none !important;
     }
@@ -674,7 +674,7 @@
     #lineItemsTable .form-control[value]:not([value=""]):not(.is-invalid),
     #lineItemsTable .form-select[value]:not([value=""]):not(.is-invalid),
     #lineItemsTable textarea:not(:placeholder-shown):not(.is-invalid) {
-        border-color: #ced4da !important;
+        border-color: var(--einv-border) !important;
         box-shadow: none !important;
         background-image: none !important;
     }
@@ -694,40 +694,43 @@
 
     /* Enhanced card styling for form sections */
     .page-title-box {
-        border: 1px solid #e9ecef;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid var(--einv-border);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
         border-radius: 0.5rem;
     }
 
     /* Card styling for form groups */
     .form-group-card {
-        border: 1px solid #e9ecef;
+        border: 1px solid var(--einv-border);
         border-radius: 0.375rem;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
     }
 
-    /* Normal card styling for all sections */
+    /* Normal card styling for all sections — border/shadow match the app-wide .card treatment
+       (wwwroot/tabler/css/einvworld-tokens.css) instead of the flat Bootstrap defaults this page
+       had before the "EinvWorld Professional" rebrand, so cards here look consistent with the rest
+       of the app instead of losing their soft ambient shadow. */
     .card,
     .card-body {
-        border: 1px solid #e9ecef;
+        border: 1px solid var(--einv-border);
         border-radius: 0.375rem;
-        box-shadow: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
     }
 
     /* Standard table styling */
     .table-responsive {
-        border: 1px solid #e9ecef;
+        border: 1px solid var(--einv-border);
         border-radius: 0.375rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
         overflow: hidden;
     }
 
     /* Tax row card styling */
     .tax-row {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef !important;
+        background: var(--einv-page-bg);
+        border: 1px solid var(--einv-border) !important;
         border-radius: 0.375rem !important;
     }
 
@@ -738,7 +741,7 @@
 
     /* Progress bar card styling */
     .progress {
-        background: #e9ecef;
+        background: var(--einv-border);
         border-radius: 0.5rem;
         box-shadow: inset 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
@@ -768,7 +771,7 @@
     #refUUIDSelect + .select2-container .select2-selection--single {
         height: calc(3.5rem + 2px) !important;
         padding: 1rem 0.75rem !important;
-        border: 1px solid #ced4da !important;
+        border: 1px solid var(--einv-border) !important;
         border-radius: 0.375rem !important;
     }
 
@@ -5194,13 +5197,13 @@
 
                 if (isEmpty) {
                     // Red border for empty required fields
-                    field.style.borderColor = '#dc3545 !important';
-                    field.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important';
+                    field.style.borderColor = 'var(--einv-error) !important';
+                    field.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important';
                     field.classList.remove('is-valid');
                     field.classList.add('is-invalid');
                 } else {
                     // Normal border for filled required fields (remove all validation styling)
-                    field.style.borderColor = '#ced4da';
+                    field.style.borderColor = 'var(--einv-border)';
                     field.style.boxShadow = 'none';
                     field.style.backgroundImage = 'none';
                     field.classList.remove('is-invalid');

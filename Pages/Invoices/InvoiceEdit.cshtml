@@ -220,7 +220,7 @@
         #lineItemsTable .is-valid,
         #lineItemsTable .was-validated .form-control:valid,
         #lineItemsTable .was-validated .form-select:valid {
-            border-color: #ced4da !important;
+            border-color: var(--einv-border) !important;
             box-shadow: none !important;
             background-image: none !important;
         }
@@ -4160,13 +4160,13 @@
 
                 if (isEmpty) {
                     // Red border for empty required fields
-                    field.style.borderColor = '#dc3545 !important';
-                    field.style.boxShadow = '0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important';
+                    field.style.borderColor = 'var(--einv-error) !important';
+                    field.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25) !important';
                     field.classList.remove('is-valid');
                     field.classList.add('is-invalid');
                 } else {
                     // Normal border for filled required fields (remove all validation styling)
-                    field.style.borderColor = '#ced4da';
+                    field.style.borderColor = 'var(--einv-border)';
                     field.style.boxShadow = 'none';
                     field.style.backgroundImage = 'none';
                     field.classList.remove('is-invalid');
