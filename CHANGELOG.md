@@ -1,10 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.14.2`** (`AppInfo:Version` in `appsettings.json`). v1.14.2 is a **patch**
+> **Current version: `v1.15.2`** (`AppInfo:Version` in `appsettings.json`). v1.15.2 is a **patch**
 > release: the admin-triggered "Import All Invoices from LHDN" backfill was scoped only to the
 > clicking admin's own linked companies instead of every company registered in EINVWORLD, and the
 > scheduled background import's lookback window was widened from 3 to 7 days so late-arriving
 > external-ERP invoices aren't missed. No schema change, no LHDN request-volume increase (see below).
+> Numbered to follow v1.15.0/v1.15.1 (Smart Capture Stage 1 + display-precision fixes), which were
+> built/released ahead of this fix but, as of this PR, are still on an unmerged branch (PR #164) —
+> see that PR's own CHANGELOG entries once merged to `main`.
 
 ## 📅 2026-08-05 — Widen admin "Import All Invoices from LHDN" to every registered company
 
