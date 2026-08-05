@@ -1,15 +1,33 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.14.1`** (`AppInfo:Version` in `appsettings.json`). v1.14.1 is a **patch**
-> release: fixes Rejection/Cancellation notification emails, which were **silently failing for both
-> Supplier and Buyer** whenever `GlobalBccEmail` was blank — the exact production symptom reported —
-> and gives both emails the same atomic-claim/background-retry durability the Valid-status and
-> new-invoice-received emails already have, so a transient failure is retried instead of lost. Also
-> fixes a related bug where a failed rejection email could abort the *entire* local database update
-> even though LHDN had already accepted the rejection, adds a concurrency-retry to the reject path
-> (cancel already had one), a one-retry mitigation for a transient PDF file-lock, and a conservative
-> Staging-specific LHDN rate-limit tightening after real 429s in production logs. **One new additive
-> database migration** — see `DEPLOY-NOTES.md` §1.
+> **Current version: `v1.15.2`** (`AppInfo:Version` in `appsettings.json`). v1.15.2 is a **patch**
+> release: the admin-triggered "Import All Invoices from LHDN" backfill was scoped only to the
+> clicking admin's own linked companies instead of every company registered in EINVWORLD, and the
+> scheduled background import's lookback window was widened from 3 to 7 days so late-arriving
+> external-ERP invoices aren't missed. No schema change, no LHDN request-volume increase (see below).
+> Numbered to follow v1.15.0/v1.15.1 (Smart Capture Stage 1 + display-precision fixes), which were
+> built/released ahead of this fix but, as of this PR, are still on an unmerged branch (PR #164) —
+> see that PR's own CHANGELOG entries once merged to `main`.
+
+## 📅 2026-08-05 — Widen admin "Import All Invoices from LHDN" to every registered company
+
+- **`Pages/Admin/InvoiceSync.cshtml.cs` `OnPostFullImportAllAsync`** previously enqueued a `FullImport`
+  job only for TINs linked to the clicking admin's own account (`User.GetUserCompanies`), so a manual
+  deep backfill silently missed every other company registered in EINVWORLD. Investigated after a user
+  report of external-ERP-submitted invoices not appearing in the Buyer "Received" tab; confirmed the
+  *scheduled* background import (`InvoiceStatusUpdater.RunLhdnImportAsync`, every 10th poll cycle) was
+  already correctly iterating all TINs in `UserCompanies` system-wide — only the manual admin trigger
+  was narrower than intended. Changed to query `UserCompanies` distinct TINs directly, matching the
+  scheduled job's scope.
+- Still one `SyncJob` row per TIN, drained sequentially by the single `DurableSyncJobWorker` instance
+  and paced within each run by `LhdnRateLimitHandler` — widening the TIN list only increases queue
+  depth, not request concurrency, so LHDN rate-limit exposure is unchanged.
+- **`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`** widened `3` → `7` days
+  (`appsettings.json`, default in `Models/Settings/InvoiceStatusUpdaterSettings.cs`) so the scheduled
+  background import (`InvoiceStatusUpdater.RunLhdnImportAsync`) doesn't miss an external-ERP invoice
+  that lands a few days late. 7 days still fits inside `GetAllUuidsForTinAsync`'s single 10-day
+  date-chunk, so this adds zero extra `/documents/search` calls per cycle per TIN — no change in LHDN
+  request volume, only in how far back each existing call looks.
 
 ## 📅 2026-08-03 — Restyle: finish rolling the "EinvWorld Professional" tokens onto Create/Edit Invoice
 
