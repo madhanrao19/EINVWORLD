@@ -658,7 +658,7 @@
                                             <td class="col-desc" style="white-space:pre-wrap; text-align:left;">
                                                 @Html.Raw(System.Net.WebUtility.HtmlEncode(item.ItemDescription ?? "").Replace("\n", "<br/>"))
                                             </td>
-                                            <td class="col-qty" style="text-align:center;">@item.Quantity</td>
+                                            <td class="col-qty" style="text-align:center;">@item.Quantity?.ToString("N2")</td>
                                             <td class="col-unit" style="text-align:right;">@item.UnitPrice?.ToString("N2")</td>
                                             <td class="col-total" style="text-align:right;">@((item.Quantity * item.UnitPrice)?.ToString("N2"))</td>
                                         </tr>
