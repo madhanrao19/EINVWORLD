@@ -1,16 +1,37 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.15.0`** (`AppInfo:Version` in `appsettings.json`). v1.15.0 is a **minor**
-> release: adds **Smart Capture (Stage 1)** — a persisted, asynchronous successor to the AI Document
-> Capture beta. Upload a supplier invoice (PDF/JPG/PNG) → malware-scanned, `SafePath`-stored, processed
-> via the durable `SyncJobs` queue (not the request thread) → the same LHDN-aware
-> `InvoiceSuggestionValidator` review, with an **explicit** document-type and buyer confirmation (never
-> inferred) → a real Draft via the **unchanged** `InvoiceDraftService.SaveDraft` → the normal
-> `InvoiceEdit` page → the unchanged MyInvois submission path. Adds ClamAV malware scanning (a direct
-> `clamd` client — no new NuGet dependency), tiered retention enforced by a scheduled sweep job, and a
-> monthly processed-page quota. OFF by default (`SmartCapture:Enabled=false`); **requires ClamAV in
-> Staging/Production**, see `IIS-DEPLOYMENT-GUIDE.md` PART 17d. **One new additive database migration**
-> — see `DEPLOY-NOTES.md` §1. PR: [#164](https://github.com/madhanrao19/EINVWORLD/pull/164).
+> **Current version: `v1.15.1`** (`AppInfo:Version` in `appsettings.json`). v1.15.1 is a **patch**
+> release: fixes `Quantity` displaying at its raw `decimal(18,6)` database precision (e.g. `1.000000`)
+> instead of `1.00` on the Invoice Details page and in the Print/Download PDF, plus the same bug class
+> on `InvoiceTemplate.ExchangeRate` (Invoice Templates → Details/Delete). Display-only — no calculation,
+> precision, or LHDN submission logic changed. Also includes a config-only commit: `AI:Model` switched
+> to `qwen2.5:1.5b`, `AI`/`SmartCapture` enabled in Production, the Staging `FilePathConfig` base path
+> corrected, and a real `GlobalBccEmail`/`ReceiverEmail` set.
+
+## 📅 2026-08-05 — Fix Quantity/ExchangeRate display precision + Production config enablement
+
+- **Quantity showed 6 decimal places instead of 2** (`1.000000` instead of `1.00`) on the Invoice
+  Details page and in Print/Download PDF — reported with a screenshot. `@item.Quantity` rendered raw
+  in three places while the sibling `UnitPrice`/`TaxAmount`/`Total` columns in the same tables already
+  used `.ToString("N2")`. Fixed to match: `Pages/Invoices/InvoiceDetails2.cshtml`,
+  `Views/Invoices/PdfTemplate_v2.cshtml` (the live template `PDFGeneratorService` renders for Print/
+  Download PDF), and `Pages/Invoices/PdfTemplate.cshtml` (legacy, not currently wired into any code
+  path, fixed anyway). Audited every other decimal field in those three files — all already correctly
+  formatted; Quantity was the only outlier.
+- **`InvoiceTemplate.ExchangeRate` had no `[DisplayFormat]`**, so `@Html.DisplayFor` on
+  `Pages/Templates/Details.cshtml`/`Delete.cshtml` rendered it at raw precision too (same bug class).
+  Added `[DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = false)]` on the model
+  property (`Models/Templates/InvoiceTemplate.cs`) — fixes both pages at once, doesn't affect the
+  editable `<input>` in Create/Edit. Confirmed by grep this is the only read-only render of
+  `ExchangeRate` anywhere in the app.
+- **Config (separate commit, no code changed):** `AI:Model` → `qwen2.5:1.5b`;
+  `appsettings.Production.json` `AI:Enabled` and `SmartCapture:Enabled` → `true` (Smart Capture is now
+  live in Production ahead of the Staging verification listed on PR #164's checklist — confirmed
+  intentional); `appsettings.Staging.json` `FilePathConfig` base path corrected from
+  `E:\EINVWORLD\Documents` to `E:\EINVWORLD_STAGING\Documents`; `GlobalBccEmail`/
+  `CustomerSubmission:ReceiverEmail` set to a real address.
+
+Build clean; full suite (202/202) passes.
 
 ## 📅 2026-08-04 — Smart Capture (Stage 1): persisted, async supplier-invoice capture → draft
 
