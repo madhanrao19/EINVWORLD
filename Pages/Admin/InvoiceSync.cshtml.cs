@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using eInvWorld.Services;
 using EINVWORLD.Helpers;
 using EINVWORLD.Services.Background;
@@ -50,11 +51,21 @@ namespace eInvWorld.Pages.Admin
             return RedirectToPage();
         }
 
-        // "Import All Invoices from LHDN" — enqueue one paced background job per company TIN.
+        // "Import All Invoices from LHDN" — enqueue one paced background job per company TIN,
+        // across every company registered in EINVWORLD (not just the clicking admin's own), so an
+        // admin-triggered deep backfill has the same reach as the scheduled background import
+        // (InvoiceStatusUpdater.RunLhdnImportAsync). Still one job per TIN, drained sequentially by
+        // the single DurableSyncJobWorker instance and paced within each run by LhdnRateLimitHandler —
+        // widening the TIN list changes queue depth, not request concurrency, so it doesn't change
+        // LHDN rate-limit exposure.
         public async Task<IActionResult> OnPostFullImportAllAsync()
         {
-            // Get all TINs linked to the current user (could be system or intermediary)
-            var allUserTins = User.GetUserCompanies(_dbContext).Select(x => x.TIN).ToList();
+            var allUserTins = await _dbContext.UserCompanies
+                .Include(uc => uc.PartyInfo)
+                .Where(uc => uc.PartyInfo != null && !string.IsNullOrWhiteSpace(uc.PartyInfo.TIN))
+                .Select(uc => uc.PartyInfo!.TIN!)
+                .Distinct()
+                .ToListAsync();
 
             // Filter out General TINs as they cannot be used for LHDN token requests
             var userTins = allUserTins.Where(tin => !GeneralTINHelper.IsGeneralTIN(tin)).ToList();
@@ -64,7 +75,7 @@ namespace eInvWorld.Pages.Admin
                 var generalTinCount = allUserTins.Count - userTins.Count;
                 TempData["Message"] = generalTinCount > 0
                     ? $"❌ No valid companies for LHDN import. Found {generalTinCount} General TIN(s) which cannot be used for import."
-                    : "❌ No companies linked to your account.";
+                    : "❌ No companies registered in EINVWORLD.";
                 return RedirectToPage();
             }
 

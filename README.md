@@ -132,7 +132,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
-| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `3`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. |
+| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `7`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. Runs for every company registered in EINVWORLD (all distinct `UserCompanies` TINs), not just one. |
 | `EmailConfiguration:NewInvoiceReceivedEmailSettings` | "New e-Invoice Received" notification (buyer-side, for invoices synced in from an external ERP) — `Subject`, `MaxAgeDaysForNotification` (default `7`, avoids emailing about invoices merely new to EINVWORLD's database from a large historical import). Kill switch: `EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`. |
 
 > **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
