@@ -1,4 +1,5 @@
 ﻿using eInvWorld.Models.InputModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 
@@ -23,6 +24,8 @@ namespace eInvWorld.Models.Templates
         [ForeignKey("CustomerId")]
         public virtual PartyInfo? Customer { get; set; }
         public string? Currency { get; set; }
+
+        [DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = false)]
         public decimal? ExchangeRate { get; set; }
         public string? ForeignCurrency { get; set; }  // Foreign Currency (if any)
 
