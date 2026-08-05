@@ -1,13 +1,29 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.15.2`** (`AppInfo:Version` in `appsettings.json`). v1.15.2 is a **patch**
-> release: the admin-triggered "Import All Invoices from LHDN" backfill was scoped only to the
-> clicking admin's own linked companies instead of every company registered in EINVWORLD, and the
-> scheduled background import's lookback window was widened from 3 to 7 days so late-arriving
-> external-ERP invoices aren't missed. No schema change, no LHDN request-volume increase (see below).
-> Numbered to follow v1.15.0/v1.15.1 (Smart Capture Stage 1 + display-precision fixes), which were
-> built/released ahead of this fix but, as of this PR, are still on an unmerged branch (PR #164) —
-> see that PR's own CHANGELOG entries once merged to `main`.
+> **Current version: `v1.15.3`** (`AppInfo:Version` in `appsettings.json`). v1.15.3 is a **patch**
+> release: `Quantity` was rendering at its raw `decimal(18,6)` database precision (e.g. `1.000000`)
+> instead of `1.00` on the Invoice Details page and in Print/Download PDF, plus the same bug class on
+> `InvoiceTemplate.ExchangeRate` (Invoice Templates → Details/Delete). Display-only — no calculation,
+> precision, or LHDN submission logic changed. Ports a fix already implemented and tested on the
+> still-unmerged Smart Capture branch (PR #164, originally shipped there as v1.15.1) onto `main`
+> directly, so the display bug is fixed without waiting on that PR's Staging verification gate.
+
+## 📅 2026-08-05 — Format Quantity/ExchangeRate to 2 decimal places in invoice display/PDF
+
+- **Quantity showed 6 decimal places instead of 2** (`1.000000` instead of `1.00`) on the Invoice
+  Details page and in Print/Download PDF — reported with a screenshot. `@item.Quantity` rendered raw
+  in three places while the sibling `UnitPrice`/`TaxAmount`/`Total` columns in the same tables already
+  used `.ToString("N2")`. Fixed to match: `Pages/Invoices/InvoiceDetails2.cshtml`,
+  `Views/Invoices/PdfTemplate_v2.cshtml` (the live template `PDFGeneratorService` renders for Print/
+  Download PDF), and `Pages/Invoices/PdfTemplate.cshtml` (legacy, not currently wired into any code
+  path, fixed anyway). Audited every other decimal field in those three files — all already correctly
+  formatted; Quantity was the only outlier.
+- **`InvoiceTemplate.ExchangeRate` had no `[DisplayFormat]`**, so `@Html.DisplayFor` on
+  `Pages/Templates/Details.cshtml`/`Delete.cshtml` rendered it at raw precision too (same bug class).
+  Added `[DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = false)]` on the model
+  property (`Models/Templates/InvoiceTemplate.cs`) — fixes both pages at once, doesn't affect the
+  editable `<input>` in Create/Edit. Confirmed by grep this is the only read-only render of
+  `ExchangeRate` anywhere in the app.
 
 ## 📅 2026-08-05 — Widen admin "Import All Invoices from LHDN" to every registered company
 
