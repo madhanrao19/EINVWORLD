@@ -1,12 +1,44 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.15.3`** (`AppInfo:Version` in `appsettings.json`). v1.15.3 is a **patch**
-> release: `Quantity` was rendering at its raw `decimal(18,6)` database precision (e.g. `1.000000`)
-> instead of `1.00` on the Invoice Details page and in Print/Download PDF, plus the same bug class on
-> `InvoiceTemplate.ExchangeRate` (Invoice Templates → Details/Delete). Display-only — no calculation,
-> precision, or LHDN submission logic changed. Ports a fix already implemented and tested on the
-> still-unmerged Smart Capture branch (PR #164, originally shipped there as v1.15.1) onto `main`
-> directly, so the display bug is fixed without waiting on that PR's Staging verification gate.
+> **Current version: `v1.16.0`** (`AppInfo:Version` in `appsettings.json`). v1.16.0 is a **minor**
+> release: Manage Resources (admin CMS) best-practice redesign — SEO/GEO metadata fields, a live
+> readiness score, server-side pagination, and a Resource Types SEO-prefix column. New additive
+> `WebsiteDbContext` migration. No LHDN/invoice logic touched. Also fixes a pre-existing JSON syntax
+> error in `appsettings.json` (`FilePathConfig`) that prevented the app from starting locally.
+
+## 📅 2026-08-07 — Manage Resources (CMS): SEO/GEO redesign
+
+- **New SEO/GEO metadata on `ResourceItem`**: `MetaTitle`, `MetaDescription`, `FocusKeyword`,
+  `CanonicalUrl`, `OgText`, `ImageAlt`, `Author`, `Tldr` (AI-answer-engine summary), `SchemaType`
+  (Article/FAQ/HowTo), and `FaqItemsJson` (FAQ Q&A pairs, stored as JSON — not a child table). All
+  nullable/defaulted — additive migration
+  (`Migrations/20260807120000_AddSeoGeoFieldsToResourceItem` + `Apply_AddSeoGeoFieldsToResourceItem.sql`),
+  targets `WebsiteDbContext` (its own, separate `__EFMigrationsHistory`).
+- **New `Helpers/ResourceSeoScorer`**: single source of truth for the 0-100 SEO/GEO readiness score
+  (slug, meta title/description length, focus keyword, canonical URL, image alt, author, TL;DR, schema
+  type, and FAQ-question-count-when-FAQ). Mirrored in `wwwroot/js/resource-seo.js` for the live gauge
+  on Create/Edit (no round trip) — the two are kept in sync intentionally; update both if the checklist
+  changes.
+- **Manage Resources (list)**: added a per-row SEO score chip and "AI SEO Assistant" sidebar (Global
+  Site Health % + static suggestions), plus **real server-side pagination** (previously loaded every
+  resource on one page). Existing filters, Add Type modal, and Backfill Slugs untouched.
+- **Create/Edit Resource**: two-column layout — SEO/GEO panel (live gauge, char counters, Meta
+  Title/Description/Focus Keyword/Canonical URL/Social Share Text), Alt Text, AI Summary/TL;DR, and a
+  Structured Data section with a Schema Type select + FAQ Q&A builder (shown only when Schema Type =
+  FAQ). Title→slug auto-derive, TinyMCE, and the ImageMagick image pipeline are unchanged.
+- **Resource Types**: added a computed "SEO Prefix" (`/{code}/`) column; fixed a pre-existing bug where
+  creating a type with a duplicate Code threw an unhandled 500 instead of a validation error (now
+  matches the existing duplicate-check already used by the Manage Resources "Add Type" modal).
+- **Public Article page**: `<title>`/meta-description now fall back to the new MetaTitle/MetaDescription
+  when set (else Title/Summary as before) — the only change to the public-facing page.
+- **Hygiene**: `Create.cshtml.cs` now has an explicit `[Authorize(Roles="Admin")]` matching its siblings
+  (the `/Admin` folder policy already covered it — defence-in-depth, not a live vulnerability fix).
+- **Fixed `appsettings.json`**: a missing comma after `CompanyLogosFolder` (introduced in a recent
+  appsettings update) made the entire file invalid JSON, so the app failed to start locally at all.
+  Restored valid JSON; no config values changed.
+- New unit tests: `ResourceSeoScorerTests` (score/tier boundaries, FAQ JSON round-trip) and
+  `WebsiteDbContextModelTests` (catches EF model-validation regressions — e.g. a public `List<T>`
+  property on an entity being mis-mapped as a navigation — without needing a live DB connection).
 
 ## 📅 2026-08-05 — Format Quantity/ExchangeRate to 2 decimal places in invoice display/PDF
 
