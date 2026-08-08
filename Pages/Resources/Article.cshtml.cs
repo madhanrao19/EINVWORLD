@@ -16,6 +16,12 @@ namespace EINVWORLD.Pages.Resources
 
         public ResourceItem? Article { get; set; }
 
+        /// <summary>Effective &lt;title&gt;/meta-description text: falls back to Title/Summary when the
+        /// SEO fields (MetaTitle/MetaDescription) are blank. Consumed by _HomeLayout's ViewData["Title"]
+        /// / ViewData["Description"] — see Article.cshtml.</summary>
+        public string SeoTitle => !string.IsNullOrWhiteSpace(Article?.MetaTitle) ? Article!.MetaTitle! : Article?.Title ?? "";
+        public string SeoDescription => !string.IsNullOrWhiteSpace(Article?.MetaDescription) ? Article!.MetaDescription! : Article?.Summary ?? "";
+
         public IActionResult OnGet(string slug)
         {
             Article = _context.Resources.FirstOrDefault(r => r.Slug == slug);

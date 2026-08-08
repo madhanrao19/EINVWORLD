@@ -20,6 +20,13 @@ namespace EINVWORLD.Services.DocumentCapture
         /// or an empty string when OCR is unavailable/fails (the caller then shows a graceful message).
         /// </summary>
         string OcrPdf(byte[] pdfBytes, int maxPages);
+
+        /// <summary>
+        /// OCRs a single raster image (JPEG/PNG) directly — no PDFium rasterization step, since the input
+        /// is already a bitmap. Used by Smart Capture for image uploads (a PDF has a rasterization step;
+        /// an image does not). Returns an empty string when OCR is unavailable/fails.
+        /// </summary>
+        string OcrImage(byte[] imageBytes);
     }
 
     /// <summary>
@@ -77,6 +84,26 @@ namespace EINVWORLD.Services.DocumentCapture
             {
                 // Native runtime missing, bad tessdata, etc. — never break the upload flow.
                 _log.LogWarning(ex, "OCR of the uploaded PDF failed (Tesseract/PDFium). Returning no text.");
+                return string.Empty;
+            }
+        }
+
+        public string OcrImage(byte[] imageBytes)
+        {
+            if (!IsAvailable || imageBytes is null || imageBytes.Length == 0) return string.Empty;
+
+            var language = string.IsNullOrWhiteSpace(_options.OcrLanguage) ? "eng" : _options.OcrLanguage;
+
+            try
+            {
+                using var engine = new TesseractEngine(_options.TessdataPath, language, EngineMode.Default);
+                using var pix = Pix.LoadFromMemory(imageBytes);
+                using var page = engine.Process(pix);
+                return page.GetText()?.Trim() ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "OCR of the uploaded image failed (Tesseract). Returning no text.");
                 return string.Empty;
             }
         }

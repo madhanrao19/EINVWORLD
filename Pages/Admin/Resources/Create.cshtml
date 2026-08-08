@@ -1,11 +1,13 @@
-﻿@page
+@page
 @model EINVWORLD.Pages.Admin.Resources.CreateModel
+@using EINVWORLD.Models.Public
 @{
     ViewData["Title"] = "Create Resource";
 }
 
 @section Styles {
     <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
+    <link href="~/tabler/css/einvworld-resources.css" rel="stylesheet">
 }
 
 <div class="row mb-4">
@@ -15,83 +17,209 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-<div class="card-body">
-    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
-        @Html.AntiForgeryToken()
-        
-        <div class="mb-3">
-            <label asp-for="Resource.Title" class="form-label">Title</label>
-            <input asp-for="Resource.Title" class="form-control" required />
-            <span asp-validation-for="Resource.Title" class="text-danger"></span>
-        </div>
+<form method="post" enctype="multipart/form-data" class="needs-validation resource-form" novalidate>
+    @Html.AntiForgeryToken()
 
-        <div class="mb-3">
-            <label asp-for="Resource.Summary" class="form-label">Summary</label>
-            <textarea asp-for="Resource.Summary" class="form-control" rows="3" required></textarea>
-            <span asp-validation-for="Resource.Summary" class="text-danger"></span>
-        </div>
+    <div class="row g-3">
+        <!-- Main column -->
+        <div class="col-xl-8">
 
-        <div class="mb-3">
-            <label asp-for="Resource.ResourceTypeCode" class="form-label">Category</label>
-            <select asp-for="Resource.ResourceTypeCode" class="form-select" asp-items="Model.ResourceTypeCodeOptions">
-                <option value="">-- Select Type --</option>
-            </select>
-            <span asp-validation-for="Resource.ResourceTypeCode" class="text-danger"></span>
-        </div>
+            <!-- Basic Info -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header fw-semibold">Basic Info</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Resource.Title" class="form-label">Title *</label>
+                        <input asp-for="Resource.Title" class="form-control" required />
+                        <span asp-validation-for="Resource.Title" class="text-danger"></span>
+                    </div>
 
-        <div class="mb-3">
-            <label asp-for="ImageFile" class="form-label">Cover Image</label>
-            <input type="file" asp-for="ImageFile" class="form-control" accept="image/*" onchange="compressAndPreviewImage(event)" required />
-            <span asp-validation-for="ImageFile" class="text-danger"></span>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Resource.ResourceTypeCode" class="form-label">Category</label>
+                            <select asp-for="Resource.ResourceTypeCode" class="form-select" asp-items="Model.ResourceTypeCodeOptions">
+                                <option value="">-- Select Type --</option>
+                            </select>
+                            <span asp-validation-for="Resource.ResourceTypeCode" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Resource.Slug" class="form-label">
+                                URL Slug
+                                <a href="#" id="slugResetLink" class="small ms-1 d-none">(reset to auto)</a>
+                            </label>
+                            <input asp-for="Resource.Slug" class="form-control font-monospace" placeholder="auto-generated-from-title" />
+                            <span asp-validation-for="Resource.Slug" class="text-danger"></span>
+                        </div>
+                    </div>
 
-            <div class="mt-3">
-                <img id="imagePreview" src="#" class="img-fluid rounded shadow-sm d-none" style="max-height: 200px;" />
+                    <div class="row g-3 mt-0">
+                        <div class="col-md-6">
+                            <label asp-for="Resource.Author" class="form-label">Author</label>
+                            <input asp-for="Resource.Author" class="form-control" maxlength="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Resource.DatePublished" class="form-label">Published Date</label>
+                            <input asp-for="Resource.DatePublished" class="form-control" type="date" />
+                            <span asp-validation-for="Resource.DatePublished" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cover Image -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header fw-semibold">Cover Image</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="ImageFile" class="form-label">Cover Image</label>
+                        <input type="file" asp-for="ImageFile" class="form-control" accept="image/*" onchange="compressAndPreviewImage(event)" required />
+                        <span asp-validation-for="ImageFile" class="text-danger"></span>
+                        <div class="mt-3">
+                            <img id="imagePreview" src="#" class="img-fluid rounded shadow-sm d-none" style="max-height: 200px;" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Resource.ImageAlt" class="form-label">Alt Text <span class="text-muted small">(for image SEO/accessibility)</span></label>
+                        <input asp-for="Resource.ImageAlt" class="form-control" maxlength="200" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Resource.Summary" class="form-label d-flex justify-content-between">
+                            <span>Summary *</span>
+                            <span class="text-muted small" data-char-counter-for="Resource_Summary" data-char-max="160">0 / 160</span>
+                        </label>
+                        <textarea asp-for="Resource.Summary" class="form-control" rows="3" required></textarea>
+                        <span asp-validation-for="Resource.Summary" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-1">
+                        <label asp-for="Resource.Tldr" class="form-label">
+                            AI Summary / TL;DR
+                            <span class="text-muted small">(1-2 sentence answer-first summary for AI assistants to quote)</span>
+                        </label>
+                        <textarea asp-for="Resource.Tldr" class="form-control" rows="2" maxlength="400"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full Content -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header fw-semibold">Full Content</div>
+                <div class="card-body">
+                    <textarea asp-for="Resource.ContentHtml" class="form-control" rows="10" required></textarea>
+                    <span asp-validation-for="Resource.ContentHtml" class="text-danger"></span>
+                </div>
+            </div>
+
+            <!-- Structured Data -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header fw-semibold">Structured Data</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Resource.SchemaType" class="form-label">Schema Type</label>
+                        <select asp-for="Resource.SchemaType" class="form-select" asp-items="Html.GetEnumSelectList<ResourceSchemaType>()"></select>
+                        <div class="form-text">This content feeds structured data / FAQPage schema for search and AI answer engines.</div>
+                    </div>
+
+                    <div id="faqBuilderSection" class="d-none">
+                        <label class="form-label">FAQ Questions</label>
+                        <div id="faqItemsList"></div>
+                        <button type="button" id="addFaqItemBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="ri-add-line align-bottom me-1"></i> Add Question
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Save Article</button>
+                <a asp-page="/Admin/Resources/Manage" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </div>
 
+        <!-- Right column: Publishing + SEO/GEO -->
+        <div class="col-xl-4">
+            <div class="einv-resource-sticky">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header fw-semibold">Publishing</div>
+                    <div class="card-body">
+                        <label asp-for="Resource.Status" class="form-label">Status</label>
+                        <select asp-for="Resource.Status" class="form-select">
+                            <option value="0">Draft</option>
+                            <option value="1">Published</option>
+                            <option value="2">Archived</option>
+                        </select>
+                    </div>
+                </div>
 
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header fw-semibold">AI SEO &amp; Discovery</div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center mb-3">
+                            <svg width="100" height="100" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="none" stroke="#e6e8eb" stroke-width="8" />
+                                <circle id="seoGaugeCircle" cx="50" cy="50" r="40" fill="none" stroke="#10b981" stroke-width="8"
+                                        stroke-linecap="round" transform="rotate(-90 50 50)" style="transition: stroke-dashoffset .2s ease;" />
+                                <text x="50" y="55" text-anchor="middle" font-size="22" font-weight="700" id="seoGaugeValue">0</text>
+                            </svg>
+                        </div>
 
-        <div class="mb-3">
-            <label asp-for="Resource.ContentHtml" class="form-label">Full Content</label>
-            <textarea asp-for="Resource.ContentHtml" class="form-control" rows="10" required></textarea>
-            <span asp-validation-for="Resource.ContentHtml" class="text-danger"></span>
+                        <div class="mb-3">
+                            <label asp-for="Resource.MetaTitle" class="form-label d-flex justify-content-between">
+                                <span>Meta Title</span>
+                                <span class="text-muted small" data-char-counter-for="Resource_MetaTitle" data-char-max="60">0 / 60</span>
+                            </label>
+                            <input asp-for="Resource.MetaTitle" class="form-control" maxlength="60" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Resource.MetaDescription" class="form-label d-flex justify-content-between">
+                                <span>Meta Description</span>
+                                <span class="text-muted small" data-char-counter-for="Resource_MetaDescription" data-char-max="160">0 / 160</span>
+                            </label>
+                            <textarea asp-for="Resource.MetaDescription" class="form-control" rows="2" maxlength="160"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Resource.FocusKeyword" class="form-label">Focus Keyword</label>
+                            <input asp-for="Resource.FocusKeyword" class="form-control" maxlength="100" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Resource.CanonicalUrl" class="form-label">Canonical URL</label>
+                            <input asp-for="Resource.CanonicalUrl" class="form-control font-monospace" maxlength="500" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Resource.OgText" class="form-label">Social Share Text <span class="text-muted small">(OG fallback)</span></label>
+                            <textarea asp-for="Resource.OgText" class="form-control" rows="2" maxlength="200"></textarea>
+                        </div>
+
+                        <hr />
+
+                        <div id="seoChecklist"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div class="mb-3">
-            <label asp-for="Resource.DatePublished" class="form-label">Published Date</label>
-            <input asp-for="Resource.DatePublished" class="form-control" type="date" />
-            <span asp-validation-for="Resource.DatePublished" class="text-danger"></span>
-        </div>
-
-        <div class="mb-3">
-            <label asp-for="Resource.Status" class="form-label">Status</label>
-            <select asp-for="Resource.Status" class="form-select">
-                <option value="0">Draft</option>
-                <option value="1">Published</option>
-                <option value="2">Archived</option>
-            </select>
-        </div>
-
-
-        <button type="submit" class="btn btn-primary">Save Article</button>
-    </form>
-</div>
-</div>
+    </div>
+</form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/resource-seo.js"></script>
 
     <script src="~/assets/js/tinymce/tinymce.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Initializing TinyMCE...');
-            
+
             if (typeof tinymce === 'undefined') {
                 console.error('TinyMCE not loaded! Check the script path.');
                 return;
             }
-            
+
             tinymce.init({
                 selector: '#Resource_ContentHtml',
                 height: 400,
@@ -100,20 +228,20 @@
                 toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link unlink | image | code',
                 branding: false,
                 resize: true,
-                
+
                 // Enhanced link options
                 link_title: false,
                 link_assume_external_targets: true,
                 link_context_toolbar: true,
                 autolink_pattern: /^https?:\/\/\S+$/,
-                
+
                 // Link target options
                 target_list: [
                     {title: 'Same window', value: ''},
                     {title: 'New window', value: '_blank'},
                     {title: 'Parent frame', value: '_parent'}
                 ],
-                
+
                 // Custom link list for common internal pages
                 link_list: [
                     {title: 'Home Page', value: '/'},
@@ -137,7 +265,7 @@
                 images_upload_handler: function (blobInfo, success, failure) {
                     const formData = new FormData();
                     formData.append('image', blobInfo.blob(), blobInfo.filename());
-                    
+
                     // Add CSRF token
                     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
                     if (token) {
@@ -231,5 +359,9 @@
         }
     </script>
 
-
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            EinvResourceSeo.initResourceSeoForm();
+        });
+    </script>
 }

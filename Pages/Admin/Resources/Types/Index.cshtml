@@ -5,6 +5,10 @@
     ViewData["Title"] = "Resource Types";
 }
 
+@section Styles {
+    <link href="~/tabler/css/einvworld-resources.css" rel="stylesheet">
+}
+
 <div class="row mb-4">
     <div class="col-12 d-flex align-items-center justify-content-between flex-wrap gap-3">
         <div>
@@ -24,18 +28,22 @@
                 <thead class="einv-table-head">
                     <tr>
                         <th>@Html.DisplayNameFor(model => model.ResourceType[0].Name)</th>
+                        <th>Code</th>
+                        <th>SEO Prefix</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.ResourceType.Count == 0)
                     {
-                        <tr><td colspan="2" class="text-center text-muted py-4">No resource types found.</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted py-4">No resource types found.</td></tr>
                     }
                     @foreach (var item in Model.ResourceType)
                     {
                         <tr>
                             <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                            <td><span class="einv-code-chip">@item.Code</span></td>
+                            <td><span class="text-muted font-monospace small">/@item.Code/</span></td>
                             <td>
                                 <div class="d-flex gap-1">
                                     <a asp-page="./Edit" asp-route-id="@item.Code" class="btn btn-outline-secondary btn-sm">Edit</a>

@@ -2,8 +2,8 @@
 @model EINVWORLD.Pages.Resources.ArticleModel
 @{
     Layout = "_HomeLayout";
-    ViewData["Title"] = Model.Article?.Title + " | eInvWorld";
-    ViewData["Description"] = Model.Article?.Summary;
+    ViewData["Title"] = Model.SeoTitle + " | eInvWorld";
+    ViewData["Description"] = Model.SeoDescription;
     // ViewData["Keywords"] = Model.Article.ResourceType + ", e-invoicing, Malaysia";
 }
 
