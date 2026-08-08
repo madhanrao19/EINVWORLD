@@ -1,10 +1,39 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.17.0`** (`AppInfo:Version` in `appsettings.json`). v1.17.0 is a **minor**
-> release: **Smart Capture (Stage 1)** — persisted, async supplier-invoice capture → draft (see below).
-> Merged via PR #170. New additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-
-> flagged **OFF by default** in Development and Production; enabled on Staging only, for verification
-> (real Ollama + real ClamAV sign-off still outstanding — see `POST-DEPLOY-CHECKLIST.md`).
+> **Current version: `v1.17.1`** (`AppInfo:Version` in `appsettings.json`). v1.17.1 is a **patch**:
+> fixes a **Critical** bug where every Smart Capture "Confirm" attempt failed (`InvoiceDraftService
+> .SaveDraft` never set the NOT-NULL `PrefixedID` column) — see the entry below. v1.17.0 was the
+> **minor** release that introduced **Smart Capture (Stage 1)** — persisted, async supplier-invoice
+> capture → draft — via PR #170, with a new additive `ApplicationDbContext` migration
+> (`SmartCaptureDocuments`). Feature-flagged **OFF by default** in Development and Production; enabled
+> on Staging only, for verification (real Ollama + real ClamAV sign-off still outstanding — see
+> `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-08 — Smart Capture: fix Critical "Confirm" failure (`PrefixedID` NOT NULL)
+
+While closing a testing gap (no live run in this environment ever reached the actual "Confirm → create
+draft" step, since there's no reachable Ollama here — every live attempt terminated earlier at
+`NoTextExtracted`), added an integration test that exercises the **real** extraction → review → confirm
+pipeline end-to-end (only the AI provider network call is faked; every EINVWORLD service and table
+involved is real, against real SQL Server). It failed immediately: `InvoiceDraftService.SaveDraft` — a
+**pre-existing service, not touched by the Smart Capture port** (traces back to the repo's first commit)
+— has always thrown when creating a new invoice, because it never sets `InvoiceHeaders.PrefixedID`, a
+NOT NULL column. It was simply never called by anything until Smart Capture added its one and only
+caller (`SmartCaptureReviewModel.OnPostConfirmAsync`). **Every Smart Capture "Confirm" click would have
+failed** with "Failed to create the draft invoice. Please try again." — deterministically, with no way
+to recover — while `CreateInvoice.cshtml.cs` was unaffected because it uses a separate save path that
+already sets `PrefixedID = Invoice.InvoiceNo` correctly.
+
+- **Fix**: `Services/InvoiceDraftService.cs` — set `PrefixedID = model.InvoiceNo ?? string.Empty` in the
+  new-invoice branch, matching the existing pattern in `CreateInvoice.cshtml.cs`. One line.
+- **New test**: `Successful_Extraction_Through_Confirm_Creates_A_Real_Draft_Invoice` — the first test in
+  the suite to exercise the full pipeline with a successful (faked-provider) extraction, proving a real
+  `InvoiceHeader` is created with correct totals, doc type, and line items, and the `SmartCaptureDocument`
+  is correctly linked (`Status=DraftCreated`, `RelatedInvoiceHeaderInvoiceNo` set).
+- `dotnet test`: 220/220 pass against real SQL Server LocalDB (219 prior + this new one).
+- This does **not** change the outstanding Stage 1 gate — real Ollama extraction, real ClamAV scanning,
+  and full Staging end-to-end sign-off are still required before production. It does mean that gate is
+  now worth pursuing: the step it was ultimately gating (draft creation) is confirmed working.
 
 ## 📅 2026-08-08 — Smart Capture (Stage 1): ported from the stale, never-merged PR #164
 
