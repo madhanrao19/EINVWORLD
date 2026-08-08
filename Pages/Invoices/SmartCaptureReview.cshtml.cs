@@ -58,6 +58,12 @@ namespace eInvWorld.Pages.Invoices
         public InvoiceSuggestion? Suggestion { get; private set; }
         public List<SmartCaptureReviewItemDto> ReviewItems { get; private set; } = new();
         public bool ReviewHasErrors { get; private set; }
+
+        /// <summary>True when the review checklist has neither errors nor warnings — the "nothing to
+        /// look at" tier. Drives a condensed review presentation (checklist/raw-suggestion collapsed by
+        /// default) instead of a change to the Confirm flow itself: the human still always clicks Confirm
+        /// before a draft is created, matching Stage 1's explicit "never auto-decide doc type" rule.</summary>
+        public bool IsFullyClean => !ReviewHasErrors && !ReviewItems.Any(i => i.Severity == "Warning");
         public List<(int PartyInfoId, string Name, string Tin)> KnownBuyers { get; private set; } = new();
         public string[] ValidDocumentTypes => ValidDocTypes;
         public string? ErrorText { get; set; }
