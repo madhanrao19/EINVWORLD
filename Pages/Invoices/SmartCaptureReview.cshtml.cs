@@ -148,7 +148,25 @@ namespace eInvWorld.Pages.Invoices
             Document.ConfirmedDocTypeCode = confirmedDocTypeCode.Trim();
             Document.RelatedInvoiceHeaderInvoiceNo = model.InvoiceNo;
             Document.UpdatedAtUtc = DateTime.UtcNow;
-            await _context.SaveChangesAsync(ct);
+
+            try
+            {
+                await _context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Two concurrent confirms (double-click, retry-after-timeout) can both pass the
+                // ReviewRequired check above and both create a draft via SaveDraft before either commits
+                // this status update — the loser hits RowVersion's optimistic-concurrency conflict here.
+                // The draft it made already exists (SaveDraft commits independently), so recover instead
+                // of surfacing a raw 500: whichever request actually won gets to be the source of truth.
+                var winner = await _documents.GetOwnedAsync(id, userId, ct);
+                if (winner?.Status == SmartCaptureDocumentStatus.DraftCreated && !string.IsNullOrEmpty(winner.RelatedInvoiceHeaderInvoiceNo))
+                    return RedirectToPage("/Invoices/InvoiceEdit", new { id = winner.RelatedInvoiceHeaderInvoiceNo });
+
+                ErrorText = "This document was already processed by another request. Please refresh and try again.";
+                return Page();
+            }
 
             await _audit.WriteAsync("SmartCaptureDraftCreated", new AuditEntry
             {

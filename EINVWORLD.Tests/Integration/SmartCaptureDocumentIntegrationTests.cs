@@ -405,5 +405,56 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal(SmartCaptureDocumentStatus.ReviewRequired, reloaded.Status); // unchanged
             Assert.Equal(originalExtractionJson, reloaded.NormalizedExtractionJson); // not overwritten
         }
+
+        // ── Confirm-race (SmartCaptureReviewModel.OnPostConfirmAsync) ───────────────────────────────
+        [Fact]
+        public async Task RowVersion_Conflict_Is_Thrown_When_Two_Requests_Race_To_Confirm_The_Same_Document()
+        {
+            // Reproduces the precondition SmartCaptureReviewModel.OnPostConfirmAsync's
+            // DbUpdateConcurrencyException catch block exists for: two concurrent "Confirm" POSTs both
+            // load the document (as two separate requests/DbContexts would), the first commits its
+            // status update, and the second — still holding its own copy's original RowVersion — must
+            // fail with a concurrency conflict, not silently overwrite the winner's result.
+            if (!_fx.Available) return;
+
+            await using var seedCtx = _fx.CreateContext();
+            var company = await CreateValidPartyInfoAsync(seedCtx, "Race Co");
+            seedCtx.PartyInfos.Add(company);
+            await seedCtx.SaveChangesAsync();
+
+            var document = new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = company.PartyInfoId,
+                UploadedByUserId = "someone",
+                OriginalFileName = "race.pdf",
+                InternalStorageReference = "race.pdf",
+                ContentType = "application/pdf",
+                FileSize = 5,
+                Status = SmartCaptureDocumentStatus.ReviewRequired,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            seedCtx.SmartCaptureDocuments.Add(document);
+            await seedCtx.SaveChangesAsync();
+
+            // Two independent contexts each load the same row — exactly what two concurrent HTTP
+            // requests would produce (each gets its own scoped DbContext).
+            await using var winnerCtx = _fx.CreateContext();
+            var winnerDoc = await winnerCtx.SmartCaptureDocuments.SingleAsync(d => d.Id == document.Id);
+
+            await using var loserCtx = _fx.CreateContext();
+            var loserDoc = await loserCtx.SmartCaptureDocuments.SingleAsync(d => d.Id == document.Id);
+
+            winnerDoc.Status = SmartCaptureDocumentStatus.DraftCreated;
+            winnerDoc.RelatedInvoiceHeaderInvoiceNo = "INV-WINNER";
+            await winnerCtx.SaveChangesAsync();
+
+            loserDoc.Status = SmartCaptureDocumentStatus.DraftCreated;
+            loserDoc.RelatedInvoiceHeaderInvoiceNo = "INV-LOSER";
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => loserCtx.SaveChangesAsync());
+
+            var final = await seedCtx.SmartCaptureDocuments.AsNoTracking().SingleAsync(d => d.Id == document.Id);
+            Assert.Equal("INV-WINNER", final.RelatedInvoiceHeaderInvoiceNo); // loser never overwrote it
+        }
     }
 }
