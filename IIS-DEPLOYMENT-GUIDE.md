@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.14.0.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.17.0.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -201,7 +201,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.14.0.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.17.0.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
@@ -614,6 +614,41 @@ runtime; the app log records the OCR error. (OCR can't be exercised by CI — it
 1. Add env var `Api__Key` = a long random string, then `iisreset`.
 2. The ERP calls `POST https://einvworld.com/api/import/validate` with header `X-Api-Key: <that key>` and
    a JSON array of invoice rows; it returns a per-row validation report.
+
+### 17d — Smart Capture (persisted, async supplier-invoice capture) + ClamAV
+
+Smart Capture (`/Invoices/SmartCapture`) is the productionised version of AI Document Capture above — it
+persists the upload, processes it via a background job (the existing durable `SyncJobs` queue, not a new
+service), and requires the same `DocumentCapture`/`AI` settings from 17a. Enable it only after installing
+ClamAV, since it fails **closed** (rejects uploads) if the scanner is required but unreachable.
+
+1. **Install ClamAV for Windows** — download from `https://www.clamav.net/downloads` (FOSS, GPL-2.0).
+   Run the installer, then initialize the virus database and start the `clamd` service:
+   ```
+   freshclam
+   sc start clamd
+   sc config clamd start=auto
+   ```
+   Confirm it's listening: `Test-NetConnection -ComputerName 127.0.0.1 -Port 3310` should report
+   `TcpTestSucceeded : True`. Set up a scheduled task to run `freshclam` daily so virus definitions stay
+   current (the installer's default task usually already does this — verify it's enabled).
+2. **Grant the app-pool a writable folder** for uploaded documents, e.g. `E:\EINVWORLD\Documents\SmartCapture`
+   (Part 9, **Modify** rights) — matches `FilePathConfig:SmartCaptureFolder`.
+3. Add env vars (Part 10) and `iisreset`:
+   | Name | Value |
+   |---|---|
+   | `SmartCapture__Enabled` | `true` |
+   | `SmartCapture__MalwareScanRequired` | `true` (**do not** set `false` in Staging/Production) |
+   | `SmartCapture__ClamAvHost` | `127.0.0.1` (default; change only if `clamd` runs elsewhere) |
+   | `SmartCapture__ClamAvPort` | `3310` (default) |
+   | `FilePathConfig__SmartCaptureFolder` | `E:\EINVWORLD\Documents\SmartCapture` |
+
+✅ **Verify:** upload a document via **Smart Capture** — it should show "Queued" then move to a review
+screen once the background job finishes. Upload the [EICAR test file](https://www.eicar.org/download-anti-malware-testfile/)
+(a harmless string every AV recognizes as a test signature) and confirm it's **rejected** — this proves
+the scanner is actually wired in, not just installed. If every upload is rejected with "Document security
+scanning is temporarily unavailable", `clamd` isn't reachable — check the service is running and the
+port/firewall allow localhost traffic on 3310.
 
 ---
 
