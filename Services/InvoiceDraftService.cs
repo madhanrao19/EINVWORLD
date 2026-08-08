@@ -83,6 +83,7 @@ namespace eInvWorld.Services
                     var newInvoice = new InvoiceHeader
                     {
                         InvoiceNo = model.InvoiceNo ?? string.Empty,
+                        PrefixedID = model.InvoiceNo ?? string.Empty,
                         RefDocumentNo = model.RefDocumentNo,
                         StartDate = model.StartDate,
                         EndDate = model.EndDate,
