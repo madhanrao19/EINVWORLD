@@ -1,19 +1,19 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.16.0`** (`AppInfo:Version` in `appsettings.json`). v1.16.0 is a **minor**
-> release: Manage Resources (admin CMS) best-practice redesign — SEO/GEO metadata fields, a live
-> readiness score, server-side pagination, and a Resource Types SEO-prefix column. New additive
-> `WebsiteDbContext` migration. No LHDN/invoice logic touched. Also fixes a pre-existing JSON syntax
-> error in `appsettings.json` (`FilePathConfig`) that prevented the app from starting locally.
+> **Current version: `v1.17.0`** (`AppInfo:Version` in `appsettings.json`). v1.17.0 is a **minor**
+> release: **Smart Capture (Stage 1)** — persisted, async supplier-invoice capture → draft (see below).
+> Merged via PR #170. New additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-
+> flagged **OFF by default** in Development and Production; enabled on Staging only, for verification
+> (real Ollama + real ClamAV sign-off still outstanding — see `POST-DEPLOY-CHECKLIST.md`).
 
 ## 📅 2026-08-08 — Smart Capture (Stage 1): ported from the stale, never-merged PR #164
 
-Not released yet (branch `feature/smart-capture-stage1`, not yet merged to `main`) — recorded here so
-the work and its verification status are visible ahead of a PR. Smart Capture Stage 1 (persisted, async
-supplier-invoice capture → draft) was fully built and locally verified back on 2026-08-04 on branch
-`fix/lhdn-getdoc-burst-429` (PR #164), but that branch was never merged and went stale — `main` picked up
-unrelated work in the meantime (the LHDN full-import widen fix, the Quantity/ExchangeRate display fix,
-and the Manage Resources CMS/SEO-GEO redesign above), none of which PR #164 ever incorporated.
+Merged to `main` via **PR #170** (squash), which closed the original **PR #164** as superseded. Smart
+Capture Stage 1 (persisted, async supplier-invoice capture → draft) was fully built and locally verified
+back on 2026-08-04 on branch `fix/lhdn-getdoc-burst-429` (PR #164), but that branch was never merged and
+went stale — `main` picked up unrelated work in the meantime (the LHDN full-import widen fix, the
+Quantity/ExchangeRate display fix, and the Manage Resources CMS/SEO-GEO redesign above), none of which
+PR #164 ever incorporated.
 
 - **Ported cleanly onto current `main`**, file-by-file and hunk-by-hunk — not a raw branch merge — so
   none of PR #164's staleness (reverted Resources pages, reverted LHDN lookback default, reverted
@@ -46,6 +46,17 @@ and the Manage Resources CMS/SEO-GEO redesign above), none of which PR #164 ever
 - **Still outstanding** (the user's own stated Stage 1 production gate, not achievable from this
   environment): a successful extraction using real Ollama output, real ClamAV clean/infected-file
   scanning, and full Staging end-to-end sign-off. **Not production-ready until those pass.**
+- **`appsettings.Staging.json`: `SmartCapture:Enabled` flipped `true`.** Note: per `IIS-DEPLOYMENT-GUIDE.md`
+  Part 2 / Part 10 and `DEPLOY-NOTES.md`, the real Staging server runs with `ASPNETCORE_ENVIRONMENT=Production`
+  (the "Staging" distinction is DB/URL only, via manually-edited `appsettings.json` values on that box) —
+  so `appsettings.Staging.json` is **not loaded there** and this file change alone does not enable the
+  feature on the real server. **To actually enable it on Staging, set the `SmartCapture__*` environment
+  variables** in IIS (Part 10) per the new PART 17d below, then `iisreset`. The `appsettings.Staging.json`
+  change only takes effect if something is explicitly run with `ASPNETCORE_ENVIRONMENT=Staging` (e.g. a
+  future differently-configured environment, or local `dotnet run` in that mode).
+- **`IIS-DEPLOYMENT-GUIDE.md` PART 17d added** (was referenced by README/`POST-DEPLOY-CHECKLIST.md` but
+  missing from the port) — ClamAV install/verify steps and the `SmartCapture__*`/`FilePathConfig__*` env
+  vars needed to enable this feature on a real server.
 
 ## 📅 2026-08-07 — Manage Resources (CMS): SEO/GEO redesign
 
