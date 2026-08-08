@@ -462,6 +462,17 @@ builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtra
 // OCR fallback for scanned PDFs (Tesseract + PDFium). Inert unless DocumentCapture:OcrEnabled + tessdata.
 builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentOcrService, EINVWORLD.Services.DocumentCapture.TesseractDocumentOcrService>();
 
+// Smart Capture (Stage 1): persists + asynchronizes AI Document Capture via the existing SyncJobs queue.
+// OFF by default; also requires DocumentCapture + the AI assistant to be enabled (it reuses their services).
+var smartCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.SmartCapture.SmartCaptureOptions.SectionName)
+    .Get<EINVWORLD.Services.SmartCapture.SmartCaptureOptions>() ?? new EINVWORLD.Services.SmartCapture.SmartCaptureOptions();
+builder.Services.AddSingleton(smartCaptureOptions);
+builder.Services.AddScoped<EINVWORLD.Services.Security.IMalwareScanner, EINVWORLD.Services.Security.ClamAvMalwareScanner>();
+builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureDocumentService>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureExtractionJobHandler>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureRetentionJobHandler>();
+builder.Services.AddHostedService<EINVWORLD.Services.SmartCapture.SmartCaptureRetentionScheduler>();
+
 // Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
 builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
 
@@ -573,13 +584,15 @@ EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Envi
 // One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
 // (no secrets — just feature/mode flags).
 Log.Information(
-    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, AutoMigrate={AutoMigrate}",
+    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, SmartCapture={SmartCaptureEnabled}, MalwareScanRequired={MalwareScanRequired}, AutoMigrate={AutoMigrate}",
     app.Configuration["AppInfo:Version"] ?? "?",
     app.Environment.EnvironmentName,
     app.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf",
     app.Configuration.GetValue("AI:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
+    app.Configuration.GetValue("SmartCapture:Enabled", false),
+    app.Configuration.GetValue("SmartCapture:MalwareScanRequired", true),
     app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
 
 // Apply migrations and seed data
