@@ -120,6 +120,28 @@ correct decimal precision (18,2 money / 18,6 rate / 18,4 unit price) · fail-fas
 probes · two-layer rate limiting · end-to-end correlation IDs · smart HTTPS-redirect default (off behind a
 tunnel) · externalized secrets · DataProtection key-ring outside `App\`.
 
+## Invoice-input mechanisms (AI Document Capture, Smart Capture, Bulk Import, future methods)
+**Smart Capture (and any future document-capture mechanism) is an invoice-**input** mechanism, not an
+invoice **subsystem**.** It may extract, normalize, validate, and propose invoice information, but it must
+never: independently calculate final invoice values, create an alternative/parallel invoice record,
+implement separate tenant or permission rules, generate its own UBL submission path, or submit directly to
+MyInvois. Once a capture is accepted, all data enters the standard EINVWORLD invoice workflow — the
+existing `InvoiceDraftService` → `InvoiceEdit` → calculation/validation → LHDN submission services remain
+the single source of truth and stay authoritative, unchanged. This applies to every provider tier inside a
+capture pipeline too (deterministic/template rules, OCR/layout, AI-assisted extraction) — none of them
+bypass the standard draft/validation/submission path; they only produce a *suggestion* for it.
+
+AI Document Capture (`/Invoices/CreateFromFile`, synchronous) and Smart Capture (`/Invoices/SmartCapture`,
+persisted/async — malware-scanned, durable-job-queued, retention/quota-governed) currently coexist and
+share the same underlying extraction/AI/validation services (`IDocumentTextExtractor`, `IDocumentOcrService`,
+`IEInvoiceAssistantService`, `InvoiceSuggestionValidator`) and the same draft creation path
+(`InvoiceDraftService.SaveDraft`) — this is intentional reuse, not duplication, and must stay that way.
+Planned direction: Smart Capture becomes the single production document-capture workflow and AI Document
+Capture is retired from user-facing navigation (keep the route for rollback; don't delete the reusable
+services). See the `smart-capture-roadmap` memory for the staged plan (Smart Review confidence tiers,
+supplier templates, bulk capture, then — much later, explicitly opt-in per company — conditional
+auto-submission).
+
 ## Known improvement backlog (deferred — need a scoped, tested effort)
 - **Split the ~1,300-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
 - **OpenTelemetry metrics** — low value on a single on-prem node with no metrics backend; revisit if scaled.
