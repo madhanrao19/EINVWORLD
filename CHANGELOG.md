@@ -1,12 +1,85 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.15.3`** (`AppInfo:Version` in `appsettings.json`). v1.15.3 is a **patch**
-> release: `Quantity` was rendering at its raw `decimal(18,6)` database precision (e.g. `1.000000`)
-> instead of `1.00` on the Invoice Details page and in Print/Download PDF, plus the same bug class on
-> `InvoiceTemplate.ExchangeRate` (Invoice Templates → Details/Delete). Display-only — no calculation,
-> precision, or LHDN submission logic changed. Ports a fix already implemented and tested on the
-> still-unmerged Smart Capture branch (PR #164, originally shipped there as v1.15.1) onto `main`
-> directly, so the display bug is fixed without waiting on that PR's Staging verification gate.
+> **Current version: `v1.16.0`** (`AppInfo:Version` in `appsettings.json`). v1.16.0 is a **minor**
+> release: Manage Resources (admin CMS) best-practice redesign — SEO/GEO metadata fields, a live
+> readiness score, server-side pagination, and a Resource Types SEO-prefix column. New additive
+> `WebsiteDbContext` migration. No LHDN/invoice logic touched. Also fixes a pre-existing JSON syntax
+> error in `appsettings.json` (`FilePathConfig`) that prevented the app from starting locally.
+
+## 📅 2026-08-08 — Smart Capture (Stage 1): ported from the stale, never-merged PR #164
+
+Not released yet (branch `feature/smart-capture-stage1`, not yet merged to `main`) — recorded here so
+the work and its verification status are visible ahead of a PR. Smart Capture Stage 1 (persisted, async
+supplier-invoice capture → draft) was fully built and locally verified back on 2026-08-04 on branch
+`fix/lhdn-getdoc-burst-429` (PR #164), but that branch was never merged and went stale — `main` picked up
+unrelated work in the meantime (the LHDN full-import widen fix, the Quantity/ExchangeRate display fix,
+and the Manage Resources CMS/SEO-GEO redesign above), none of which PR #164 ever incorporated.
+
+- **Ported cleanly onto current `main`**, file-by-file and hunk-by-hunk — not a raw branch merge — so
+  none of PR #164's staleness (reverted Resources pages, reverted LHDN lookback default, reverted
+  CreateInvoice/InvoiceEdit CSS token rebrand) came along with it. Regenerated the EF migration
+  (`Migrations/20260808063519_AddSmartCaptureDocument`) fresh against `main`'s current model instead of
+  reusing the old branch's Designer/ModelSnapshot, so it chains correctly after
+  `20260807120000_AddSeoGeoFieldsToResourceItem`; table shape verified byte-identical to the original.
+- **Two config defaults fixed during the port**: the base `appsettings.json` `SmartCapture` section had
+  `Enabled=true`/`MalwareScanRequired=true`, contradicting its own comment and meaning Staging (which
+  never overrides `Enabled`) would have silently shipped the feature on. `appsettings.Production.json`
+  had both `SmartCapture.Enabled` and unrelated `AI.Enabled` flipped `true` with no corresponding
+  Staging/Ollama/ClamAV sign-off. Both reverted to the project's stated default (`false`).
+  Deploy/config reference is unchanged (`README.md`, `POST-DEPLOY-CHECKLIST.md` already document the
+  `SmartCapture` section and the ClamAV/EICAR verification step — no new doc entries needed there).
+- **One defect found and fixed via `/roast`** (Medium): `SmartCaptureReviewModel.OnPostConfirmAsync` had
+  no double-submit guard — two concurrent "Confirm" POSTs could both create a draft invoice, and the
+  losing request would throw an unhandled `DbUpdateConcurrencyException`. Fixed by catching the conflict
+  and redirecting to whichever invoice actually won, reusing the existing `SmartCaptureDocument.RowVersion`
+  concurrency token — no new abstraction, no schema change. Regression-tested against real SQL Server.
+- **Two pre-existing Playwright test bugs fixed** in `tests/playwright/13-smart-capture.spec.js`
+  (inherited from the original branch, unrelated to the port itself): a hardcoded `localhost:5210` in the
+  anonymous-download check (now uses the configured `baseURL`), and a 60s terminal-state wait that didn't
+  account for `AI:TimeoutSeconds` (180s) when Ollama is unreachable (extended to 200s/240s).
+- **Verified this session**: `dotnet build` clean; `dotnet test` 219/219 against real SQL Server LocalDB
+  (not the in-memory provider); a focused security review (tenant isolation, IDOR, malware fail-closed
+  behavior, secrets/PII handling — no findings); the migration applied to the shared Staging database
+  (idempotent — reconciled pre-existing schema drift from an earlier unmerged deploy attempt rather than
+  re-creating anything); and the full `13-smart-capture.spec.js` Playwright spec, 4/4 pass on a clean,
+  verified single app instance.
+- **Still outstanding** (the user's own stated Stage 1 production gate, not achievable from this
+  environment): a successful extraction using real Ollama output, real ClamAV clean/infected-file
+  scanning, and full Staging end-to-end sign-off. **Not production-ready until those pass.**
+
+## 📅 2026-08-07 — Manage Resources (CMS): SEO/GEO redesign
+
+- **New SEO/GEO metadata on `ResourceItem`**: `MetaTitle`, `MetaDescription`, `FocusKeyword`,
+  `CanonicalUrl`, `OgText`, `ImageAlt`, `Author`, `Tldr` (AI-answer-engine summary), `SchemaType`
+  (Article/FAQ/HowTo), and `FaqItemsJson` (FAQ Q&A pairs, stored as JSON — not a child table). All
+  nullable/defaulted — additive migration
+  (`Migrations/20260807120000_AddSeoGeoFieldsToResourceItem` + `Apply_AddSeoGeoFieldsToResourceItem.sql`),
+  targets `WebsiteDbContext` (its own, separate `__EFMigrationsHistory`).
+- **New `Helpers/ResourceSeoScorer`**: single source of truth for the 0-100 SEO/GEO readiness score
+  (slug, meta title/description length, focus keyword, canonical URL, image alt, author, TL;DR, schema
+  type, and FAQ-question-count-when-FAQ). Mirrored in `wwwroot/js/resource-seo.js` for the live gauge
+  on Create/Edit (no round trip) — the two are kept in sync intentionally; update both if the checklist
+  changes.
+- **Manage Resources (list)**: added a per-row SEO score chip and "AI SEO Assistant" sidebar (Global
+  Site Health % + static suggestions), plus **real server-side pagination** (previously loaded every
+  resource on one page). Existing filters, Add Type modal, and Backfill Slugs untouched.
+- **Create/Edit Resource**: two-column layout — SEO/GEO panel (live gauge, char counters, Meta
+  Title/Description/Focus Keyword/Canonical URL/Social Share Text), Alt Text, AI Summary/TL;DR, and a
+  Structured Data section with a Schema Type select + FAQ Q&A builder (shown only when Schema Type =
+  FAQ). Title→slug auto-derive, TinyMCE, and the ImageMagick image pipeline are unchanged.
+- **Resource Types**: added a computed "SEO Prefix" (`/{code}/`) column; fixed a pre-existing bug where
+  creating a type with a duplicate Code threw an unhandled 500 instead of a validation error (now
+  matches the existing duplicate-check already used by the Manage Resources "Add Type" modal).
+- **Public Article page**: `<title>`/meta-description now fall back to the new MetaTitle/MetaDescription
+  when set (else Title/Summary as before) — the only change to the public-facing page.
+- **Hygiene**: `Create.cshtml.cs` now has an explicit `[Authorize(Roles="Admin")]` matching its siblings
+  (the `/Admin` folder policy already covered it — defence-in-depth, not a live vulnerability fix).
+- **Fixed `appsettings.json`**: a missing comma after `CompanyLogosFolder` (introduced in a recent
+  appsettings update) made the entire file invalid JSON, so the app failed to start locally at all.
+  Restored valid JSON; no config values changed.
+- New unit tests: `ResourceSeoScorerTests` (score/tier boundaries, FAQ JSON round-trip) and
+  `WebsiteDbContextModelTests` (catches EF model-validation regressions — e.g. a public `List<T>`
+  property on an entity being mis-mapped as a navigation — without needing a live DB connection).
 
 ## 📅 2026-08-05 — Format Quantity/ExchangeRate to 2 decimal places in invoice display/PDF
 

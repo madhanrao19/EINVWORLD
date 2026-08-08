@@ -13,5 +13,9 @@
         public string ResourceImagesFolder { get; set; } = null!;
         public string EditorUploadsFolder { get; set; } = null!;
         public string CompanyLogosFolder { get; set; } = null!;
+
+        /// <summary>Storage root for uploaded Smart Capture source documents (SafePath-resolved; never
+        /// served directly, only via the tenant-scoped download endpoint).</summary>
+        public string SmartCaptureFolder { get; set; } = null!;
 	}
 }

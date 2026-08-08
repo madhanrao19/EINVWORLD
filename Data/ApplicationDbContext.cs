@@ -5,6 +5,7 @@ using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
 using eInvWorld.Models.Logs;
 using eInvWorld.Models.Settings;
+using eInvWorld.Models.SmartCapture;
 using eInvWorld.Models.Templates;
 using eInvWorld.Models.ViewModels;
 using eInvWorld.Models.Webhooks;
@@ -104,6 +105,9 @@ namespace eInvWorld.Data
 
         // --- Tamper-evident audit trail (hash-chained, append-only) ---
         public DbSet<eInvWorld.Models.Audit.AuditLog> AuditLogs { get; set; }
+
+        // --- Smart Capture (persisted, async AI Document Capture — Stage 1) ---
+        public DbSet<SmartCaptureDocument> SmartCaptureDocuments { get; set; } = default!;
 
         // --- Outbound webhook subscriptions (customer ERP callbacks) ---
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
@@ -399,6 +403,20 @@ namespace eInvWorld.Data
             Encrypt<PublicCustomer>(c => c.BankAccountNo);
 
             Encrypt<InvoiceTemplate>(t => t.BankAccountNo);
+
+            // Smart Capture: the extraction JSON is an OCR/LLM reading of a supplier's own invoice and may
+            // carry the supplier's bank details (see InvoiceSuggestion's field set) — same protection as the
+            // BankAccountNo columns above.
+            Encrypt<SmartCaptureDocument>(d => d.NormalizedExtractionJson);
+
+            modelBuilder.Entity<SmartCaptureDocument>(b =>
+            {
+                // Retention sweep filters on "file not yet deleted" every run.
+                b.HasIndex(d => d.FileDeletedAtUtc);
+                // Unused by any Stage 1 query, but cheap to index now — Stage 2 duplicate detection
+                // (explicitly deferred) will filter on this.
+                b.HasIndex(d => d.FileHash);
+            });
 
             // Webhook subscription: encrypt the HMAC signing secret at rest (distinct secret protector),
             // and index by TIN for the dispatcher's per-company lookup.

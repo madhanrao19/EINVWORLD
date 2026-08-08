@@ -42,9 +42,11 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 - **Health + ops** — `/health/live` and `/health/ready` probes, an **Admin → System Health** dashboard,
   fail-fast startup config validation, and CSP violation reporting (`/csp-report`).
 - **Invoice ingestion** (draft-safe — validate/suggest only, never auto-create or submit): **AI Document
-  Capture** (PDF → reviewed suggestion), **Bulk Import** (CSV/XLSX validation + template), a
-  **watched-folder** importer, and a **REST validate API** (`POST /api/import/validate`). All OFF by
-  default.
+  Capture** (PDF → reviewed suggestion), **Smart Capture** (persisted, async version of the above — upload
+  a supplier PDF/JPG/PNG, background OCR/LLM extraction via the durable job queue, malware-scanned
+  storage, explicit document-type + buyer confirmation, then a real Draft through the normal invoice
+  pipeline), **Bulk Import** (CSV/XLSX validation + template), a **watched-folder** importer, and a
+  **REST validate API** (`POST /api/import/validate`). All OFF by default.
 - **AI features** (optional, OFF by default) — a **provider-agnostic** AI layer that answers e-invoicing
   questions and turns a plain-English description into a suggested invoice that pre-fills the Create
   Invoice form. Ships with a local, on-prem [Ollama](https://ollama.com) provider (**no invoice data
@@ -130,6 +132,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
 | `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120), `KeepAliveMinutes` (default 30 — how long Ollama keeps the model loaded between requests), `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. (Replaces the retired `AIAssistant` section — rename any `AIAssistant__*` env vars to `AI__*`.) |
 | `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
+| `SmartCapture` | Optional persisted/async Smart Capture (OFF; needs `DocumentCapture`+`AI:Enabled`). `MalwareScanRequired` must be `true` in Staging/Production — installs ClamAV, see deployment guide PART 17d. |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
 | `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `7`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. Runs for every company registered in EINVWORLD (all distinct `UserCompanies` TINs), not just one. |
