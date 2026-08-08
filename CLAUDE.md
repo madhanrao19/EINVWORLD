@@ -132,15 +132,29 @@ capture pipeline too (deterministic/template rules, OCR/layout, AI-assisted extr
 bypass the standard draft/validation/submission path; they only produce a *suggestion* for it.
 
 AI Document Capture (`/Invoices/CreateFromFile`, synchronous) and Smart Capture (`/Invoices/SmartCapture`,
-persisted/async — malware-scanned, durable-job-queued, retention/quota-governed) currently coexist and
-share the same underlying extraction/AI/validation services (`IDocumentTextExtractor`, `IDocumentOcrService`,
-`IEInvoiceAssistantService`, `InvoiceSuggestionValidator`) and the same draft creation path
-(`InvoiceDraftService.SaveDraft`) — this is intentional reuse, not duplication, and must stay that way.
-Planned direction: Smart Capture becomes the single production document-capture workflow and AI Document
-Capture is retired from user-facing navigation (keep the route for rollback; don't delete the reusable
-services). See the `smart-capture-roadmap` memory for the staged plan (Smart Review confidence tiers,
+labelled **"Create from Document"** in nav; persisted/async, durable-job-queued, retention/quota-governed)
+currently coexist and share the same underlying extraction/AI/validation services
+(`IDocumentTextExtractor`, `IDocumentOcrService`, `IEInvoiceAssistantService`, `InvoiceSuggestionValidator`)
+and the same draft creation path (`InvoiceDraftService.SaveDraft`) — this is intentional reuse, not
+duplication, and must stay that way. Planned direction: Smart Capture becomes the single production
+document-capture workflow and AI Document Capture is retired from user-facing navigation (keep the route
+for rollback; don't delete the reusable services). See the `smart-capture-roadmap` memory for the staged
+plan (Smart Review confidence tiers,
 supplier templates, bulk capture, then — much later, explicitly opt-in per company — conditional
 auto-submission).
+
+### Upload security (Smart Capture — no application-level malware scanning)
+**Deliberate, explicit decision (2026-08-08):** Smart Capture does not scan uploaded files with an
+antivirus engine (ClamAV was built, tested, and then deliberately removed — see `CHANGELOG.md`). Upload
+security instead relies entirely on: file extension allowlist, magic-byte/file-signature validation, a
+`MaxFileSizeMb`/`MaxPages` limit, a monthly per-company quota, storage outside `wwwroot` under a random
+internal filename, `SafePath` traversal protection, tenant/company ownership checks on every read, an
+IDOR-protected download endpoint, retention/deletion, and audit logging — plus normal server-level
+protection (least-privilege app pool, Windows Server endpoint protection). **Know the limit of this**:
+none of these controls inspect file *content* — a well-formed PDF can still carry an embedded exploit.
+Don't add a "the file passed validation, so it's safe" assumption anywhere downstream. If a future
+capture mechanism (or a future requirement) needs content-level scanning, add it explicitly — don't assume
+it's already covered.
 
 ## Known improvement backlog (deferred — need a scoped, tested effort)
 - **Split the ~1,300-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.

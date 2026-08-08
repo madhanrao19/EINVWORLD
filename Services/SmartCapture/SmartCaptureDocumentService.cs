@@ -13,7 +13,6 @@ using eInvWorld.Models.SmartCapture;
 using EINVWORLD.Helpers;
 using EINVWORLD.Services.Audit;
 using EINVWORLD.Services.Background;
-using EINVWORLD.Services.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,8 +28,6 @@ namespace EINVWORLD.Services.SmartCapture
         TooLarge,
         UnsupportedType,
         InvalidSignature,
-        MalwareDetected,
-        ScannerRequiredButUnavailable,
         QuotaExceeded,
     }
 
@@ -52,7 +49,6 @@ namespace EINVWORLD.Services.SmartCapture
         private readonly ApplicationDbContext _context;
         private readonly FilePathConfig _filePathConfig;
         private readonly SmartCaptureOptions _options;
-        private readonly IMalwareScanner _malwareScanner;
         private readonly IAuditService _audit;
         private readonly ILogger<SmartCaptureDocumentService> _logger;
 
@@ -60,14 +56,12 @@ namespace EINVWORLD.Services.SmartCapture
             ApplicationDbContext context,
             IOptions<FilePathConfig> filePathConfig,
             SmartCaptureOptions options,
-            IMalwareScanner malwareScanner,
             IAuditService audit,
             ILogger<SmartCaptureDocumentService> logger)
         {
             _context = context;
             _filePathConfig = filePathConfig.Value;
             _options = options;
-            _malwareScanner = malwareScanner;
             _audit = audit;
             _logger = logger;
         }
@@ -105,8 +99,11 @@ namespace EINVWORLD.Services.SmartCapture
                 .ToListAsync(ct);
         }
 
-        /// <summary>Validates, scans, persists the file, writes the SmartCaptureDocument row, and enqueues
-        /// the extraction SyncJob — all in one place so no call site can skip a step.</summary>
+        /// <summary>Validates, persists the file, writes the SmartCaptureDocument row, and enqueues
+        /// the extraction SyncJob — all in one place so no call site can skip a step. No application-level
+        /// malware scanning is performed — see SmartCaptureOptions / IIS-DEPLOYMENT-GUIDE.md PART 17d for
+        /// the upload-security controls this relies on instead (format/signature validation, size/page/
+        /// quota limits, tenant-scoped storage outside wwwroot, safe random filenames, no execution).</summary>
         public async Task<SmartCaptureUploadResult> UploadAsync(
             byte[] content, string originalFileName, string contentType, int companyPartyInfoId, string userId, CancellationToken ct)
         {
@@ -133,32 +130,6 @@ namespace EINVWORLD.Services.SmartCapture
             var quotaOk = await CheckQuotaAsync(companyPartyInfoId, ct);
             if (!quotaOk)
                 return new SmartCaptureUploadResult(false, SmartCaptureUploadFailureReason.QuotaExceeded, null, "This company's monthly Smart Capture processing quota has been reached.");
-
-            var scan = await _malwareScanner.ScanAsync(content, ct);
-            if (scan.Outcome == MalwareScanOutcome.Infected)
-            {
-                await _audit.WriteAsync("SmartCaptureMalwareDetected", new AuditEntry
-                {
-                    NewValueJson = JsonSerializer.Serialize(new { file = originalFileName, signature = scan.SignatureName })
-                }, ct);
-                _logger.LogWarning("Smart Capture upload rejected — malware signature {Signature} for {File}", scan.SignatureName, originalFileName);
-                return new SmartCaptureUploadResult(false, SmartCaptureUploadFailureReason.MalwareDetected, null, "This file failed a security scan and was rejected.");
-            }
-            if (scan.Outcome == MalwareScanOutcome.ScannerUnavailable)
-            {
-                if (_options.MalwareScanRequired)
-                {
-                    _logger.LogError("Smart Capture upload rejected — malware scanner unavailable and MalwareScanRequired is true ({Detail})", scan.Detail);
-                    return new SmartCaptureUploadResult(false, SmartCaptureUploadFailureReason.ScannerRequiredButUnavailable, null,
-                        "Document security scanning is temporarily unavailable. Please try again shortly.");
-                }
-                // Fail-open path (dev-only, per SmartCaptureOptions.MalwareScanRequired) — must be loud, not silent.
-                await _audit.WriteAsync("SmartCaptureMalwareScanSkipped", new AuditEntry
-                {
-                    NewValueJson = JsonSerializer.Serialize(new { file = originalFileName, detail = scan.Detail })
-                }, ct);
-                _logger.LogWarning("Smart Capture: proceeding WITHOUT a malware scan ({Detail}) — MalwareScanRequired=false", scan.Detail);
-            }
 
             var fileHash = Convert.ToHexString(SHA256.HashData(content));
             var internalFileName = $"{Guid.NewGuid():N}.{extension}";

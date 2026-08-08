@@ -1,13 +1,43 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.17.1`** (`AppInfo:Version` in `appsettings.json`). v1.17.1 is a **patch**:
-> fixes a **Critical** bug where every Smart Capture "Confirm" attempt failed (`InvoiceDraftService
-> .SaveDraft` never set the NOT-NULL `PrefixedID` column) — see the entry below. v1.17.0 was the
+> **Current version: `v1.17.2`** (`AppInfo:Version` in `appsettings.json`). v1.17.2 is a **patch**:
+> removes application-level malware scanning (ClamAV) from Smart Capture — a deliberate architecture
+> decision, not a regression fix; see the entry below for the reasoning and the upload-security controls
+> it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart Capture "Confirm" attempt
+> failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID` column). v1.17.0 was the
 > **minor** release that introduced **Smart Capture (Stage 1)** — persisted, async supplier-invoice
-> capture → draft — via PR #170, with a new additive `ApplicationDbContext` migration
-> (`SmartCaptureDocuments`). Feature-flagged **OFF by default** in Development and Production; enabled
-> on Staging only, for verification (real Ollama + real ClamAV sign-off still outstanding — see
-> `POST-DEPLOY-CHECKLIST.md`).
+> capture → draft, now labelled **"Create from Document"** in navigation — via PR #170, with a new
+> additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-flagged **OFF by default**
+> in Development and Production; enabled on Staging only, for verification (real Ollama sign-off still
+> outstanding — see `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-08 — Smart Capture: remove application-level malware scanning (ClamAV)
+
+**Deliberate architecture decision, explicitly requested and confirmed**, not a bug fix. Smart Capture no
+longer scans uploaded files with ClamAV. Upload security instead relies entirely on: file extension
+allowlist, magic-byte/file-signature validation (rejects a renamed file whose content doesn't match its
+claimed type), configurable file-size/page-count limits, monthly per-company processing quota, storage
+outside `wwwroot` under a random internal filename, `SafePath` path-traversal protection, tenant/company
+ownership enforcement on every read, an IDOR-protected download endpoint, tiered retention/deletion, and
+audit logging — plus normal server-level protection (least-privilege app pool, Windows Server endpoint
+protection). This does **not** provide the same guarantee as content-level antivirus scanning; a
+well-formed PDF can still carry an embedded exploit that format/signature validation cannot detect. If a
+deployment's risk profile requires content scanning, add it at the network/endpoint layer (e.g. scan the
+`FilePathConfig:SmartCaptureFolder` directory via Windows Defender/EDR) — EINVWORLD does not provide one.
+
+- **Removed**: `Services/Security/IMalwareScanner.cs`, `Services/Security/ClamAvMalwareScanner.cs`,
+  `SmartCaptureOptions.MalwareScanRequired`/`ClamAvHost`/`ClamAvPort`/`ClamAvTimeoutSeconds`, the
+  `MalwareDetected`/`ScannerRequiredButUnavailable` upload-failure reasons, the
+  `SmartCaptureMalwareDetected`/`SmartCaptureMalwareScanSkipped` audit actions, the `MalwareScanRequired`
+  field from the startup log line, and the ClamAV install/verify steps from `IIS-DEPLOYMENT-GUIDE.md`
+  PART 17d and the EICAR test step from `POST-DEPLOY-CHECKLIST.md`.
+- **Updated**: all three `appsettings*.json` `SmartCapture` sections (no more `MalwareScanRequired`/
+  `ClamAv*` keys), `README.md`, `IIS-DEPLOYMENT-GUIDE.md` PART 17d (now documents the upload-security
+  controls Smart Capture relies on instead, and a renamed-file-rejection verification step in place of
+  the EICAR test), `POST-DEPLOY-CHECKLIST.md`, and `CLAUDE.md` (new "Upload security (Smart Capture — no
+  malware scanning)" note alongside the existing invoice-input-mechanism architecture rule).
+- `dotnet test`: 220/220 pass (unchanged — no test asserted on ClamAV behavior beyond a fake "always
+  clean" double, which is simply no longer needed).
 
 ## 📅 2026-08-08 — Smart Capture: fix Critical "Confirm" failure (`PrefixedID` NOT NULL)
 
