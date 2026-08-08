@@ -10,7 +10,7 @@ bottom; stop and investigate on the first ❌.
 
 ## 0. Startup & configuration (fail-fast gates)
 - [ ] App pool starts; site responds. ✅ no crash on boot.
-- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, SmartCapture=…, MalwareScanRequired=…, AutoMigrate=…`). ✅ flags match what you intend — in particular, `MalwareScanRequired=True` on any server with `SmartCapture=True`.
+- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, SmartCapture=…, AutoMigrate=…`). ✅ flags match what you intend.
 - [ ] No **config-validation** error in the log. ✅ the fail-fast validator passed (connection string, `DataProtection:KeyRingPath` set outside `App\`, LHDN BaseUrl, signing cert if `SigningEnabled`, no localhost URLs in Production).
 - [ ] `GET /health` ✅ returns Healthy (DB reachable + writable folders).
 - [ ] `DataProtection:KeyRingPath` folder exists, is **outside** `App\`, and the app-pool identity has Modify. ✅ existing users stay logged in across a redeploy (keys not rotated).
