@@ -464,10 +464,12 @@ builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentOcrServic
 
 // Smart Capture (Stage 1): persists + asynchronizes AI Document Capture via the existing SyncJobs queue.
 // OFF by default; also requires DocumentCapture + the AI assistant to be enabled (it reuses their services).
+// No application-level malware scanning — see IIS-DEPLOYMENT-GUIDE.md PART 17d for the upload-security
+// controls this relies on instead (format/signature validation, size/page/quota limits, tenant-scoped
+// storage outside wwwroot, safe random filenames, no execution, OS/endpoint-level protection).
 var smartCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.SmartCapture.SmartCaptureOptions.SectionName)
     .Get<EINVWORLD.Services.SmartCapture.SmartCaptureOptions>() ?? new EINVWORLD.Services.SmartCapture.SmartCaptureOptions();
 builder.Services.AddSingleton(smartCaptureOptions);
-builder.Services.AddScoped<EINVWORLD.Services.Security.IMalwareScanner, EINVWORLD.Services.Security.ClamAvMalwareScanner>();
 builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureDocumentService>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureExtractionJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureRetentionJobHandler>();
@@ -584,7 +586,7 @@ EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Envi
 // One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
 // (no secrets — just feature/mode flags).
 Log.Information(
-    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, SmartCapture={SmartCaptureEnabled}, MalwareScanRequired={MalwareScanRequired}, AutoMigrate={AutoMigrate}",
+    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, SmartCapture={SmartCaptureEnabled}, AutoMigrate={AutoMigrate}",
     app.Configuration["AppInfo:Version"] ?? "?",
     app.Environment.EnvironmentName,
     app.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf",
@@ -592,7 +594,6 @@ Log.Information(
     app.Configuration.GetValue("DocumentCapture:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
     app.Configuration.GetValue("SmartCapture:Enabled", false),
-    app.Configuration.GetValue("SmartCapture:MalwareScanRequired", true),
     app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
 
 // Apply migrations and seed data

@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.17.1.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.17.2.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -201,7 +201,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.17.1.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.17.2.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
@@ -615,40 +615,45 @@ runtime; the app log records the OCR error. (OCR can't be exercised by CI — it
 2. The ERP calls `POST https://einvworld.com/api/import/validate` with header `X-Api-Key: <that key>` and
    a JSON array of invoice rows; it returns a per-row validation report.
 
-### 17d — Smart Capture (persisted, async supplier-invoice capture) + ClamAV
+### 17d — Smart Capture (persisted, async supplier-invoice capture)
 
-Smart Capture (`/Invoices/SmartCapture`) is the productionised version of AI Document Capture above — it
-persists the upload, processes it via a background job (the existing durable `SyncJobs` queue, not a new
-service), and requires the same `DocumentCapture`/`AI` settings from 17a. Enable it only after installing
-ClamAV, since it fails **closed** (rejects uploads) if the scanner is required but unreachable.
+Smart Capture (`/Invoices/SmartCapture`, labelled **Create from Document** in navigation) is the
+productionised version of AI Document Capture above — it persists the upload, processes it via a
+background job (the existing durable `SyncJobs` queue, not a new service), and requires the same
+`DocumentCapture`/`AI` settings from 17a.
 
-1. **Install ClamAV for Windows** — download from `https://www.clamav.net/downloads` (FOSS, GPL-2.0).
-   Run the installer, then initialize the virus database and start the `clamd` service:
-   ```
-   freshclam
-   sc start clamd
-   sc config clamd start=auto
-   ```
-   Confirm it's listening: `Test-NetConnection -ComputerName 127.0.0.1 -Port 3310` should report
-   `TcpTestSucceeded : True`. Set up a scheduled task to run `freshclam` daily so virus definitions stay
-   current (the installer's default task usually already does this — verify it's enabled).
-2. **Grant the app-pool a writable folder** for uploaded documents, e.g. `E:\EINVWORLD\Documents\SmartCapture`
+> ⚠️ **No application-level malware scanning.** This is a deliberate trade-off, not an oversight — Smart
+> Capture does not run uploaded files through an antivirus engine. Upload security instead relies entirely
+> on the controls below plus normal server-level protection. If your environment's risk profile requires
+> content scanning, add it at the network/endpoint layer (e.g. a Windows Defender/EDR policy that scans the
+> `FilePathConfig:SmartCaptureFolder` directory) — EINVWORLD does not provide one itself.
+
+**What upload security relies on instead:**
+- File extension allowlist (`SmartCapture:AllowedExtensions` — PDF/JPG/JPEG/PNG only)
+- Magic-byte / file-signature validation (rejects a renamed file whose content doesn't match its claimed type)
+- Configurable file-size and page-count limits (`MaxFileSizeMb`, `MaxPages`)
+- Monthly per-company processing quota (`MonthlyProcessedPageQuota`)
+- Storage outside `wwwroot`, under a random internal filename (never the original name), scoped per company
+- Files are never executed — only read as document data by the OCR/text-extraction pipeline
+- Path-traversal protection (`SafePath`) on every read/write
+- Tenant/company ownership enforced on every document read; the download endpoint is IDOR-protected
+- Tiered retention/deletion policy (expired documents' files are deleted on a schedule)
+- Upload/access activity is audit-logged (never the raw OCR content or extracted PII)
+- Normal server hardening: run the IIS app pool with least privilege, keep Windows Server endpoint
+  protection (e.g. Defender) enabled and up to date
+
+1. **Grant the app-pool a writable folder** for uploaded documents, e.g. `E:\EINVWORLD\Documents\SmartCapture`
    (Part 9, **Modify** rights) — matches `FilePathConfig:SmartCaptureFolder`.
-3. Add env vars (Part 10) and `iisreset`:
+2. Add env vars (Part 10) and `iisreset`:
    | Name | Value |
    |---|---|
    | `SmartCapture__Enabled` | `true` |
-   | `SmartCapture__MalwareScanRequired` | `true` (**do not** set `false` in Staging/Production) |
-   | `SmartCapture__ClamAvHost` | `127.0.0.1` (default; change only if `clamd` runs elsewhere) |
-   | `SmartCapture__ClamAvPort` | `3310` (default) |
    | `FilePathConfig__SmartCaptureFolder` | `E:\EINVWORLD\Documents\SmartCapture` |
 
-✅ **Verify:** upload a document via **Smart Capture** — it should show "Queued" then move to a review
-screen once the background job finishes. Upload the [EICAR test file](https://www.eicar.org/download-anti-malware-testfile/)
-(a harmless string every AV recognizes as a test signature) and confirm it's **rejected** — this proves
-the scanner is actually wired in, not just installed. If every upload is rejected with "Document security
-scanning is temporarily unavailable", `clamd` isn't reachable — check the service is running and the
-port/firewall allow localhost traffic on 3310.
+✅ **Verify:** upload a document via **Create from Document** — it should show "Queued" then move to a
+review screen once the background job finishes. Upload a renamed non-PDF file (e.g. a `.txt` renamed to
+`.pdf`) and confirm it's **rejected** with a signature-mismatch error — this proves the format validation
+is actually enforced, not just the extension check.
 
 ---
 

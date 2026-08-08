@@ -16,7 +16,6 @@ using EINVWORLD.Services.Assistant;
 using EINVWORLD.Services.Audit;
 using EINVWORLD.Services.Background;
 using EINVWORLD.Services.DocumentCapture;
-using EINVWORLD.Services.Security;
 using EINVWORLD.Services.SmartCapture;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -127,15 +126,6 @@ namespace EINVWORLD.Tests.Integration
             Task.FromResult(new AuditVerificationResult(true, 0, null, "n/a"));
     }
 
-    /// <summary>Always reports "clean" — these tests exercise tenant scoping and quota/retention logic,
-    /// not the ClamAV wire protocol (covered separately by not needing a live daemon in CI).</summary>
-    internal sealed class AlwaysCleanMalwareScanner : IMalwareScanner
-    {
-        public bool IsConfigured => true;
-        public Task<MalwareScanResult> ScanAsync(byte[] content, CancellationToken ct) =>
-            Task.FromResult(new MalwareScanResult(MalwareScanOutcome.Clean));
-    }
-
     /// <summary>
     /// Real-SQL-Server tests (via the shared SqlServerFixture — see SqlServerIntegrationTests.cs) for the
     /// tenant-isolation guarantee Smart Capture depends on: SmartCaptureDocumentService must never return a
@@ -155,9 +145,9 @@ namespace EINVWORLD.Tests.Integration
             {
                 SmartCaptureFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "einv-smartcapture-tests")
             });
-            options ??= new SmartCaptureOptions { Enabled = true, MalwareScanRequired = false, MonthlyProcessedPageQuota = 0 };
+            options ??= new SmartCaptureOptions { Enabled = true, MonthlyProcessedPageQuota = 0 };
             return new SmartCaptureDocumentService(
-                ctx, filePathConfig, options, new AlwaysCleanMalwareScanner(), new NullAuditService(),
+                ctx, filePathConfig, options, new NullAuditService(),
                 NullLogger<SmartCaptureDocumentService>.Instance);
         }
 
