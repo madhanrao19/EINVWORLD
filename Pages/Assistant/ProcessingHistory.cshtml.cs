@@ -28,8 +28,6 @@ namespace eInvWorld.Pages.Assistant
             "SmartCaptureUploaded",
             "SmartCaptureExtracted",
             "SmartCaptureExtractionFailed",
-            "SmartCaptureMalwareDetected",
-            "SmartCaptureMalwareScanSkipped",
             "SmartCaptureDraftCreated",
             "SmartCaptureDocumentDownloaded",
         };

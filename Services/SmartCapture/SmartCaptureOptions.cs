@@ -26,23 +26,6 @@ namespace EINVWORLD.Services.SmartCapture
         /// <summary>Only process this many pages of a document (bounds OCR/LLM work).</summary>
         public int MaxPages { get; set; } = 15;
 
-        /// <summary>
-        /// When true, a document is rejected (fail-closed) if the malware scanner is unreachable. When
-        /// false, uploads proceed unscanned with a logged + audited warning — intended only for local
-        /// development environments that don't run ClamAV. Recommended: false in Development, true in
-        /// Staging/Production.
-        /// </summary>
-        public bool MalwareScanRequired { get; set; } = true;
-
-        /// <summary>Hostname of the clamd daemon (ClamAV). Only used when MalwareScanRequired allows an
-        /// actual scan attempt.</summary>
-        public string ClamAvHost { get; set; } = "127.0.0.1";
-
-        public int ClamAvPort { get; set; } = 3310;
-
-        /// <summary>Socket timeout for the clamd INSTREAM scan, in seconds.</summary>
-        public int ClamAvTimeoutSeconds { get; set; } = 30;
-
         // ── Retention (tiered — see SmartCaptureRetentionJobHandler for the rules these back) ──────
 
         /// <summary>Documents that never got past extraction (Failed / ValidationFailed with no draft).</summary>
