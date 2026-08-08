@@ -636,6 +636,143 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal(model.InvoiceNo, finalDocument.RelatedInvoiceHeaderInvoiceNo);
         }
 
+        // ── Duplicate-upload detection (Stage 1.5 reduced first cut) ─────────────────────────────────
+        [Fact]
+        public async Task ExtractionJob_Flags_Duplicate_Content_Within_The_Same_Company_As_A_Warning_Not_A_Block()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Duplicate Test Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+
+            const string sharedHash = "SAME-CONTENT-HASH-FOR-DUP-TEST";
+            var firstUpload = new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = company.PartyInfoId,
+                UploadedByUserId = "dup-test-user",
+                OriginalFileName = "invoice-original.pdf",
+                InternalStorageReference = "irrelevant-1.pdf",
+                ContentType = "application/pdf",
+                FileSize = 4,
+                FileHash = sharedHash,
+                Status = SmartCaptureDocumentStatus.DraftCreated, // already processed earlier
+                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+                UpdatedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+            };
+            var secondUpload = new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = company.PartyInfoId,
+                UploadedByUserId = "dup-test-user",
+                OriginalFileName = "invoice-reupload.pdf",
+                InternalStorageReference = "irrelevant-2.pdf",
+                FileHash = sharedHash, // identical content, re-uploaded
+                ContentType = "application/pdf",
+                FileSize = 4,
+                Status = SmartCaptureDocumentStatus.Queued,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            ctx.SmartCaptureDocuments.AddRange(firstUpload, secondUpload);
+            await ctx.SaveChangesAsync();
+
+            var smartCaptureFolder = Path.Combine(Path.GetTempPath(), "einv-smartcapture-dup-test");
+            var companyFolder = Path.Combine(smartCaptureFolder, company.PartyInfoId.ToString());
+            Directory.CreateDirectory(companyFolder);
+            await File.WriteAllBytesAsync(Path.Combine(companyFolder, "irrelevant-2.pdf"), new byte[] { 0x25, 0x50, 0x44, 0x46 });
+            secondUpload.InternalStorageReference = Path.Combine(company.PartyInfoId.ToString(), "irrelevant-2.pdf");
+            await ctx.SaveChangesAsync();
+
+            var filePathConfig = Options.Create(new FilePathConfig { SmartCaptureFolder = smartCaptureFolder });
+            var handler = new SmartCaptureExtractionJobHandler(
+                ctx, filePathConfig, new SmartCaptureOptions { Enabled = true, MaxPages = 15 },
+                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(),
+                new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
+
+            await handler.ExecuteAsync(new SyncJob
+            {
+                JobType = SyncJobType.SmartCaptureExtraction,
+                PayloadJson = SyncJobPayload.CreateForSmartCaptureDocument(secondUpload.Id),
+            }, CancellationToken.None);
+
+            var reloaded = await ctx.SmartCaptureDocuments.AsNoTracking().FirstAsync(d => d.Id == secondUpload.Id);
+            // A duplicate is a Warning, never an Error — it must not block draft creation (ReviewRequired,
+            // not ValidationFailed), matching the roast's "flag, don't block" decision for this tier.
+            Assert.Equal(SmartCaptureDocumentStatus.ReviewRequired, reloaded.Status);
+
+            var payload = JsonSerializer.Deserialize<SmartCaptureExtractionPayload>(reloaded.NormalizedExtractionJson!);
+            Assert.NotNull(payload);
+            Assert.False(payload!.ReviewHasErrors);
+            Assert.Contains(payload.ReviewItems, i => i.Severity == "Warning" && i.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [Fact]
+        public async Task ExtractionJob_Does_Not_Flag_Identical_Content_Uploaded_By_A_Different_Company()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var companyA = await CreateValidPartyInfoAsync(ctx, "Dup Isolation Co A");
+            var companyB = await CreateValidPartyInfoAsync(ctx, "Dup Isolation Co B");
+            ctx.PartyInfos.AddRange(companyA, companyB);
+            await ctx.SaveChangesAsync();
+
+            const string sharedHash = "SHARED-TEMPLATE-CONTENT-HASH";
+            ctx.SmartCaptureDocuments.Add(new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = companyA.PartyInfoId,
+                UploadedByUserId = "iso-test-user",
+                OriginalFileName = "template.pdf",
+                InternalStorageReference = "irrelevant.pdf",
+                ContentType = "application/pdf",
+                FileSize = 4,
+                FileHash = sharedHash,
+                Status = SmartCaptureDocumentStatus.ReviewRequired,
+                CreatedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+                UpdatedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+            });
+            var companyBUpload = new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = companyB.PartyInfoId,
+                UploadedByUserId = "iso-test-user-2",
+                OriginalFileName = "template.pdf",
+                InternalStorageReference = "irrelevant.pdf",
+                FileHash = sharedHash, // same bytes, but a DIFFERENT company uploaded it
+                ContentType = "application/pdf",
+                FileSize = 4,
+                Status = SmartCaptureDocumentStatus.Queued,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            ctx.SmartCaptureDocuments.Add(companyBUpload);
+            await ctx.SaveChangesAsync();
+
+            var smartCaptureFolder = Path.Combine(Path.GetTempPath(), "einv-smartcapture-dup-isolation-test");
+            var companyFolder = Path.Combine(smartCaptureFolder, companyB.PartyInfoId.ToString());
+            Directory.CreateDirectory(companyFolder);
+            await File.WriteAllBytesAsync(Path.Combine(companyFolder, "irrelevant.pdf"), new byte[] { 0x25, 0x50, 0x44, 0x46 });
+            companyBUpload.InternalStorageReference = Path.Combine(companyB.PartyInfoId.ToString(), "irrelevant.pdf");
+            await ctx.SaveChangesAsync();
+
+            var filePathConfig = Options.Create(new FilePathConfig { SmartCaptureFolder = smartCaptureFolder });
+            var handler = new SmartCaptureExtractionJobHandler(
+                ctx, filePathConfig, new SmartCaptureOptions { Enabled = true, MaxPages = 15 },
+                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(),
+                new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
+
+            await handler.ExecuteAsync(new SyncJob
+            {
+                JobType = SyncJobType.SmartCaptureExtraction,
+                PayloadJson = SyncJobPayload.CreateForSmartCaptureDocument(companyBUpload.Id),
+            }, CancellationToken.None);
+
+            var reloaded = await ctx.SmartCaptureDocuments.AsNoTracking().FirstAsync(d => d.Id == companyBUpload.Id);
+            var payload = JsonSerializer.Deserialize<SmartCaptureExtractionPayload>(reloaded.NormalizedExtractionJson!);
+            Assert.NotNull(payload);
+            Assert.DoesNotContain(payload!.ReviewItems, i => i.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase));
+        }
+
         // ── Confirm-race (SmartCaptureReviewModel.OnPostConfirmAsync) ───────────────────────────────
         [Fact]
         public async Task RowVersion_Conflict_Is_Thrown_When_Two_Requests_Race_To_Confirm_The_Same_Document()

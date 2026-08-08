@@ -50,8 +50,17 @@ else if (doc.Status == SmartCaptureDocumentStatus.DraftCreated)
 }
 else
 {
+    var isCondensed = doc.Status != SmartCaptureDocumentStatus.ValidationFailed && Model.IsFullyClean;
+    if (isCondensed)
+    {
+        <div class="alert alert-success py-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span><i class="ri-checkbox-circle-line align-bottom me-1"></i><strong>All checks passed</strong> — @(Model.Suggestion?.LineItems.Count ?? 0) line item(s) extracted, no issues found.</span>
+            <a class="fw-semibold" data-bs-toggle="collapse" href="#einvScDetails" role="button" aria-expanded="false" aria-controls="einvScDetails">Show extraction details</a>
+        </div>
+    }
     <div class="row g-4">
         <div class="col-lg-6">
+            <div class="@(isCondensed ? "collapse" : "")" id="einvScDetails">
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-checkbox-multiple-line align-bottom me-1"></i>Review Checklist</h5></div>
                 <div class="card-body">
@@ -75,6 +84,7 @@ else
                 <div class="card-body">
                     <pre class="border rounded p-2 bg-light mb-0" style="white-space:pre-wrap; max-height:400px; overflow:auto; font-size: 0.8rem;">@(Model.Suggestion is null ? "(could not parse)" : System.Text.Json.JsonSerializer.Serialize(Model.Suggestion, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }))</pre>
                 </div>
+            </div>
             </div>
         </div>
 
