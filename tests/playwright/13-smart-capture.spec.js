@@ -29,6 +29,9 @@ async function loginVerifyUser(page, email, password) {
 
 test.describe('Smart Capture', () => {
   test('main workflow: upload a valid PDF, it queues and is processed asynchronously', async ({ page }) => {
+    // Global test timeout (playwright.config.js) is 60s; this test's terminal-state wait alone can take
+    // up to AI:TimeoutSeconds (180s) when Ollama isn't reachable — extend so that wait isn't cut short.
+    test.setTimeout(240_000);
     await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('h1.einv-page-title')).toContainText('Smart Capture');
@@ -44,11 +47,14 @@ test.describe('Smart Capture', () => {
     // end-to-end (upload -> SafePath storage -> SyncJobs enqueue -> DurableSyncJobWorker claim ->
     // SmartCaptureExtractionJobHandler -> PdfPig text extraction -> assistant call). This sandbox has no
     // reachable Ollama, so the realistic terminal state is "Failed" (FailureCode=AssistantUnavailable);
-    // the assertion also accepts the success states so it passes wherever Ollama IS available.
+    // the assertion also accepts the success states so it passes wherever Ollama IS available. The wait
+    // window must exceed AI:TimeoutSeconds (180s in appsettings.json) — with no reachable Ollama, the
+    // assistant call itself blocks for the full timeout before SmartCaptureExtractionJobHandler can mark
+    // the job Failed, so a shorter window flakes even though the pipeline is behaving correctly.
     await expect(async () => {
       const bodyText = await page.locator('body').innerText();
       expect(bodyText).toMatch(/Extraction failed|Review Checklist|has blocking errors|Draft.*created/i);
-    }).toPass({ timeout: 60000, intervals: [2000] });
+    }).toPass({ timeout: 200000, intervals: [3000] });
   });
 
   test('rejects a renamed non-PDF (magic-byte check)', async ({ page }) => {
@@ -98,7 +104,7 @@ test.describe('Smart Capture', () => {
     // No session at all: the download handler must not serve the file to an anonymous caller — Playwright's
     // `request` fixture follows redirects by default, so a successful block lands on /login (200 there),
     // not a 200 with the actual file content-type.
-    const anonResp = await request.get(`http://localhost:5210/Invoices/SmartCaptureReview/${documentId}?handler=Download`);
+    const anonResp = await request.get(`/Invoices/SmartCaptureReview/${documentId}?handler=Download`);
     const contentType = anonResp.headers()['content-type'] || '';
     expect(anonResp.url().toLowerCase(), `anonymous download was not redirected to login: ${anonResp.url()} (${contentType})`).toContain('/login');
   });
