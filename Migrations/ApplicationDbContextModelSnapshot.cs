@@ -2441,6 +2441,102 @@ namespace eInvWorld.Migrations
                     b.ToTable("GlobalThemeSettings");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConfirmedDocTypeCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime?>("FileDeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FileHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InternalStorageReference")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NormalizedExtractionJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<decimal?>("OverallConfidence")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedInvoiceHeaderInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("UsedOcr")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserSafeFailureMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId");
+
+                    b.HasIndex("FileDeletedAtUtc");
+
+                    b.HasIndex("FileHash");
+
+                    b.ToTable("SmartCaptureDocuments");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.StateCode", b =>
                 {
                     b.Property<string>("Code")
@@ -3303,6 +3399,17 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("InvoiceTemplate");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplate", b =>

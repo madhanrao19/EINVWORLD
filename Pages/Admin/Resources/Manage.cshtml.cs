@@ -22,7 +22,21 @@ namespace EINVWORLD.Pages.Admin.Resources
         }
 
         public List<ResourceItem> Resources { get; set; } = new();
-        public List<SelectListItem> ResourceTypeCodeOptions { get; set; } = new(); 
+        public List<SelectListItem> ResourceTypeCodeOptions { get; set; } = new();
+
+        /// <summary>SEO score (0-100) per resource Id, computed once per request via ResourceSeoScorer
+        /// so the score chip in Manage.cshtml and the "AI SEO Assistant" site-health average share
+        /// the exact same scoring logic used on the Create/Edit form.</summary>
+        public Dictionary<int, int> SeoScores { get; set; } = new();
+
+        /// <summary>Average SEO score across ALL resources (not just the current filtered/paged view) —
+        /// shown as the "Global Site Health" figure in the AI SEO Assistant sidebar.</summary>
+        public int GlobalSiteHealthPercent { get; set; }
+
+        public int PageSize { get; } = 20;
+        [BindProperty(SupportsGet = true)] public int PageNumber { get; set; } = 1;
+        public int TotalCount { get; set; }
+        public int TotalPages => TotalCount == 0 ? 1 : (int)Math.Ceiling(TotalCount / (double)PageSize);
 
 
         [BindProperty(SupportsGet = true)] public string? FilterStatus { get; set; }
@@ -82,9 +96,30 @@ namespace EINVWORLD.Pages.Admin.Resources
             }
 
 
+            query = query.OrderByDescending(r => r.DatePublished);
+
+            TotalCount = query.Count();
+
+            if (PageNumber < 1) PageNumber = 1;
+            var maxPage = TotalCount == 0 ? 1 : (int)Math.Ceiling(TotalCount / (double)PageSize);
+            if (PageNumber > maxPage) PageNumber = maxPage;
+
             Resources = query
-                .OrderByDescending(r => r.DatePublished)
+                .Skip((PageNumber - 1) * PageSize)
+                .Take(PageSize)
                 .ToList();
+
+            foreach (var r in Resources)
+            {
+                SeoScores[r.Id] = ResourceSeoScorer.Compute(r).Score;
+            }
+
+            // Global Site Health: average score across every resource, not just this page/filter —
+            // computed from a lightweight projection so we don't materialize full rows.
+            var allForScoring = _context.Resources.AsNoTracking().ToList();
+            GlobalSiteHealthPercent = allForScoring.Count == 0
+                ? 0
+                : (int)Math.Round(allForScoring.Average(r => ResourceSeoScorer.Compute(r).Score));
         }
 
 

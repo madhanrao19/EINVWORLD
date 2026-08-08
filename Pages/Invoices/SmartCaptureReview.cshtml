@@ -1,0 +1,126 @@
+@page "{id:int}"
+@using eInvWorld.Models.SmartCapture
+@model eInvWorld.Pages.Invoices.SmartCaptureReviewModel
+@{
+    ViewData["Title"] = "Review Captured Document";
+    var doc = Model.Document!;
+    var stillProcessing = doc.Status is SmartCaptureDocumentStatus.Uploaded or SmartCaptureDocumentStatus.Queued or SmartCaptureDocumentStatus.Processing;
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Review: @doc.OriginalFileName</h1>
+                <p class="text-muted mb-0">Uploaded @doc.CreatedAtUtc.ToLocalTime().ToString("g")</p>
+            </div>
+            <a class="btn btn-outline-secondary btn-sm" asp-page="SmartCapture"><i class="ri-arrow-left-line align-bottom me-1"></i>Back to Smart Capture</a>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorText))
+{
+    <div class="alert alert-danger">@Model.ErrorText</div>
+}
+
+@if (stillProcessing)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="mb-0 text-muted">Processing this document in the background — this page refreshes automatically.</p>
+        </div>
+    </div>
+    <script>setTimeout(function () { window.location.reload(); }, 4000);</script>
+}
+else if (doc.Status == SmartCaptureDocumentStatus.Failed)
+{
+    <div class="alert alert-danger">
+        <strong>Extraction failed.</strong> @doc.UserSafeFailureMessage
+    </div>
+    <a class="btn btn-outline-primary" asp-page="SmartCaptureReview" asp-page-handler="Download" asp-route-id="@doc.Id">Download original file</a>
+}
+else if (doc.Status == SmartCaptureDocumentStatus.DraftCreated)
+{
+    <div class="alert alert-success">
+        A draft invoice (<strong>@doc.RelatedInvoiceHeaderInvoiceNo</strong>) was created from this document.
+        <a asp-page="/Invoices/InvoiceEdit" asp-route-id="@doc.RelatedInvoiceHeaderInvoiceNo">Open it in the invoice editor</a>.
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-checkbox-multiple-line align-bottom me-1"></i>Review Checklist</h5></div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                        @foreach (var item in Model.ReviewItems)
+                        {
+                            var (badgeClass, icon) = item.Severity switch
+                            {
+                                "Error" => ("einv-badge-danger", "ri-close-circle-line"),
+                                "Warning" => ("einv-badge-warning", "ri-alert-line"),
+                                _ => ("einv-badge-success", "ri-checkbox-circle-line")
+                            };
+                            <li><span class="einv-badge @badgeClass"><i class="@icon"></i>@item.Message</span></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-file-list-3-line align-bottom me-1"></i>Extracted Suggestion</h5></div>
+                <div class="card-body">
+                    <pre class="border rounded p-2 bg-light mb-0" style="white-space:pre-wrap; max-height:400px; overflow:auto; font-size: 0.8rem;">@(Model.Suggestion is null ? "(could not parse)" : System.Text.Json.JsonSerializer.Serialize(Model.Suggestion, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }))</pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark"><i class="ri-shield-check-line align-bottom me-1"></i>Confirm &amp; Create Draft</h5></div>
+                <div class="card-body">
+                    @if (doc.Status == SmartCaptureDocumentStatus.ValidationFailed)
+                    {
+                        <div class="alert alert-warning py-2">This document has blocking errors above — a draft cannot be created until they're resolved. Re-upload a corrected file if needed.</div>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page-handler="Confirm" asp-route-id="@doc.Id">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">LHDN Document Type <span class="text-danger">*</span></label>
+                                <select name="confirmedDocTypeCode" class="form-select" required>
+                                    <option value="">— Confirm the document type —</option>
+                                    @foreach (var code in Model.ValidDocumentTypes)
+                                    {
+                                        var selected = Model.Suggestion?.DocumentType?.Trim() == code;
+                                        <option value="@code" selected="@selected">@code @(Model.Suggestion?.DocumentType?.Trim() == code ? "(suggested: " + Model.Suggestion.DocumentTypeName + ")" : "")</option>
+                                    }
+                                </select>
+                                <small class="text-muted">This is never assumed from the OCR result — you must confirm it explicitly.</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Buyer <span class="text-danger">*</span></label>
+                                <select name="selectedBuyerPartyInfoId" class="form-select" required>
+                                    <option value="">— Select a registered buyer —</option>
+                                    @foreach (var b in Model.KnownBuyers)
+                                    {
+                                        var suggestedMatch = Model.Suggestion?.BuyerTin?.Trim() == b.Tin;
+                                        <option value="@b.PartyInfoId" selected="@suggestedMatch">@b.Name (@b.Tin) @(suggestedMatch ? "— suggested match" : "")</option>
+                                    }
+                                </select>
+                                <small class="text-muted">Only this company's existing registered buyers are shown — a new buyer is never created automatically.</small>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary"><i class="ri-file-add-line align-bottom me-1"></i>Create Draft &amp; Open in Editor</button>
+                            </div>
+                            <p class="text-muted mt-2 mb-0"><small>The draft opens in the normal invoice editor, where you can correct any field before submitting to MyInvois.</small></p>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -14,6 +14,10 @@ namespace EINVWORLD.Services.DocumentCapture
         /// which is a later phase.
         /// </summary>
         string ExtractPdfText(byte[] pdfBytes, int maxPages);
+
+        /// <summary>Returns the PDF's page count, or null if it can't be read (corrupt/encrypted). Used by
+        /// Smart Capture for quota accounting — cheap (header parse only, no text extraction).</summary>
+        int? TryGetPdfPageCount(byte[] pdfBytes);
     }
 
     /// <summary>
@@ -48,6 +52,21 @@ namespace EINVWORLD.Services.DocumentCapture
             {
                 _log.LogWarning(ex, "Failed to extract text from uploaded PDF.");
                 return string.Empty;
+            }
+        }
+
+        public int? TryGetPdfPageCount(byte[] pdfBytes)
+        {
+            if (pdfBytes is null || pdfBytes.Length == 0) return null;
+            try
+            {
+                using var doc = PdfDocument.Open(pdfBytes);
+                return doc.NumberOfPages;
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Failed to read page count from uploaded PDF.");
+                return null;
             }
         }
     }

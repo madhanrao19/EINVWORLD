@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ImageMagick;
 using EINVWORLD.Data;
@@ -14,6 +15,7 @@ using System.Diagnostics;
 
 namespace EINVWORLD.Pages.Admin.Resources
 {
+    [Authorize(Roles = "Admin")]
     public class CreateModel : PageModel
     {
         private readonly WebsiteDbContext _context;

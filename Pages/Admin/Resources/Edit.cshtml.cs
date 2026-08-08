@@ -63,6 +63,20 @@ namespace EINVWORLD.Pages.Admin.Resources
             existing.Status = Resource.Status;
             existing.DatePublished = Resource.DatePublished == default ? DateTime.Now : Resource.DatePublished;
 
+            // SEO / GEO fields
+            existing.MetaTitle = Resource.MetaTitle;
+            existing.MetaDescription = Resource.MetaDescription;
+            existing.FocusKeyword = Resource.FocusKeyword;
+            existing.CanonicalUrl = Resource.CanonicalUrl;
+            existing.OgText = Resource.OgText;
+            existing.ImageAlt = Resource.ImageAlt;
+            existing.Author = Resource.Author;
+            existing.Tldr = Resource.Tldr;
+            existing.SchemaType = Resource.SchemaType;
+            // FAQ builder inputs remain in the DOM (only visually hidden) when SchemaType != FAQ, so
+            // any previously-entered Q&As are preserved either way — see design note in the handoff.
+            existing.FaqItems = Resource.FaqItems;
+
             if (ImageFile != null)
             {
                 DeleteFile(existing.ImageUrl);

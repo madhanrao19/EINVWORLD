@@ -1,6 +1,7 @@
 ﻿@page
 @model EINVWORLD.Pages.Admin.Resources.ManageModel
 @using EINVWORLD.Models.Public
+@using EINVWORLD.Helpers
 @{
     ViewData["Title"] = "Manage Resources | Admin";
 }
@@ -79,8 +80,8 @@
     </div>
 
 
-    <div class="col-xxl-12">
-        <div class="card border-0 shadow-sm">
+    <div class="col-12 d-flex flex-column flex-xl-row gap-3 align-items-start">
+        <div class="card border-0 shadow-sm flex-grow-1 w-100">
             <div class="card-header">
                 <form method="get">
                     <div class="row g-2 align-items-end">
@@ -136,18 +137,18 @@
                 </form>
 
                 <div class="text-muted small mb-2">
-                    Showing <strong>@Model.Resources.Count</strong> result(s)
+                    Showing <strong>@Model.Resources.Count</strong> of <strong>@Model.TotalCount</strong> result(s)
                 </div>
             </div>
 
             <div class="card-body">
                 <div class="table-responsive mb-3">
-                    <table class="table align-middle mb-0">
+                    <table class="table align-middle mb-0 einv-mobile-stack">
                         <thead class="einv-table-head">
                             <tr>
                                 <th>ID</th>
                                 <th>Image</th>
-                                <th>Title</th>
+                                <th>Title &amp; SEO</th>
                                 <th>Type</th>
                                 <th>Date</th>
                                 <th>Status</th>
@@ -159,9 +160,11 @@
                             {
                                 foreach (var item in Model.Resources)
                                 {
+                                    var seoScore = Model.SeoScores.TryGetValue(item.Id, out var s) ? s : 0;
+                                    var seoTier = ResourceSeoScorer.Tier(seoScore);
                                     <tr>
-                                        <td>@item.Id</td>
-                                        <td>
+                                        <td data-label="ID"><span class="font-monospace">@item.Id</span></td>
+                                        <td data-label="Image">
                                             @if (!string.IsNullOrEmpty(item.ImageUrl))
                                             {
                                                 <a href="@item.ImageUrl" target="_blank" title="Click to view full image">
@@ -169,10 +172,26 @@
                                                 </a>
                                             }
                                         </td>
-                                        <td>@item.Title</td>
-                                        <td class="text-capitalize">@item.ResourceType?.Name</td>
-                                        <td>@item.DatePublished.ToString("dd MMM yyyy")</td>
-                                        <td>
+                                        <td data-label="Title &amp; SEO">
+                                            <div class="fw-semibold" style="max-width:320px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">@item.Title</div>
+                                            <div class="mt-1 d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="einv-badge einv-badge-@(seoTier == "success" ? "success" : seoTier == "warning" ? "warning" : "danger")" title="SEO readiness score">
+                                                    <i class="ri-@(seoTier == "success" ? "line-chart-line" : seoTier == "warning" ? "error-warning-line" : "close-circle-line")"></i>
+                                                    SEO: @seoScore/100
+                                                </span>
+                                                @if (string.IsNullOrWhiteSpace(item.Slug))
+                                                {
+                                                    <span class="einv-badge einv-badge-neutral">Missing Slug</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small font-monospace">/@item.Slug</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td data-label="Type" class="text-capitalize">@item.ResourceType?.Name</td>
+                                        <td data-label="Date">@item.DatePublished.ToString("dd MMM yyyy")</td>
+                                        <td data-label="Status">
                                             @switch (item.Status)
                                             {
                                                 case ResourceStatus.Published:
@@ -186,7 +205,7 @@
                                                     break;
                                             }
                                         </td>
-                                        <td>
+                                        <td data-label="Actions" class="col-action">
                                             <a href="/Admin/Resources/Edit?id=@item.Id" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
                                             @if (!string.IsNullOrWhiteSpace(item.Slug))
                                             {
@@ -208,11 +227,65 @@
                         </tbody>
                     </table>
                 </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Resources pagination" class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="text-muted small">
+                            Showing @((Model.PageNumber - 1) * Model.PageSize + 1) to @(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalCount)) of @Model.TotalCount results
+                        </div>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Page("Manage", new { PageNumber = Model.PageNumber - 1, FilterTitle = Model.FilterTitle, FilterType = Model.FilterType, FilterStatus = Model.FilterStatus, FilterDateFrom = Model.FilterDateFrom?.ToString("yyyy-MM-dd"), FilterDateTo = Model.FilterDateTo?.ToString("yyyy-MM-dd") })">Previous</a>
+                            </li>
+                            @for (var p = 1; p <= Model.TotalPages; p++)
+                            {
+                                <li class="page-item @(p == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" href="@Url.Page("Manage", new { PageNumber = p, FilterTitle = Model.FilterTitle, FilterType = Model.FilterType, FilterStatus = Model.FilterStatus, FilterDateFrom = Model.FilterDateFrom?.ToString("yyyy-MM-dd"), FilterDateTo = Model.FilterDateTo?.ToString("yyyy-MM-dd") })">@p</a>
+                                </li>
+                            }
+                            <li class="page-item @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Page("Manage", new { PageNumber = Model.PageNumber + 1, FilterTitle = Model.FilterTitle, FilterType = Model.FilterType, FilterStatus = Model.FilterStatus, FilterDateFrom = Model.FilterDateFrom?.ToString("yyyy-MM-dd"), FilterDateTo = Model.FilterDateTo?.ToString("yyyy-MM-dd") })">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm flex-shrink-0 w-100" style="max-width: 300px;">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="ri-magic-line text-primary"></i>
+                <span class="fw-semibold">AI SEO Assistant</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-muted">Global Site Health</span>
+                        <span class="fw-semibold">@Model.GlobalSiteHealthPercent%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-@(ResourceSeoScorer.Tier(Model.GlobalSiteHealthPercent))" role="progressbar"
+                             style="width: @(Model.GlobalSiteHealthPercent)%;" aria-valuenow="@Model.GlobalSiteHealthPercent" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+
+                <div class="border rounded p-2 mb-2 small">
+                    <div class="fw-semibold mb-1"><i class="ri-lightbulb-line me-1"></i>Suggestion</div>
+                    <div class="text-muted">Articles missing a Focus Keyword or Meta Description score lower with AI answer engines. Fill these in on the Create/Edit form's SEO panel.</div>
+                </div>
+
+                <div class="border rounded p-2 mb-3 small">
+                    <div class="fw-semibold mb-1"><i class="ri-search-eye-line me-1"></i>Keyword Opportunity</div>
+                    <div class="text-muted">Consider covering "e-invoice compliance Malaysia" — a high-value topic with limited current coverage.</div>
+                </div>
+
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" disabled title="Full report not yet available">
+                    Full SEO Report
+                </button>
             </div>
         </div>
     </div>
-
-    
 
 </div>
 
