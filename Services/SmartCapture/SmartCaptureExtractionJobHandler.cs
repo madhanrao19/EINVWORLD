@@ -138,6 +138,15 @@ namespace EINVWORLD.Services.SmartCapture
 
             var review = _assistant.ReviewSuggestion(result.Content, knownBuyers.Select(b => b.Tin).ToList());
 
+            // Flag (never block) an exact-content re-upload within the same company — a Warning, not an
+            // Error, so it lands in the "needs a look" tier rather than SmartCaptureDocumentStatus
+            // .ValidationFailed. Business-level duplicate detection (same buyer/amount/date, different
+            // file) is a larger, riskier heuristic deferred to Stage 2 alongside supplier templates.
+            if (await IsDuplicateUploadAsync(document, ct))
+            {
+                review.Warn("Possible duplicate — this file's content matches a document already captured for this company. Check it isn't a re-upload of the same invoice.");
+            }
+
             document.NormalizedExtractionJson = JsonSerializer.Serialize(new SmartCaptureExtractionPayload
             {
                 SuggestionJson = result.Content,
@@ -175,6 +184,18 @@ namespace EINVWORLD.Services.SmartCapture
 
             _logger.LogWarning("Smart Capture extraction failed for document {DocumentId}: {FailureCode}", document.Id, failureCode);
             return $"Document {document.Id} failed: {failureCode}";
+        }
+
+        /// <summary>Exact-content duplicate check, scoped to the uploading company (tenant-isolated the
+        /// same way every other query on this table is) — a different company uploading byte-identical
+        /// content (e.g. a shared template) is not flagged.</summary>
+        private async Task<bool> IsDuplicateUploadAsync(SmartCaptureDocument document, CancellationToken ct)
+        {
+            if (string.IsNullOrEmpty(document.FileHash)) return false;
+            return await _context.SmartCaptureDocuments.AnyAsync(d =>
+                d.Id != document.Id &&
+                d.CompanyPartyInfoId == document.CompanyPartyInfoId &&
+                d.FileHash == document.FileHash, ct);
         }
 
         /// <summary>Mirrors CreateFromFileModel.LoadKnownBuyersAsync but scoped directly by company id — a
