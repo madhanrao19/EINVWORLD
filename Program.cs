@@ -271,6 +271,16 @@ builder.Services.AddHttpClient(EINVWORLD.Services.Background.CodeTableSyncWorker
     c.DefaultRequestHeaders.UserAgent.ParseAdd("EINVWORLD-CodeTableSync/1.0");
 });
 builder.Services.AddHostedService<EINVWORLD.Services.Background.CodeTableSyncWorker>();
+// Keeps Tesseract OCR language files (tessdata/<lang>.traineddata) current from the official
+// tesseract-ocr/tessdata GitHub repo, replacing the previous fully-manual copy-in process (still
+// documented as the fallback for air-gapped servers). Inert unless DocumentCapture:OcrEnabled=true;
+// independently switchable off via TessdataSync:Enabled for restricted-outbound-internet deployments.
+builder.Services.AddHttpClient(EINVWORLD.Services.Background.TessdataSyncWorker.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromMinutes(5); // trained-data files can be several MB
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("EINVWORLD-TessdataSync/1.0");
+});
+builder.Services.AddHostedService<EINVWORLD.Services.Background.TessdataSyncWorker>();
 builder.Services.AddSingleton<QRCodeGeneratorService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
