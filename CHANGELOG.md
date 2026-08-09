@@ -1,6 +1,17 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.20.1`** (`AppInfo:Version` in `appsettings.json`). v1.20.1 is a **patch**:
+> **Current version: `v1.20.2`** (`AppInfo:Version` in `appsettings.json`). v1.20.2 is a **patch**:
+> fixes a **Critical** IDOR/tenant-isolation gap on `Pages/Invoices/InvoiceEdit.cshtml` — the page every
+> Smart Capture confirmation hands its new draft off to had no ownership check at all on loading (GET) or
+> saving (POST) an invoice by id; `SupplierBasePage`'s own authorization never actually engaged for this
+> page (it parses `id` as a query-string int `PartyInfoId`, but this page's `id` is a route-value
+> `InvoiceNo` string, so the parse always silently fails and falls back to checking the current user's
+> *own* company instead of the invoice actually requested). Fixed by reusing the same
+> `CanAccessInvoiceAsync` helper already guarding this page's own Submit handler and every other
+> invoice-by-id endpoint in the app. Also removed **AI Document Capture** from the sidebar/admin nav menus
+> — fully superseded by Smart Capture ("Create from Document") across all 5 shipped stages; the route
+> stays alive as a documented rollback path (`CLAUDE.md`), only the nav links were removed. No schema
+> change. See the dated entry below for details. v1.20.1 was a **patch**:
 > fixes a race condition found during a full Smart Capture re-verification pass —
 > `SmartCaptureAutoSubmitEligibilityService.CancelAsync` could, under a real timing race with the durable
 > worker, blindly overwrite an already-`Completed` `SyncJob` row back to `Cancelled`, showing "Cancelled"
@@ -37,6 +48,60 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Critical IDOR fix on InvoiceEdit + AI Document Capture removed from nav
+
+Requested check: confirm Smart Capture's "Open it in the invoice editor" link points at the current,
+actively-maintained Create/Edit Invoice form. It does — `InvoiceEdit.cshtml` and `CreateInvoice.cshtml`
+were restyled together in the same commit (#162) and both use the Tabler layout; no routing bug. While
+verifying that, inspection of the target page turned up a real, pre-existing, **Critical** authorization
+gap unrelated to Smart Capture itself but reachable by every draft it creates:
+
+- `InvoiceEdit.cshtml` uses `@page "{id?}"` — `id` is a route value (`/Invoices/InvoiceEdit/INV-000123`),
+  not a query-string value, and it's an `InvoiceNo` string, not a `PartyInfoId` int.
+- `InvoiceEditModel : SupplierBasePage`. `SupplierBasePage.OnPageHandlerExecutionAsync` — the *only*
+  cross-cutting authorization on this page — tries `int.TryParse(Request.Query["id"], ...)` to check the
+  requested company's permission. Because this page's `id` is neither a query value nor an int, that
+  parse always silently fails, and the check falls back to verifying the *current user's own* primary/any
+  company — completely independent of which invoice was actually requested.
+- `OnGetAsync` (load for edit) and `OnPostAsync` (save) then loaded/wrote the invoice by `id` with **no
+  further ownership check at all**. `OnPostSubmitDocumentsAsync` (the LHDN-submit handler on the same
+  page) already had the correct guard — `EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync`, the
+  same helper used consistently by `InvoiceDetails2`, `CreateInvoice`/`CreateCN`/`CreateSBCN`/`CreateSBI`'s
+  submit handlers, and `InvoiceLists` — making the gap on load/save conspicuous by omission.
+
+**Net effect: any authenticated Supplier-role user with edit rights on any one company could view AND
+overwrite any other company's draft invoice** by navigating directly to
+`/Invoices/InvoiceEdit/{someOtherCompanysInvoiceNo}` — a cross-tenant financial-data read+write
+vulnerability on the exact page every Smart Capture confirmation redirects to.
+
+**Fixed** by adding the same `CanAccessInvoiceAsync` guard already used everywhere else in the app:
+- `OnGetAsync` — applied unconditionally right after the invoice is loaded (this handler already 404s if
+  `id` is missing or the invoice doesn't exist, so there's no dual-purpose "new invoice" case to special-case).
+- `OnPostAsync` — applied **only** when `id` is non-empty *and* an invoice with that number already
+  exists in the database. This handler is also used to save a brand-new invoice for the first time (a
+  pre-generated `InvoiceNo` that legitimately doesn't exist yet), and `CanAccessInvoiceAsync` correctly
+  returns `false` for a non-existent invoice — applying it unconditionally would have broken that
+  legitimate flow. AJAX saves get a 403 JSON response (`AjaxFail`, matching the page's existing
+  convention); non-AJAX gets a standard `Forbid()`.
+- Deliberately reused `CanAccessInvoiceAsync`'s existing supplier-OR-customer-OR-public-customer
+  semantics rather than tightening to supplier-only: self-billed invoice types (`11`-`14`) treat the
+  *customer* as the effective issuer/editor (mirrors `CreateInvoice.cshtml.cs`'s own TIN-selection logic
+  for who may submit them), so a supplier-only check would have incorrectly broken self-billed editing.
+  Admin bypass is preserved (the helper short-circuits `true` for Admins, as it already does everywhere
+  else it's used).
+
+**Also removed "AI Document Capture" from the sidebar and admin nav menus** (`Pages/Shared/_Sidebar.cshtml`
+×2, `_AdminNavigation.cshtml`, `_SupplierNavigation.cshtml`) — functionally superseded by Smart Capture
+("Create from Document") across all 5 shipped stages, sharing the same extraction/AI/validation services
+and the same `InvoiceDraftService.SaveDraft` path. Matches the convergence plan already documented in
+`CLAUDE.md` § "Invoice-input mechanisms": the `/Invoices/CreateFromFile` route and its page/services are
+**not** deleted — kept alive as the documented rollback path — only the nav links were removed.
+
+No schema change. `dotnet test`: 236/236 pass against real SQL Server LocalDB, including 3 new tests
+against `CanAccessInvoiceAsync` directly (cross-tenant denial, same-tenant + self-billed-customer
+allowance, and confirming it correctly returns `false` for a not-yet-existing `InvoiceNo` — the exact
+precondition `OnPostAsync`'s guard relies on).
 
 ## 📅 2026-08-09 — Smart Capture full re-verification pass: 2 real defects found and fixed
 
