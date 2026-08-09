@@ -128,7 +128,7 @@ namespace eInvWorld.Pages.Invoices
             // Ground the suggestion on the user's real customers, exactly like the AI Assistant does.
             var knownBuyers = await LoadKnownBuyersAsync(ct);
 
-            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, ct);
+            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, ct: ct);
             if (!result.Ok)
             {
                 ErrorText = result.Error;

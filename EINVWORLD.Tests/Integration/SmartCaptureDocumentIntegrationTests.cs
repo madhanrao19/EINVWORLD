@@ -81,6 +81,12 @@ namespace EINVWORLD.Tests.Integration
     {
         public bool IsEnabled => true;
         public string BuyerTin { get; set; } = string.Empty;
+        public string? TaxType { get; set; }
+        public decimal? TaxRatePercent { get; set; }
+
+        /// <summary>Captures whatever hints were passed on the most recent call, so a test can assert the
+        /// job handler actually looked up and forwarded the company's learned hints.</summary>
+        public CompanyCaptureHints? LastCompanyHints { get; private set; }
 
         public Task<AssistantResult> AskAsync(string question, CancellationToken ct = default) =>
             throw new NotSupportedException();
@@ -90,8 +96,12 @@ namespace EINVWORLD.Tests.Integration
             throw new NotSupportedException();
 
         public Task<AssistantResult> SuggestInvoiceAsync(
-            string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default)
+            string description,
+            IReadOnlyList<KnownBuyer>? knownBuyers = null,
+            CompanyCaptureHints? companyHints = null,
+            CancellationToken ct = default)
         {
+            LastCompanyHints = companyHints;
             var suggestion = new InvoiceSuggestion
             {
                 DocumentType = "01",
@@ -103,8 +113,8 @@ namespace EINVWORLD.Tests.Integration
                 {
                     new() { Description = "Consulting services (test seed)", Quantity = 1, UnitPrice = 250.00m, ClassificationCode = "022" },
                 },
-                TaxType = null,
-                TaxRatePercent = null,
+                TaxType = TaxType,
+                TaxRatePercent = TaxRatePercent,
                 Notes = null,
             };
             return Task.FromResult(AssistantResult.Success(JsonSerializer.Serialize(suggestion)));
@@ -481,6 +491,7 @@ namespace EINVWORLD.Tests.Integration
                 ctx, filePathConfig, options,
                 textExtractor: null!, ocr: null!, assistant: null!, // never touched if the idempotency
                                                                      // short-circuit works — a NullReferenceException here would mean it re-ran extraction
+                hints: new SmartCaptureCompanyHintService(ctx),
                 audit: new NullAuditService(), NullLogger<EINVWORLD.Services.SmartCapture.SmartCaptureExtractionJobHandler>.Instance);
 
             var job = new SyncJob
@@ -556,7 +567,7 @@ namespace EINVWORLD.Tests.Integration
             var fakeAssistant = new FakeSuccessfulAssistantService { BuyerTin = buyer.TIN! };
             var handler = new SmartCaptureExtractionJobHandler(
                 ctx, filePathConfig, extractionOptions,
-                new FakeTextExtractor(), new UnusedOcrService(), fakeAssistant,
+                new FakeTextExtractor(), new UnusedOcrService(), fakeAssistant, new SmartCaptureCompanyHintService(ctx),
                 new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
 
             var job = new SyncJob
@@ -687,7 +698,7 @@ namespace EINVWORLD.Tests.Integration
             var filePathConfig = Options.Create(new FilePathConfig { SmartCaptureFolder = smartCaptureFolder });
             var handler = new SmartCaptureExtractionJobHandler(
                 ctx, filePathConfig, new SmartCaptureOptions { Enabled = true, MaxPages = 15 },
-                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(),
+                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(), new SmartCaptureCompanyHintService(ctx),
                 new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
 
             await handler.ExecuteAsync(new SyncJob
@@ -758,7 +769,7 @@ namespace EINVWORLD.Tests.Integration
             var filePathConfig = Options.Create(new FilePathConfig { SmartCaptureFolder = smartCaptureFolder });
             var handler = new SmartCaptureExtractionJobHandler(
                 ctx, filePathConfig, new SmartCaptureOptions { Enabled = true, MaxPages = 15 },
-                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(),
+                new FakeTextExtractor(), new UnusedOcrService(), new FakeSuccessfulAssistantService(), new SmartCaptureCompanyHintService(ctx),
                 new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
 
             await handler.ExecuteAsync(new SyncJob
@@ -822,6 +833,115 @@ namespace EINVWORLD.Tests.Integration
 
             var final = await seedCtx.SmartCaptureDocuments.AsNoTracking().SingleAsync(d => d.Id == document.Id);
             Assert.Equal("INV-WINNER", final.RelatedInvoiceHeaderInvoiceNo); // loser never overwrote it
+        }
+
+        // ── Stage 2 (reduced first cut): learned per-company capture hints ─────────────────────────
+
+        [Fact]
+        public async Task CompanyHintService_Converges_On_The_Value_Confirmed_Most_Often()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Hint Learning Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+
+            var hints = new SmartCaptureCompanyHintService(ctx);
+
+            // Below the surfacing threshold: nothing should come back yet even though "01"/"MYR" already lead.
+            await hints.RecordConfirmedAsync(company.PartyInfoId, "01", "MYR", "SST", 6m, CancellationToken.None);
+            await hints.RecordConfirmedAsync(company.PartyInfoId, "01", "MYR", "SST", 6m, CancellationToken.None);
+            Assert.Null(await hints.GetAsync(company.PartyInfoId, CancellationToken.None));
+
+            // A third confirmation crosses the MinSamplesToSurface threshold.
+            await hints.RecordConfirmedAsync(company.PartyInfoId, "01", "MYR", "SST", 6m, CancellationToken.None);
+            var surfaced = await hints.GetAsync(company.PartyInfoId, CancellationToken.None);
+            Assert.NotNull(surfaced);
+            Assert.Equal("01", surfaced!.DocTypeCode);
+            Assert.Equal("MYR", surfaced.Currency);
+            Assert.Equal("SST", surfaced.TaxType);
+            Assert.Equal(6m, surfaced.TaxRatePercent);
+
+            // One outlier confirmation must not flip the majority (Boyer-Moore: decrements, doesn't replace).
+            await hints.RecordConfirmedAsync(company.PartyInfoId, "02", "USD", "SST", 0m, CancellationToken.None);
+            var afterOutlier = await hints.GetAsync(company.PartyInfoId, CancellationToken.None);
+            Assert.Equal("01", afterOutlier!.DocTypeCode);
+            Assert.Equal("MYR", afterOutlier.Currency);
+        }
+
+        [Fact]
+        public async Task CompanyHintService_Is_Tenant_Isolated()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var companyA = await CreateValidPartyInfoAsync(ctx, "Hint Isolation Co A");
+            var companyB = await CreateValidPartyInfoAsync(ctx, "Hint Isolation Co B");
+            ctx.PartyInfos.AddRange(companyA, companyB);
+            await ctx.SaveChangesAsync();
+
+            var hints = new SmartCaptureCompanyHintService(ctx);
+            for (var i = 0; i < 3; i++)
+                await hints.RecordConfirmedAsync(companyA.PartyInfoId, "01", "MYR", "SST", 6m, CancellationToken.None);
+
+            Assert.NotNull(await hints.GetAsync(companyA.PartyInfoId, CancellationToken.None));
+            Assert.Null(await hints.GetAsync(companyB.PartyInfoId, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task ExtractionJob_Forwards_The_Companys_Learned_Hints_To_The_Assistant()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Hint Forwarding Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+
+            var hintService = new SmartCaptureCompanyHintService(ctx);
+            for (var i = 0; i < 3; i++)
+                await hintService.RecordConfirmedAsync(company.PartyInfoId, "01", "MYR", "SST", 6m, CancellationToken.None);
+
+            var smartCaptureFolder = Path.Combine(Path.GetTempPath(), "einv-smartcapture-hint-forward-test");
+            var companyFolder = Path.Combine(smartCaptureFolder, company.PartyInfoId.ToString());
+            Directory.CreateDirectory(companyFolder);
+            var storedFileName = $"{Guid.NewGuid():N}.pdf";
+            await File.WriteAllBytesAsync(Path.Combine(companyFolder, storedFileName), new byte[] { 0x25, 0x50, 0x44, 0x46 });
+
+            var document = new SmartCaptureDocument
+            {
+                CompanyPartyInfoId = company.PartyInfoId,
+                UploadedByUserId = "hint-forward-test-user",
+                OriginalFileName = "invoice.pdf",
+                InternalStorageReference = Path.Combine(company.PartyInfoId.ToString(), storedFileName),
+                ContentType = "application/pdf",
+                FileSize = 4,
+                Status = SmartCaptureDocumentStatus.Queued,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+            };
+            ctx.SmartCaptureDocuments.Add(document);
+            await ctx.SaveChangesAsync();
+
+            var filePathConfig = Options.Create(new FilePathConfig { SmartCaptureFolder = smartCaptureFolder });
+            var fakeAssistant = new FakeSuccessfulAssistantService();
+            var handler = new SmartCaptureExtractionJobHandler(
+                ctx, filePathConfig, new SmartCaptureOptions { Enabled = true, MaxPages = 15 },
+                new FakeTextExtractor(), new UnusedOcrService(), fakeAssistant, hintService,
+                new NullAuditService(), NullLogger<SmartCaptureExtractionJobHandler>.Instance);
+
+            await handler.ExecuteAsync(new SyncJob
+            {
+                JobType = SyncJobType.SmartCaptureExtraction,
+                PayloadJson = SyncJobPayload.CreateForSmartCaptureDocument(document.Id),
+            }, CancellationToken.None);
+
+            Assert.NotNull(fakeAssistant.LastCompanyHints);
+            Assert.Equal("01", fakeAssistant.LastCompanyHints!.DocTypeCode);
+            Assert.Equal("MYR", fakeAssistant.LastCompanyHints.Currency);
+            Assert.Equal("SST", fakeAssistant.LastCompanyHints.TaxType);
+            Assert.Equal(6m, fakeAssistant.LastCompanyHints.TaxRatePercent);
         }
     }
 }

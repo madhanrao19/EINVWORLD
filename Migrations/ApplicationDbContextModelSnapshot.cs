@@ -2441,6 +2441,63 @@ namespace eInvWorld.Migrations
                     b.ToTable("GlobalThemeSettings");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CurrencyVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DocTypeVotes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MostCommonCurrency")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("MostCommonDocTypeCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("MostCommonTaxRatePercent")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("MostCommonTaxType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxRateVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxTypeVotes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId")
+                        .IsUnique();
+
+                    b.ToTable("SmartCaptureCompanyHints");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -3399,6 +3456,17 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("InvoiceTemplate");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>

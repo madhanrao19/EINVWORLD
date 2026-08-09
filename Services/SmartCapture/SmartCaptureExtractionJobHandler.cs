@@ -35,6 +35,7 @@ namespace EINVWORLD.Services.SmartCapture
         private readonly IDocumentTextExtractor _textExtractor;
         private readonly IDocumentOcrService _ocr;
         private readonly IEInvoiceAssistantService _assistant;
+        private readonly SmartCaptureCompanyHintService _hints;
         private readonly IAuditService _audit;
         private readonly ILogger<SmartCaptureExtractionJobHandler> _logger;
 
@@ -47,6 +48,7 @@ namespace EINVWORLD.Services.SmartCapture
             IDocumentTextExtractor textExtractor,
             IDocumentOcrService ocr,
             IEInvoiceAssistantService assistant,
+            SmartCaptureCompanyHintService hints,
             IAuditService audit,
             ILogger<SmartCaptureExtractionJobHandler> logger)
         {
@@ -56,6 +58,7 @@ namespace EINVWORLD.Services.SmartCapture
             _textExtractor = textExtractor;
             _ocr = ocr;
             _assistant = assistant;
+            _hints = hints;
             _audit = audit;
             _logger = logger;
         }
@@ -129,8 +132,9 @@ namespace EINVWORLD.Services.SmartCapture
             }
 
             var knownBuyers = await LoadKnownBuyersForCompanyAsync(document.CompanyPartyInfoId, ct);
+            var companyHints = await _hints.GetAsync(document.CompanyPartyInfoId, ct);
 
-            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, ct);
+            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, companyHints, ct);
             if (!result.Ok)
             {
                 return await FailAsync(document, "AssistantUnavailable", result.Error ?? "The AI assistant could not process this document.", ct);

@@ -108,6 +108,7 @@ namespace eInvWorld.Data
 
         // --- Smart Capture (persisted, async AI Document Capture — Stage 1) ---
         public DbSet<SmartCaptureDocument> SmartCaptureDocuments { get; set; } = default!;
+        public DbSet<SmartCaptureCompanyHint> SmartCaptureCompanyHints { get; set; } = default!;
 
         // --- Outbound webhook subscriptions (customer ERP callbacks) ---
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
@@ -413,9 +414,14 @@ namespace eInvWorld.Data
             {
                 // Retention sweep filters on "file not yet deleted" every run.
                 b.HasIndex(d => d.FileDeletedAtUtc);
-                // Unused by any Stage 1 query, but cheap to index now — Stage 2 duplicate detection
-                // (explicitly deferred) will filter on this.
+                // Exact-content duplicate-upload detection (SmartCaptureExtractionJobHandler.IsDuplicateUploadAsync).
                 b.HasIndex(d => d.FileHash);
+            });
+
+            // Smart Capture Stage 2: one learned hint row per company, looked up on every extraction.
+            modelBuilder.Entity<SmartCaptureCompanyHint>(b =>
+            {
+                b.HasIndex(h => h.CompanyPartyInfoId).IsUnique();
             });
 
             // Webhook subscription: encrypt the HMAC signing secret at rest (distinct secret protector),

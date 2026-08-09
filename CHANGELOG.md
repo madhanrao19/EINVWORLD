@@ -1,15 +1,52 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.17.2`** (`AppInfo:Version` in `appsettings.json`). v1.17.2 is a **patch**:
-> removes application-level malware scanning (ClamAV) from Smart Capture — a deliberate architecture
-> decision, not a regression fix; see the entry below for the reasoning and the upload-security controls
-> it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart Capture "Confirm" attempt
-> failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID` column). v1.17.0 was the
-> **minor** release that introduced **Smart Capture (Stage 1)** — persisted, async supplier-invoice
-> capture → draft, now labelled **"Create from Document"** in navigation — via PR #170, with a new
-> additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-flagged **OFF by default**
-> in Development and Production; enabled on Staging only, for verification (real Ollama sign-off still
-> outstanding — see `POST-DEPLOY-CHECKLIST.md`).
+> **Current version: `v1.18.0`** (`AppInfo:Version` in `appsettings.json`). v1.18.0 is a **minor**
+> release: **Smart Capture Stage 2 (reduced first cut)** — per-company "learned hints" (most commonly
+> confirmed doc type/currency/tax, via a streaming majority-vote, no history table) fed into the AI
+> suggestion prompt as advisory-only context. Never sets a field directly, never affects validation or
+> blocking, and the review/confirm screen is completely unchanged. New additive `ApplicationDbContext`
+> migration (`SmartCaptureCompanyHints`). v1.17.3 (folded into this release) documents Stage 1.5
+> (2026-08-08, PR #173): exact-content duplicate-upload detection (flag, never block) and a condensed
+> review view for extractions with zero warnings. v1.17.2 removed application-level malware scanning
+> (ClamAV) from Smart Capture — a deliberate architecture decision; see that entry for the reasoning and
+> the upload-security controls it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart
+> Capture "Confirm" attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID`
+> column). v1.17.0 was the **minor** release that introduced **Smart Capture (Stage 1)** — persisted,
+> async supplier-invoice capture → draft, now labelled **"Create from Document"** in navigation — via
+> PR #170, with a new additive `ApplicationDbContext` migration (`SmartCaptureDocuments`).
+> Feature-flagged **OFF by default** in Development and Production; enabled on Staging only, for
+> verification (real Ollama sign-off still outstanding — see `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Smart Capture Stage 2 (reduced first cut): learned per-company hints
+
+Each company's Smart Capture extractions now learn from that company's own confirmed drafts: a new
+`SmartCaptureCompanyHints` row (one per company) tracks the most commonly confirmed LHDN document type,
+currency, tax type, and tax rate using a streaming Boyer-Moore majority-vote counter per field — no
+per-confirmation history table needed, and a single early or outlier confirmation can't dominate it. Once
+a company has confirmed at least 3 drafts, `SmartCaptureCompanyHintService.GetAsync` surfaces the current
+majority as advisory-only context appended to the AI suggestion prompt ("this company's invoices are
+usually type X — use this only if the document doesn't clearly indicate otherwise"); the model is free to
+disagree, and the review/confirm screen behaviour is completely unchanged. Recorded once per successful
+Confirm (`SmartCaptureReviewModel.OnPostConfirmAsync`), never before — a document that fails or is
+abandoned never influences future suggestions. `IEInvoiceAssistantService.SuggestInvoiceAsync` gained a
+new optional `companyHints` parameter (backward compatible; the AI Assistant chat page and the legacy
+`CreateFromFile` page pass none). Deliberately scoped down from the full Stage 2 roadmap (per-supplier
+templates with field-level provenance, a 3-tier deterministic/OCR/AI extraction pipeline) — this is a
+company-level, fully-automatic, zero-UI first cut; the richer template model remains a future increment
+if real Staging usage shows it's worth the complexity.
+
+## 📅 2026-08-08 — Smart Capture Stage 1.5 (reduced first cut): duplicate detection + condensed review
+
+`SmartCaptureExtractionJobHandler` now flags an exact-content re-upload within the same company as a
+review-checklist **Warning** (never a block) using the already-indexed `FileHash` column — a different
+company uploading byte-identical content (e.g. a shared template) is not flagged, preserving tenant
+isolation. On the review screen, an extraction with zero errors and zero warnings now shows a condensed
+"All checks passed" summary with the full checklist/raw-suggestion collapsed behind a toggle, instead of
+always expanding the full review — the Confirm click is still always required either way; nothing is
+auto-decided. This was deliberately scoped down (via `/roast`) from the user's original "Smart Review"
+proposal, which would have auto-created drafts for high-confidence extractions with no review screen at
+all — that tier was deferred pending a real confidence signal (today's AI provider returns none) and real
+Staging usage data. PR #173.
 
 ## 📅 2026-08-08 — Smart Capture: remove application-level malware scanning (ClamAV)
 
