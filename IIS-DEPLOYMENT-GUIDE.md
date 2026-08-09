@@ -578,9 +578,8 @@ By default AI Document Capture reads **digital (text-based) PDFs** only. To also
 PDFs, enable the built-in OCR (Tesseract). The native libraries (Tesseract + PDFium) ship with the app
 and are only loaded when OCR is on, so leaving it off costs nothing.
 
-1. **Stage the language data.** Create a `tessdata` folder, e.g. `D:\EINVWORLD\tessdata`, and copy the
-   Tesseract trained-data files into it: `eng.traineddata` (and `msa.traineddata` for Malay). Get them
-   from `https://github.com/tesseract-ocr/tessdata_fast` (FOSS, Apache-2.0). Grant the app-pool **Read**.
+1. **Stage the `tessdata` folder.** Create a folder, e.g. `D:\EINVWORLD\tessdata`, and grant the app-pool
+   **Modify** rights on it (Part 9) — not just Read, because `TessdataSyncWorker` (below) writes into it.
 2. **Visual C++ runtime.** Ensure the **Microsoft Visual C++ 2015–2022 Redistributable (x64)** is
    installed on the server (the native OCR/PDF libraries need it). Most servers already have it.
 3. Add env vars (Part 10) and `iisreset`:
@@ -589,10 +588,20 @@ and are only loaded when OCR is on, so leaving it off costs nothing.
    | `DocumentCapture__OcrEnabled` | `true` |
    | `DocumentCapture__TessdataPath` | `D:\EINVWORLD\tessdata` |
    | `DocumentCapture__OcrLanguage` | `eng` (or `eng+msa`) |
+4. **Trained-data files are fetched automatically.** With `DocumentCapture:OcrEnabled=true` and
+   `TessdataSync:Enabled` at its default (`true`), a background worker (`TessdataSyncWorker`) downloads
+   `<lang>.traineddata` for every language in `DocumentCapture:OcrLanguage` from the official
+   `tesseract-ocr/tessdata` GitHub repo (FOSS, Apache-2.0) a couple of minutes after startup, then
+   re-checks daily (`TessdataSync:IntervalHours`) — it only re-downloads a file when it's missing or its
+   size no longer matches upstream, and writes atomically so a running OCR call never sees a partial
+   file. **On a server with no/restricted outbound internet access**, set `TessdataSync__Enabled` to
+   `false` and stage the files yourself instead: copy `eng.traineddata` (and `msa.traineddata` for Malay)
+   from `https://github.com/tesseract-ocr/tessdata` into the folder from step 1.
 
 ✅ **Verify:** upload a scanned invoice PDF to **AI Document Capture** — it should extract text and produce
-a suggestion. If you see "couldn't read this document", check the `tessdata` path/permissions and the VC++
-runtime; the app log records the OCR error. (OCR can't be exercised by CI — it must be verified here.)
+a suggestion. If you see "couldn't read this document", check that `tessdata` actually contains the
+`.traineddata` file (the app log records both the sync worker's download result and any OCR error) and
+the VC++ runtime. (OCR can't be exercised by CI — it must be verified here.)
 
 ### 17b — Watched-folder import (drop files to validate)
 

@@ -1,6 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.0`** (`AppInfo:Version` in `appsettings.json`). v1.21.0 is a **minor**
+> **Current version: `v1.21.1`** (`AppInfo:Version` in `appsettings.json`). v1.21.1 is a **patch**
+> release: adds `TessdataSyncWorker`, a background job that automatically keeps AI Document Capture/Smart
+> Capture's OCR language files (`eng.traineddata`, `msa.traineddata`, ...) current from the official
+> `tesseract-ocr/tessdata` GitHub repo, replacing the previous fully-manual "download and copy the file in
+> yourself" process (still documented as the fallback for air-gapped servers). Only runs at all when
+> `DocumentCapture:OcrEnabled=true` (off by default) — independently switchable off via
+> `TessdataSync:Enabled=false` for servers with restricted/no outbound internet access. See the dated
+> entry below for details. v1.21.0 was a **minor**
 > release: brings `Pages/Invoices/InvoiceEdit.cshtml` (the page every Smart Capture confirmation and
 > every "Edit" click hands off to) to full visual and functional parity with `CreateInvoice.cshtml` —
 > the two had quietly drifted apart over several UI-migration commits, and a side-by-side comparison
@@ -66,6 +73,47 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Automatic Tesseract OCR trained-data sync
+
+Replaces the fully-manual "download `eng.traineddata`/`msa.traineddata` from GitHub and copy them into
+the `tessdata` folder yourself" step (`IIS-DEPLOYMENT-GUIDE.md` PART 17a-OCR) with a new background
+worker, `Services/Background/TessdataSyncWorker.cs`, mirroring the existing `CodeTableSyncWorker` pattern
+(config-gated `BackgroundService`, named `HttpClient`, startup delay + interval loop, per-item try/catch
+isolation).
+
+- **Source:** the official, FOSS (Apache-2.0) `tesseract-ocr/tessdata` GitHub repository, fetched via
+  `raw.githubusercontent.com` — the same repo the user asked to track (`.../blob/main/eng.traineddata`,
+  `.../blob/main/msa.traineddata`). Previously the deployment guide pointed at `tessdata_fast` (a
+  smaller/lower-accuracy variant); this switches the documented/automated source to the standard,
+  best-accuracy repo.
+- **Which languages:** derived from the existing `DocumentCapture:OcrLanguage` setting (split on `+`, e.g.
+  `eng+msa`) rather than hardcoded — a deployment that only enables `eng` never fetches `msa`, and vice
+  versa.
+- **Change detection:** a cheap `HEAD` request compares upstream `Content-Length` to the local file's size;
+  a file already up to date is never re-downloaded — a normal app-pool recycle costs one HEAD request per
+  language, not a repeat multi-MB download.
+- **Corruption safety:** downloads write to a `.downloading` temp file, then atomically `File.Move(...,
+  overwrite: true)` into place — a cancelled/interrupted download can never leave a partial file for a
+  concurrent OCR call to load. A plausibility floor (< 100 KB is almost certainly an HTML error page, not
+  real trained data) discards an implausible response instead of applying it.
+- **Fail-safe/toggleable:** entirely inert unless `DocumentCapture:OcrEnabled=true` (off by default) *and*
+  `TessdataSync:Enabled` (new section, defaults to `true`, independently switchable off) — a server with
+  restricted/no outbound internet access sets `TessdataSync__Enabled=false` and keeps staging files
+  manually, exactly as before. One language's failure (network, 404, disk) is logged and skipped; it never
+  blocks another language or crashes the app.
+- New config section `TessdataSync` (`appsettings.json`): `Enabled` (default `true`), `BaseUrl` (default
+  `https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/`), `IntervalHours` (default `24`),
+  `StartupDelayMinutes` (default `2`).
+- `IIS-DEPLOYMENT-GUIDE.md` PART 17a-OCR updated: the `tessdata` folder now needs app-pool **Modify**
+  (not just Read) rights since the worker writes into it; manual download is now documented as the
+  air-gapped fallback, pointing at `tesseract-ocr/tessdata` (not `tessdata_fast`).
+
+No schema change, no LHDN/invoice-calculation impact — purely an operational improvement to an
+already-optional, already-off-by-default OCR feature. 5 new unit tests
+(`EINVWORLD.Tests/Services/TessdataSyncWorkerTests.cs`) cover: download-when-missing, skip-when-unchanged,
+discard-when-implausibly-small, multi-language fetch, and one-language-failure-doesn't-block-another —
+all against a stubbed `HttpMessageHandler` and a real temp directory, no network or database involved.
 
 ## 📅 2026-08-09 — InvoiceEdit brought to full parity with Create e-Invoice
 
