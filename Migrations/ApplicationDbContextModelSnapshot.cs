@@ -2441,6 +2441,52 @@ namespace eInvWorld.Migrations
                     b.ToTable("GlobalThemeSettings");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureAutoSubmitSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AllowedDocTypesCsv")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DelayMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MaxAutoSubmitValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId")
+                        .IsUnique();
+
+                    b.ToTable("SmartCaptureAutoSubmitSettings");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
                 {
                     b.Property<int>("Id")
@@ -2552,6 +2598,9 @@ namespace eInvWorld.Migrations
                         .HasColumnType("decimal(18, 2)");
 
                     b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PendingAutoSubmitJobId")
                         .HasColumnType("int");
 
                     b.Property<string>("RelatedInvoiceHeaderInvoiceNo")
@@ -3456,6 +3505,17 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("InvoiceTemplate");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureAutoSubmitSettings", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>

@@ -1,0 +1,88 @@
+@page
+@model eInvWorld.Pages.Admin.SmartCaptureAutoSubmitModel
+@{
+    ViewData["Title"] = "Smart Capture Auto-Submit";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Smart Capture — Automatic Submission</h1>
+        <p class="text-muted mb-0">Per-company opt-in for unattended LHDN submission of Smart Capture drafts. Admin-only — a company cannot enable this for itself.</p>
+    </div>
+</div>
+
+<div class="alert alert-warning">
+    <i class="ri-alert-line align-bottom me-1"></i>
+    Enabling this lets qualifying Smart Capture drafts submit to MyInvois automatically after a delay, with no further human click. Every submission still passes through the unchanged idempotency/audit/signing path — only the decision to enqueue it is automatic. Use narrow doc-type allowlists and a conservative value ceiling, especially for a new company.
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorText))
+{
+    <div class="alert alert-danger">@Model.ErrorText</div>
+}
+@if (!string.IsNullOrEmpty(Model.SuccessText))
+{
+    <div class="alert alert-success">@Model.SuccessText</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Companies</h5></div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    @foreach (var c in Model.Companies)
+                    {
+                        var active = Model.CompanyPartyInfoId == c.PartyInfoId ? "active" : "";
+                        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @active" asp-route-CompanyPartyInfoId="@c.PartyInfoId">
+                            @c.Name
+                            @if (c.Enabled)
+                            {
+                                <span class="einv-badge einv-badge-success">ON</span>
+                            }
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        @if (Model.SelectedCompany is null)
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center text-muted py-5">Select a company from the list to configure auto-submit.</div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">@Model.SelectedCompany.CompanyName</h5></div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="Save" asp-route-CompanyPartyInfoId="@Model.CompanyPartyInfoId">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" asp-for="Enabled" id="acEnabled">
+                            <label class="form-check-label fw-semibold" for="acEnabled">Enable automatic submission for this company</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Allowed document types (comma-separated codes)</label>
+                            <input type="text" asp-for="AllowedDocTypesCsv" class="form-control" placeholder="01" />
+                            <small class="text-muted">Any confirmed doc type not in this list always falls back to manual submission.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Maximum auto-submit value (MYR)</label>
+                            <input type="number" step="0.01" min="0" asp-for="MaxAutoSubmitValue" class="form-control" />
+                            <small class="text-muted">Invoices at or above this total always require manual submission. Required &gt; 0 to enable.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Delay before submission (minutes)</label>
+                            <input type="number" min="1" asp-for="DelayMinutes" class="form-control" />
+                            <small class="text-muted">Window during which the user can cancel the pending submission from the Smart Capture page.</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="ri-save-line align-bottom me-1"></i>Save</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

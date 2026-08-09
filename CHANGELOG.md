@@ -1,26 +1,70 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.19.0`** (`AppInfo:Version` in `appsettings.json`). v1.19.0 is a **minor**
-> release: **Smart Capture Stage 3 (reduced first cut)** — bulk upload. The upload form now accepts
-> multiple files at once (capped at `SmartCapture:MaxFilesPerBulkUpload`, default 20); each file goes
-> through the exact same per-file validation/quota/storage/durable-job path as a single upload
+> **Current version: `v1.20.0`** (`AppInfo:Version` in `appsettings.json`). v1.20.0 is a **minor**
+> release: **Smart Capture Stage 4 (reduced first cut)** — conditional automatic LHDN submission. A
+> system Admin can opt a company into unattended submission of Smart Capture drafts
+> (`/Admin/SmartCaptureAutoSubmit`, never self-service); a global kill switch
+> (`SmartCapture:AutoSubmitEnabled`, default **false everywhere**) must also be on. Every confirmed draft
+> is still re-evaluated against deterministic gates (doc-type allowlist, zero review warnings/errors,
+> exact buyer match, a per-company value ceiling) — never a fuzzy confidence score — before a delayed,
+> cancellable `SubmitDocument` job is enqueued through the existing, unchanged submission pipeline
+> (idempotency/signing/retry/audit untouched). New additive migration (`SmartCaptureAutoSubmitSettings`
+> table + `SmartCaptureDocuments.PendingAutoSubmitJobId`). v1.19.0 shipped Stage 3 (reduced first cut):
+> bulk upload. The upload form accepts multiple files at once (capped at
+> `SmartCapture:MaxFilesPerBulkUpload`, default 20); each file goes through the exact same per-file
+> validation/quota/storage/durable-job path as a single upload
 > (`SmartCaptureDocumentService.UploadAsync`, unchanged) — one bad file in a batch never blocks the
-> others, and the page reports a per-file failure list alongside the success count. Still produces
-> drafts only, one at a time, through the same always-confirm review screen — no batch draft creation or
-> auto-submission introduced. No schema change. v1.18.0 shipped Stage 2 (reduced first cut): per-company
-> "learned hints" fed into the AI suggestion prompt as advisory-only context, new additive
-> `ApplicationDbContext` migration (`SmartCaptureCompanyHints`). v1.17.3 (folded into v1.18.0) documented
-> Stage 1.5 (2026-08-08, PR #173): exact-content duplicate-upload detection (flag, never block) and a
-> condensed review view for extractions with zero warnings. v1.17.2 removed application-level malware
-> scanning (ClamAV) from Smart Capture — a deliberate architecture decision; see that entry for the
-> reasoning and the upload-security controls it relies on instead. v1.17.1 fixed a **Critical** bug where
-> every Smart Capture "Confirm" attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL
-> `PrefixedID` column). v1.17.0 was the **minor** release that introduced **Smart Capture (Stage 1)** —
-> persisted, async supplier-invoice capture → draft, now labelled **"Create from Document"** in
-> navigation — via PR #170, with a new additive `ApplicationDbContext` migration
-> (`SmartCaptureDocuments`). Feature-flagged **OFF by default** in Development and Production; enabled on
-> Staging only, for verification (real Ollama sign-off still outstanding — see
+> others. v1.18.0 shipped Stage 2 (reduced first cut): per-company "learned hints" fed into the AI
+> suggestion prompt as advisory-only context, new additive `ApplicationDbContext` migration
+> (`SmartCaptureCompanyHints`). v1.17.3 (folded into v1.18.0) documented Stage 1.5 (2026-08-08, PR #173):
+> exact-content duplicate-upload detection (flag, never block) and a condensed review view for
+> extractions with zero warnings. v1.17.2 removed application-level malware scanning (ClamAV) from Smart
+> Capture — a deliberate architecture decision; see that entry for the reasoning and the upload-security
+> controls it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart Capture "Confirm"
+> attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID` column). v1.17.0
+> was the **minor** release that introduced **Smart Capture (Stage 1)** — persisted, async
+> supplier-invoice capture → draft, now labelled **"Create from Document"** in navigation — via PR #170,
+> with a new additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-flagged **OFF
+> by default** in Development and Production; enabled on Staging only, for verification (real Ollama
+> sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Smart Capture Stage 4 (reduced first cut): conditional automatic submission
+
+The first Smart Capture capability that can submit to MyInvois without a manual click, built as a narrow,
+multi-layer-gated exception rather than a new submission path (see `CLAUDE.md` § "Invoice-input
+mechanisms" for the full reasoning). Three independent layers must all agree:
+
+1. **Global kill switch** — `SmartCapture:AutoSubmitEnabled` (config, default **false** in every
+   committed appsettings file). A company's opt-in has zero effect while this is false.
+2. **Per-company opt-in** — `SmartCaptureAutoSubmitSettings`, one row per company, set only from
+   `/Admin/SmartCaptureAutoSubmit` (`[Authorize(Roles = "Admin")]`) — never self-service on the
+   company's own Supplier workspace. Configures an LHDN doc-type allowlist (default `01` only), a
+   required value ceiling (`MaxAutoSubmitValue` — no "unlimited" tier), and a delay in minutes.
+3. **Per-document deterministic gate** (`SmartCaptureAutoSubmitEligibilityService`, re-evaluated on
+   every single confirmation) — confirmed doc type is in the company's allowlist, the review checklist
+   has zero warnings *and* zero errors (reuses Stage 1.5's existing signal), the confirmed buyer has a
+   real TIN, and the invoice's total is under the company's ceiling. No fuzzy "confidence score" —
+   today's AI provider returns none, so every condition is a plain deterministic check, and the full
+   check list (pass/fail + the actual values compared) is written to the audit trail either way.
+
+When all three pass, `SmartCaptureReviewModel.OnPostConfirmAsync` enqueues a `SyncJobType.SubmitDocument`
+job — the exact same job type and handler already used to retry a failed interactive submission
+(`InvoiceSubmissionHelper.SubmitInvoiceAsync`, with its existing payload-hash idempotency guard, XAdES
+signing, retry/backoff, and audit chain, all completely unchanged) — with `NextRunAtUtc` set
+`DelayMinutes` in the future. During that window the Smart Capture list page shows an "Auto-submit
+HH:mm" badge with a **Cancel** button per document; cancelling just flips the job's `Status` to
+`Cancelled`, which the durable worker's existing `WHERE Status = Queued` claim query already excludes —
+no new worker logic needed. Evaluation and scheduling are both best-effort or try/caught around the
+existing draft-creation flow: any failure here is logged and swallowed, never turns an already-successful
+Confirm into a 500, and simply falls back to the pre-existing manual "Submit" flow on `InvoiceEdit`.
+
+New additive migration: `SmartCaptureAutoSubmitSettings` table (unique index on `CompanyPartyInfoId`,
+cascade FK to `PartyInfos`) plus a nullable `SmartCaptureDocuments.PendingAutoSubmitJobId` column.
+
+**Deliberately out of scope for this first cut** (can be added later without a schema change): per-company
+email notification on scheduling/outcome, a richer confidence signal than "zero review issues", and
+per-supplier (not just per-company) granularity.
 
 ## 📅 2026-08-09 — Smart Capture Stage 3 (reduced first cut): bulk upload
 
