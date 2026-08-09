@@ -471,6 +471,7 @@ var smartCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.Sm
     .Get<EINVWORLD.Services.SmartCapture.SmartCaptureOptions>() ?? new EINVWORLD.Services.SmartCapture.SmartCaptureOptions();
 builder.Services.AddSingleton(smartCaptureOptions);
 builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureDocumentService>();
+builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureCompanyHintService>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureExtractionJobHandler>();
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureRetentionJobHandler>();
 builder.Services.AddHostedService<EINVWORLD.Services.SmartCapture.SmartCaptureRetentionScheduler>();
