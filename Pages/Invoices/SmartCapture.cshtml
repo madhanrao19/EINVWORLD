@@ -41,6 +41,18 @@
 {
     <div class="alert alert-success">@Model.SuccessText</div>
 }
+@if (Model.BatchFailures.Count > 0)
+{
+    <div class="alert alert-warning">
+        <strong>@Model.BatchFailures.Count file(s) could not be uploaded:</strong>
+        <ul class="mb-0 mt-1">
+            @foreach (var f in Model.BatchFailures)
+            {
+                <li>@f</li>
+            }
+        </ul>
+    </div>
+}
 
 <div class="row g-4">
     <div class="col-lg-5">
@@ -58,14 +70,15 @@
                     </div>
                     <label for="scUpload" class="d-block border border-2 border-dashed rounded-3 p-4 text-center mb-3" style="border-color: var(--einv-border) !important; cursor: pointer;" id="einvScDropzone">
                         <i class="ri-upload-cloud-2-line fs-24 d-block mb-2 text-primary"></i>
-                        <span class="fw-semibold d-block">Click to choose a file, or drag it here</span>
-                        <span class="text-muted small" id="einvScDropzoneFile">No file selected</span>
-                        <input type="file" id="scUpload" name="Upload" accept=".pdf,.jpg,.jpeg,.png" class="d-none"
-                               onchange="document.getElementById('einvScDropzoneFile').textContent = this.files.length ? this.files[0].name : 'No file selected';" />
+                        <span class="fw-semibold d-block">Click to choose files, or drag them here</span>
+                        <span class="text-muted small" id="einvScDropzoneFile">No files selected</span>
+                        <input type="file" id="scUpload" name="Uploads" accept=".pdf,.jpg,.jpeg,.png" class="d-none" multiple
+                               onchange="document.getElementById('einvScDropzoneFile').textContent = this.files.length ? (this.files.length === 1 ? this.files[0].name : this.files.length + ' files selected') : 'No files selected';" />
                     </label>
                     <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
                         <span class="einv-badge einv-badge-neutral"><i class="ri-file-list-3-line"></i>@string.Join(", ", Model.AllowedExtensions).ToUpperInvariant()</span>
-                        <span class="einv-badge einv-badge-neutral"><i class="ri-database-2-line"></i>Max @Model.MaxFileSizeMb MB</span>
+                        <span class="einv-badge einv-badge-neutral"><i class="ri-database-2-line"></i>Max @Model.MaxFileSizeMb MB each</span>
+                        <span class="einv-badge einv-badge-neutral"><i class="ri-stack-line"></i>Up to @Model.MaxFilesPerBulkUpload at once</span>
                     </div>
                     <div class="d-grid">
                         <button type="submit" id="scUploadSubmit" class="btn btn-primary" disabled="@(!Model.Enabled)">
@@ -83,7 +96,7 @@
                 </p>
                 <ul class="list-unstyled mb-0" style="font-size: 0.85rem;">
                     <li class="mb-2"><i class="ri-server-line align-bottom me-2 text-primary"></i>Processed locally — the file never leaves this server.</li>
-                    <li class="mb-2"><i class="ri-shield-check-line align-bottom me-2 text-primary"></i>Scanned for malware before storage.</li>
+                    <li class="mb-2"><i class="ri-shield-check-line align-bottom me-2 text-primary"></i>File type and content signature are validated before storage.</li>
                     <li class="mb-2"><i class="ri-user-search-line align-bottom me-2 text-primary"></i>You review and confirm every field — nothing is submitted automatically.</li>
                     <li class="mb-0"><i class="ri-time-line align-bottom me-2 text-primary"></i>Documents are retained per policy, then automatically deleted.</li>
                 </ul>

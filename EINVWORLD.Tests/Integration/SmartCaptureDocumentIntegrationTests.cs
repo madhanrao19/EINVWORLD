@@ -943,5 +943,73 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal("SST", fakeAssistant.LastCompanyHints.TaxType);
             Assert.Equal(6m, fakeAssistant.LastCompanyHints.TaxRatePercent);
         }
+
+        // ── Stage 3 (reduced first cut): bulk upload reuses UploadAsync per file, unchanged ─────────
+
+        [Fact]
+        public async Task Bulk_Upload_Creates_An_Independent_Document_And_Job_Per_File_With_No_Cross_Contamination()
+        {
+            // SmartCaptureModel.OnPostUploadAsync (Stage 3) is a thin loop calling UploadAsync once per
+            // file with the same CompanyPartyInfoId/userId — this proves that loop's real risk surface:
+            // that N sequential calls against the SAME company/user produce N independent, correctly
+            // isolated documents/jobs/storage paths rather than sharing or clobbering state.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Bulk Upload Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "bulk-user");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = company.PartyInfoId });
+            await ctx.SaveChangesAsync();
+
+            var service = CreateService(ctx, new SmartCaptureOptions { Enabled = true, MonthlyProcessedPageQuota = 0, AllowedExtensions = new[] { "pdf" } });
+            var pdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x00 };
+
+            var results = new List<SmartCaptureUploadResult>();
+            for (var i = 0; i < 5; i++)
+                results.Add(await service.UploadAsync(pdfBytes, $"bulk-invoice-{i}.pdf", "application/pdf", company.PartyInfoId, userId, CancellationToken.None));
+
+            Assert.All(results, r => Assert.True(r.Ok, r.UserMessage));
+
+            var documentIds = results.Select(r => r.Document!.Id).ToList();
+            Assert.Equal(documentIds.Count, documentIds.Distinct().Count()); // no shared/reused row
+
+            var storagePaths = results.Select(r => r.Document!.InternalStorageReference).ToList();
+            Assert.Equal(storagePaths.Count, storagePaths.Distinct().Count()); // no overwritten file
+
+            var candidateJobs = await ctx.SyncJobs.Where(j => j.JobType == SyncJobType.SmartCaptureExtraction).ToListAsync();
+            var jobCount = candidateJobs.Count(j => documentIds.Contains(SyncJobPayload.SmartCaptureDocumentIdOrNull(j.PayloadJson) ?? -1));
+            Assert.Equal(5, jobCount); // one durable job queued per file, none dropped or merged
+
+            var reloadedDocs = await ctx.SmartCaptureDocuments.Where(d => documentIds.Contains(d.Id)).ToListAsync();
+            Assert.All(reloadedDocs, d => Assert.Equal(company.PartyInfoId, d.CompanyPartyInfoId));
+            Assert.All(reloadedDocs, d => Assert.Equal(SmartCaptureDocumentStatus.Queued, d.Status));
+        }
+
+        [Fact]
+        public async Task Bulk_Upload_One_Bad_File_Does_Not_Block_The_Others_In_The_Same_Batch()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Bulk Partial Fail Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "bulk-partial-user");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = company.PartyInfoId });
+            await ctx.SaveChangesAsync();
+
+            var service = CreateService(ctx, new SmartCaptureOptions { Enabled = true, MonthlyProcessedPageQuota = 0, AllowedExtensions = new[] { "pdf" } });
+
+            var good1 = await service.UploadAsync(new byte[] { 0x25, 0x50, 0x44, 0x46 }, "good1.pdf", "application/pdf", company.PartyInfoId, userId, CancellationToken.None);
+            var bad = await service.UploadAsync(new byte[] { 0x00, 0x01, 0x02 }, "bad.pdf", "application/pdf", company.PartyInfoId, userId, CancellationToken.None); // wrong signature for .pdf
+            var good2 = await service.UploadAsync(new byte[] { 0x25, 0x50, 0x44, 0x46 }, "good2.pdf", "application/pdf", company.PartyInfoId, userId, CancellationToken.None);
+
+            Assert.True(good1.Ok);
+            Assert.False(bad.Ok);
+            Assert.Equal(SmartCaptureUploadFailureReason.InvalidSignature, bad.Reason);
+            Assert.True(good2.Ok); // the bad file in the middle of the batch didn't stop the ones after it
+        }
     }
 }

@@ -26,6 +26,11 @@ namespace EINVWORLD.Services.SmartCapture
         /// <summary>Only process this many pages of a document (bounds OCR/LLM work).</summary>
         public int MaxPages { get; set; } = 15;
 
+        /// <summary>Stage 3: maximum number of files accepted in a single bulk-upload postback. Bulk
+        /// upload reuses the same per-file validation/quota path as a single upload (SmartCaptureDocumentService
+        /// .UploadAsync) unchanged — this only bounds how many files one HTTP request can queue at once.</summary>
+        public int MaxFilesPerBulkUpload { get; set; } = 20;
+
         // ── Retention (tiered — see SmartCaptureRetentionJobHandler for the rules these back) ──────
 
         /// <summary>Documents that never got past extraction (Failed / ValidationFailed with no draft).</summary>
