@@ -109,6 +109,7 @@ namespace eInvWorld.Data
         // --- Smart Capture (persisted, async AI Document Capture — Stage 1) ---
         public DbSet<SmartCaptureDocument> SmartCaptureDocuments { get; set; } = default!;
         public DbSet<SmartCaptureCompanyHint> SmartCaptureCompanyHints { get; set; } = default!;
+        public DbSet<SmartCaptureAutoSubmitSettings> SmartCaptureAutoSubmitSettings { get; set; } = default!;
 
         // --- Outbound webhook subscriptions (customer ERP callbacks) ---
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
@@ -422,6 +423,13 @@ namespace eInvWorld.Data
             modelBuilder.Entity<SmartCaptureCompanyHint>(b =>
             {
                 b.HasIndex(h => h.CompanyPartyInfoId).IsUnique();
+            });
+
+            // Smart Capture Stage 4: one auto-submit opt-in row per company.
+            modelBuilder.Entity<SmartCaptureAutoSubmitSettings>(b =>
+            {
+                b.HasIndex(s => s.CompanyPartyInfoId).IsUnique();
+                b.Property(s => s.MaxAutoSubmitValue).HasPrecision(18, 2);
             });
 
             // Webhook subscription: encrypt the HMAC signing secret at rest (distinct secret protector),

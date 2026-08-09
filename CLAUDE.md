@@ -139,9 +139,22 @@ and the same draft creation path (`InvoiceDraftService.SaveDraft`) — this is i
 duplication, and must stay that way. Planned direction: Smart Capture becomes the single production
 document-capture workflow and AI Document Capture is retired from user-facing navigation (keep the route
 for rollback; don't delete the reusable services). See the `smart-capture-roadmap` memory for the staged
-plan (Smart Review confidence tiers,
-supplier templates, bulk capture, then — much later, explicitly opt-in per company — conditional
-auto-submission).
+plan (Smart Review confidence tiers, supplier templates, bulk capture, then conditional auto-submission).
+
+**Stage 4 (`SmartCaptureAutoSubmitEligibilityService`, shipped 2026-08-09) is a deliberate, narrow
+exception to "never submit directly to MyInvois"** — worth calling out explicitly since it's the one
+capture-adjacent capability that does enqueue an LHDN submission. It does not violate the input-only rule
+in spirit: it never builds a second submission path, never bypasses `SubmitDocumentJobHandler`/
+`InvoiceSubmissionHelper` (idempotency, signing, retry, audit — all untouched), and only decides *whether*
+to enqueue the exact same job a manual "Submit" click or a failed-submission retry already uses. Gated by
+a global kill switch (`SmartCapture:AutoSubmitEnabled`, default false everywhere), a per-company opt-in
+settable only by a system Admin (`/Admin/SmartCaptureAutoSubmit` — never company self-service), and
+deterministic per-document conditions (doc-type allowlist, zero review warnings/errors, exact buyer match,
+value ceiling) re-evaluated on every single confirmation — never a fuzzy confidence score. A delay window
+(company-configurable) before the job actually runs gives the confirming user a chance to cancel it from
+the Smart Capture list page. Any future capability that wants to submit on Smart Capture's behalf must
+reuse this same pattern (existing submission pipeline + explicit multi-layer opt-in + deterministic gate),
+not invent a new one.
 
 ### Upload security (Smart Capture — no application-level malware scanning)
 **Deliberate, explicit decision (2026-08-08):** Smart Capture does not scan uploaded files with an

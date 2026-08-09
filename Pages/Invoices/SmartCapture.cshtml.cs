@@ -21,12 +21,16 @@ namespace eInvWorld.Pages.Invoices
         private readonly SmartCaptureDocumentService _documents;
         private readonly SmartCaptureOptions _options;
         private readonly ApplicationDbContext _context;
+        private readonly SmartCaptureAutoSubmitEligibilityService _autoSubmit;
 
-        public SmartCaptureModel(SmartCaptureDocumentService documents, SmartCaptureOptions options, ApplicationDbContext context)
+        public SmartCaptureModel(
+            SmartCaptureDocumentService documents, SmartCaptureOptions options, ApplicationDbContext context,
+            SmartCaptureAutoSubmitEligibilityService autoSubmit)
         {
             _documents = documents;
             _options = options;
             _context = context;
+            _autoSubmit = autoSubmit;
         }
 
         public bool Enabled => _options.Enabled;
@@ -36,6 +40,11 @@ namespace eInvWorld.Pages.Invoices
 
         public List<(int PartyInfoId, string Name)> MemberCompanies { get; private set; } = new();
         public List<SmartCaptureDocument> Documents { get; private set; } = new();
+
+        /// <summary>Stage 4: DocumentId -> scheduled UTC run time, for documents with a still-Queued
+        /// PendingAutoSubmitJobId. Absence means either no auto-submit was scheduled, or it already ran /
+        /// was cancelled — either way there is nothing to show or cancel.</summary>
+        public Dictionary<int, DateTime> PendingAutoSubmitRunAtUtc { get; private set; } = new();
 
         /// <summary>Stage 3: accepts one or many files from the same &lt;input multiple&gt; field — a
         /// single upload is just a batch of one. Each file goes through the exact same per-file
@@ -112,6 +121,23 @@ namespace eInvWorld.Pages.Invoices
             return Page();
         }
 
+        /// <summary>Stage 4: cancels a still-pending auto-submission for one of this user's own documents.
+        /// Re-derives ownership via SmartCaptureDocumentService.GetOwnedAsync (same tenant-scoping idiom as
+        /// every other action on this page) rather than trusting the posted id alone.</summary>
+        public async Task<IActionResult> OnPostCancelAutoSubmitAsync(int documentId, CancellationToken ct)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+            var document = await _documents.GetOwnedAsync(documentId, userId, ct);
+            if (document is null) return NotFound();
+
+            var cancelled = await _autoSubmit.CancelAsync(document, ct);
+            SuccessText = cancelled ? "Automatic submission cancelled — submit this invoice manually from the invoice editor when you're ready." : null;
+            ErrorText = cancelled ? null : "This auto-submission could not be cancelled (it may have already run).";
+
+            await LoadAsync(ct);
+            return Page();
+        }
+
         private async Task LoadAsync(CancellationToken ct)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -127,6 +153,21 @@ namespace eInvWorld.Pages.Invoices
                 CompanyPartyInfoId = MemberCompanies[0].PartyInfoId;
 
             Documents = await _documents.ListForUserAsync(userId, ct);
+
+            var pendingJobIds = Documents.Where(d => d.PendingAutoSubmitJobId != null).Select(d => d.PendingAutoSubmitJobId!.Value).ToList();
+            if (pendingJobIds.Count > 0)
+            {
+                var jobs = await _context.SyncJobs
+                    .Where(j => pendingJobIds.Contains(j.Id) && j.Status == eInvWorld.Models.Background.SyncJobStatus.Queued)
+                    .Select(j => new { j.Id, j.NextRunAtUtc })
+                    .ToListAsync(ct);
+                var jobById = jobs.ToDictionary(j => j.Id, j => j.NextRunAtUtc);
+                foreach (var d in Documents.Where(d => d.PendingAutoSubmitJobId != null))
+                {
+                    if (jobById.TryGetValue(d.PendingAutoSubmitJobId!.Value, out var runAt) && runAt.HasValue)
+                        PendingAutoSubmitRunAtUtc[d.Id] = runAt.Value;
+                }
+            }
         }
     }
 }
