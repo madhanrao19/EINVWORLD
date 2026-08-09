@@ -37,6 +37,7 @@ namespace eInvWorld.Pages.Invoices
         private readonly InvoiceService _invoiceService;
         private readonly InvoiceDraftService _draftService;
         private readonly SmartCaptureCompanyHintService _hints;
+        private readonly SmartCaptureAutoSubmitEligibilityService _autoSubmit;
         private readonly IAuditService _audit;
         private readonly ILogger<SmartCaptureReviewModel> _logger;
 
@@ -47,6 +48,7 @@ namespace eInvWorld.Pages.Invoices
             InvoiceService invoiceService,
             InvoiceDraftService draftService,
             SmartCaptureCompanyHintService hints,
+            SmartCaptureAutoSubmitEligibilityService autoSubmit,
             IAuditService audit,
             ILogger<SmartCaptureReviewModel> logger)
         {
@@ -56,6 +58,7 @@ namespace eInvWorld.Pages.Invoices
             _invoiceService = invoiceService;
             _draftService = draftService;
             _hints = hints;
+            _autoSubmit = autoSubmit;
             _audit = audit;
             _logger = logger;
         }
@@ -196,6 +199,20 @@ namespace eInvWorld.Pages.Invoices
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Smart Capture: failed to record company hint for document {DocumentId} — draft {InvoiceNo} was still created successfully.", Document.Id, model.InvoiceNo);
+            }
+
+            // Stage 4: conditionally schedule automatic LHDN submission. Best-effort — same rationale as
+            // the hint recording above, the draft already exists and this must never turn a successful
+            // Confirm into a 500. Falls back to the normal manual-submission flow on any failure here.
+            try
+            {
+                var eligibility = await _autoSubmit.EvaluateAsync(
+                    Document, model, confirmedDocTypeCode.Trim(), buyer.Tin, ReviewItems, ReviewHasErrors, ct);
+                await _autoSubmit.ApplyAsync(Document, model.InvoiceNo!, supplierParty.TIN, eligibility, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Smart Capture: auto-submit evaluation failed for document {DocumentId} — draft {InvoiceNo} was still created successfully; falls back to manual submission.", Document.Id, model.InvoiceNo);
             }
 
             return RedirectToPage("/Invoices/InvoiceEdit", new { id = model.InvoiceNo });
