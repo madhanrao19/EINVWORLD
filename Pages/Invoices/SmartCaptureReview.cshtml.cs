@@ -36,7 +36,9 @@ namespace eInvWorld.Pages.Invoices
         private readonly FilePathConfig _filePathConfig;
         private readonly InvoiceService _invoiceService;
         private readonly InvoiceDraftService _draftService;
+        private readonly SmartCaptureCompanyHintService _hints;
         private readonly IAuditService _audit;
+        private readonly ILogger<SmartCaptureReviewModel> _logger;
 
         public SmartCaptureReviewModel(
             SmartCaptureDocumentService documents,
@@ -44,14 +46,18 @@ namespace eInvWorld.Pages.Invoices
             IOptions<FilePathConfig> filePathConfig,
             InvoiceService invoiceService,
             InvoiceDraftService draftService,
-            IAuditService audit)
+            SmartCaptureCompanyHintService hints,
+            IAuditService audit,
+            ILogger<SmartCaptureReviewModel> logger)
         {
             _documents = documents;
             _context = context;
             _filePathConfig = filePathConfig.Value;
             _invoiceService = invoiceService;
             _draftService = draftService;
+            _hints = hints;
             _audit = audit;
+            _logger = logger;
         }
 
         public SmartCaptureDocument? Document { get; private set; }
@@ -179,6 +185,18 @@ namespace eInvWorld.Pages.Invoices
                 InvoiceNo = model.InvoiceNo,
                 NewValueJson = JsonSerializer.Serialize(new { documentId = Document.Id, invoiceNo = model.InvoiceNo, docType = confirmedDocTypeCode })
             }, ct);
+
+            // Learn from this confirmation for next time — advisory-only, best-effort. The draft already
+            // exists at this point, so a failure here must never turn a successful Confirm into a 500.
+            try
+            {
+                await _hints.RecordConfirmedAsync(
+                    Document.CompanyPartyInfoId, confirmedDocTypeCode.Trim(), model.Currency, Suggestion?.TaxType, Suggestion?.TaxRatePercent, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Smart Capture: failed to record company hint for document {DocumentId} — draft {InvoiceNo} was still created successfully.", Document.Id, model.InvoiceNo);
+            }
 
             return RedirectToPage("/Invoices/InvoiceEdit", new { id = model.InvoiceNo });
         }
