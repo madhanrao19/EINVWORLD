@@ -1011,5 +1011,148 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal(SmartCaptureUploadFailureReason.InvalidSignature, bad.Reason);
             Assert.True(good2.Ok); // the bad file in the middle of the batch didn't stop the ones after it
         }
+
+        // ── Stage 4 (reduced first cut): conditional automatic submission gating ────────────────────
+
+        private static SmartCaptureDocument NewDocumentForCompany(int companyId) => new()
+        {
+            CompanyPartyInfoId = companyId,
+            UploadedByUserId = "auto-submit-test-user",
+            OriginalFileName = "auto-submit-test.pdf",
+            InternalStorageReference = "auto-submit-test.pdf",
+            ContentType = "application/pdf",
+            FileSize = 4,
+            Status = SmartCaptureDocumentStatus.ReviewRequired,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+        };
+
+        private static InvoiceHeaderView SmallInvoice() => new()
+        {
+            DocTypeCode = "01",
+            Currency = "MYR",
+            TotalPayableAmount = 100m,
+        };
+
+        [Fact]
+        public async Task AutoSubmit_Not_Eligible_When_Global_Kill_Switch_Is_Off_Even_If_Company_Opted_In()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Global-Off Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+            ctx.SmartCaptureAutoSubmitSettings.Add(new SmartCaptureAutoSubmitSettings
+            {
+                CompanyPartyInfoId = company.PartyInfoId, Enabled = true, AllowedDocTypesCsv = "01", MaxAutoSubmitValue = 1000m, DelayMinutes = 5,
+            });
+            await ctx.SaveChangesAsync();
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = false }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            var doc = NewDocumentForCompany(company.PartyInfoId);
+            var result = await service.EvaluateAsync(doc, SmallInvoice(), "01", "999999999", new List<SmartCaptureReviewItemDto>(), false, CancellationToken.None);
+
+            Assert.False(result.Eligible);
+            Assert.False(result.Checks.Single(c => c.Name == "GlobalKillSwitch").Passed);
+        }
+
+        [Fact]
+        public async Task AutoSubmit_Not_Eligible_When_Company_Never_Opted_In()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Not-Opted-In Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync(); // no SmartCaptureAutoSubmitSettings row at all
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = true }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            var doc = NewDocumentForCompany(company.PartyInfoId);
+            var result = await service.EvaluateAsync(doc, SmallInvoice(), "01", "999999999", new List<SmartCaptureReviewItemDto>(), false, CancellationToken.None);
+
+            Assert.False(result.Eligible);
+            Assert.False(result.Checks.Single(c => c.Name == "CompanyOptedIn").Passed);
+        }
+
+        [Fact]
+        public async Task AutoSubmit_Not_Eligible_When_DocType_Not_Allowlisted_Or_Value_Over_Ceiling_Or_Review_Has_Warnings()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Conditions Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+            ctx.SmartCaptureAutoSubmitSettings.Add(new SmartCaptureAutoSubmitSettings
+            {
+                CompanyPartyInfoId = company.PartyInfoId, Enabled = true, AllowedDocTypesCsv = "01", MaxAutoSubmitValue = 500m, DelayMinutes = 5,
+            });
+            await ctx.SaveChangesAsync();
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = true }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            // Doc type "02" (Credit Note) is not in the "01"-only allowlist.
+            var wrongDocType = await service.EvaluateAsync(NewDocumentForCompany(company.PartyInfoId), SmallInvoice(), "02", "999999999", new List<SmartCaptureReviewItemDto>(), false, CancellationToken.None);
+            Assert.False(wrongDocType.Eligible);
+            Assert.False(wrongDocType.Checks.Single(c => c.Name == "DocTypeAllowed").Passed);
+
+            // Value over the 500 ceiling.
+            var tooExpensive = await service.EvaluateAsync(NewDocumentForCompany(company.PartyInfoId), new InvoiceHeaderView { DocTypeCode = "01", Currency = "MYR", TotalPayableAmount = 5000m }, "01", "999999999", new List<SmartCaptureReviewItemDto>(), false, CancellationToken.None);
+            Assert.False(tooExpensive.Eligible);
+            Assert.False(tooExpensive.Checks.Single(c => c.Name == "UnderValueCeiling").Passed);
+
+            // A Warning-severity review item blocks it even though ReviewHasErrors is false.
+            var withWarning = await service.EvaluateAsync(NewDocumentForCompany(company.PartyInfoId), SmallInvoice(), "01", "999999999",
+                new List<SmartCaptureReviewItemDto> { new("Warning", "Possible duplicate") }, false, CancellationToken.None);
+            Assert.False(withWarning.Eligible);
+            Assert.False(withWarning.Checks.Single(c => c.Name == "ZeroReviewIssues").Passed);
+        }
+
+        [Fact]
+        public async Task AutoSubmit_Schedules_A_Delayed_Job_And_Cancel_Prevents_It_From_Running()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Eligible Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+            ctx.SmartCaptureAutoSubmitSettings.Add(new SmartCaptureAutoSubmitSettings
+            {
+                CompanyPartyInfoId = company.PartyInfoId, Enabled = true, AllowedDocTypesCsv = "01", MaxAutoSubmitValue = 1000m, DelayMinutes = 15,
+            });
+            var doc = NewDocumentForCompany(company.PartyInfoId);
+            ctx.SmartCaptureDocuments.Add(doc);
+            await ctx.SaveChangesAsync();
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = true }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            var result = await service.EvaluateAsync(doc, SmallInvoice(), "01", "999999999", new List<SmartCaptureReviewItemDto>(), false, CancellationToken.None);
+            Assert.True(result.Eligible, string.Join("; ", result.Checks.Where(c => !c.Passed).Select(c => c.Name)));
+
+            var before = DateTime.UtcNow;
+            await service.ApplyAsync(doc, "INV-AUTO-0001", company.TIN, result, CancellationToken.None);
+
+            Assert.NotNull(doc.PendingAutoSubmitJobId);
+            var job = await ctx.SyncJobs.SingleAsync(j => j.Id == doc.PendingAutoSubmitJobId);
+            Assert.Equal(SyncJobType.SubmitDocument, job.JobType);
+            Assert.Equal(SyncJobStatus.Queued, job.Status);
+            Assert.True(job.NextRunAtUtc > before.AddMinutes(14)); // ~15 min delay honoured
+            Assert.Equal("INV-AUTO-0001", SyncJobPayload.InvoiceNoOrNull(job.PayloadJson));
+
+            // Cancelling before it runs sets it Cancelled — the durable worker only ever claims Queued rows.
+            var cancelled = await service.CancelAsync(doc, CancellationToken.None);
+            Assert.True(cancelled);
+            Assert.Null(doc.PendingAutoSubmitJobId);
+            var jobAfterCancel = await ctx.SyncJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id);
+            Assert.Equal(SyncJobStatus.Cancelled, jobAfterCancel.Status);
+        }
     }
 }

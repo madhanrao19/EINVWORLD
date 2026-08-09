@@ -87,6 +87,14 @@ namespace eInvWorld.Models.SmartCapture
         [MaxLength(50)]
         public string? RelatedInvoiceHeaderInvoiceNo { get; set; }
 
+        /// <summary>Stage 4: set to the id of a delayed SyncJobType.SubmitDocument job when
+        /// SmartCaptureAutoSubmitEligibilityService schedules an automatic submission for this document's
+        /// draft. Null unless the company has explicitly opted in AND every gating condition passed. The
+        /// user can cancel the pending job (Smart Capture list page) any time before its NextRunAtUtc — the
+        /// job row itself is the single source of truth for whether it will actually run; this is only a
+        /// display/lookup convenience, never re-checked as an authorization gate.</summary>
+        public int? PendingAutoSubmitJobId { get; set; }
+
         /// <summary>Machine-stable failure category (e.g. "OcrFailed", "LlmUnavailable", "MalwareDetected").
         /// Never a raw exception message.</summary>
         [MaxLength(60)]

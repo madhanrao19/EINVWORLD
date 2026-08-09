@@ -140,11 +140,26 @@
                                         SmartCaptureDocumentStatus.Failed => ("einv-badge-danger", "Failed"),
                                         _ => ("einv-badge-neutral", d.Status)
                                     };
+                                    var pendingAutoSubmit = Model.PendingAutoSubmitRunAtUtc.TryGetValue(d.Id, out var runAtUtc);
                                     <tr>
                                         <td>@d.OriginalFileName</td>
                                         <td><small class="text-muted">@d.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
-                                        <td><span class="einv-badge @badgeClass">@label</span></td>
+                                        <td>
+                                            <span class="einv-badge @badgeClass">@label</span>
+                                            @if (pendingAutoSubmit)
+                                            {
+                                                <span class="einv-badge einv-badge-warning ms-1" title="Scheduled to submit automatically unless cancelled">
+                                                    <i class="ri-time-line"></i>Auto-submit @runAtUtc.ToLocalTime().ToString("t")
+                                                </span>
+                                            }
+                                        </td>
                                         <td class="text-end">
+                                            @if (pendingAutoSubmit)
+                                            {
+                                                <form method="post" asp-page-handler="CancelAutoSubmit" asp-route-documentId="@d.Id" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning me-1"><i class="ri-close-circle-line align-bottom me-1"></i>Cancel Auto-Submit</button>
+                                                </form>
+                                            }
                                             <a class="btn btn-sm btn-outline-primary" asp-page="SmartCaptureReview" asp-route-id="@d.Id">
                                                 <i class="ri-eye-line align-bottom me-1"></i>Open
                                             </a>

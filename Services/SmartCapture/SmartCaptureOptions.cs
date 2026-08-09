@@ -31,6 +31,12 @@ namespace EINVWORLD.Services.SmartCapture
         /// .UploadAsync) unchanged — this only bounds how many files one HTTP request can queue at once.</summary>
         public int MaxFilesPerBulkUpload { get; set; } = 20;
 
+        /// <summary>Stage 4 global kill switch — master gate for automatic LHDN submission of Smart Capture
+        /// drafts, independent of any per-company SmartCaptureAutoSubmitSettings row. Defaults to false and
+        /// is not set to true in any committed appsettings*.json; a company's own opt-in has no effect
+        /// while this is false. See SmartCaptureAutoSubmitEligibilityService.</summary>
+        public bool AutoSubmitEnabled { get; set; } = false;
+
         // ── Retention (tiered — see SmartCaptureRetentionJobHandler for the rules these back) ──────
 
         /// <summary>Documents that never got past extraction (Failed / ValidationFailed with no draft).</summary>
