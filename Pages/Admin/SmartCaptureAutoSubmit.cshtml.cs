@@ -3,6 +3,7 @@ using eInvWorld.Data;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.SmartCapture;
 using EINVWORLD.Services.Audit;
+using EINVWORLD.Services.SmartCapture;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +28,16 @@ namespace eInvWorld.Pages.Admin
         private readonly ApplicationDbContext _context;
         private readonly UserManager<eInvWorld.Models.ApplicationUser> _userManager;
         private readonly IAuditService _audit;
+        private readonly SmartCaptureAutoSubmitEligibilityService _autoSubmit;
 
-        public SmartCaptureAutoSubmitModel(ApplicationDbContext context, UserManager<eInvWorld.Models.ApplicationUser> userManager, IAuditService audit)
+        public SmartCaptureAutoSubmitModel(
+            ApplicationDbContext context, UserManager<eInvWorld.Models.ApplicationUser> userManager, IAuditService audit,
+            SmartCaptureAutoSubmitEligibilityService autoSubmit)
         {
             _context = context;
             _userManager = userManager;
             _audit = audit;
+            _autoSubmit = autoSubmit;
         }
 
         public List<(int PartyInfoId, string Name, bool Enabled)> Companies { get; private set; } = new();
@@ -113,6 +118,16 @@ namespace eInvWorld.Pages.Admin
             }, ct);
 
             SuccessText = "Settings saved.";
+
+            // Turning the toggle off should act like a stop, not just a "no new schedulings" switch —
+            // retract any jobs already scheduled during their delay window for this company.
+            if (wasEnabled && !Enabled)
+            {
+                var cancelled = await _autoSubmit.CancelAllPendingForCompanyAsync(id, ct);
+                if (cancelled > 0)
+                    SuccessText += $" {cancelled} already-scheduled auto-submission(s) for this company were also cancelled.";
+            }
+
             await LoadSelectedAsync(id, ct);
             return Page();
         }
