@@ -4,7 +4,7 @@ Complete technical documentation for **EINVWORLD (eInvWorld)** — an e-invoicin
 **Malaysia's LHDN MyInvois** system, self-hosted on a single in-house **Windows / IIS + SQL Server**
 server.
 
-> This document describes the system as of **v1.12.0**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
+> This document describes the system as of **v1.20.1**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
 > for deployment see [`IIS-DEPLOYMENT-GUIDE.md`](IIS-DEPLOYMENT-GUIDE.md) and [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md);
 > for secrets see [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
@@ -291,7 +291,7 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 
 | Service | Purpose |
 |---|---|
-| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw — reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
+| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw, and — since Smart Capture Stage 4 — the same job type an eligible auto-submit schedules with a delay via `NextRunAtUtc`; reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **SmartCaptureExtraction** (OCR/LLM extraction for one uploaded document) / **SmartCaptureRetention** (tiered document/file cleanup, §10) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
 | **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`), the PDF/validation-email finalizer safety net, the new-e-invoice-received-email safety net (below), and — every 10th cycle — the full LHDN `documents/search` import for every registered company TIN (`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`, default 7 days; this is what catches invoices an external ERP submitted directly to LHDN — see §7). |
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
 
@@ -397,7 +397,36 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
   description into a reviewed invoice **suggestion** (grounded on real LHDN codes + the user's
   customers). Suggest-only; never submits. (`AI` config; Ollama provider by default.)
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — upload a digital PDF → extract text (PdfPig) →
-  suggestion → review. Draft-safe. (`DocumentCapture` config; needs `AI:Enabled`.)
+  suggestion → review. Draft-safe, synchronous. (`DocumentCapture` config; needs `AI:Enabled`.) Being
+  superseded by Smart Capture below; kept unadvertised in nav as a rollback path.
+- **Smart Capture** (`/Invoices/SmartCapture`, labelled **"Create from Document"** in nav) — the
+  persisted/async successor to AI Document Capture, built in 5 staged, deliberately reduced increments
+  (`SmartCapture` config; needs `DocumentCapture` + `AI:Enabled`; OFF by default in Development/Production,
+  Staging-only pending real-Ollama sign-off):
+  - **Stage 1 — assisted capture.** Upload a PDF/JPG/PNG → durable background job (extract text/OCR → AI
+    suggestion → `InvoiceSuggestionValidator` review checklist) → the user always explicitly confirms the
+    LHDN document type and buyer (never auto-decided) → draft via the unchanged `InvoiceDraftService`. No
+    application-level malware scanning (file-type/signature validation, size/page/quota limits, and
+    tenant-scoped storage instead — see `IIS-DEPLOYMENT-GUIDE.md` PART 17d).
+  - **Stage 1.5 — duplicate flag + condensed review.** An exact-content re-upload within the same company
+    is flagged as a review Warning (never blocked); an extraction with zero errors/warnings gets a
+    condensed "all checks passed" view instead of the full checklist expanded by default.
+  - **Stage 2 — learned company hints.** A per-company row (`SmartCaptureCompanyHints`) tracks the most
+    commonly confirmed doc type/currency/tax via a streaming majority vote, surfaced as advisory-only
+    context in the AI prompt once a company has confirmed a few drafts. Never sets a field directly.
+  - **Stage 3 — bulk upload.** The upload form accepts multiple files at once
+    (`SmartCapture:MaxFilesPerBulkUpload`), each going through the identical per-file pipeline as a single
+    upload; one bad file in a batch never blocks the others.
+  - **Stage 4 — conditional automatic submission.** A system Admin can opt a company into unattended LHDN
+    submission of Smart Capture drafts (`/Admin/SmartCaptureAutoSubmit`, never company self-service),
+    gated by a global kill switch (`SmartCapture:AutoSubmitEnabled`, default false), a per-company doc-type
+    allowlist + value ceiling, and a deterministic per-document check (zero review issues, matched buyer,
+    under ceiling) re-evaluated on every confirmation — never a fuzzy confidence score. Reuses the
+    existing `SubmitDocumentJobHandler`/`InvoiceSubmissionHelper` pipeline unchanged (idempotency/signing/
+    retry/audit untouched) via a delayed, cancellable job; the Smart Capture list page shows a countdown +
+    Cancel button during the delay window.
+  - See `CLAUDE.md` § "Invoice-input mechanisms" for the standing architecture rule these all follow
+    (capture is invoice-*input* only, never a parallel subsystem) and the Stage 4 exception's reasoning.
 - **Admin → AI Settings** (`/Admin/AiSettings`) — read-only view of the active AI config + a **Test
   connection** probe (reachable / model pulled / latency). Never shows the API key.
 
@@ -482,6 +511,7 @@ blank in files and supplied via env vars / user-secrets.
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
 | `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120 — may need raising for a large model's first cold load), `KeepAliveMinutes` (default 30; sent as Ollama's `keep_alive` so the model stays resident between requests instead of unloading after Ollama's own 5-minute default, avoiding a repeat cold-load penalty), `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
 | `DocumentCapture` | AI Document Capture: `Enabled`, `MaxFileSizeMb`, `MaxPages`. |
+| `SmartCapture` | Persisted/async Smart Capture (needs `DocumentCapture`+`AI:Enabled`): `Enabled` (OFF in Development/Production, Staging-only), `AllowedExtensions`, `MaxFileSizeMb`, `MaxPages`, retention day tiers, `MonthlyProcessedPageQuota`, `MaxFilesPerBulkUpload` (Stage 3, default 20), `AutoSubmitEnabled` (Stage 4 global kill switch, default **false everywhere** — a company's opt-in via `/Admin/SmartCaptureAutoSubmit` has no effect while this is false). No application-level malware scanning — see `IIS-DEPLOYMENT-GUIDE.md` PART 17d. |
 | `WatchedFolderImport` | `Enabled`, `InboxPath`, `PollSeconds`. |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate`. |
 | `ExtractInvoice:ServiceUrl` | Legacy OCR service endpoint. |
@@ -493,14 +523,17 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **79 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+- **83 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
   into one, `ConsolidatedSchemaCatchup_v1_11_0`). Two new additive migrations in v1.13.0:
   `AddRoleModulePermissions` (new `RoleModulePermissions` table) and `AddCompanyRolePartyInfoScope`
   (nullable `CompanyRole.PartyInfoId`). One more in v1.14.0: `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`
   (3 new `InvoiceHeaders` columns backing the new-e-invoice-received notification, §8). One more in
   v1.14.1: `AddRejectionCancellationEmailTrackingToInvoiceHeader` (7 new `InvoiceHeaders` columns
-  backing retry-safe rejection/cancellation emails, same section) — see `DEPLOY-NOTES.md` §1 for the
-  apply order. Auto-apply on startup
+  backing retry-safe rejection/cancellation emails, same section). Three more for Smart Capture (§10):
+  `AddSmartCaptureDocument` (v1.17.0, the core `SmartCaptureDocuments` table), `AddSmartCaptureCompanyHint`
+  (v1.18.0, Stage 2's learned-hints table), and `AddSmartCaptureAutoSubmit` (v1.20.0, Stage 4's
+  `SmartCaptureAutoSubmitSettings` table + `SmartCaptureDocuments.PendingAutoSubmitJobId`) — see
+  `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
   (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
   tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
   `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not

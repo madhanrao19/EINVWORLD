@@ -41,14 +41,18 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   duplicating at LHDN).
 - **Health + ops** — `/health/live` and `/health/ready` probes, an **Admin → System Health** dashboard,
   fail-fast startup config validation, and CSP violation reporting (`/csp-report`).
-- **Invoice ingestion** (draft-safe — validate/suggest only, never auto-create or submit): **AI Document
-  Capture** (PDF → reviewed suggestion), **Smart Capture** ("Create from Document" in nav — persisted,
-  async version of the above — upload a supplier PDF/JPG/PNG, background OCR/LLM extraction via the
-  durable job queue, format/signature-validated tenant-scoped storage (no application-level malware
-  scanning — a deliberate trade-off, see PART 17d), explicit document-type + buyer confirmation, then a
-  real Draft through the normal invoice
-  pipeline), **Bulk Import** (CSV/XLSX validation + template), a **watched-folder** importer, and a
-  **REST validate API** (`POST /api/import/validate`). All OFF by default.
+- **Invoice ingestion** (draft-safe by default — validate/suggest only, human always confirms the doc
+  type and buyer): **AI Document Capture** (PDF → reviewed suggestion), **Smart Capture** ("Create from
+  Document" in nav — persisted, async version of the above, shipped in 5 staged increments — upload a
+  supplier PDF/JPG/PNG (single or bulk), background OCR/LLM extraction via the durable job queue,
+  format/signature-validated tenant-scoped storage (no application-level malware scanning — a deliberate
+  trade-off, see PART 17d), explicit document-type + buyer confirmation, then a real Draft through the
+  normal invoice pipeline. **One narrow, opt-in exception**: a system Admin may enable conditional
+  automatic LHDN submission for a specific company (`/Admin/SmartCaptureAutoSubmit`), gated by a global
+  kill switch + a per-company doc-type allowlist/value ceiling + deterministic per-document checks — off
+  everywhere by default, and even then reuses the same manual-submission pipeline with a cancellable
+  delay), **Bulk Import** (CSV/XLSX validation + template), a **watched-folder** importer, and a **REST
+  validate API** (`POST /api/import/validate`). All OFF by default.
 - **AI features** (optional, OFF by default) — a **provider-agnostic** AI layer that answers e-invoicing
   questions and turns a plain-English description into a suggested invoice that pre-fills the Create
   Invoice form. Ships with a local, on-prem [Ollama](https://ollama.com) provider (**no invoice data
