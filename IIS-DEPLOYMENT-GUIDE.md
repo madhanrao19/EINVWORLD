@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.17.2.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.20.1.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -201,7 +201,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.17.2.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.20.1.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
@@ -653,7 +653,19 @@ background job (the existing durable `SyncJobs` queue, not a new service), and r
 ✅ **Verify:** upload a document via **Create from Document** — it should show "Queued" then move to a
 review screen once the background job finishes. Upload a renamed non-PDF file (e.g. a `.txt` renamed to
 `.pdf`) and confirm it's **rejected** with a signature-mismatch error — this proves the format validation
-is actually enforced, not just the extension check.
+is actually enforced, not just the extension check. Select multiple files at once (Stage 3, bulk upload,
+capped at `SmartCapture:MaxFilesPerBulkUpload` — default 20) and confirm each gets its own row/status.
+
+**Stage 4 — conditional automatic submission (optional, off by default).** Do not enable this until Smart
+Capture itself has been signed off end-to-end on this environment. Set `SmartCapture__AutoSubmitEnabled`
+to `true` (global kill switch — still has zero effect until a company is individually opted in), then, as
+a system Admin, configure a specific company at **Admin → Smart Capture Auto-Submit**
+(`/Admin/SmartCaptureAutoSubmit`): a narrow LHDN doc-type allowlist (start with `01` only), a conservative
+value ceiling, and a delay of at least several minutes. Verify by confirming a small, clean-looking Smart
+Capture draft for that company and watching the **Smart Capture** list page show an "Auto-submit HH:mm"
+countdown with a **Cancel** button during the delay window — confirm Cancel actually stops it before
+testing the case where you let it run and it appears on **Admin → Sync Jobs** as a completed
+`SubmitDocument` job.
 
 ---
 

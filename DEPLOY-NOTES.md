@@ -237,6 +237,48 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260803200000_AddRejectionCancellationEmailTrackingToInvoiceHeader
 ```
 
+### Post-v1.17.0 migration — Smart Capture (Stage 1)
+
+One new migration, purely additive (new `SmartCaptureDocuments` table only):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureDocument.sql"
+```
+
+> **`AddSmartCaptureDocument`** — creates `SmartCaptureDocuments` (uploaded-document tracking, extraction
+> result, retention). No existing table touched. `SmartCapture:Enabled` stays `false` until you've
+> completed `IIS-DEPLOYMENT-GUIDE.md` PART 17d and `POST-DEPLOY-CHECKLIST.md`'s Smart Capture section.
+
+### Post-v1.18.0 migration — Smart Capture Stage 2 (learned hints)
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureCompanyHint.sql"
+```
+
+> **`AddSmartCaptureCompanyHint`** — creates `SmartCaptureCompanyHints` (one row per company, learned
+> advisory-only doc-type/currency/tax hints). Purely additive; the feature is entirely automatic once
+> Smart Capture itself is enabled — no separate config flag.
+
+### Post-v1.20.0 migration — Smart Capture Stage 4 (conditional auto-submission)
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureAutoSubmit.sql"
+```
+
+> **`AddSmartCaptureAutoSubmit`** — creates `SmartCaptureAutoSubmitSettings` (per-company opt-in, set only
+> from `/Admin/SmartCaptureAutoSubmit`) and adds nullable `SmartCaptureDocuments.PendingAutoSubmitJobId`.
+> Purely additive. `SmartCapture:AutoSubmitEnabled` (config, global kill switch) stays `false` — no
+> company can auto-submit until you explicitly opt one in AND set that flag `true`.
+
+Verify all three are recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260809023129_AddSmartCaptureAutoSubmit
+```
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:
