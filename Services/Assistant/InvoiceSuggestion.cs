@@ -30,6 +30,13 @@ namespace EINVWORLD.Services.Assistant
     /// <summary>A customer the current user is allowed to invoice (used to ground + validate the buyer).</summary>
     public sealed record KnownBuyer(string Name, string Tin);
 
+    /// <summary>Advisory-only hints learned from a company's own past confirmed drafts (Smart Capture
+    /// Stage 2, <c>SmartCaptureCompanyHintService</c>) — nudges the suggestion prompt toward the company's
+    /// usual doc type/currency/tax, but the model is free to disagree and the human review step is
+    /// unchanged either way. Never used to set a field directly.</summary>
+    public sealed record CompanyCaptureHints(
+        string? DocTypeCode, string? Currency, string? TaxType, decimal? TaxRatePercent);
+
     public enum CheckSeverity { Ok, Warning, Error }
 
     public sealed record CheckItem(CheckSeverity Severity, string Message);

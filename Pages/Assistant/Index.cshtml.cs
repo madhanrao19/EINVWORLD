@@ -99,7 +99,7 @@ namespace eInvWorld.Pages.Assistant
             // buyer + exact TIN instead of inventing one.
             var knownBuyers = await LoadKnownBuyersAsync(ct);
 
-            var result = await _assistant.SuggestInvoiceAsync(Description ?? string.Empty, knownBuyers, ct);
+            var result = await _assistant.SuggestInvoiceAsync(Description ?? string.Empty, knownBuyers, ct: ct);
             if (result.Ok)
             {
                 SuggestionJson = result.Content;
