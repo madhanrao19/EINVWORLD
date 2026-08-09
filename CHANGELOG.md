@@ -1,6 +1,24 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.20.2`** (`AppInfo:Version` in `appsettings.json`). v1.20.2 is a **patch**:
+> **Current version: `v1.21.0`** (`AppInfo:Version` in `appsettings.json`). v1.21.0 is a **minor**
+> release: brings `Pages/Invoices/InvoiceEdit.cshtml` (the page every Smart Capture confirmation and
+> every "Edit" click hands off to) to full visual and functional parity with `CreateInvoice.cshtml` —
+> the two had quietly drifted apart over several UI-migration commits, and a side-by-side comparison
+> against live staging screenshots confirmed InvoiceEdit was still showing an older, plainer layout
+> despite being restyled in the same commits. All 3 steps now match: Step 1 gets the KPI stat row
+> (Buyer Status/Currency/Running Total/Document Type), collapsible Document Setup/Buyer & Supplier/
+> Additional Party Information sections, and a sticky Invoice Summary + live Validation Checklist
+> sidebar; Step 2 gets a Row Total column per line item and an Invoice Summary/Amount Payable block;
+> Step 3 gets Invoice Details/Buyer & Supplier cards, an Item Summary table, a Submission Readiness
+> checklist, and a sticky Total Amount sidebar — while keeping InvoiceEdit's own Save Draft/Save as
+> Template/Submit to LHDN button set and handlers completely unchanged (only CreateInvoice's Review
+> step's markup/layout was reused, never its buttons). Found and fixed one real pre-existing bug along
+> the way: `calculateTotals()` never updated a line item's own "Subtotal" display for an already-saved
+> draft — only a live `oninput` handler did — so a freshly-opened existing invoice showed "0.00"
+> everywhere that value fed into (the Step 2 Subtotal box and, worse, the new Step 3 Item Summary
+> table's Tax column, computed as Row Total − Subtotal). Now `calculateTotals()` keeps that value in
+> sync directly, like it already did for Row Total. No schema change; pure Razor markup + JavaScript.
+> v1.20.2 was a **patch**:
 > fixes a **Critical** IDOR/tenant-isolation gap on `Pages/Invoices/InvoiceEdit.cshtml` — the page every
 > Smart Capture confirmation hands its new draft off to had no ownership check at all on loading (GET) or
 > saving (POST) an invoice by id; `SupplierBasePage`'s own authorization never actually engaged for this
@@ -48,6 +66,58 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — InvoiceEdit brought to full parity with Create e-Invoice
+
+Follow-up to the same-day IDOR fix below: the user reported (with staging screenshots) that the invoice
+editor Smart Capture hands drafts off to still "looked old" compared to Create e-Invoice, even after
+confirming the routing itself was correct. Comparing the two Razor views side by side confirmed it —
+`InvoiceEdit.cshtml` never received the richer redesign `CreateInvoice.cshtml` got in earlier "Stitch
+parity" commits (`db90425`, `206a5a2`); it only got a lighter "consistent header" touch-up and the
+shared brand-token restyle (`#154`, `#162`), which explains why both looked "restyled" in git history
+but not actually alike on screen.
+
+**Step 1 — Basic Information**: added the Bento KPI row (Buyer Status/Currency/Running Total/Document
+Type, live-updated), wrapped the existing fields in collapsible "Document Setup" / "Buyer & Supplier"
+sections (matching Create e-Invoice's exact field boundaries — no new fields added), restyled
+"Additional Party Information" into its own collapsed-by-default section with the "PRE-FILLED"/"SYSTEM
+PRE-FILLED" badges, and added the sticky right-hand Invoice Summary + Validation Checklist sidebar. Also
+added the SVDP Notice banner (config-gated, same as Create e-Invoice) that InvoiceEdit was missing
+entirely.
+
+**Step 2 — Invoice Items**: added a "Row Total" box next to each line's "Subtotal" box, moved "+ Add
+Item" to the top of the card (matching Create e-Invoice), and added the Invoice Summary / Amount Payable
+block at the bottom. Applied to both the server-rendered items and the two JS templates used when adding
+a new row / re-adding a removed row, plus the row-reindexing logic.
+
+**Step 3 — Review & Submit**: replaced the plain two-table layout with Invoice Details / Buyer & Supplier
+cards, an Item Summary table (built client-side from the live item rows, no server round-trip), a
+Submission Readiness checklist, a Payment & Terms card, and a sticky Total Amount sidebar — while leaving
+InvoiceEdit's own action buttons (Save as Draft / Save as Template / Submit to LHDN, and the
+`IsTemplateMode` "Update Template" variant) completely untouched; only Create e-Invoice's simpler "Submit
+Draft/Template" button set was *not* copied over, since InvoiceEdit's own handlers are real, different,
+already-correct backend behavior specific to editing an existing draft.
+
+**Real bug found and fixed along the way**: `calculateTotals()` computed each line's subtotal internally
+but only ever wrote it to the DOM's Row Total display — the separate per-row "Subtotal" box was actually
+maintained by a different function (`calculateSubtotal()`) triggered only by the user typing into a
+qty/price field. For a freshly-opened *existing* draft, that never fires, so the Subtotal box silently
+stayed at its "0.00" placeholder — and the new Step 3 Item Summary table, which derives its Tax column as
+`Row Total − Subtotal`, showed the full row total as "tax" instead of the real tax amount. Fixed by
+having `calculateTotals()` keep the per-row Subtotal box in sync directly, the same way it already did
+for Row Total — this also fixes the pre-existing Step 2 display bug for existing drafts, not just the
+new Step 3 table.
+
+No schema change, no backend/`.cs` changes at all — pure `.cshtml` markup and inline JavaScript. Verified
+live against the real Staging database (local dev environment, per `local-f5-staging-db` — Turnstile uses
+Cloudflare's public test keys locally, so automated login works here unlike against the deployed Staging
+host) by logging in as Admin, opening a real draft invoice (`EINV100464`), and walking all 3 steps: KPI
+tiles and Validation Checklist correctly reflected the invoice's real supplier/buyer/currency, the Item
+Summary table showed the correct Tax/Total after the fix, Submission Readiness showed all green, and the
+existing Save Draft / Save as Template / Submit to LHDN buttons rendered with their original behavior
+intact. The invoice was only viewed and navigated — never saved/submitted — so no shared data was
+modified. `dotnet build`/`dotnet test`: unaffected (236/236 pass) since this is a pure front-end change
+with no C# logic touched; verification here was via live browser testing rather than new unit tests.
 
 ## 📅 2026-08-09 — Critical IDOR fix on InvoiceEdit + AI Document Capture removed from nav
 
