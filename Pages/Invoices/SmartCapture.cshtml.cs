@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Claims;
 using eInvWorld.Data;
 using eInvWorld.Models.SmartCapture;
@@ -31,18 +32,27 @@ namespace eInvWorld.Pages.Invoices
         public bool Enabled => _options.Enabled;
         public int MaxFileSizeMb => _options.MaxFileSizeMb;
         public string[] AllowedExtensions => _options.AllowedExtensions;
+        public int MaxFilesPerBulkUpload => _options.MaxFilesPerBulkUpload;
 
         public List<(int PartyInfoId, string Name)> MemberCompanies { get; private set; } = new();
         public List<SmartCaptureDocument> Documents { get; private set; } = new();
 
+        /// <summary>Stage 3: accepts one or many files from the same &lt;input multiple&gt; field — a
+        /// single upload is just a batch of one. Each file goes through the exact same per-file
+        /// validation/quota/storage path (SmartCaptureDocumentService.UploadAsync) as before; nothing about
+        /// that path changed for bulk.</summary>
         [BindProperty]
-        public IFormFile? Upload { get; set; }
+        public List<IFormFile>? Uploads { get; set; }
 
         [BindProperty]
         public int CompanyPartyInfoId { get; set; }
 
         public string? ErrorText { get; private set; }
         public string? SuccessText { get; private set; }
+
+        /// <summary>Per-file failures from the most recent bulk upload ("invoice3.pdf: file too large"),
+        /// shown alongside SuccessText so a partially-successful batch is never silently incomplete.</summary>
+        public List<string> BatchFailures { get; private set; } = new();
 
         public async Task OnGetAsync(CancellationToken ct)
         {
@@ -59,29 +69,45 @@ namespace eInvWorld.Pages.Invoices
                 return Page();
             }
 
-            if (Upload is null || Upload.Length == 0)
+            var files = (Uploads ?? new List<IFormFile>()).Where(f => f.Length > 0).ToList();
+            if (files.Count == 0)
             {
-                ErrorText = "Please choose a file to upload.";
+                ErrorText = "Please choose at least one file to upload.";
                 await LoadAsync(ct);
                 return Page();
             }
 
-            byte[] bytes;
-            using (var ms = new MemoryStream())
+            if (files.Count > _options.MaxFilesPerBulkUpload)
             {
-                await Upload.CopyToAsync(ms, ct);
-                bytes = ms.ToArray();
-            }
-
-            var result = await _documents.UploadAsync(bytes, Upload.FileName, Upload.ContentType, CompanyPartyInfoId, userId, ct);
-            if (!result.Ok)
-            {
-                ErrorText = result.UserMessage;
+                ErrorText = $"Too many files in one batch (limit {_options.MaxFilesPerBulkUpload}). Please upload in smaller batches.";
                 await LoadAsync(ct);
                 return Page();
             }
 
-            SuccessText = "Document uploaded and queued for processing.";
+            var succeeded = 0;
+            foreach (var file in files)
+            {
+                byte[] bytes;
+                using (var ms = new MemoryStream())
+                {
+                    await file.CopyToAsync(ms, ct);
+                    bytes = ms.ToArray();
+                }
+
+                var result = await _documents.UploadAsync(bytes, file.FileName, file.ContentType, CompanyPartyInfoId, userId, ct);
+                if (result.Ok)
+                    succeeded++;
+                else
+                    BatchFailures.Add($"{file.FileName}: {result.UserMessage}");
+            }
+
+            if (succeeded > 0)
+                SuccessText = files.Count == 1
+                    ? "Document uploaded and queued for processing."
+                    : $"{succeeded} of {files.Count} documents uploaded and queued for processing.";
+            if (BatchFailures.Count > 0 && succeeded == 0)
+                ErrorText = "No documents could be uploaded.";
+
             await LoadAsync(ct);
             return Page();
         }
