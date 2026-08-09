@@ -1,21 +1,50 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.18.0`** (`AppInfo:Version` in `appsettings.json`). v1.18.0 is a **minor**
-> release: **Smart Capture Stage 2 (reduced first cut)** — per-company "learned hints" (most commonly
-> confirmed doc type/currency/tax, via a streaming majority-vote, no history table) fed into the AI
-> suggestion prompt as advisory-only context. Never sets a field directly, never affects validation or
-> blocking, and the review/confirm screen is completely unchanged. New additive `ApplicationDbContext`
-> migration (`SmartCaptureCompanyHints`). v1.17.3 (folded into this release) documents Stage 1.5
-> (2026-08-08, PR #173): exact-content duplicate-upload detection (flag, never block) and a condensed
-> review view for extractions with zero warnings. v1.17.2 removed application-level malware scanning
-> (ClamAV) from Smart Capture — a deliberate architecture decision; see that entry for the reasoning and
-> the upload-security controls it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart
-> Capture "Confirm" attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID`
-> column). v1.17.0 was the **minor** release that introduced **Smart Capture (Stage 1)** — persisted,
-> async supplier-invoice capture → draft, now labelled **"Create from Document"** in navigation — via
-> PR #170, with a new additive `ApplicationDbContext` migration (`SmartCaptureDocuments`).
-> Feature-flagged **OFF by default** in Development and Production; enabled on Staging only, for
-> verification (real Ollama sign-off still outstanding — see `POST-DEPLOY-CHECKLIST.md`).
+> **Current version: `v1.19.0`** (`AppInfo:Version` in `appsettings.json`). v1.19.0 is a **minor**
+> release: **Smart Capture Stage 3 (reduced first cut)** — bulk upload. The upload form now accepts
+> multiple files at once (capped at `SmartCapture:MaxFilesPerBulkUpload`, default 20); each file goes
+> through the exact same per-file validation/quota/storage/durable-job path as a single upload
+> (`SmartCaptureDocumentService.UploadAsync`, unchanged) — one bad file in a batch never blocks the
+> others, and the page reports a per-file failure list alongside the success count. Still produces
+> drafts only, one at a time, through the same always-confirm review screen — no batch draft creation or
+> auto-submission introduced. No schema change. v1.18.0 shipped Stage 2 (reduced first cut): per-company
+> "learned hints" fed into the AI suggestion prompt as advisory-only context, new additive
+> `ApplicationDbContext` migration (`SmartCaptureCompanyHints`). v1.17.3 (folded into v1.18.0) documented
+> Stage 1.5 (2026-08-08, PR #173): exact-content duplicate-upload detection (flag, never block) and a
+> condensed review view for extractions with zero warnings. v1.17.2 removed application-level malware
+> scanning (ClamAV) from Smart Capture — a deliberate architecture decision; see that entry for the
+> reasoning and the upload-security controls it relies on instead. v1.17.1 fixed a **Critical** bug where
+> every Smart Capture "Confirm" attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL
+> `PrefixedID` column). v1.17.0 was the **minor** release that introduced **Smart Capture (Stage 1)** —
+> persisted, async supplier-invoice capture → draft, now labelled **"Create from Document"** in
+> navigation — via PR #170, with a new additive `ApplicationDbContext` migration
+> (`SmartCaptureDocuments`). Feature-flagged **OFF by default** in Development and Production; enabled on
+> Staging only, for verification (real Ollama sign-off still outstanding — see
+> `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Smart Capture Stage 3 (reduced first cut): bulk upload
+
+The Smart Capture upload form now accepts multiple files in one submission (`<input multiple>`), capped
+at a configurable `SmartCapture:MaxFilesPerBulkUpload` (default 20 per batch). Each file is passed through
+`SmartCaptureDocumentService.UploadAsync` exactly as before — same per-file signature/size/quota
+validation, same tenant-scoped storage, same one-durable-job-per-document queuing — so a single upload is
+just a batch of one and nothing about the existing per-file pipeline changed. Results are aggregated
+per-file: a batch reports "N of M documents uploaded" plus a list of which files failed and why, so one
+bad file (wrong signature, over quota, unsupported type) never blocks the rest of the batch. Also fixed a
+stale claim on the Smart Capture page ("Scanned for malware before storage") left over from the v1.17.2
+ClamAV removal — replaced with an accurate description of the file-type/signature validation it actually
+performs.
+
+**Known limitation, not addressed in this cut**: the monthly processing quota is measured in
+*successfully extracted* pages (`PageCount`, set only once background extraction completes), not upload
+count — so a large bulk batch can queue well past the quota before any of it finishes processing and the
+quota check reflects it. This is an existing Stage 1 characteristic, not new to bulk; bulk just makes the
+burst more visible. `MaxFilesPerBulkUpload` bounds the worst case per batch. Revisit if real Staging usage
+shows this needs a reservation-based quota instead.
+
+Still produces drafts one at a time through the unchanged, always-confirm review screen — no batch draft
+creation, no auto-submission. That remains explicitly out of scope until Stage 4, which requires its own
+scoped approval given the LHDN-submission blast radius.
 
 ## 📅 2026-08-09 — Smart Capture Stage 2 (reduced first cut): learned per-company hints
 
