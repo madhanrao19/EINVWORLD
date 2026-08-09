@@ -115,8 +115,6 @@ namespace EINVWORLD.Services.SmartCapture
             var companyOptedIn = result.Checks.FirstOrDefault(c => c.Name == "CompanyOptedIn")?.Passed ?? false;
             if (!companyOptedIn) return; // never opted in — nothing to record
 
-            var checksJson = JsonSerializer.Serialize(result.Checks);
-
             if (!result.Eligible)
             {
                 await _audit.WriteAsync("SmartCaptureAutoSubmitSkipped", new AuditEntry
@@ -157,20 +155,30 @@ namespace EINVWORLD.Services.SmartCapture
             _logger.LogInformation("Smart Capture: auto-submit scheduled for invoice {InvoiceNo} (document {DocumentId}) at {RunAtUtc}", invoiceNo, document.Id, job.NextRunAtUtc);
         }
 
-        /// <summary>Cancels a still-pending auto-submission — sets the job Cancelled (the durable worker
-        /// only ever claims Status=Queued rows, so this is race-free: either the worker already claimed it
-        /// and this is a no-op, or it hasn't and it never will). Caller must have already verified the
-        /// document belongs to the acting user's company.</summary>
+        /// <summary>Cancels a still-pending auto-submission. Uses a single atomic conditional UPDATE
+        /// (<c>WHERE Id = jobId AND Status = Queued</c>) rather than a load-check-save round trip: SyncJob
+        /// has no concurrency token, so a plain read-then-write here would race the durable worker's own
+        /// atomic claim (<see cref="DurableSyncJobWorker"/> claims via UPDLOCK/READPAST inside a short
+        /// transaction, then releases the lock and can run — and complete, including a real LHDN
+        /// submission — well before this method's own read would ever notice). A stale read winning that
+        /// race and blindly overwriting the row afterwards would show "Cancelled" even though the invoice
+        /// had already been submitted — this atomic UPDATE closes that window: it can only ever affect a
+        /// row still Queued at the exact moment it runs, and the affected-row-count tells us which case we
+        /// hit. Caller must have already verified the document belongs to the acting user's company.</summary>
         public async Task<bool> CancelAsync(SmartCaptureDocument document, CancellationToken ct)
         {
             if (document.PendingAutoSubmitJobId is not int jobId) return false;
 
-            var job = await _context.SyncJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
-            if (job is null || job.Status != SyncJobStatus.Queued) return false;
+            var cancelled = await _context.SyncJobs
+                .Where(j => j.Id == jobId && j.Status == SyncJobStatus.Queued)
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, SyncJobStatus.Cancelled), ct);
 
-            job.Status = SyncJobStatus.Cancelled;
+            // Either way the job is no longer in a cancellable state — clear the pending marker so a stale
+            // "Auto-submit pending" badge doesn't linger once it's already run (or just got cancelled).
             document.PendingAutoSubmitJobId = null;
             await _context.SaveChangesAsync(ct);
+
+            if (cancelled == 0) return false; // lost the race — the worker had already claimed/run it
 
             await _audit.WriteAsync("SmartCaptureAutoSubmitCancelled", new AuditEntry
             {
@@ -179,6 +187,39 @@ namespace EINVWORLD.Services.SmartCapture
             }, ct);
 
             return true;
+        }
+
+        /// <summary>Retracts every still-pending auto-submission for a company in one pass — called when a
+        /// system Admin disables the company's opt-in (<c>Pages/Admin/SmartCaptureAutoSubmit</c>), so
+        /// turning the toggle off actually stops jobs already scheduled during their delay window, not just
+        /// new ones. Same atomic conditional UPDATE as <see cref="CancelAsync"/> (a job the worker already
+        /// claimed is simply left alone — it is no longer Queued, so the WHERE clause excludes it), applied
+        /// in bulk instead of one row at a time. Returns how many were actually cancelled.</summary>
+        public async Task<int> CancelAllPendingForCompanyAsync(int companyPartyInfoId, CancellationToken ct)
+        {
+            var jobIds = await _context.SmartCaptureDocuments
+                .Where(d => d.CompanyPartyInfoId == companyPartyInfoId && d.PendingAutoSubmitJobId != null)
+                .Select(d => d.PendingAutoSubmitJobId!.Value)
+                .ToListAsync(ct);
+            if (jobIds.Count == 0) return 0;
+
+            var cancelledCount = await _context.SyncJobs
+                .Where(j => jobIds.Contains(j.Id) && j.Status == SyncJobStatus.Queued)
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.Status, SyncJobStatus.Cancelled), ct);
+
+            await _context.SmartCaptureDocuments
+                .Where(d => d.CompanyPartyInfoId == companyPartyInfoId && d.PendingAutoSubmitJobId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(d => d.PendingAutoSubmitJobId, (int?)null), ct);
+
+            if (cancelledCount > 0)
+            {
+                await _audit.WriteAsync("SmartCaptureAutoSubmitBulkCancelled", new AuditEntry
+                {
+                    NewValueJson = JsonSerializer.Serialize(new { companyPartyInfoId, cancelledCount, totalPending = jobIds.Count })
+                }, ct);
+            }
+
+            return cancelledCount;
         }
     }
 }

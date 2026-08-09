@@ -1,7 +1,16 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.20.0`** (`AppInfo:Version` in `appsettings.json`). v1.20.0 is a **minor**
-> release: **Smart Capture Stage 4 (reduced first cut)** — conditional automatic LHDN submission. A
+> **Current version: `v1.20.1`** (`AppInfo:Version` in `appsettings.json`). v1.20.1 is a **patch**:
+> fixes a race condition found during a full Smart Capture re-verification pass —
+> `SmartCaptureAutoSubmitEligibilityService.CancelAsync` could, under a real timing race with the durable
+> worker, blindly overwrite an already-`Completed` `SyncJob` row back to `Cancelled`, showing "Cancelled"
+> in the UI even though the invoice had already been submitted to MyInvois. Fixed with a single atomic
+> conditional `UPDATE ... WHERE Status = Queued` (via `ExecuteUpdateAsync`) instead of a load-check-save
+> round trip. Also fixes disabling a company's auto-submit opt-in
+> (`/Admin/SmartCaptureAutoSubmit`) not retracting jobs already scheduled during their delay window — it
+> now cancels them too (`CancelAllPendingForCompanyAsync`). No schema change. See the dated entry below
+> for the full re-verification findings. v1.20.0 was a **minor** release: **Smart Capture Stage 4
+> (reduced first cut)** — conditional automatic LHDN submission. A
 > system Admin can opt a company into unattended submission of Smart Capture drafts
 > (`/Admin/SmartCaptureAutoSubmit`, never self-service); a global kill switch
 > (`SmartCapture:AutoSubmitEnabled`, default **false everywhere**) must also be on. Every confirmed draft
@@ -28,6 +37,37 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-09 — Smart Capture full re-verification pass: 2 real defects found and fixed
+
+A fresh "check if Smart Capture has been fully implemented" pass (roast → plan → fix → test) across all 5
+already-shipped stages. Both real, concrete findings were in Stage 4's auto-submit cancellation path —
+everything else (tenant isolation on the Stage 2/4 tables, Admin-page authorization, the
+`OnPostCancelAutoSubmitAsync` ownership check, migration additivity, hint-value prompt-injection surface)
+held up under review with no changes needed.
+
+- **`SmartCaptureAutoSubmitEligibilityService.CancelAsync` TOCTOU race (real, not theoretical).**
+  `SyncJob` has no concurrency token, and the durable worker claims a job via an atomic
+  `UPDATE ... WHERE Status = Queued` inside a short transaction, then releases the row lock and runs the
+  handler (a real LHDN submission) to completion in a separate later write. The old `CancelAsync` read the
+  job, checked its status in C#, then unconditionally wrote `Status = Cancelled` — if the worker's claim
+  and completion happened in between that read and that write, Cancel's own write would silently overwrite
+  `Completed` back to `Cancelled`, showing the user a false "cancelled" state for an invoice that had
+  actually already gone to MyInvois. Fixed with a single atomic conditional UPDATE
+  (`_context.SyncJobs.Where(j => j.Id == jobId && j.Status == Queued).ExecuteUpdateAsync(...)`), whose
+  affected-row-count tells the caller which case actually happened — no intermediate read to go stale.
+- **Disabling a company's auto-submit didn't retract already-scheduled jobs.** An Admin flipping
+  `Enabled` to `false` on `/Admin/SmartCaptureAutoSubmit` only stopped *future* schedulings — any job
+  already queued during its delay window kept its `NextRunAtUtc` and would still fire. Added
+  `SmartCaptureAutoSubmitEligibilityService.CancelAllPendingForCompanyAsync`, called on the true→false
+  transition, using the same atomic-UPDATE pattern in bulk (a job the worker already claimed is simply
+  outside the `WHERE Status = Queued` filter, so it's correctly left untouched either way).
+
+Also removed one unused local variable (`checksJson` in `ApplyAsync`) found during the pass. No schema
+change, no behavior change to the eligibility/scheduling logic itself — this is purely a cancellation-path
+correctness fix. `dotnet test`: 233/233 pass against real SQL Server LocalDB, including 2 new tests
+reproducing the exact race (job already `Completed` when Cancel runs — never overwritten) and the bulk
+retraction (2 pending jobs cancelled, 1 already-`Completed` job for the same company left alone).
 
 ## 📅 2026-08-09 — Smart Capture Stage 4 (reduced first cut): conditional automatic submission
 

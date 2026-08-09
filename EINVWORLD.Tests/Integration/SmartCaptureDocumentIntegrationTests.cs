@@ -1154,5 +1154,92 @@ namespace EINVWORLD.Tests.Integration
             var jobAfterCancel = await ctx.SyncJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id);
             Assert.Equal(SyncJobStatus.Cancelled, jobAfterCancel.Status);
         }
+
+        [Fact]
+        public async Task AutoSubmit_Cancel_Never_Overwrites_A_Job_The_Worker_Already_Claimed_And_Finished()
+        {
+            // Reproduces the precondition the atomic-UPDATE fix in CancelAsync exists for: by the time the
+            // Cancel button's request reaches the server, DurableSyncJobWorker may have already claimed
+            // AND completed the job (including a real LHDN submission) - a stale read-then-write Cancel
+            // must never blindly stomp that Completed status back to Cancelled and mislead the user into
+            // thinking they stopped a submission that already went through.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Race Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+
+            var job = new SyncJob
+            {
+                JobType = SyncJobType.SubmitDocument,
+                Status = SyncJobStatus.Queued,
+                QueuedAtUtc = DateTime.UtcNow,
+                PayloadJson = SyncJobPayload.CreateForInvoice("INV-RACE-0001"),
+            };
+            ctx.SyncJobs.Add(job);
+            var doc = NewDocumentForCompany(company.PartyInfoId);
+            doc.Status = SmartCaptureDocumentStatus.DraftCreated;
+            ctx.SmartCaptureDocuments.Add(doc);
+            await ctx.SaveChangesAsync();
+            doc.PendingAutoSubmitJobId = job.Id;
+            await ctx.SaveChangesAsync();
+
+            // Simulate the worker having already claimed and completed the job — real submission happened.
+            job.Status = SyncJobStatus.Completed;
+            job.FinishedAtUtc = DateTime.UtcNow;
+            await ctx.SaveChangesAsync();
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = true }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            var cancelled = await service.CancelAsync(doc, CancellationToken.None);
+
+            Assert.False(cancelled); // Cancel must report failure, not a false success
+            var jobAfter = await ctx.SyncJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id);
+            Assert.Equal(SyncJobStatus.Completed, jobAfter.Status); // NEVER overwritten back to Cancelled
+            Assert.Null(doc.PendingAutoSubmitJobId); // stale "pending" badge is still cleared
+        }
+
+        [Fact]
+        public async Task AutoSubmit_Disabling_Company_Opt_In_Retracts_Already_Scheduled_Jobs_But_Not_Already_Completed_Ones()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Auto-Submit Bulk Cancel Co");
+            ctx.PartyInfos.Add(company);
+            await ctx.SaveChangesAsync();
+
+            var pendingJob1 = new SyncJob { JobType = SyncJobType.SubmitDocument, Status = SyncJobStatus.Queued, QueuedAtUtc = DateTime.UtcNow, PayloadJson = SyncJobPayload.CreateForInvoice("INV-BULK-0001") };
+            var pendingJob2 = new SyncJob { JobType = SyncJobType.SubmitDocument, Status = SyncJobStatus.Queued, QueuedAtUtc = DateTime.UtcNow, PayloadJson = SyncJobPayload.CreateForInvoice("INV-BULK-0002") };
+            var alreadyDoneJob = new SyncJob { JobType = SyncJobType.SubmitDocument, Status = SyncJobStatus.Completed, QueuedAtUtc = DateTime.UtcNow, FinishedAtUtc = DateTime.UtcNow, PayloadJson = SyncJobPayload.CreateForInvoice("INV-BULK-0003") };
+            ctx.SyncJobs.AddRange(pendingJob1, pendingJob2, alreadyDoneJob);
+
+            var doc1 = NewDocumentForCompany(company.PartyInfoId);
+            var doc2 = NewDocumentForCompany(company.PartyInfoId);
+            var doc3 = NewDocumentForCompany(company.PartyInfoId); // already-submitted document, not cancellable
+            ctx.SmartCaptureDocuments.AddRange(doc1, doc2, doc3);
+            await ctx.SaveChangesAsync();
+
+            doc1.PendingAutoSubmitJobId = pendingJob1.Id;
+            doc2.PendingAutoSubmitJobId = pendingJob2.Id;
+            doc3.PendingAutoSubmitJobId = alreadyDoneJob.Id;
+            await ctx.SaveChangesAsync();
+
+            var service = new SmartCaptureAutoSubmitEligibilityService(
+                ctx, new SmartCaptureOptions { AutoSubmitEnabled = true }, new NullAuditService(), NullLogger<SmartCaptureAutoSubmitEligibilityService>.Instance);
+
+            var cancelledCount = await service.CancelAllPendingForCompanyAsync(company.PartyInfoId, CancellationToken.None);
+
+            Assert.Equal(2, cancelledCount); // only the two still-Queued jobs
+            var jobs = await ctx.SyncJobs.AsNoTracking().Where(j => new[] { pendingJob1.Id, pendingJob2.Id, alreadyDoneJob.Id }.Contains(j.Id)).ToListAsync();
+            Assert.Equal(SyncJobStatus.Cancelled, jobs.Single(j => j.Id == pendingJob1.Id).Status);
+            Assert.Equal(SyncJobStatus.Cancelled, jobs.Single(j => j.Id == pendingJob2.Id).Status);
+            Assert.Equal(SyncJobStatus.Completed, jobs.Single(j => j.Id == alreadyDoneJob.Id).Status); // untouched
+
+            var docsAfter = await ctx.SmartCaptureDocuments.AsNoTracking().Where(d => new[] { doc1.Id, doc2.Id, doc3.Id }.Contains(d.Id)).ToListAsync();
+            Assert.All(docsAfter, d => Assert.Null(d.PendingAutoSubmitJobId)); // pending marker cleared on all three
+        }
     }
 }
