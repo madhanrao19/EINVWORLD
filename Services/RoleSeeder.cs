@@ -113,10 +113,20 @@ namespace eInvWorld.Services
 
                     if (await _context.PartyInfos.AnyAsync(p => p.PartyInfoId == companyId))
                     {
+                        // HasCompanyAccess/IsPrimaryCompany default to false on a bare UserCompany row.
+                        // SupplierBasePage.OnPageHandlerExecutionAsync treats that combination as "no
+                        // permission" and redirects to Access Denied - a real onboarded user only gets
+                        // these set by the app's own "Invite a teammate" flow. Without this, the demo
+                        // account's own "My Company" link (/Suppliers/Details?id=...) was permanently
+                        // blocked despite the user genuinely owning that company. First company in the
+                        // list is the primary/full-access anchor; any additional ones get full access
+                        // without also claiming to be primary.
                         _context.UserCompanies.Add(new UserCompany
                         {
                             UserId = user.Id,
-                            PartyInfoId = companyId
+                            PartyInfoId = companyId,
+                            IsPrimaryCompany = companyId == companyIds[0],
+                            HasCompanyAccess = true
                         });
                         changed = true;
                     }
