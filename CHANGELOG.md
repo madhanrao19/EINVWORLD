@@ -1,7 +1,19 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.3`** (`AppInfo:Version` in `appsettings.json`). v1.21.3 is a **patch**
-> release, found during a full production-verification QA pass on staging.einvworld.com: fixes a
+> **Current version: `v1.21.4`** (`AppInfo:Version` in `appsettings.json`). v1.21.4 is a **patch**
+> release: three more fixes from the same full production-verification QA pass on staging.einvworld.com
+> that produced v1.21.3 — the demo Buyer account was linked to an LHDN generic placeholder TIN that can
+> never complete an intermediary OAuth token exchange (now points at a real onboarded company); the
+> Supplier/Buyer dashboard's "LHDN Invalid"/"Connection Failed" action tiles always rendered with
+> alarming static text even with zero actual issues (now hidden when there's nothing to act on, plus a
+> missing filter dropdown option); and demo accounts got "Access Denied" viewing their own company's
+> "My Company" page because `RoleSeeder` never granted the legacy `HasCompanyAccess`/`IsPrimaryCompany`
+> flags that gate it (a separate mechanism from the newer "Roles & Permissions" system). All four fixes
+> from this QA pass (this one plus the three that shipped as v1.21.3) have been live-verified against
+> Staging post-redeploy: Admin, Supplier, and Buyer all log in and reach a fully working dashboard, "My
+> Company" loads correctly, and the dashboard action tiles no longer show false alarms. See the dated
+> entries below for details. v1.21.3 was a **patch**
+> release, found during the same QA pass: fixes a
 > false-positive "Row 1: contents were altered after it was written" from Admin → Audit Trail →
 > "Verify chain integrity" (a `DateTimeKind` round-trip bug in the hash recomputation, not a real tamper
 > event — proven with a real-SQL-Server integration test that reproduces the exact error on a
@@ -87,6 +99,68 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-10 — Fix demo Supplier/Buyer "My Company" Access Denied
+
+Continuing the same QA pass, re-verified live on Staging after the TIN-missing fix's redeploy:
+`supplier@einvworld.com` logged in cleanly, but **Company Management → My Company
+(`/Suppliers/Details?id=...`) returned "Access denied"** for the account viewing its own company.
+
+`SupplierBasePage.OnPageHandlerExecutionAsync` (the gate for `/Suppliers/Details`, `/Edit`, `/Users`,
+`/RolesPermissions`, `/Security`, `/Audit`) only grants access when the caller's `UserCompanies` row has
+`HasCompanyAccess=true` or `IsPrimaryCompany=true`. `RoleSeeder`'s `UserCompany` inserts only ever set
+`UserId`/`PartyInfoId`, leaving both flags at their default `false` — every demo account's company link
+has always failed this check. A real, properly onboarded user gets these flags set correctly via the
+app's own "Invite a teammate" flow. Note this is a genuinely separate mechanism from the newer
+"Roles & Permissions" tab (`UserCompany.CompanyRoleId` → `CompanyRoles`) — assigning a role there only
+ever writes `CompanyRoleId`, never `HasCompanyAccess`/`IsPrimaryCompany`, so it would not have fixed this
+on its own either.
+
+`RoleSeeder` now sets `IsPrimaryCompany=true` on the first company in each demo account's list and
+`HasCompanyAccess=true` on all of them. The stale pre-fix `UserCompanies` rows were removed directly via
+Admin → Company Management → Users on the live Staging database so the self-heal logic recreated them
+correctly on the next restart — confirmed post-redeploy: "My Company" now loads the full Company Profile
+with all tabs.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
+## 📅 2026-08-10 — Fix misleading dashboard action tiles + missing filter option
+
+Continuing the same QA pass, found as Supplier: the dashboard's "LHDN Invalid" and "Connection Failed"
+Action Center tiles always rendered with alarming static text ("Fix & Resubmit", "Server down. Retry
+later.") even when there was nothing to act on — only the small badge count next to each tile was
+conditional on `Model.ActionInvalidCount`/`ActionTransmissionErrorCount > 0`, not the tile itself.
+
+Wrapped each tile in the same `> 0` condition already used for its badge — unchanged when there IS
+something to act on, hidden entirely when there isn't. Also added the missing `TransmissionError`
+`<option>` to the Internal Status filter dropdown on `Invoices/InvoiceLists` — the backend already
+filtered on this `InternalStatusId` correctly, and the dashboard's "Connection Failed" tile already
+deep-linked to `?InternalStatus=TransmissionError`, but the dropdown never listed it as a selectable
+option. Live-verified via local dev (shares the Staging database) and again post-redeploy: both tiles
+are correctly absent for accounts with zero qualifying invoices.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass (pure Razor markup change).
+
+## 📅 2026-08-10 — Fix demo Buyer login: point at a real company, not a placeholder TIN
+
+Continuing the same QA pass, re-verified live on Staging after the TIN-missing fix's redeploy:
+`supplier@einvworld.com` now logged in cleanly, but `buyer@einvworld.com` progressed to a new, different
+failure: `Login succeeded but failed to retrieve system token: LHDN rejected intermediary token for
+EI00000000020. Reason: {"error":"unauthorized_client"}`.
+
+Traced via Admin → Companies: `PartyInfoId 3` (`EI00000000020`) is **"Foreign Buyer / Shipping
+Recipient"** — one of LHDN's official generic placeholder TINs for buyers without a real Malaysian TIN,
+not a real onboarded company with its own MyInvois intermediary authorization. It was never going to
+complete an OAuth token exchange — expected LHDN behavior for a synthetic TIN, not a code bug. The
+hardcoded company id was just always the wrong choice for a login-able demo persona.
+
+Operator confirmed the replacement: `PartyInfoId 12`, **"Datamation (M) Sdn. Bhd."** (TIN
+`C2899917070`) — a real onboarded company already used successfully by `supplier@einvworld.com`. Also
+removed the erroneous `UserCompanies` row (`buyer@einvworld.com` → `PartyInfoId 3`) directly from the
+live Staging database. Confirmed post-redeploy: Buyer logs in and reaches a fully working dashboard with
+real data (7 invoices received, RM 3,132 valid/payable, spend trends chart).
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
 
 ## 📅 2026-08-10 — Fix demo Supplier/Buyer login stuck on "company TIN is missing"
 
