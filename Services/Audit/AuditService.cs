@@ -118,10 +118,17 @@ namespace EINVWORLD.Services.Audit
         /// <summary>Canonical hash of a row's content chained onto its PreviousHash. Excludes Id and RowHash.</summary>
         private static string ComputeRowHash(AuditLog r)
         {
+            // SQL Server's datetime2 has no concept of DateTimeKind, so EF Core always materializes
+            // CreatedAtUtc as Kind=Unspecified when a row is read back (verification path) even though it
+            // was written as Kind=Utc (DateTime.UtcNow). ToString("O") includes a trailing "Z" only for
+            // Kind=Utc, so without this normalization every row's hash recomputes differently the moment
+            // it round-trips through the database \u2014 verification would report the first row it checks as
+            // "altered" regardless of whether anything was actually tampered with.
+            var createdAtUtc = DateTime.SpecifyKind(r.CreatedAtUtc, DateTimeKind.Utc);
             var canonical = string.Join("\u241F", new[]
             {
                 r.PreviousHash,
-                r.CreatedAtUtc.ToString("O"),
+                createdAtUtc.ToString("O"),
                 r.Action,
                 r.CorrelationId, r.UserId, r.UserName, r.Tin, r.InvoiceNo, r.Uuid,
                 r.OldValueJson, r.NewValueJson, r.IpAddress, r.UserAgent

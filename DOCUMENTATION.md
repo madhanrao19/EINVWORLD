@@ -4,7 +4,7 @@ Complete technical documentation for **EINVWORLD (eInvWorld)** — an e-invoicin
 **Malaysia's LHDN MyInvois** system, self-hosted on a single in-house **Windows / IIS + SQL Server**
 server.
 
-> This document describes the system as of **v1.21.2**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
+> This document describes the system as of **v1.21.3**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
 > for deployment see [`IIS-DEPLOYMENT-GUIDE.md`](IIS-DEPLOYMENT-GUIDE.md) and [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md);
 > for secrets see [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
