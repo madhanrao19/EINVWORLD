@@ -4,6 +4,13 @@
 @{
     Layout = "_LayoutTabler";
     ViewData["IsEditMode"] = false;
+
+    // Display-only 2dp formatting for the number inputs below (Quantity, UnitPrice, TaxPercentage,
+    // ExchangeRate) when the form is prefilled from a template/clone (templateId/cloneId/invoiceNo).
+    // Storage keeps its full decimal(18,6)/decimal(18,4) precision — this only overrides the rendered
+    // <input value="…">, matching the step="0.01" these fields already use, so a value like 1500.0000
+    // doesn't leak decimal-column padding onto the screen.
+    string Fmt2(decimal? v) => (v ?? 0m).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 }
 
 <style>
@@ -1133,7 +1140,7 @@
                         <!-- Exchange Rate -->
                         <div class="col-md-4">
                             <div class="form-floating">
-                                <input type="number" asp-for="Invoice.ExchangeRate" class="form-control" id="exchangeRate" step="0.01" placeholder="1.00" />
+                                <input type="number" asp-for="Invoice.ExchangeRate" value="@Fmt2(Model.Invoice?.ExchangeRate)" class="form-control" id="exchangeRate" step="0.01" placeholder="1.00" />
                                 <label for="exchangeRate">
                                     Exchange Rate
                                     <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="Exchange rate if different from base currency"></i>
@@ -1473,7 +1480,7 @@
                                                 <div class="row g-2">
                                                     <div class="col-4">
                                                         <label class="text-uppercase text-muted small mb-1">Qty</label>
-                                                        <input asp-for="Invoice.InvoiceLines[i].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                                        <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="text-uppercase text-muted small mb-1">Unit</label>
@@ -1483,7 +1490,7 @@
                                                     </div>
                                                     <div class="col-4">
                                                         <label class="text-uppercase text-muted small mb-1">Unit Price</label>
-                                                        <input asp-for="Invoice.InvoiceLines[i].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                                        <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
                                                     </div>
                                                     <div class="col-12">
                                                         <label class="text-uppercase text-muted small mb-1">Tax</label>
@@ -1500,7 +1507,7 @@
                                                                                 </select>
                                                                             </div>
                                                                             <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
-                                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
+                                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" value="@Fmt2(Model.Invoice?.InvoiceLines[i].Taxes?[j].TaxPercentage)" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                                                                             </div>
                                                                             <div class="tax-action-wrapper" style="flex: 0 0 auto;">
                                                                                 <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
@@ -3298,7 +3305,7 @@
                         const rowTotal = parseFloat(rowTotalEl?.textContent) || 0;
                         const tax = (rowTotal - subtotal).toFixed(2);
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${desc}</td><td class="text-center">${qty}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
+                        tr.innerHTML = `<td>${desc}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
                         reviewBody.appendChild(tr);
                     });
                 }
@@ -4098,6 +4105,16 @@
             // were added on Step 2.
             const kpiRunningTotal = document.getElementById('kpiRunningTotal');
             if (kpiRunningTotal) kpiRunningTotal.textContent = 'RM ' + totalAmount.toFixed(2);
+
+            // Step 1 sticky "Invoice Summary" sidebar card — was never wired up, so it stayed frozen at
+            // its initial "RM 0.00" no matter how many items/totals were entered on Step 2 (visible as
+            // soon as the user went back to Step 1, e.g. after loading a template/clone with items).
+            const step1SummarySubtotal = document.getElementById('step1SummarySubtotal');
+            const step1SummaryTax = document.getElementById('step1SummaryTax');
+            const step1SummaryTotal = document.getElementById('step1SummaryTotal');
+            if (step1SummarySubtotal) step1SummarySubtotal.textContent = 'RM ' + subtotal.toFixed(2);
+            if (step1SummaryTax) step1SummaryTax.textContent = 'RM ' + taxAmount.toFixed(2);
+            if (step1SummaryTotal) step1SummaryTotal.textContent = totalAmount.toFixed(2);
 
             // Update hidden fields
             const totalAmountExclTax = document.getElementById('totalAmountExclTax');

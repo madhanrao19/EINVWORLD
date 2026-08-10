@@ -1,6 +1,14 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.1`** (`AppInfo:Version` in `appsettings.json`). v1.21.1 is a **patch**
+> **Current version: `v1.21.2`** (`AppInfo:Version` in `appsettings.json`). v1.21.2 is a **patch**
+> release: `CreateInvoice.cshtml`/`InvoiceEdit.cshtml` were rendering `Quantity`/`UnitPrice`/
+> `TaxPercentage`/`ExchangeRate` inputs at their raw `decimal(18,6)`/`decimal(18,4)` database precision
+> (e.g. `1.000000`, `1500.0000`) instead of the 2 decimal places every other amount on the form already
+> used — fixed by formatting the rendered `value` for display only (storage precision unchanged). Also
+> fixes a real bug found in the same pass: the Step 1 sticky "Invoice Summary" sidebar card on both forms
+> was never wired up to the totals calculation, so it stayed frozen at `RM 0.00` regardless of the
+> invoice's actual items/totals, even while the "Running Total" KPI right next to it updated correctly.
+> See the dated entry below for details. v1.21.1 was a **patch**
 > release: adds `TessdataSyncWorker`, a background job that automatically keeps AI Document Capture/Smart
 > Capture's OCR language files (`eng.traineddata`, `msa.traineddata`, ...) current from the official
 > `tesseract-ocr/tessdata` GitHub repo, replacing the previous fully-manual "download and copy the file in
@@ -73,6 +81,40 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-10 — Create/Edit Invoice: 2dp number display + Step 1 Invoice Summary fix
+
+Reported with staging screenshots: on `InvoiceEdit.cshtml` (and, on inspection, identically on
+`CreateInvoice.cshtml`), the Quantity, Unit Price, and Tax Percentage inputs — and the header Exchange
+Rate field — rendered whatever raw precision their `decimal(18,6)`/`decimal(18,4)` database column
+happened to carry (`1.000000`, `1500.0000`) instead of the 2 decimal places every other amount on the same
+form already showed. The Review & Submit step's Item Summary table had the identical gap for its QTY
+column (Unit Price there was already correctly formatted).
+
+- **Fix (display only):** all 4 inputs now render via a small `Fmt2(decimal?)` Razor helper
+  (`value.ToString("F2", CultureInfo.InvariantCulture)`) passed as an explicit `value="…"` attribute
+  alongside `asp-for` — ASP.NET Core's `InputTagHelper` never overwrites an explicitly-set `value`, so this
+  only changes what's rendered, not the model binding path, the POST payload shape, or the underlying
+  `decimal(18,6)`/`decimal(18,4)` column precision (per the "correct decimal precision" architecture note
+  in `CLAUDE.md` — nothing there regressed). Matches the `step="0.01"` these inputs already declared.
+  Applied to `CreateInvoice.cshtml` too since it reaches the same raw-precision values via its
+  `templateId`/`cloneId`/`invoiceNo` prefill paths (a blank new invoice was never affected — its fields
+  start empty).
+- The Review & Submit Item Summary table's QTY cell now goes through `parseFloat(qty).toFixed(2)`,
+  matching the pattern its own Unit Price cell already used.
+- **Real defect found and fixed in the same pass:** the Step 1 sticky "Invoice Summary" card
+  (`step1SummarySubtotal`/`step1SummaryTax`/`step1SummaryTotal`) on both forms was declared in the markup
+  but never referenced anywhere in `calculateTotals()` — it stayed frozen at its initial `RM 0.00` no
+  matter how many items or how large the actual total was, which is exactly the "RM 42.98 running total
+  vs. `RM 0.00` Invoice Summary" mismatch shown in the reported screenshots. `calculateTotals()` now
+  updates all three elements alongside the KPI tile and the Step 2 card it already kept in sync.
+
+Verified live against a real Staging draft invoice via local dev (Admin login, `EINV00017`): Quantity/Unit
+Price both display `1.00` instead of `1.000000`/`1.0000` on Step 2, the Item Summary table shows `1.00` on
+Step 3, the Step 1 Invoice Summary card tracks the real total instead of staying at `RM 0.00`, and
+resaving via "Update Draft" round-trips correctly (`RM 1.08` unchanged on reload) with no console errors.
+`dotnet build`: 0 errors. `dotnet test`: 241/241 pass (no test changes needed — pure Razor/JS display
+fix, no calculation logic touched). No schema, config, or LHDN-submission changes.
 
 ## 📅 2026-08-09 — Automatic Tesseract OCR trained-data sync
 
