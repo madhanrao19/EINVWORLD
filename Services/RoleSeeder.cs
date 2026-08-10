@@ -65,9 +65,10 @@ namespace eInvWorld.Services
 
         private async Task SeedUserAsync(string email, string password, string role, List<int>? companyIds)
         {
-            if (await _userManager.FindByEmailAsync(email) == null)
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
             {
-                var user = new ApplicationUser
+                user = new ApplicationUser
                 {
                     UserName = email,
                     Email = email,
@@ -79,35 +80,47 @@ namespace eInvWorld.Services
                 };
 
                 var result = await _userManager.CreateAsync(user, password);
+                if (!result.Succeeded) return;
 
-                if (result.Succeeded)
+                await _userManager.AddToRoleAsync(user, role);
+            }
+
+            // ✅ Ensure company links exist, on every startup — not just when the user is first created.
+            // A fresh database has no PartyInfos yet, so a link can legitimately be skipped the first time
+            // (otherwise the FK FK_UserCompanies_PartyInfos_PartyInfoId would crash startup seeding). Once
+            // that PartyInfo exists (e.g. after company seed data lands on a later deploy), this backfills
+            // the missing link instead of leaving the demo account permanently unable to log in — without
+            // this, "FindByEmailAsync(email) == null" being false on every later startup meant the link was
+            // never retried, which is exactly what happened to supplier@einvworld.com/buyer@einvworld.com
+            // on Staging (flagged in CHANGELOG 2026-08-01, still broken as of this pass).
+            if (companyIds != null)
+            {
+                var existingLinks = await _context.UserCompanies
+                    .Where(uc => uc.UserId == user.Id)
+                    .Select(uc => uc.PartyInfoId)
+                    .ToListAsync();
+
+                var changed = false;
+                foreach (var companyId in companyIds)
                 {
-                    await _userManager.AddToRoleAsync(user, role);
+                    if (existingLinks.Contains(companyId)) continue;
 
-                    // ✅ Assign user to multiple companies. A fresh database has no PartyInfos yet, so link
-                    // only to companies that actually exist — otherwise the FK
-                    // (FK_UserCompanies_PartyInfos_PartyInfoId) fails and crashes startup seeding. Demo
-                    // users are still created and roled; they simply start without company links.
-                    if (companyIds != null)
+                    if (await _context.PartyInfos.AnyAsync(p => p.PartyInfoId == companyId))
                     {
-                        foreach (var companyId in companyIds)
+                        _context.UserCompanies.Add(new UserCompany
                         {
-                            if (await _context.PartyInfos.AnyAsync(p => p.PartyInfoId == companyId))
-                            {
-                                _context.UserCompanies.Add(new UserCompany
-                                {
-                                    UserId = user.Id,
-                                    PartyInfoId = companyId
-                                });
-                            }
-                            else
-                            {
-                                _logger.LogWarning("Seeding {Email}: skipping company link {CompanyId} — no such PartyInfo (fresh database).", email, companyId);
-                            }
-                        }
-                        await _context.SaveChangesAsync();
+                            UserId = user.Id,
+                            PartyInfoId = companyId
+                        });
+                        changed = true;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Seeding {Email}: skipping company link {CompanyId} — no such PartyInfo yet.", email, companyId);
                     }
                 }
+
+                if (changed) await _context.SaveChangesAsync();
             }
         }
     }
