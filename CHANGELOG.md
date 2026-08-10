@@ -88,6 +88,29 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-08-10 — Fix demo Supplier/Buyer login stuck on "company TIN is missing"
+
+Found during a full production-verification QA pass on staging.einvworld.com using the credentials the
+operator provided: both `supplier@einvworld.com` and `buyer@einvworld.com` were completely unable to
+log in, rejected with "Your company TIN is missing. Please contact support." This exact symptom was
+already flagged in this changelog on 2026-08-01 as a "pre-existing seeded-data issue" and was never
+actually fixed.
+
+Root cause: `RoleSeeder.SeedUserAsync`'s company-link step (`UserCompanies` → `PartyInfo`, which is
+exactly what the login page's TIN check reads) only ever ran at the moment a demo user is first
+created. On a freshly-created database the required `PartyInfo` rows didn't exist yet, so the link was
+correctly skipped with a warning at seed time — but because the demo users already existed as of that
+point, the link was never retried on any later startup, even once those `PartyInfo` rows landed in a
+subsequent deploy. Permanently company-less demo accounts.
+
+Fixed by decoupling "create the user" from "ensure the company link exists" — the latter now runs on
+every startup (still gated behind `Seeding:SeedDefaultUsers`, off in Production) and only adds a link
+that's actually missing, self-healing once the target `PartyInfo` exists. No existing `UserCompanies`
+rows are touched or removed. Once deployed and the app restarts, `supplier@einvworld.com`/
+`buyer@einvworld.com` should self-heal without any manual DB fix.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
 ## 📅 2026-08-10 — Fix false-positive tamper detection in audit chain verification
 
 Found during a full production-verification QA pass on staging.einvworld.com: **Admin → Audit Trail →
