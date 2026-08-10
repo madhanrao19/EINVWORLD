@@ -1,6 +1,12 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.2`** (`AppInfo:Version` in `appsettings.json`). v1.21.2 is a **patch**
+> **Current version: `v1.21.3`** (`AppInfo:Version` in `appsettings.json`). v1.21.3 is a **patch**
+> release, found during a full production-verification QA pass on staging.einvworld.com: fixes a
+> false-positive "Row 1: contents were altered after it was written" from Admin → Audit Trail →
+> "Verify chain integrity" (a `DateTimeKind` round-trip bug in the hash recomputation, not a real tamper
+> event — proven with a real-SQL-Server integration test that reproduces the exact error on a
+> brand-new database and passes once fixed). See the dated entry below for details. v1.21.2 was a
+> **patch**
 > release: `CreateInvoice.cshtml`/`InvoiceEdit.cshtml` were rendering `Quantity`/`UnitPrice`/
 > `TaxPercentage`/`ExchangeRate` inputs at their raw `decimal(18,6)`/`decimal(18,4)` database precision
 > (e.g. `1.000000`, `1500.0000`) instead of the 2 decimal places every other amount on the form already
@@ -104,6 +110,30 @@ rows are touched or removed. Once deployed and the app restarts, `supplier@einvw
 `buyer@einvworld.com` should self-heal without any manual DB fix.
 
 dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
+## 📅 2026-08-10 — Fix false-positive tamper detection in audit chain verification
+
+Found during a full production-verification QA pass on staging.einvworld.com: **Admin → Audit Trail →
+"Verify chain integrity" reports "Row 1: contents were altered after it was written"** on a database
+with no actual tampering.
+
+`AuditService.ComputeRowHash` hashes `CreatedAtUtc.ToString("O")`. At write time `CreatedAtUtc =
+DateTime.UtcNow` has `Kind=Utc`, so `ToString("O")` ends in `Z`. SQL Server's `datetime2` has no
+`DateTimeKind` concept, so when `VerifyChainAsync` streams rows back via EF Core, `CreatedAtUtc` comes
+back with `Kind=Unspecified` — `ToString("O")` then omits the `Z`, producing a different string and
+therefore a different SHA-256 hash for every single row. `VerifyChainAsync` returns on the first
+mismatch, so this always surfaced as "row 1 altered" regardless of whether every row was equally
+affected (it was).
+
+Fixed by normalizing `CreatedAtUtc` to `Kind=Utc` via `DateTime.SpecifyKind` (a reinterpretation, not a
+conversion — the stored value already represents UTC) before hashing. No-op at write time; makes the
+verify-time recomputation match. Existing stored `RowHash` values are unaffected — no data migration
+needed. Proven with a real-SQL-Server integration test
+(`EINVWORLD.Tests/Integration/AuditServiceTests.cs`): reverting the fix reproduces the exact Staging
+error on a brand-new, never-touched database; restoring it passes — confirming this was always a false
+positive, never a real tamper event.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, including real SQL Server LocalDB integration tests.
 
 ## 📅 2026-08-10 — Create/Edit Invoice: 2dp number display + Step 1 Invoice Summary fix
 
