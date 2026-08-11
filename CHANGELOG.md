@@ -1,6 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.4`** (`AppInfo:Version` in `appsettings.json`). v1.21.4 is a **patch**
+> **Current version: `v1.21.5`** (`AppInfo:Version` in `appsettings.json`). v1.21.5 is a **patch**
+> release: closes the one gap found in a follow-up LHDN SDK 1.0 compliance sweep (releases newer than the
+> last audit) — a 12-character length cap on Passport-type registration numbers, enforced in
+> `InvoiceMapper` on every submission path. Not urgent (Production-effective 23 Oct 2026); everything else
+> audited was already compliant. See the dated entry below for details. v1.21.4 was a **patch**
 > release: three more fixes from the same full production-verification QA pass on staging.einvworld.com
 > that produced v1.21.3 — the demo Buyer account was linked to an LHDN generic placeholder TIN that can
 > never complete an intermediary OAuth token exchange (now points at a real onboarded company); the
@@ -99,6 +103,27 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-11 — LHDN SDK 1.0 compliance: Passport ID 12-character cap
+
+> Follow-up sweep against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`, covering the three releases newer
+> than the last audit (PR merged 2026-07-29): 17 Jul 2026 (docs-only tax-exemption clarification), 03 Jul
+> 2026 (field-validation rules, Production-effective 15 Aug 2026), and 06 Aug 2026 (money-field digit cap
+> + Passport ID length cap, Production-effective 23 Oct 2026). EINVWORLD was already compliant on every
+> rule from all three releases — date formats, UOM codes, bank account number, e-Invoice Code/Number,
+> Certified Exporter Authorisation Number, Incoterms, Payment Terms, Prepayment Reference Number,
+> Frequency of Billing, Business Activity Description, tax-exemption `TaxAmount` handling, and money-field
+> digit counts (structurally below the new 26-digit cap given existing `decimal(18,2)/(18,4)/(18,6)`
+> columns) — **except one**: `PartyInfo`/`Buyer`/`Supplier`/`PublicCustomer.RegNo` had no length limit, so
+> a Passport-type registration number (`RegTypeCode == "PASSPORT"`) longer than the new 12-character cap
+> could be submitted. Fixed by adding an `InvoiceMapper` validation check (`IsPassportTooLong`, scoped to
+> `RegTypeCode == "PASSPORT"` only — NRIC/BRN/ARMY are untouched, matching the SDK release's actual scope)
+> in the same place as the existing State-Code-17 and unit-of-measure checks, so it's enforced on every
+> submission path (manual entry, CSV import, templates, recurring invoices), not just the create/edit
+> forms. No DB change (`RegNo` is already `nvarchar(max)`), no migration, no config. Not urgent — the
+> Production deadline is 23 Oct 2026 — but small and safe enough to close out now. Known follow-up (not
+> fixed here, out of scope): no UI-level hint yet, so an over-length Passport number surfaces only as a
+> server error at submission time, same UX tier as the existing State-Code-17 check.
 
 ## 📅 2026-08-10 — Fix demo Supplier/Buyer "My Company" Access Denied
 
