@@ -225,6 +225,13 @@ namespace eInvWorld.Services.Mappers
                && string.Equals(countryCode, "MYS", StringComparison.OrdinalIgnoreCase)
                && !EINVWORLD.Helpers.GeneralTINHelper.IsGeneralTIN(tin);
 
+        /// <summary>
+        /// LHDN SDK rule (06 Aug 2026, effective Production 23 Oct 2026): Passport ID type is limited to
+        /// 12 characters. Scoped to RegTypeCode "PASSPORT" only — no other SDK rule caps NRIC/BRN/ARMY.
+        /// </summary>
+        private static bool IsPassportTooLong(string? regTypeCode, string? regNo)
+            => regTypeCode == "PASSPORT" && (regNo?.Length ?? 0) > 12;
+
         private void ValidatePartyInfo(PartyInfo party, string role)
         {
             if (party == null)
@@ -254,6 +261,8 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} Phone Number is required.");
             if (IsRestrictedState17(party.StateCode, party.CountryCode, party.TIN))
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
+            if (IsPassportTooLong(party.RegTypeCode, party.RegNo))
+                errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
             // 👇 This line replaces the previous email validation
             party.Email ??= ""; // ✅ Ensures empty string if no email
 
@@ -1202,6 +1211,8 @@ namespace eInvWorld.Services.Mappers
             if (string.IsNullOrEmpty(customer.PhoneNo)) errors.Add($"{role} Phone Number is required.");
             if (IsRestrictedState17(customer.StateCode, customer.CountryCode, customer.TIN))
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
+            if (IsPassportTooLong(customer.RegTypeCode, customer.RegNo))
+                errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
 
             // Ensure email is not null (matching original side-effect logic)
             customer.Email ??= "";
