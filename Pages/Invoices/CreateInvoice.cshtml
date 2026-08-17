@@ -1704,11 +1704,18 @@
                                                 <div class="text-muted" style="font-size:.7rem;">Both supplier and buyer must be selected.</div>
                                             </div>
                                         </li>
-                                        <li class="d-flex align-items-start gap-2">
+                                        <li class="d-flex align-items-start gap-2 mb-3">
                                             <i class="ri-checkbox-circle-fill" id="chkTotalsIcon"></i>
                                             <div>
                                                 <div class="fw-bold" id="chkTotalsText">Totals Not Calculated</div>
                                                 <div class="text-muted" style="font-size:.7rem;">Subtotal and tax are computed from item rows.</div>
+                                            </div>
+                                        </li>
+                                        <li class="d-flex align-items-start gap-2">
+                                            <i class="ri-checkbox-circle-fill" id="chkDraftIcon"></i>
+                                            <div>
+                                                <div class="fw-bold" id="chkDraftText">Draft Not Saved</div>
+                                                <div class="text-muted" style="font-size:.7rem;">Save this invoice as a draft before submitting to LHDN.</div>
                                             </div>
                                         </li>
                                     </ul>
@@ -2732,6 +2739,9 @@
                                     submitBtn.disabled = false;
                                 }
 
+                                // Refresh the readiness checklist so "Draft Saved" flips green immediately
+                                InvoiceManager.updateSummary();
+
                                 // Show success message using SweetAlert
                                 const successTitle = response.isUpdate ? 'Draft Updated Successfully!' : 'Draft Saved Successfully!';
                                 Swal.fire({
@@ -3336,6 +3346,18 @@
                 if (chkTotalsText) {
                     chkTotalsText.textContent = hasTotals ? 'Totals Calculated' : 'Totals Not Calculated';
                     chkTotalsIcon.className = hasTotals ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+                }
+
+                // The Submit to LHDN button stays disabled until a draft has actually been
+                // saved (see bindFormSubmission — submitBtn.disabled is gated on draftFilePath).
+                // Surface that precondition here too, so this checklist never shows "all ready"
+                // while the button is still disabled for a reason the user can't see.
+                const hasDraft = !!document.getElementById('draftFilePath')?.value;
+                const chkDraftIcon = document.getElementById('chkDraftIcon');
+                const chkDraftText = document.getElementById('chkDraftText');
+                if (chkDraftText) {
+                    chkDraftText.textContent = hasDraft ? 'Draft Saved' : 'Draft Not Saved';
+                    chkDraftIcon.className = hasDraft ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
                 }
             }
         };
