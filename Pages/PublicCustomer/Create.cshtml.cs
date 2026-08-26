@@ -230,6 +230,25 @@ namespace eInvWorld.Pages.PublicCustomer
             _context.PublicCustomers.Add(publicCustomer);
             await _context.SaveChangesAsync();
 
+            if (publicCustomer.CreatedByCompanyId.HasValue)
+            {
+                var linkExists = await _context.SupplierBuyers.AnyAsync(sb =>
+                    sb.SupplierId == publicCustomer.CreatedByCompanyId.Value &&
+                    sb.PublicCustomerId == publicCustomer.PublicCustomerId);
+
+                if (!linkExists)
+                {
+                    _context.SupplierBuyers.Add(new SupplierBuyer
+                    {
+                        SupplierId = publicCustomer.CreatedByCompanyId.Value,
+                        BuyerId = null,
+                        PublicCustomerId = publicCustomer.PublicCustomerId
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             TempData["SuccessMessage"] = "Buyer successfully created!";
 
             return RedirectToPage("./List");
