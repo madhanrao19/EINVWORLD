@@ -568,7 +568,7 @@
                                                 var buyerCity = invoice.Customer != null ? invoice.Customer.CityName : invoice.PublicCustomer?.CityName;
                                                 var buyerTIN = invoice.Customer != null ? invoice.Customer.TIN : invoice.PublicCustomer?.TIN;
                                                 var buyerAttention = invoice.Customer != null ? invoice.Customer.Attention : invoice.PublicCustomer?.Attention;
-                                                var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer?.State?.State;
+                                                var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer != null ? Model.DropdownHelper.GetStateName(invoice.PublicCustomer.StateCode) : null;
                                                 var buyerCountry = invoice.Customer != null ? invoice.Customer.Country?.Country : invoice.PublicCustomer?.Country?.Country;
                                                 var buyerCountryTitle = string.IsNullOrEmpty(buyerCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(buyerCountry.ToLower());
                                             }
