@@ -307,7 +307,8 @@ setting is blank/wrong (connection string, key ring, signing cert, localhost URL
   - `Documents\`, `Logs\`, `Temp\`, `Keys\` Modify
   - `Cert\` Read
 - Confirm `web.config` is present at the app root (without it, IIS can serve `.deps.json` etc.).
-- Set `ASPNETCORE_ENVIRONMENT=Production`.
+- Set `ASPNETCORE_ENVIRONMENT=Production` (or `Staging` on the staging box — see
+  `IIS-DEPLOYMENT-GUIDE.md` Part 2 for what that changes).
 
 ## 4. Health monitoring
 
