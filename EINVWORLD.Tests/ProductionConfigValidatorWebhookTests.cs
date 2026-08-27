@@ -21,6 +21,8 @@ namespace EINVWORLD.Tests
             {
                 ["ConnectionStrings:DefaultConnection"] = "Server=.;Database=x;Trusted_Connection=True;",
                 ["LHDNApiConfig:BaseUrl"] = "https://preprod-api.myinvois.hasil.gov.my",
+                ["LHDNApiConfig:ClientId"] = "test-client-id",
+                ["LHDNApiConfig:ClientSecret"] = "test-secret",
                 ["DataProtection:KeyRingPath"] = "D:\\Keys",
             };
             foreach (var (k, v) in overrides) dict[k] = v;

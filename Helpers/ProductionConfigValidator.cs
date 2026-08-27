@@ -45,6 +45,16 @@ namespace EINVWORLD.Helpers
             else if (isProduction && config["LHDNApiConfig:BaseUrl"]!.Contains("preprod", StringComparison.OrdinalIgnoreCase))
                 warnings.Add("LHDNApiConfig:BaseUrl points at the PREPROD/sandbox host while ASPNETCORE_ENVIRONMENT=Production — switch to the production MyInvois host before going live.");
 
+            // ClientId/secret blank checks are Production-only (like ClientSecret below) rather than
+            // unconditional like BaseUrl: a blank pair only ever surfaces later as a confusing
+            // "invalid_client" from LHDN on first login, not at startup, and this is specifically a
+            // production-deploy risk (dev/test configs routinely omit these).
+            if (isProduction && Blank(config["LHDNApiConfig:ClientId"]))
+                errors.Add("LHDNApiConfig:ClientId is empty.");
+
+            if (isProduction && Blank(config["LHDNApiConfig:ClientSecret"]) && Blank(config["LHDNApiConfig:ClientSecret2"]))
+                errors.Add("LHDNApiConfig:ClientSecret and ClientSecret2 are both empty — set at least one via env var LHDNApiConfig__ClientSecret (or ClientSecret2) or user-secrets.");
+
             // Digital signing: if turned on, the certificate must be fully specified or signing will crash at submit time.
             if (config.GetValue("LHDNApiConfig:SigningEnabled", false))
             {
