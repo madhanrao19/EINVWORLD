@@ -1,6 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.5`** (`AppInfo:Version` in `appsettings.json`). v1.21.5 is a **patch**
+> **Current version: `v1.21.6`** (`AppInfo:Version` in `appsettings.json`). v1.21.6 is a **patch**
+> release: fixes a data-integrity bug where the background/manual "full sync from LHDN" pipeline
+> (`InvoiceFullSyncHelper`) could silently overwrite a submitted invoice's Buyer with the wrong
+> party — an unscoped TIN-only lookup mismatched LHDN's shared general TINs against whichever
+> `PartyInfo` row happened to carry that TIN first (e.g. the "Foreign Buyer / Shipping Recipient"
+> placeholder), unconditionally replacing the correct `PublicCustomerId` on every re-sync of a
+> not-yet-"stable" invoice, with no audit trail. See the dated entry below for details. v1.21.5
+> was a **patch**
 > release: closes the one gap found in a follow-up LHDN SDK 1.0 compliance sweep (releases newer than the
 > last audit) — a 12-character length cap on Passport-type registration numbers, enforced in
 > `InvoiceMapper` on every submission path. Not urgent (Production-effective 23 Oct 2026); everything else
@@ -103,6 +110,39 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-27 — Fix LHDN full-sync silently overwriting a submitted invoice's Buyer
+
+> Reported live on staging: invoice EINV100506 was created for Buyer "PT Kustodian Sentral Efek
+> Indonesia" (a `PublicCustomer` carrying LHDN's shared general TIN `EI00000000020`), submitted,
+> reached **Valid** — then its Bill To silently flipped to the generic placeholder "Foreign Buyer /
+> Shipping Recipient" (a different `PartyInfo` row sharing the same general TIN), with no Activity
+> Log entry recording the change.
+>
+> Root cause: `Helpers/InvoiceFullSyncHelper.cs`'s `SyncAllFromApiAsync` — the pipeline behind the
+> `InvoiceStatusUpdater` background hosted service and the manual "Refresh from API"/"Import All"
+> actions — re-resolves an invoice's Buyer on **every** re-check of a not-yet-"stable" invoice (up
+> to 72h after validation), via an unscoped, TIN-only lookup against the global `PartyInfos` table.
+> LHDN's general TINs (`EI00000000010/20/30/40`) are shared by design — many different real buyers,
+> plus EINVWORLD's own pre-seeded placeholder `PartyInfo` rows, legitimately carry the same one —
+> so `FirstOrDefault` nondeterministically matched the placeholder, and the update branch then
+> unconditionally overwrote the invoice's correct `PublicCustomerId` with the wrong `CustomerId`.
+> No history/audit-log call exists anywhere in that file, so the corruption was silent.
+>
+> Fixed with two guards in `InvoiceFullSyncHelper.cs`: (1) never overwrite an already-set buyer
+> link when re-syncing an existing invoice — only fill a genuine gap; (2) skip the unscoped global
+> `PartyInfos` lookup entirely for general TINs, resolving only against the company-scoped
+> `PublicCustomers` table instead (protects newly sync-discovered invoices too, not just re-syncs).
+> Added a warning log when a general-TIN buyer can't be resolved at all, instead of failing
+> silently. Two new integration tests
+> (`EINVWORLD.Tests.Integration.InvoiceFullSyncBuyerOverwriteTests`) exercise the real helper
+> against a real SQL Server — verified to fail against the pre-fix code (reproducing the exact bug)
+> and pass against the fix. `Services/Background/InvoiceStatusUpdater.cs` and
+> `Services/Background/SyncJobHandlers.cs` needed no change — they only orchestrate *when*
+> `SyncAllFromApiAsync` runs. **Known follow-up (not done here):** EINV100506 itself is still
+> corrupted — LHDN-validated invoices can't have their Buyer edited through the UI, so recovering
+> it (and checking for any other invoices affected the same way) needs a manual, case-by-case data
+> correction, not an automated script.
 
 ## 📅 2026-08-11 — LHDN SDK 1.0 compliance: Passport ID 12-character cap
 
