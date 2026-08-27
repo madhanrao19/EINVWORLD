@@ -113,8 +113,15 @@ Do the **same steps** for both. Only these values differ — write down which se
 > If you set the preprod URL while `ASPNETCORE_ENVIRONMENT=Production`, the app logs a harmless
 > **warning** at startup (reminding you it's the sandbox) — that's expected on staging.
 >
-> The LHDN `BaseUrl`/`ValidationBaseUrl` live in `appsettings.json` (not a secret). For staging, edit
-> those two values in the staging server's `appsettings.json` to the preprod URLs.
+> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` are not secrets, and now live as explicit,
+> git-tracked values in `appsettings.Production.json` (real production host/Client ID) — no more
+> hand-editing a server's local `appsettings.json` copy for these. **Caveat:** since both servers run
+> with `ASPNETCORE_ENVIRONMENT=Production` (this file's own table, above), the staging server's
+> *actual* running config comes from its own separately-maintained local copy of
+> `appsettings.Production.json` (per the "keep intact, never overwrite" deploy rule) — `git`'s
+> `appsettings.Staging.json` is not currently loaded by any real deployment (no server or launch
+> profile sets `ASPNETCORE_ENVIRONMENT=Staging`). Until that's addressed, keep the staging server's
+> own local `appsettings.Production.json` pointed at the preprod URLs shown above, same as before.
 
 ---
 
@@ -364,6 +371,7 @@ This is where the passwords go — **not** in `appsettings.json`.
    > properly trusted certificate, remove it for full chain validation.
    | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
    | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
+   | `DataProtection__KeyRingPath` | `E:\EINVWORLD\Keys` (the folder from Part 3, required — the app refuses to start in Production without it) |
    | `EmailConfiguration__Default__SmtpUsername` | `YOUR_SMTP_USERNAME` |
    | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |
    | `Turnstile__SecretKey` | `YOUR_TURNSTILE_SECRET` |
@@ -383,10 +391,10 @@ This is where the passwords go — **not** in `appsettings.json`.
 
 6. Click **OK** (close the grid) → on the right click **Apply**.
 
-> 📝 **`DataProtection:KeyRingPath` is already set** to `E:\EINVWORLD\Keys` inside
-> `appsettings.Production.json`. You just made that folder in Part 3 and gave it Modify rights in Part 9,
-> so there's nothing more to do here. **(The app will refuse to start in Production if this folder/path
-> is missing — that's a safety feature.)**
+> 📝 **`DataProtection:KeyRingPath` is deliberately left blank** in `appsettings.Production.json` — it
+> must be supplied per-server via the `DataProtection__KeyRingPath` row added to the environment
+> variables grid above, not inherited from a repo default that might point at the wrong machine.
+> **(The app will refuse to start in Production if this isn't set — that's a safety feature.)**
 
 ✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production`).
 
