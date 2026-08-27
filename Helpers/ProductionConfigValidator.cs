@@ -16,7 +16,10 @@ namespace EINVWORLD.Helpers
     {
         /// <summary>
         /// Validates configuration. <paramref name="isProduction"/> tightens checks that only
-        /// matter on a real server (DataProtection key ring, localhost URLs, preprod LHDN host).
+        /// matter on a real server (DataProtection key ring, localhost URLs, preprod LHDN host,
+        /// LHDN ClientId/secrets). Callers pass <c>app.Environment.IsProduction()</c>, which is
+        /// <c>false</c> on the Staging server (<c>ASPNETCORE_ENVIRONMENT=Staging</c>) — deliberate:
+        /// Staging gets these checks as warnings instead of hard startup failures.
         /// Throws <see cref="InvalidOperationException"/> aggregating all blocking problems.
         /// </summary>
         public static void Validate(IConfiguration config, bool isProduction)

@@ -105,23 +105,24 @@ Do the **same steps** for both. Only these values differ — write down which se
 |---|---|---|
 | Domain | `einvworld.com` | `staging.einvworld.com` (or a port like `:8443`) |
 | Database name | `EINVWORLD` | `EINVWORLD_STAGING` (a separate DB!) |
-| `ASPNETCORE_ENVIRONMENT` | `Production` | `Production` (still Production — just different DB/URL) |
+| `ASPNETCORE_ENVIRONMENT` | `Production` | `Staging` — this is what makes `appsettings.Staging.json` load automatically; see note below |
 | LHDN `BaseUrl` | `https://api.myinvois.hasil.gov.my/` | `https://preprod-api.myinvois.hasil.gov.my/` (sandbox) |
 | LHDN `ValidationBaseUrl` | `https://myinvois.hasil.gov.my/` | `https://preprod.myinvois.hasil.gov.my/` |
 
 > Staging points at the **LHDN PREPROD sandbox** so test invoices don't go to the real tax authority.
-> If you set the preprod URL while `ASPNETCORE_ENVIRONMENT=Production`, the app logs a harmless
-> **warning** at startup (reminding you it's the sandbox) — that's expected on staging.
 >
-> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` are not secrets, and now live as explicit,
-> git-tracked values in `appsettings.Production.json` (real production host/Client ID) — no more
-> hand-editing a server's local `appsettings.json` copy for these. **Caveat:** since both servers run
-> with `ASPNETCORE_ENVIRONMENT=Production` (this file's own table, above), the staging server's
-> *actual* running config comes from its own separately-maintained local copy of
-> `appsettings.Production.json` (per the "keep intact, never overwrite" deploy rule) — `git`'s
-> `appsettings.Staging.json` is not currently loaded by any real deployment (no server or launch
-> profile sets `ASPNETCORE_ENVIRONMENT=Staging`). Until that's addressed, keep the staging server's
-> own local `appsettings.Production.json` pointed at the preprod URLs shown above, same as before.
+> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` are not secrets, and live as explicit,
+> git-tracked values in `appsettings.Production.json` (real production host/Client ID) and
+> `appsettings.Staging.json` (preprod host/Client ID) — no more hand-editing a server's local
+> `appsettings.json` copy for these.
+>
+> **`ASPNETCORE_ENVIRONMENT=Staging` on the staging server** (Part 10) is what makes
+> `appsettings.Staging.json` load by ASP.NET Core's normal convention, on top of the base
+> `appsettings.json` — the same mechanism Production already relies on for `appsettings.Production.json`.
+> One consequence: `ProductionConfigValidator`'s Production-only hard-fail checks (DataProtection key
+> ring required, LHDN ClientId/secrets required, no localhost PDF/Email URLs) run in their looser
+> warning-only mode on Staging — acceptable since Staging isn't real production, but worth knowing if
+> a staging config gap that used to be a hard startup failure now only logs a warning.
 
 ---
 
@@ -361,7 +362,7 @@ This is where the passwords go — **not** in `appsettings.json`.
 
    | Name | Value (example) |
    |---|---|
-   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ASPNETCORE_ENVIRONMENT` | `Production` — or `Staging` on the staging server (see Part 2); this selects which `appsettings.{Environment}.json` file loads |
    | `ConnectionStrings__DefaultConnection` | `Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
    | `ConnectionStrings__WebsiteDb` | `Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
 
@@ -371,7 +372,7 @@ This is where the passwords go — **not** in `appsettings.json`.
    > properly trusted certificate, remove it for full chain validation.
    | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
    | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
-   | `DataProtection__KeyRingPath` | `E:\EINVWORLD\Keys` (the folder from Part 3, required — the app refuses to start in Production without it) |
+   | `DataProtection__KeyRingPath` | `E:\EINVWORLD\Keys` (the folder from Part 3, required — the app refuses to start on the real Production server without it; on Staging it's a startup warning, not a hard failure, but still set it so a redeploy doesn't wipe keys/sessions) |
    | `EmailConfiguration__Default__SmtpUsername` | `YOUR_SMTP_USERNAME` |
    | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |
    | `Turnstile__SecretKey` | `YOUR_TURNSTILE_SECRET` |
@@ -394,9 +395,11 @@ This is where the passwords go — **not** in `appsettings.json`.
 > 📝 **`DataProtection:KeyRingPath` is deliberately left blank** in `appsettings.Production.json` — it
 > must be supplied per-server via the `DataProtection__KeyRingPath` row added to the environment
 > variables grid above, not inherited from a repo default that might point at the wrong machine.
-> **(The app will refuse to start in Production if this isn't set — that's a safety feature.)**
+> **(The app will refuse to start on the real Production server if this isn't set — that's a safety
+> feature. On Staging it's a startup warning instead, but still set it.)**
 
-✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production`).
+✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production` on
+the production server, or `Staging` on the staging server).
 
 ---
 

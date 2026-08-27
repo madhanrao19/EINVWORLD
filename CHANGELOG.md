@@ -118,6 +118,30 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-08-28 — Staging server now actually loads appsettings.Staging.json
+
+> Follow-up to the LHDN config consolidation below: the real Staging server has run with
+> `ASPNETCORE_ENVIRONMENT=Production` since the very first deployment (per `IIS-DEPLOYMENT-GUIDE.md`
+> Part 2), meaning `appsettings.Staging.json` has never actually been loaded there — every
+> Staging-specific setting instead required hand-editing that server's own local
+> `appsettings.Production.json` or, per a previous workaround (see the 2026-08-07 Smart Capture
+> entry), setting individual `{Section}__*` environment variables one at a time in IIS. Both are the
+> same "invisible to git" pattern the LHDN fix below addresses, just for the whole Staging config
+> instead of one setting.
+>
+> Fixed at the root: `ASPNETCORE_ENVIRONMENT=Staging` on the staging IIS server now makes
+> `appsettings.Staging.json` load automatically via ASP.NET Core's own convention — the same
+> mechanism Production already relies on. Verified the blast radius first: `Environment.IsProduction()`
+> is read in exactly one place in the whole codebase (`Program.cs`, gating
+> `ProductionConfigValidator`'s strictness) and `EnvironmentName` only feeds two display/log lines
+> (`Program.cs` startup log, Admin → System Health) — no hardcoded `"Production"` string comparisons
+> anywhere. Net effect on Staging: `ProductionConfigValidator`'s hard-fail checks (DataProtection key
+> ring required, LHDN ClientId/secrets required, no localhost PDF/Email URLs) now run in warning-only
+> mode there instead of blocking startup — an accepted, documented trade-off since Staging isn't real
+> production. `IIS-DEPLOYMENT-GUIDE.md` Parts 2/10 and `DEPLOY-NOTES.md` updated accordingly. This is
+> a server-side env var change the operator applies directly — no code depends on it, so existing
+> deployments are unaffected until the env var is actually changed on that box.
+
 ## 📅 2026-08-28 — Consolidate LHDN BaseUrl/ClientId into git-tracked environment overrides
 
 > A production login started failing with LHDN's OAuth token endpoint returning `invalid_client`
