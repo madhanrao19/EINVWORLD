@@ -50,7 +50,7 @@ namespace EINVWORLD.Services.Mappers
                 .Include(i => i.Supplier).ThenInclude(s => s.Country)
                 .Include(i => i.Customer).ThenInclude(c => c.State)
                 .Include(i => i.Customer).ThenInclude(c => c.Country)
-                .Include(i => i.PublicCustomer)
+                .Include(i => i.PublicCustomer).ThenInclude(pc => pc.Country)
                 .Include(i => i.InvoiceLines).ThenInclude(il => il.InvoiceTaxes)
                 .Include(i => i.LHDNStatus)
                 .Include(i => i.InternalStatus)
