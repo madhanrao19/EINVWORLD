@@ -68,7 +68,7 @@ else
                                     <span class="d-block">@buyer.TIN</span>
                                     <span class="text-muted small">@buyer.RegTypeCode @buyer.RegNo</span>
                                 </td>
-                                <td data-label="Location">@buyer.CityName, @(buyer.State?.State ?? buyer.StateCode)</td>
+                                <td data-label="Location">@buyer.CityName, @(Model.StateNames.TryGetValue(buyer.StateCode, out var buyerStateName) ? buyerStateName : buyer.StateCode)</td>
                                 <td data-label="Created">@buyer.CreatedDate.ToString("yyyy-MM-dd")</td>
                                 <td class="col-action" data-label="Action">
                                     <a asp-page="./Details" asp-route-id="@buyer.PublicCustomerId" class="btn btn-sm einv-action-btn">
