@@ -137,7 +137,7 @@
                                 @Html.Raw("-<br />")
                             }
                             @(Model.PublicCustomer.PostalCode ?? "-") @(Model.PublicCustomer.CityName ?? "-")<br />
-                            @(Model.PublicCustomer.State?.State ?? "-"), @(string.IsNullOrEmpty(Model.PublicCustomer.Country?.Country) ? "-" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Model.PublicCustomer.Country.Country.ToLower()))
+                            @Model.StateName, @(string.IsNullOrEmpty(Model.PublicCustomer.Country?.Country) ? "-" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Model.PublicCustomer.Country.Country.ToLower()))
                         </div>
                     </div>
                 </div>

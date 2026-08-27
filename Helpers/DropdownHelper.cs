@@ -87,6 +87,17 @@ namespace eInvWorld.Helpers
                 .FirstOrDefault() ?? code; // fallback to code if not found
         }
 
+        // Resolves a state code to its display name; falls back to the raw value when it doesn't
+        // match a StateCodes row (e.g. a foreign buyer's free-text state).
+        public string GetStateName(string? code)
+        {
+            if (string.IsNullOrEmpty(code)) return "-";
+            return _context.StateCodes
+                .Where(s => s.Code == code)
+                .Select(s => s.State)
+                .FirstOrDefault() ?? code;
+        }
+
         // Method to populate Classification Code options
         public List<SelectListItem> GetClassificationCodeOptions()
         {

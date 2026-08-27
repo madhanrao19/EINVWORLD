@@ -94,8 +94,6 @@ namespace EINVWORLD.Pages.Invoices
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer
-                    .ThenInclude(p => p!.State)
-                    .Include(i => i.PublicCustomer)
                             .ThenInclude(p => p!.Country)
                     .Include(i => i.InvoiceLines)
                         .ThenInclude(il => il.InvoiceTaxes)
@@ -116,8 +114,6 @@ namespace EINVWORLD.Pages.Invoices
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer
-                            .ThenInclude(p => p!.State)
-                    .Include(i => i.PublicCustomer)
                             .ThenInclude(p => p!.Country)
                     .Include(i => i.InvoiceLines)
                         .ThenInclude(il => il.InvoiceTaxes)
