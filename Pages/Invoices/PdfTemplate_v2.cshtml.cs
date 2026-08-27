@@ -68,6 +68,8 @@ namespace EINVWORLD.Pages.Invoices
                         .ThenInclude(c => c.State)   // ✅ Load Customer's State Name
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country) // ✅ Load Customer's Country Name
+                    .Include(i => i.PublicCustomer)  // Load Public/foreign Buyer (no PartyInfo)
+                        .ThenInclude(pc => pc.Country) // ✅ Load PublicCustomer's Country Name
                 .Include(i => i.InvoiceLines)
                 .ThenInclude(il => il.InvoiceTaxes) //  Load Taxes on Items
                 .Include(i => i.LHDNStatus)  //  Ensure LHDNStatus is loaded
