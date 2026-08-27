@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using eInvWorld.Data;
+using eInvWorld.Helpers;
 using eInvWorld.Models.InputModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,13 +13,16 @@ namespace eInvWorld.Pages.PublicCustomer
     public class DetailsModel : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly DropdownHelper _dropdownHelper;
 
-        public DetailsModel(ApplicationDbContext context)
+        public DetailsModel(ApplicationDbContext context, DropdownHelper dropdownHelper)
         {
             _context = context;
+            _dropdownHelper = dropdownHelper;
         }
 
         public eInvWorld.Models.InputModel.PublicCustomer PublicCustomer { get; set; } = default!;
+        public string StateName { get; set; } = "-";
 
         public bool CanEdit { get; set; }
 
@@ -29,7 +33,6 @@ namespace eInvWorld.Pages.PublicCustomer
                 return NotFound();
 
             var entity = await _context.PublicCustomers
-                .Include(p => p.State)
                 .Include(p => p.Country)
                 .Include(p => p.RegType)
                 .FirstOrDefaultAsync(p => p.PublicCustomerId == id);
@@ -37,6 +40,8 @@ namespace eInvWorld.Pages.PublicCustomer
 
             if (entity == null)
                 return NotFound();
+
+            StateName = _dropdownHelper.GetStateName(entity.StateCode);
 
             // 🔐 Admin can view all
             if (User.IsInRole("Admin"))

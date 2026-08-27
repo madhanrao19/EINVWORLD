@@ -70,8 +70,6 @@ namespace EINVWORLD.Views.Invoices
                 .Include(i => i.Customer)
                     .ThenInclude(c => c.Country) 
                 .Include(i => i.PublicCustomer)
-                    .ThenInclude(p => p!.State)
-                .Include(i => i.PublicCustomer)
                     .ThenInclude(p => p!.Country)
                 .Include(i => i.InvoiceLines)
                 .ThenInclude(il => il.InvoiceTaxes)

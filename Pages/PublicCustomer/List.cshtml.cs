@@ -31,6 +31,7 @@ namespace eInvWorld.Pages.PublicCustomer
         }
 
         public IList<PublicCustomerViewModel> CustomerViewModels { get; set; } = default!;
+        public Dictionary<string, string> StateNames { get; set; } = new();
         public HashSet<string> AssignedBuyerKeys { get; set; } = new();
         public HashSet<int> AssignedPublicCustomerIds { get; set; } = new();
         public Dictionary<int, int> InvoiceCountByBuyer { get; set; } = new();
@@ -65,8 +66,9 @@ namespace eInvWorld.Pages.PublicCustomer
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             bool isAdmin = User.IsInRole("Admin");
 
+            StateNames = await _context.StateCodes.ToDictionaryAsync(s => s.Code, s => s.State);
+
             var query = from pc in _context.PublicCustomers
-                            .Include(p => p.State)
                             .Include(p => p.Country)
                         join party in _context.PartyInfos
                             on pc.CreatedByCompanyId equals party.PartyInfoId into pcParty

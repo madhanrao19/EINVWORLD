@@ -27,16 +27,18 @@ namespace eInvWorld.Pages.PublicCustomer
         }
 
         public List<DuplicateGroup> DuplicateGroups { get; set; } = new();
+        public Dictionary<string, string> StateNames { get; set; } = new();
 
         public async Task OnGetAsync()
         {
             bool isAdmin = User.IsInRole("Admin");
 
+            StateNames = await _context.StateCodes.ToDictionaryAsync(s => s.Code, s => s.State);
+
             // Same tenant-scoping pattern as Import.cshtml.cs OnPostUploadAsync: a Supplier only ever
             // sees duplicates within their own buyers; an Admin only sees duplicates among global
             // (Admin-created) buyers. Never compares across tenants.
             var query = _context.PublicCustomers
-                .Include(p => p.State)
                 .Include(p => p.Country)
                 .AsQueryable();
 
