@@ -118,6 +118,35 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-08-28 — Consolidate LHDN BaseUrl/ClientId into git-tracked environment overrides
+
+> A production login started failing with LHDN's OAuth token endpoint returning `invalid_client`
+> right after a routine deploy. Investigation traced the actual confusion (not the root cause of
+> that specific incident, which turned out to be an IIS-level env var) to a real config-hygiene gap:
+> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` were the only environment-specific,
+> non-secret values in the app that lived nowhere in git — each server carried its own hand-edited
+> copy of the base `appsettings.json` with no template, no diff history, and no mention in
+> `SECRETS-SETUP.md`. Every other per-environment override already has a proper home
+> (`appsettings.Production.json`). Moved these three values into `appsettings.Production.json`
+> (real production host/Client ID — safe to commit, since OAuth `client_id` is public; only
+> `ClientSecret`/`ClientSecret2` stay env-var-only, unchanged) and, for reference,
+> `appsettings.Staging.json` (preprod values — see caveat below). `Helpers/ProductionConfigValidator`
+> now also fails startup in Production on a blank `ClientId` or both `ClientSecret`/`ClientSecret2`
+> blank — previously nothing caught a missing credential until the first confusing runtime
+> `invalid_client`/`unauthorized_client`, exactly like this incident (5 new tests in
+> `ProductionConfigValidatorLhdnCredentialTests`). Also fixed two stale doc claims found along the
+> way: `IIS-DEPLOYMENT-GUIDE.md`/`SECRETS-SETUP.md` both incorrectly said
+> `DataProtection:KeyRingPath` is "already set"/"preset" in `appsettings.Production.json` — it's
+> deliberately blank there (forces an explicit per-server `DataProtection__KeyRingPath` env var), and
+> that env var was missing from the guide's required-variables table entirely.
+>
+> **Caveat surfaced but deliberately not fixed in this change:** both servers run with
+> `ASPNETCORE_ENVIRONMENT=Production` (per the deployment guide's own Production-vs-Staging table),
+> so `appsettings.Staging.json` is not actually loaded by any real deployment today — the staging
+> server's true running config comes from its own separately hand-maintained local
+> `appsettings.Production.json`. The `appsettings.Staging.json` LHDN block added here is reference
+> only until that's addressed as a separate, explicitly-scoped follow-up.
+
 ## 📅 2026-08-27 — Free-text State/Province for foreign Buyers
 
 > `PublicCustomer.StateCode` had a hard EF Core foreign key to the `StateCodes` table (16 Malaysian
