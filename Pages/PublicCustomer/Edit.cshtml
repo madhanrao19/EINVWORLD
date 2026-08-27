@@ -151,17 +151,25 @@
                 <div class="col-md-4 mb-3">
                     <label asp-for="PublicCustomer.StateCode" class="form-label">State / Province</label>
                     <select asp-for="PublicCustomer.StateCode"
+                            id="PublicCustomer_StateCode"
                             asp-items="Model.StateOptions"
                             class="form-select">
                         <option value="">-- Select State --</option>
                     </select>
+                    <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode"
+                           value="@Model.PublicCustomer.StateCode"
+                           class="form-control d-none" disabled maxlength="100"
+                           placeholder="Enter state / province" />
+                    <span asp-validation-for="PublicCustomer.StateCode" class="text-danger"></span>
                 </div>
 
                 <div class="col-md-6 mb-3">
                     <label asp-for="PublicCustomer.CountryCode" class="form-label">Country</label>
                     <select asp-for="PublicCustomer.CountryCode"
+                            id="PublicCustomer_CountryCode"
                             asp-items="Model.CountryOptions"
-                            class="form-select">
+                            class="form-select"
+                            onchange="toggleStateFieldForCountry()">
                         <option value="">-- Select Country --</option>
                     </select>
                 </div>
@@ -225,3 +233,35 @@
 </form>
 
 <partial name="_ValidationScriptsPartial" />
+
+<script>
+    // Malaysia keeps the fixed State dropdown (LHDN's own MyInvois Portal requires it); any other
+    // country switches to a free-text State input, matching LHDN's own portal behavior for foreign
+    // parties. Treat "no country chosen" like Malaysia so the dropdown is the fallback default.
+    function toggleStateFieldForCountry() {
+        const countrySelect = document.getElementById('PublicCustomer_CountryCode');
+        const stateSelect = document.getElementById('PublicCustomer_StateCode');
+        const stateText = document.getElementById('PublicCustomer_StateCode_Text');
+        if (!countrySelect || !stateSelect || !stateText) return;
+
+        const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
+
+        if (isMalaysia) {
+            stateSelect.classList.remove('d-none');
+            stateSelect.disabled = false;
+            stateSelect.required = true;
+            stateText.classList.add('d-none');
+            stateText.disabled = true;
+            stateText.required = false;
+        } else {
+            stateSelect.classList.add('d-none');
+            stateSelect.disabled = true;
+            stateSelect.required = false;
+            stateText.classList.remove('d-none');
+            stateText.disabled = false;
+            stateText.required = true;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', toggleStateFieldForCountry);
+</script>

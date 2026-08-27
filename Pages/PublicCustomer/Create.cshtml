@@ -260,15 +260,20 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label asp-for="PublicCustomer.StateCode" class="form-label">State / Province</label>
-                            <select asp-for="PublicCustomer.StateCode" class="form-select select2" asp-items="Model.StateOptions" required>
+                            <select asp-for="PublicCustomer.StateCode" id="PublicCustomer_StateCode" class="form-select select2" asp-items="Model.StateOptions">
                                 <option value="">-- Select State --</option>
                             </select>
+                            <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode"
+                                   value="@Model.PublicCustomer.StateCode"
+                                   class="form-control d-none" disabled maxlength="100"
+                                   placeholder="Enter state / province" />
+                            <span asp-validation-for="PublicCustomer.StateCode" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label asp-for="PublicCustomer.CountryCode" class="form-label">Country</label>
-                            <select asp-for="PublicCustomer.CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required>
+                            <select asp-for="PublicCustomer.CountryCode" id="PublicCustomer_CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required onchange="toggleStateFieldForCountry()">
                                 <option value="">-- Select Country --</option>
                             </select>
                         </div>
@@ -305,6 +310,40 @@
 
 @section Scripts {
     <script>
+        // Malaysia keeps the fixed State dropdown (LHDN's own MyInvois Portal requires it); any
+        // other country switches to a free-text State input, matching LHDN's own portal behavior for
+        // foreign parties. Treat "no country chosen yet" like Malaysia so the dropdown is the default
+        // on a fresh Create form.
+        function toggleStateFieldForCountry() {
+            const countrySelect = document.getElementById('PublicCustomer_CountryCode');
+            const stateSelect = document.getElementById('PublicCustomer_StateCode');
+            const stateText = document.getElementById('PublicCustomer_StateCode_Text');
+            if (!countrySelect || !stateSelect || !stateText) return;
+
+            const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
+            const stateSelect2Container = $(stateSelect).next('.select2-container');
+
+            if (isMalaysia) {
+                stateSelect2Container.removeClass('d-none');
+                stateSelect.disabled = false;
+                stateSelect.required = true;
+                stateText.classList.add('d-none');
+                stateText.disabled = true;
+                stateText.required = false;
+            } else {
+                stateSelect2Container.addClass('d-none');
+                stateSelect.disabled = true;
+                stateSelect.required = false;
+                stateText.classList.remove('d-none');
+                stateText.disabled = false;
+                stateText.required = true;
+            }
+        }
+
+        $(function () {
+            toggleStateFieldForCountry();
+        });
+
         let isLhdnValidated = false;
 
         // Reset validation state if user edits TIN, RegNo, or ID Type

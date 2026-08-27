@@ -273,6 +273,23 @@ namespace EINVWORLD.Tests
             Assert.Contains("EI00000000010", json);
         }
 
+        // ── Free-text State for a foreign Buyer (PublicCustomer.StateCode no longer FK-restricted
+        // to the StateCodes list — LHDN's own MyInvois Portal accepts free text for a foreign
+        // party's CountrySubentityCode, and InvoiceMapper never validated its format beyond the
+        // State-17 domestic restriction above) ─────────────────────────────────────────────────
+        [Fact]
+        public void Map_PublicCustomerForeignFreeTextState_PassesThroughVerbatim()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000020", "Foreign Buyer Inc");
+            header.PublicCustomer.CountryCode = "IDN";
+            header.PublicCustomer.StateCode = "CUSTOM STATE"; // not a StateCodes row — free text
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("\"CUSTOM STATE\"", json);
+        }
+
         // ── Passport ID length cap (LHDN SDK, 06 Aug 2026, effective Production 23 Oct 2026) ──
         private static PublicCustomer ValidPublicCustomer(string tin, string company) => new()
         {

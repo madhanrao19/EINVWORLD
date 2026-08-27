@@ -179,7 +179,7 @@
                                     <span class="d-block text-truncate" style="max-width: 200px;">@item.Email</span>
                                     <span class="text-muted small">@item.PhoneNo</span>
                                 </td>
-                                <td data-label="Location">@item.CityName, @(item.State?.State ?? item.StateCode)</td>
+                                <td data-label="Location">@item.CityName, @(Model.StateNames.TryGetValue(item.StateCode, out var stateName) ? stateName : item.StateCode)</td>
                                 <td class="text-end" data-label="Invoices">@invoiceCount</td>
 
                                 @if (isAdmin)

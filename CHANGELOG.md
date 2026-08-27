@@ -1,6 +1,13 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.6`** (`AppInfo:Version` in `appsettings.json`). v1.21.6 is a **patch**
+> **Current version: `v1.21.7`** (`AppInfo:Version` in `appsettings.json`). v1.21.7 is a **patch**
+> release: a foreign Buyer's (`PublicCustomer`, `CountryCode != "MYS"`) State/Province field is now
+> free text instead of being locked to the Malaysian `StateCodes` list — that restriction was
+> self-imposed (a DB foreign key), not an LHDN requirement; LHDN's own MyInvois Portal accepts free
+> text for a foreign party's state, and `CountrySubentityCode` in the UBL payload was already an
+> unconstrained string. Malaysian buyers are unaffected — still a dropdown, still validated against
+> `StateCodes`, just enforced at the application layer now instead of the database FK. See the dated
+> entry below for details. v1.21.6 was a **patch**
 > release: fixes a data-integrity bug where the background/manual "full sync from LHDN" pipeline
 > (`InvoiceFullSyncHelper`) could silently overwrite a submitted invoice's Buyer with the wrong
 > party — an unscoped TIN-only lookup mismatched LHDN's shared general TINs against whichever
@@ -110,6 +117,35 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-27 — Free-text State/Province for foreign Buyers
+
+> `PublicCustomer.StateCode` had a hard EF Core foreign key to the `StateCodes` table (16 Malaysian
+> states + code "17" "Not Applicable"), enforced for every Buyer regardless of `CountryCode`. A user
+> asked whether a foreign Buyer's State could be free text, and pointed to LHDN's own MyInvois
+> Portal, which renders State as a dropdown for Malaysia but a free-text input for any other country
+> — direct evidence that free text is acceptable to LHDN for a foreign party. Investigation confirmed
+> there is no LHDN document restricting `CountrySubentityCode` to a fixed code list; it's a plain
+> unconstrained string in the UBL JSON model, and `InvoiceMapper`'s only related rule
+> (`IsRestrictedState17`) forbids state code `"17"` for a *domestic* Malaysian party — it says
+> nothing about a foreign party's state format. The FK was a self-imposed EINVWORLD restriction.
+>
+> Fixed by removing `PublicCustomer`'s `State` navigation/FK (migration
+> `RemovePublicCustomerStateCodeForeignKey`, purely additive — drops the FK + its auto-generated
+> index, narrows `StateCode` from `nvarchar(450)` to `nvarchar(100)`; all existing values are
+> 2-character codes, safe) and moving Malaysian-buyer validation to the application layer
+> (`Pages/PublicCustomer/Create.cshtml.cs`/`Edit.cshtml.cs`: still rejects an invalid/tampered state
+> code when `CountryCode == "MYS"`). The Create/Edit forms now toggle between the existing State
+> dropdown and a new free-text input based on the selected Country, matching LHDN's own portal
+> behavior. Every display site that read the removed navigation (Buyer Details page, Buyer list,
+> duplicate-review list, invoice Bill To preview and PDF) now resolves the name via a new
+> `DropdownHelper.GetStateName(code)` helper, which falls back to the raw value when it doesn't match
+> a `StateCodes` row — Malaysian codes still show their friendly name, foreign free text passes
+> through unchanged. Scoped to Buyers only; a Supplier's own company address (`PartyInfo`, same
+> dropdown pattern) is untouched — separate entity, separate FK, out of scope for this change.
+> `Services/Mappers/InvoiceMapper.cs` needed no change at all — it already sent `StateCode` verbatim.
+> Migration verified locally end-to-end against a real SQL Server (LocalDB) via the existing
+> `EINVWORLD.Tests.Integration.SqlServerIntegrationTests` fixture (`Migrate()` on a throwaway DB).
 
 ## 📅 2026-08-27 — Fix LHDN full-sync silently overwriting a submitted invoice's Buyer
 
