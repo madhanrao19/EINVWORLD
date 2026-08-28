@@ -957,6 +957,7 @@
                             <small class="text-muted">Enter the fundamental details of your invoice</small>
                         </div>
                     </div>
+                    <small class="text-muted d-none d-md-inline"><span class="text-danger">*</span> Required for e-Invoice submission</small>
                 </div>
                 <div class="card-body">
                     <!-- Bento KPI Highlights -->
@@ -1094,7 +1095,7 @@
                         <!-- PO/DO No -->
                         <div class="col-md-4">
                             <div class="form-floating">
-                                <input type="text" asp-for="Invoice.PoDoNo" class="form-control" id="poDoNo" placeholder="Enter PO/DO Number (optional)" />
+                                <input type="text" asp-for="Invoice.PoDoNo" class="form-control" id="poDoNo" placeholder="Enter PO/DO Number" />
                                 <label for="poDoNo">
                                     PO/DO No
                                     <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="Optional: Purchase Order or Delivery Order Number"></i>
@@ -1439,7 +1440,7 @@
                                     <div class="card-body">
                                         <div class="row g-4">
                                             <div class="col-12 col-lg-6">
-                                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                                <label class="text-uppercase text-muted small mb-1">Item <span class="text-danger">*</span></label>
                                                 <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, @i)">
                                                     <option value="">-- Select Saved Item --</option>
                                                     @if (Model.SavedItems != null && Model.SavedItems.Any())
@@ -1465,17 +1466,17 @@
                                             <div class="col-12 col-lg-6">
                                                 <div class="row g-2">
                                                     <div class="col-4">
-                                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                                        <label class="text-uppercase text-muted small mb-1">Qty <span class="text-danger">*</span></label>
                                                         <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
                                                     </div>
                                                     <div class="col-4">
-                                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                                        <label class="text-uppercase text-muted small mb-1">Unit <span class="text-danger">*</span></label>
                                                         <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
                                                             <option value="">Unit</option>
                                                         </select>
                                                     </div>
                                                     <div class="col-4">
-                                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                                        <label class="text-uppercase text-muted small mb-1">Unit Price <span class="text-danger">*</span></label>
                                                         <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
                                                     </div>
                                                     <div class="col-12">
@@ -4458,7 +4459,7 @@
                     <div class="card-body">
                         <div class="row g-4">
                             <div class="col-12 col-lg-6">
-                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                <label class="text-uppercase text-muted small mb-1">Item <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
                                     <option value="">-- Select Saved Item --</option>
                                     ${savedItemsOptionsHtml}
@@ -4479,18 +4480,18 @@
                             <div class="col-12 col-lg-6">
                                 <div class="row g-2">
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                        <label class="text-uppercase text-muted small mb-1">Qty <span class="text-danger">*</span></label>
                                         <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
                                     </div>
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                        <label class="text-uppercase text-muted small mb-1">Unit <span class="text-danger">*</span></label>
                                         <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
                                             <option value="">Unit</option>
                                             ${unitOptionsHtml}
                                         </select>
                                     </div>
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                        <label class="text-uppercase text-muted small mb-1">Unit Price <span class="text-danger">*</span></label>
                                         <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
                                     </div>
                                     <div class="col-12">
@@ -4733,7 +4734,7 @@
                     <div class="card-body">
                         <div class="row g-4">
                             <div class="col-12 col-lg-6">
-                                <label class="text-uppercase text-muted small mb-1">Item</label>
+                                <label class="text-uppercase text-muted small mb-1">Item <span class="text-danger">*</span></label>
                                 <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
                                     <option value="">-- Select Saved Item --</option>
                                     ${savedItemsOptionsHtml}
@@ -4754,18 +4755,18 @@
                             <div class="col-12 col-lg-6">
                                 <div class="row g-2">
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Qty</label>
+                                        <label class="text-uppercase text-muted small mb-1">Qty <span class="text-danger">*</span></label>
                                         <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
                                     </div>
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit</label>
+                                        <label class="text-uppercase text-muted small mb-1">Unit <span class="text-danger">*</span></label>
                                         <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
                                             <option value="">Unit</option>
                                             ${unitOptionsHtml}
                                         </select>
                                     </div>
                                     <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit Price</label>
+                                        <label class="text-uppercase text-muted small mb-1">Unit Price <span class="text-danger">*</span></label>
                                         <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
                                     </div>
                                     <div class="col-12">
