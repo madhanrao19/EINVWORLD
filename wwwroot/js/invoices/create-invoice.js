@@ -2467,77 +2467,65 @@
                 console.log(`📝 Adding item #${itemCount + 1}, current count: ${itemCount}`);
 
                 const newRow = document.createElement('div');
-                newRow.className = 'item-row card mb-3';
+                newRow.className = 'item-row';
                 newRow.style.borderLeft = '4px solid var(--einv-primary, #006948)';
+                newRow.style.borderBottom = '1px solid var(--einv-border, #e9ecef)';
                 newRow.setAttribute('data-item-index', itemCount);
 
-                // UPDATED HTML: Added the Quick Select dropdown in the description block
+                // Phase 2D dense-grid row (mirrors _CreateInvoice_Step2Items.cshtml's server-rendered markup)
                 newRow.innerHTML = `
-                    <div class="card-body">
-                        <div class="row g-4">
-                            <div class="col-12 col-lg-6">
-                                <label class="text-uppercase text-muted small mb-1">Item <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
-                                    <option value="">-- Select Saved Item --</option>
-                                    ${savedItemsOptionsHtml}
-                                </select>
-                                <div class="row g-2 mb-2">
-                                    <div class="col-sm-7">
-                                        <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                            <option value="">Select Classification</option>
-                                            ${classificationOptionsHtml}
-                                        </select>
-                                    </div>
-                                    <div class="col-sm-5">
-                                        <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
-                                    </div>
-                                </div>
-                                <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
-                            </div>
-                            <div class="col-12 col-lg-6">
-                                <div class="row g-2">
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Qty <span class="text-danger">*</span></label>
-                                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit <span class="text-danger">*</span></label>
-                                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                                            <option value="">Unit</option>
-                                            ${unitOptionsHtml}
-                                        </select>
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit Price <span class="text-danger">*</span></label>
-                                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="text-uppercase text-muted small mb-1">Tax</label>
-                                        <div class="tax-section" id="taxes-${itemCount}"></div>
-                                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
-                                            <i class="ri-add-line me-1"></i>Tax
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="text-uppercase text-muted small mb-1">Subtotal</label>
-                                        <div class="p-2 rounded bg-light text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="text-uppercase text-muted small mb-1">Row Total</label>
-                                        <div class="p-2 rounded text-end fw-bold text-primary" style="background:rgba(0,105,72,.08);" id="rowtotal-${itemCount}">0.00</div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="irow">
+                        <div class="irow-num">${itemCount + 1}</div>
+                        <div class="irow-desc">
+                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                                <option value="">-- Select Saved Item --</option>
+                                ${savedItemsOptionsHtml}
+                            </select>
+                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
                         </div>
-                        <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
-                            <div class="d-flex gap-3">
-                                <button type="button" class="btn btn-link btn-sm text-success text-decoration-none p-0" onclick="duplicateItem(this)">
-                                    <i class="ri-file-copy-line me-1"></i>Duplicate
-                                </button>
-                                <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)">
-                                    <i class="ri-delete-bin-line me-1"></i>Remove
-                                </button>
-                            </div>
+                        <div class="irow-classification">
+                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
+                            <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                <option value="">Select Classification</option>
+                                ${classificationOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="irow-qty">
+                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                        </div>
+                        <div class="irow-unit">
+                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
+                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
+                                <option value="">Unit</option>
+                                ${unitOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="irow-price">
+                            <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                        </div>
+                        <div class="irow-tax">
+                            <div class="irow-mlabel">Tax</div>
+                            <div class="tax-section" id="taxes-${itemCount}"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                <i class="ri-add-line me-1"></i>Tax
+                            </button>
+                        </div>
+                        <div class="irow-total">
+                            <div class="irow-mlabel">Subtotal</div>
+                            <div class="irow-num-val" id="subtotal-${itemCount}">0.00</div>
+                            <div class="irow-mlabel">Row Total</div>
+                            <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
+                        </div>
+                        <div class="irow-actions">
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate">
+                                <i class="ri-file-copy-line"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2716,8 +2704,9 @@
 
                 // Create new row
                 const newRow = document.createElement('div');
-                newRow.className = 'item-row card mb-3';
+                newRow.className = 'item-row';
                 newRow.style.borderLeft = '4px solid var(--einv-primary, #006948)';
+                newRow.style.borderBottom = '1px solid var(--einv-border, #e9ecef)';
                 newRow.setAttribute('data-item-index', itemCount);
 
                 // Get all form data from source row SAFELY using the classes
@@ -2747,72 +2736,60 @@
                 });
 
                 // 🚨 CRITICAL FIX: Create BLANK HTML for new row (NO INJECTED TEXT VALUES)
+                // Phase 2D dense-grid row (mirrors _CreateInvoice_Step2Items.cshtml / addItemRow's markup)
                 newRow.innerHTML = `
-                    <div class="card-body">
-                        <div class="row g-4">
-                            <div class="col-12 col-lg-6">
-                                <label class="text-uppercase text-muted small mb-1">Item <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
-                                    <option value="">-- Select Saved Item --</option>
-                                    ${savedItemsOptionsHtml}
-                                </select>
-                                <div class="row g-2 mb-2">
-                                    <div class="col-sm-7">
-                                        <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                            <option value="">Select Classification</option>
-                                            ${classificationOptionsHtml}
-                                        </select>
-                                    </div>
-                                    <div class="col-sm-5">
-                                        <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
-                                    </div>
-                                </div>
-                                <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="3" placeholder="Enter comprehensive item description..." required style="resize: vertical; min-height: 70px;"></textarea>
-                            </div>
-                            <div class="col-12 col-lg-6">
-                                <div class="row g-2">
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Qty <span class="text-danger">*</span></label>
-                                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit <span class="text-danger">*</span></label>
-                                        <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                                            <option value="">Unit</option>
-                                            ${unitOptionsHtml}
-                                        </select>
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="text-uppercase text-muted small mb-1">Unit Price <span class="text-danger">*</span></label>
-                                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="text-uppercase text-muted small mb-1">Tax</label>
-                                        <div class="tax-section" id="taxes-${itemCount}"></div>
-                                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="addTaxRow(${itemCount})">
-                                            <i class="ri-add-line me-1"></i>Tax
-                                        </button>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="text-uppercase text-muted small mb-1">Subtotal</label>
-                                        <div class="p-2 rounded bg-light text-end fw-bold" id="subtotal-${itemCount}">0.00</div>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="text-uppercase text-muted small mb-1">Row Total</label>
-                                        <div class="p-2 rounded text-end fw-bold text-primary" style="background:rgba(0,105,72,.08);" id="rowtotal-${itemCount}">0.00</div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="irow">
+                        <div class="irow-num">${itemCount + 1}</div>
+                        <div class="irow-desc">
+                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                                <option value="">-- Select Saved Item --</option>
+                                ${savedItemsOptionsHtml}
+                            </select>
+                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
                         </div>
-                        <div class="d-flex align-items-center justify-content-between mt-3 pt-3 border-top">
-                            <div class="d-flex gap-3">
-                                <button type="button" class="btn btn-link btn-sm text-success text-decoration-none p-0" onclick="duplicateItem(this)">
-                                    <i class="ri-file-copy-line me-1"></i>Duplicate
-                                </button>
-                                <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="removeItem(this)">
-                                    <i class="ri-delete-bin-line me-1"></i>Remove
-                                </button>
-                            </div>
+                        <div class="irow-classification">
+                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
+                            <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                <option value="">Select Classification</option>
+                                ${classificationOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="irow-qty">
+                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                        </div>
+                        <div class="irow-unit">
+                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
+                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
+                                <option value="">Unit</option>
+                                ${unitOptionsHtml}
+                            </select>
+                        </div>
+                        <div class="irow-price">
+                            <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                        </div>
+                        <div class="irow-tax">
+                            <div class="irow-mlabel">Tax</div>
+                            <div class="tax-section" id="taxes-${itemCount}"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                <i class="ri-add-line me-1"></i>Tax
+                            </button>
+                        </div>
+                        <div class="irow-total">
+                            <div class="irow-mlabel">Subtotal</div>
+                            <div class="irow-num-val" id="subtotal-${itemCount}">0.00</div>
+                            <div class="irow-mlabel">Row Total</div>
+                            <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
+                        </div>
+                        <div class="irow-actions">
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate">
+                                <i class="ri-file-copy-line"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2994,6 +2971,12 @@
             const rows = document.querySelectorAll('.item-row');
             rows.forEach((row, index) => {
                 row.setAttribute('data-item-index', index);
+
+                // Update the visible row number (Phase 2D dense-grid "#" column)
+                const numEl = row.querySelector('.irow-num');
+                if (numEl) {
+                    numEl.textContent = index + 1;
+                }
 
                 // Update all input names
                 row.querySelectorAll('input, select, textarea').forEach(input => {
