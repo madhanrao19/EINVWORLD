@@ -437,11 +437,10 @@ namespace eInvWorld.Pages.Invoices
                 TotalSentInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Sent", userTINs).CountAsync();
                 TotalReceivedInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Received", userTINs).CountAsync();
 
-                // "Needs Attention" (Phase 1C): a distinct-invoice count across ALL directions, mirroring
-                // Dashboard.cshtml.cs's ActionInvalidCount/ActionTransmissionErrorCount/RejectRequestInvoices/
-                // aging-drafts criteria — same composite predicate, reused via ApplyNeedsAttentionFilter so
-                // this count and the filtered grid below can never drift apart.
-                TotalNeedsAttentionInvoices = await ApplyNeedsAttentionFilter(
+                // "Needs Attention" (Phase 1C/1D): a distinct-invoice count across ALL directions,
+                // via the same InvoiceNeedsAttentionFilter the Dashboard panel uses — this count and
+                // the filtered grid below (and the Dashboard's headline number) can never drift apart.
+                TotalNeedsAttentionInvoices = await InvoiceNeedsAttentionFilter.Apply(
                     ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs)).CountAsync();
 
                 // Direction-scoped LHDN status counts for the compliance strip under the table.
@@ -530,22 +529,6 @@ namespace eInvWorld.Pages.Invoices
             };
         }
 
-        // "Needs Attention" composite predicate (Phase 1C) — mirrors Dashboard.cshtml.cs's
-        // ActionInvalidCount (LHDNStatusId Invalid, not Draft) + ActionTransmissionErrorCount
-        // (InternalStatusId TransmissionError) + RejectRequestInvoices (InternalStatusId RequestReject)
-        // + aging drafts (Draft older than 3 days). An invoice can match more than one of these
-        // simultaneously, so this is a DISTINCT-invoice OR, not a sum of the four — same rule the
-        // Dashboard's headline "Needs Attention" number must follow (see plan Phase 1D).
-        private static IQueryable<InvoiceHeader> ApplyNeedsAttentionFilter(IQueryable<InvoiceHeader> query)
-        {
-            var agingDraftCutoff = DateTime.Now.AddDays(-3);
-            return query.Where(i =>
-                (i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft") ||
-                i.InternalStatusId == "TransmissionError" ||
-                i.InternalStatusId == "RequestReject" ||
-                (i.InternalStatusId == "Draft" && i.CreatedDate <= agingDraftCutoff));
-        }
-
         private IQueryable<InvoiceHeader> ApplyFilters(
             IQueryable<InvoiceHeader> query,
             DateTime? submissionDateFrom,
@@ -620,7 +603,7 @@ namespace eInvWorld.Pages.Invoices
 
             if (string.Equals(internalStatus, "NeedsAttention", StringComparison.OrdinalIgnoreCase))
             {
-                query = ApplyNeedsAttentionFilter(query);
+                query = InvoiceNeedsAttentionFilter.Apply(query);
             }
             else if (!string.IsNullOrEmpty(internalStatus))
             {
