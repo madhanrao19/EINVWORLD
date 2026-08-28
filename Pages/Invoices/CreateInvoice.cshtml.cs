@@ -1696,6 +1696,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             PartyInfoId = p.PartyInfoId,
                             TIN = p.TIN,
+                            RegTypeCode = p.RegTypeCode,
+                            RegNo = p.RegNo,
+                            SST = p.SST,
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,
@@ -1714,6 +1717,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             PartyInfoId = p.PublicCustomerId,
                             TIN = p.TIN,
+                            RegTypeCode = p.RegTypeCode,
+                            RegNo = p.RegNo,
+                            SST = p.SST,
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,
