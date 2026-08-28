@@ -1395,6 +1395,7 @@
                 document.getElementById('summarySupplier').textContent = supplier.options[supplier.selectedIndex]?.text || '-';
                 document.getElementById('summaryBuyer').textContent = buyer.options[buyer.selectedIndex]?.text || '-';
                 document.getElementById('summaryIssueDate').textContent = issueDate.value || '-';
+                updateReviewTradingParties();
                 const itemRows = document.querySelectorAll('.item-row');
                 document.getElementById('summaryItemsCount').textContent = itemRows.length;
 
@@ -2289,6 +2290,7 @@
             if (issueDate) {
             document.getElementById('summaryIssueDate').textContent = issueDate.value || '-';
             }
+            updateReviewTradingParties();
 
             const itemsCountElement = document.getElementById('summaryItemsCount');
             if (itemsCountElement) {
@@ -2297,6 +2299,20 @@
 
             // Update financial summary by recalculating totals
             calculateTotals();
+        }
+
+        // Populates the Step 3 review's TIN/BRN/SST (supplier) and TIN/BRN/Address (buyer) rows
+        // from the party data already fetched by loadPartyDetails() — no extra round-trip.
+        function updateReviewTradingParties() {
+            const setText = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value || '-';
+            };
+            setText('summarySupplierTIN', window.currentSupplierTIN);
+            setText('summarySupplierRegNo', window.currentSupplierRegNo);
+            setText('summarySupplierSST', window.currentSupplierSST);
+            setText('summaryBuyerTIN', window.currentBuyerTIN);
+            setText('summaryBuyerRegNo', window.currentBuyerRegNo);
         }
 
         // Add event listeners for summary updates
@@ -3137,6 +3153,12 @@
                         // Visual feedback
                         if(getVal('bankAccountNo')) showAutoPopulatedIndicator('bankAccountNo');
                         if(getVal('bankName')) showAutoPopulatedIndicator('bankName');
+
+                        // Cache for the Step 3 review's Trading Parties card (see updateSummary()).
+                        window.currentSupplierTIN = getVal('tin');
+                        window.currentSupplierRegNo = getVal('regNo');
+                        window.currentSupplierSST = getVal('sst');
+                        updateReviewTradingParties();
                     }
 
                     if (role === 'buyer') {
@@ -3154,6 +3176,14 @@
                         $('#paymentTerms').val(paymentTerms);
                         // Optional: show indicator
                         // if (paymentTerms) showAutoPopulatedIndicator('paymentTerms');
+
+                        // Cache for the Step 3 review's Trading Parties card (see updateSummary()).
+                        // Note: the API's "address" field is deliberately not surfaced here — it
+                        // concatenates the encrypted Addr2 column, which isn't decrypted inside this
+                        // projection and can leak ciphertext (see PR description / follow-up).
+                        window.currentBuyerTIN = getVal('tin');
+                        window.currentBuyerRegNo = getVal('regNo');
+                        updateReviewTradingParties();
                     }
                 },
                 error: function(xhr, status, error) {
