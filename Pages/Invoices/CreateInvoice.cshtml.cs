@@ -214,7 +214,7 @@ namespace EINVWORLD.Pages.Invoices
                     InvoiceNo = GenerateNextInvoiceNumber(),
                     InvoicePeriod = InvoicePeriodEnum.Not_Applicable,
                     RefDocumentNo = "NA",
-                    DocTypeCode = "01",
+                    DocTypeCode = string.Equals(type, "SELF", StringComparison.OrdinalIgnoreCase) ? "11" : "01",
                     IssueDate = malaysiaTime,
                     InvoiceLines = new List<InvoiceLineView>
             {
