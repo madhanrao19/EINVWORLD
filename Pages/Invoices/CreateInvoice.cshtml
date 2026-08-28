@@ -2087,6 +2087,12 @@
                 return;
             }
 
+            // Skip while the page's own initial setup is still applying default values — see
+            // isInitializing's declaration for why this exists.
+            if (typeof isInitializing !== 'undefined' && isInitializing) {
+                return;
+            }
+
             try {
                 // Get all validation elements in the row
                 const quantityInput = row.querySelector('.quantity-input');
@@ -3323,11 +3329,11 @@
                 // Calculate initial totals
                 calculateTotals();
 
-                // Run onload validation for all existing items
-                console.log('🔍 Running onload validation for existing items...');
-                document.querySelectorAll('.item-row').forEach(row => {
-                    validateRow(row);
-                });
+                // Deliberately no onload validateRow() pass here: a page load is not a submission
+                // attempt or user interaction, so per the untouched-until-interacted validation
+                // model (see the validation-timing fix), rows stay visually neutral until the user
+                // actually touches a field or clicks Next/Submit — otherwise every row (blank or an
+                // incomplete loaded draft) would show red the instant the page renders.
             },
 
             updateProgress() {
@@ -3615,6 +3621,14 @@
         // Step navigation variables - MOVED BEFORE DOM READY
         let currentStep = 1;
         const totalSteps = 3;
+
+        // True while the page's own initial setup (default classification/unit codes, etc.) is
+        // still running. Several of those defaults are applied via `.trigger('change')` so Select2
+        // refreshes its display — which, correctly, also reaches the real validation listeners now.
+        // Without this guard, that purely cosmetic sync would mark a brand-new, untouched row
+        // invalid the instant the page renders. Cleared shortly after DOMContentLoaded once initial
+        // setup has had time to finish; genuine user interaction after that validates normally.
+        let isInitializing = true;
 
 
         // Step navigation functions
@@ -3996,6 +4010,10 @@
                 console.log('🔄 [1000ms] Final classification code update attempt...');
                 updateAllClassificationCodes(true);
             }, 1000);
+
+            // Initial setup (including the classification-code retries above) is done applying
+            // its own defaults by now — real user interaction validates normally from this point.
+            setTimeout(() => { isInitializing = false; }, 1200);
 
             // Initialize table scroll indicators
             initTableScrollIndicators();
@@ -5278,10 +5296,27 @@
             updateStep1Kpis();
         });
 
-        // Force validation styling for required fields
-        function forceValidationStyling() {
-            // Find all required fields in the invoice items table
-            const requiredFields = document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]');
+        // Force validation styling for required fields.
+        // Called two ways: (a) as a DOM event handler on the single field the user just interacted
+        // with (marks it touched, then validates just that field), or (b) with no argument after a
+        // structural change elsewhere in the table (row added/removed/cloned) to refresh styling for
+        // fields already touched. Untouched fields are deliberately skipped in mode (b) so a freshly
+        // added row — or any field the user hasn't reached yet — never appears invalid on its own;
+        // previously this ran unconditionally across every required field on page load and after
+        // every row mutation, which is what caused untouched fields to render red prematurely.
+        function forceValidationStyling(eventOrField) {
+            const singleField = eventOrField && eventOrField.target
+                ? eventOrField.target
+                : (eventOrField instanceof Element ? eventOrField : null);
+
+            if (singleField) {
+                singleField.dataset.touched = 'true';
+            }
+
+            const requiredFields = singleField
+                ? [singleField]
+                : Array.from(document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]'))
+                    .filter(field => field.dataset.touched === 'true');
 
             requiredFields.forEach(field => {
                 // Skip validation for tax percentage fields that should be exempt
@@ -5334,10 +5369,12 @@
                     field.removeAttribute('data-bs-valid');
                     field.removeAttribute('data-bs-invalid');
                 }
+                setFieldAriaValidation(field, !isEmpty);
             });
         }
 
-        // Apply validation styling on page load
+        // No-arg call below now validates nothing (no field has been touched yet on page load) —
+        // kept only so the MutationObserver's later no-arg refresh calls share the same code path.
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 forceValidationStyling();
@@ -5346,9 +5383,16 @@
                 const requiredFields = document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]');
                 requiredFields.forEach(field => {
                     field.addEventListener('input', forceValidationStyling);
-                    field.addEventListener('change', forceValidationStyling);
                     field.addEventListener('blur', forceValidationStyling);
                     field.addEventListener('keyup', forceValidationStyling);
+                    // Select2-enhanced fields (classification/unit) commit via jQuery's
+                    // .trigger('change'), which a plain addEventListener('change', ...) never
+                    // receives — bind through jQuery too so a Select2 pick is actually caught.
+                    if (window.jQuery) {
+                        jQuery(field).on('change', forceValidationStyling);
+                    } else {
+                        field.addEventListener('change', forceValidationStyling);
+                    }
                 });
 
                 // Also observe DOM changes to handle dynamically added fields
