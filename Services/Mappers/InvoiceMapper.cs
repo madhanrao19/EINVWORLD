@@ -237,11 +237,17 @@ namespace eInvWorld.Services.Mappers
             if (party == null)
                 throw new ArgumentNullException(nameof(party), $"{role} information is missing.");
 
+            // Business Description and Postal Code are optional for the Buyer ("Customer" role) —
+            // MyInvois does not mandate them for the buyer party, and requiring them here blocked
+            // otherwise-valid invoices whose buyer record simply doesn't carry that data. Supplier
+            // requirements are unchanged.
+            bool isBuyer = role == "Customer";
+
             var errors = new List<string>();
 
             if (string.IsNullOrEmpty(party.IndustryClassificationCode))
                 errors.Add($"{role} IndustryClassificationCode is required.");
-            if (string.IsNullOrEmpty(party.BizDescription))
+            if (!isBuyer && string.IsNullOrEmpty(party.BizDescription))
                 errors.Add($"{role} Business Description is required.");
             if (string.IsNullOrEmpty(party.CompanyName))
                 errors.Add($"{role} Company Name is required.");
@@ -253,7 +259,7 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} Address Line 1 is required.");
             if (string.IsNullOrEmpty(party.CityName))
                 errors.Add($"{role} City Name is required.");
-            if (string.IsNullOrEmpty(party.PostalCode))
+            if (!isBuyer && string.IsNullOrEmpty(party.PostalCode))
                 errors.Add($"{role} Postal Code is required.");
             if (string.IsNullOrEmpty(party.CountryCode))
                 errors.Add($"{role} Country Code is required.");
@@ -1198,14 +1204,15 @@ namespace eInvWorld.Services.Mappers
 
             var errors = new List<string>();
 
+            // Business Description and Postal Code are optional for Buyers — this method only ever
+            // validates the buyer/public-customer party, never a Supplier. See ValidatePartyInfo for
+            // the equivalent Buyer-vs-Supplier branch when the buyer is a full registered company.
             if (string.IsNullOrEmpty(customer.IndustryClassificationCode)) errors.Add($"{role} IndustryClassificationCode is required.");
-            if (string.IsNullOrEmpty(customer.BizDescription)) errors.Add($"{role} Business Description is required.");
             if (string.IsNullOrEmpty(customer.CompanyName)) errors.Add($"{role} Company Name is required.");
             if (string.IsNullOrEmpty(customer.TIN)) errors.Add($"{role} TIN is required.");
             if (string.IsNullOrEmpty(customer.RegNo)) errors.Add($"{role} Registration Number is required.");
             if (string.IsNullOrEmpty(customer.Addr1)) errors.Add($"{role} Address Line 1 is required.");
             if (string.IsNullOrEmpty(customer.CityName)) errors.Add($"{role} City Name is required.");
-            if (string.IsNullOrEmpty(customer.PostalCode)) errors.Add($"{role} Postal Code is required.");
             if (string.IsNullOrEmpty(customer.StateCode)) errors.Add($"{role} State Code is required.");
             if (string.IsNullOrEmpty(customer.CountryCode)) errors.Add($"{role} Country Code is required.");
             if (string.IsNullOrEmpty(customer.PhoneNo)) errors.Add($"{role} Phone Number is required.");

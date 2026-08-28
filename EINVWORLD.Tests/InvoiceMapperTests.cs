@@ -309,6 +309,60 @@ namespace EINVWORLD.Tests
             TTX = "NA",
         };
 
+        // ── Buyer optional fields: Business Description, Primary Email, Fax Number, Postal Code ──
+        // MyInvois does not mandate these for the buyer party; requiring them blocked otherwise-valid
+        // invoices whose buyer record simply didn't carry that data. Supplier requirements (below)
+        // are intentionally left unchanged.
+        [Fact]
+        public void Map_BuyerCompanyWithBlankOptionalFields_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.BizDescription = "";
+            header.Customer.Email = null;
+            header.Customer.FaxNo = null;
+            header.Customer.PostalCode = null;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.NotNull(json);
+        }
+
+        [Fact]
+        public void Map_PublicCustomerBuyerWithBlankOptionalFields_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000020", "Blank Fields Buyer");
+            header.PublicCustomer.BizDescription = "";
+            header.PublicCustomer.Email = null;
+            header.PublicCustomer.FaxNo = null;
+            header.PublicCustomer.PostalCode = null;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.NotNull(json);
+        }
+
+        [Fact]
+        public void Map_SupplierWithBlankBusinessDescription_StillThrows()
+        {
+            // Guards the role-based branch: relaxing this field for the Buyer must not leak to Supplier.
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Supplier.BizDescription = "";
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Supplier Business Description is required", ex.Message);
+        }
+
+        [Fact]
+        public void Map_SupplierWithBlankPostalCode_StillThrows()
+        {
+            // Guards the role-based branch: relaxing this field for the Buyer must not leak to Supplier.
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Supplier.PostalCode = "";
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Supplier Postal Code is required", ex.Message);
+        }
+
         [Fact]
         public void Map_PassportOver12Chars_Throws()
         {
