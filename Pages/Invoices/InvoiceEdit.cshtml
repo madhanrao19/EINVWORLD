@@ -1465,6 +1465,16 @@
             }
         }
 
+        // MyInvois permits a genuine 0% rate on any tax type (e.g. Sales Tax at 0%), not just
+        // "Not Applicable"/"Exemption" — so a tax line is valid once a rate is actually entered,
+        // whether or not it is zero. Only a blank/negative percentage is rejected.
+        function isTaxPercentageProvided(percentageInput) {
+            const raw = percentageInput?.value;
+            if (raw === undefined || raw === null || raw.trim() === '') return false;
+            const value = parseFloat(raw);
+            return !isNaN(value) && value >= 0;
+        }
+
         function validateTaxField(field) {
             try {
                 if (!field) {
@@ -1532,20 +1542,9 @@
                 const percentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');
 
                 const categoryValue = categorySelect?.value;
-                const percentageValue = parseFloat(percentageInput?.value) || 0;
 
-                if (categoryValue && categoryValue !== '') {
-                    const categoryText = categorySelect.options[categorySelect.selectedIndex]?.text || '';
-                    const isNotApplicable = categoryText.toLowerCase().includes('not applicable');
-                    const isExemption = categoryText.toLowerCase().includes('exemption');
-
-                    // For exempt categories, 0% is valid
-                    if ((isNotApplicable || isExemption) && percentageValue === 0) {
-                        taxValid = true;
-                    } else if (percentageValue > 0) {
-                        // For regular categories, percentage must be > 0
-                        taxValid = true;
-                    }
+                if (categoryValue && categoryValue !== '' && isTaxPercentageProvided(percentageInput)) {
+                    taxValid = true;
                 }
             });
 
@@ -1562,25 +1561,11 @@
                 const percentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');
 
                 const categoryValue = categorySelect?.value;
-                const percentageValue = parseFloat(percentageInput?.value) || 0;
 
                 const categoryValid = categoryValue && categoryValue !== '';
 
-                // Check if percentage is valid for the selected category
-                let percentageValid = false;
-                if (categoryValid) {
-                    const categoryText = categorySelect.options[categorySelect.selectedIndex]?.text || '';
-                    const isNotApplicable = categoryText.toLowerCase().includes('not applicable');
-                    const isExemption = categoryText.toLowerCase().includes('exemption');
-
-                    // For exempt categories, 0% is valid
-                    if ((isNotApplicable || isExemption) && percentageValue === 0) {
-                        percentageValid = true;
-                    } else if (percentageValue > 0) {
-                        // For regular categories, percentage must be > 0
-                        percentageValid = true;
-                    }
-                }
+                // A rate is valid once it's present and non-negative — 0% is fine on any category.
+                const percentageValid = categoryValid && isTaxPercentageProvided(percentageInput);
 
                 updateFieldStyling(categorySelect, categoryValid);
                 updateFieldStyling(percentageInput, percentageValid);
@@ -1667,31 +1652,24 @@
                     const percentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');
 
                     const categoryValue = categorySelect?.value;
-                    const percentageValue = parseFloat(percentageInput?.value) || 0;
 
-                    if (categoryValue && categoryValue !== '') {
+                    // A rate is valid once it's present and non-negative — MyInvois allows a
+                    // genuine 0% rate on any tax type, not just "Not Applicable"/"Exemption".
+                    if (categoryValue && categoryValue !== '' && isTaxPercentageProvided(percentageInput)) {
                         const categoryText = categorySelect.options[categorySelect.selectedIndex]?.text || '';
-                        const isNotApplicable = categoryText.toLowerCase().includes('not applicable');
                         const isExemption = categoryText.toLowerCase().includes('exemption');
 
-                        // For exempt categories, 0% is valid
-                        if ((isNotApplicable || isExemption) && percentageValue === 0) {
-                            // For exemption category, also check if reason is filled when required
-                            if (isExemption) {
-                                const exemptionReasonInput = taxRow.querySelector('.tax-exemption-reason input');
-                                if (exemptionReasonInput && exemptionReasonInput.closest('.tax-exemption-reason').style.display !== 'none') {
-                                    // Exemption reason is required
-                                    if (exemptionReasonInput.value && exemptionReasonInput.value.trim() !== '') {
-                                        taxValid = true;
-                                    }
-                                } else {
-                                    taxValid = true; // No exemption reason required
+                        if (isExemption) {
+                            // Exemption category additionally requires its reason when shown
+                            const exemptionReasonInput = taxRow.querySelector('.tax-exemption-reason input');
+                            if (exemptionReasonInput && exemptionReasonInput.closest('.tax-exemption-reason').style.display !== 'none') {
+                                if (exemptionReasonInput.value && exemptionReasonInput.value.trim() !== '') {
+                                    taxValid = true;
                                 }
                             } else {
-                                taxValid = true; // Not applicable category
+                                taxValid = true;
                             }
-                        } else if (percentageValue > 0) {
-                            // For regular categories, percentage must be > 0
+                        } else {
                             taxValid = true;
                         }
                     }
@@ -2458,9 +2436,9 @@
                             let hasValidTax = false;
                             taxRows.forEach(taxRow => {
                                 const taxCategory = taxRow.querySelector('select[name*=".TaxCategory"]')?.value;
-                                const taxPercentage = taxRow.querySelector('input[name*=".TaxPercentage"]')?.value;
+                                const taxPercentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');
 
-                                if (taxCategory && taxPercentage && parseFloat(taxPercentage) > 0) {
+                                if (taxCategory && isTaxPercentageProvided(taxPercentageInput)) {
                                     hasValidTax = true;
                                 }
                             });
