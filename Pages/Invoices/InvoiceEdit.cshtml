@@ -1514,6 +1514,12 @@
                 return;
             }
 
+            // Skip while the page's own initial setup is still applying default values — see
+            // isInitializing's declaration for why this exists.
+            if (typeof isInitializing !== 'undefined' && isInitializing) {
+                return;
+            }
+
             try {
                 // Get all validation elements in the row
                 const quantityInput = row.querySelector('.quantity-input');
@@ -2696,11 +2702,12 @@
                 // Calculate initial totals
                 calculateTotals();
 
-                // Run onload validation for all existing items
-                console.log('🔍 Running onload validation for existing items...');
-                document.querySelectorAll('.item-row').forEach(row => {
-                    validateRow(row);
-                });
+                // Deliberately no onload validateRow() pass here: a page load is not a submission
+                // attempt or user interaction, so per the untouched-until-interacted validation
+                // model (see the validation-timing fix), rows stay visually neutral until the user
+                // actually touches a field or clicks Next/Submit — otherwise every row (blank or an
+                // existing invoice's row) would show red the instant the page renders, and Create
+                // and Edit must behave identically here.
             },
 
             updateProgress() {
@@ -2913,6 +2920,14 @@
         // Step navigation variables - MOVED BEFORE DOM READY
         let currentStep = 1;
         const totalSteps = 3;
+
+        // True while the page's own initial setup (default classification/unit codes, etc.) is
+        // still running. Several of those defaults are applied via `.trigger('change')` so Select2
+        // refreshes its display — which, correctly, also reaches the real validation listeners now.
+        // Without this guard, that purely cosmetic sync would mark an existing row invalid the
+        // instant the page renders. Cleared shortly after DOMContentLoaded once initial setup has
+        // had time to finish; genuine user interaction after that validates normally.
+        let isInitializing = true;
 
 
         // Step navigation functions
@@ -3230,6 +3245,10 @@
                 console.log('🔄 [1000ms] Final classification code update attempt...');
                 updateAllClassificationCodes(true);
             }, 1000);
+
+            // Initial setup (including the classification-code retries above) is done applying
+            // its own defaults by now — real user interaction validates normally from this point.
+            setTimeout(() => { isInitializing = false; }, 1200);
 
             // Initialize table scroll indicators
             initTableScrollIndicators();
