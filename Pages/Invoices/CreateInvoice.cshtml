@@ -726,6 +726,74 @@
         background: #fff;
     }
 
+    /* Phase 2D: dense accounting-grid layout for item rows on desktop (>=992px).
+       Below 992px, .irow falls back to a wrapped/stacked layout (mobile keeps a card-like feel
+       without a separate mobile template — Phase 4 owns any further mobile-specific redesign). */
+    .irow-head {
+        display: none;
+    }
+    @@media (min-width: 992px) {
+        .irow-head {
+            display: flex;
+            gap: .5rem;
+            padding: .35rem .75rem;
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--einv-muted, #6c757d);
+            border-bottom: 1px solid var(--einv-border, #e9ecef);
+            margin-bottom: .25rem;
+        }
+        .irow {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: flex-start;
+            gap: .5rem;
+        }
+    }
+    .irow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: .5rem;
+        padding: .5rem .75rem;
+    }
+    .irow-num,
+    .irow-head-num { flex: 0 0 24px; padding-top: .4rem; color: var(--einv-muted, #6c757d); font-size: .8rem; }
+    .irow-desc,
+    .irow-head-desc { flex: 1 1 220px; min-width: 200px; }
+    .irow-classification,
+    .irow-head-classification { flex: 0 0 130px; }
+    .irow-qty,
+    .irow-head-qty { flex: 0 0 70px; }
+    .irow-unit,
+    .irow-head-unit { flex: 0 0 100px; }
+    .irow-price,
+    .irow-head-price { flex: 0 0 100px; }
+    .irow-tax,
+    .irow-head-tax { flex: 0 0 150px; }
+    .irow-total,
+    .irow-head-total { flex: 0 0 110px; }
+    .irow-actions,
+    .irow-head-actions { flex: 0 0 60px; text-align: right; }
+    .irow-mlabel {
+        font-size: .65rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--einv-muted, #6c757d);
+        margin-bottom: .15rem;
+    }
+    @@media (min-width: 992px) {
+        .irow .irow-mlabel { display: none; }
+    }
+    .irow-desc .item-code { margin-top: .25rem; }
+    .irow-num-val {
+        text-align: right;
+        font-weight: 600;
+        padding: .25rem 0;
+    }
+    .irow-num-val.irow-total-val { color: var(--einv-primary, #006948); }
+
     /* Progress bar card styling */
     .progress {
         background: var(--einv-border);
