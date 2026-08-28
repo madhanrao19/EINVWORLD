@@ -1,6 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.7`** (`AppInfo:Version` in `appsettings.json`). v1.21.7 is a **patch**
+> **Current version: `v1.21.10`** (`AppInfo:Version` in `appsettings.json`). v1.21.10 is a **patch**
+> release: Business Description, Primary Email, Fax Number, and Postal Code are no longer mandatory
+> for Buyers — MyInvois doesn't require them for the buyer party, but the app force-required them in
+> three places (the Buyer Create form's HTML `required` attributes, and two LHDN-submission-time
+> validators in `InvoiceMapper` that threw before a UBL payload could even be built). Supplier
+> requirements are unchanged — the shared validator now branches on role. See the dated entry below
+> for details. v1.21.9 was a **patch** release: a genuine 0% tax rate (e.g. Sales Tax at 0.00%) is now
+> accepted on any tax category instead of only "Not Applicable"/"Exemption" — the client-side item-row
+> validation on Create Invoice/Edit Invoice previously required `TaxPercentage > 0` for every other
+> category, incorrectly blocking a legitimate 0% Sales/Service Tax entry with a "missing required
+> fields" warning. See the dated entry below for details. v1.21.8 was a **patch** release: the Unit of
+> Measure dropdown (Create Invoice, Edit Invoice, Item Management) now shows a curated "Common Units"
+> group (~24 codes covering the vast majority of SME invoicing) above the full MyInvois/UN-ECE
+> "All Units" list, instead of forcing users to scroll hundreds of unit codes; a new invoice line now
+> defaults to `EA` (each) instead of `XUN`. See the dated entry below for details. v1.21.7 was a **patch**
 > release: a foreign Buyer's (`PublicCustomer`, `CountryCode != "MYS"`) State/Province field is now
 > free text instead of being locked to the Malaysian `StateCodes` list — that restriction was
 > self-imposed (a DB foreign key), not an LHDN requirement; LHDN's own MyInvois Portal accepts free
@@ -117,6 +131,47 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-28 — Buyer optional fields: Business Description, Email, Fax, Postal Code
+
+> MyInvois does not mandate Business Description, Primary Email, Fax Number, or Postal Code for the
+> buyer party, but the app force-required them for Buyers in three places: the Buyer Create form's
+> HTML `required` attributes (Email, Postal Code — FaxNo/BizDescription were already optional there;
+> `Edit.cshtml` and the `PublicCustomer` model already had no `[Required]` on any of the four), and two
+> LHDN-submission-time validators in `InvoiceMapper` that threw before a UBL payload could even be
+> built — `ValidatePartyInfo` (for a buyer stored as a full registered company) and
+> `ValidatePublicCustomer` (for a buyer stored as a lightweight public-customer record).
+>
+> `ValidatePartyInfo` is shared with Supplier validation (`role == "Supplier"` vs
+> `role == "Customer"`), so the two checks are now skipped only when `role == "Customer"` — Supplier
+> requirements are unchanged. `ValidatePublicCustomer` only ever validates a buyer, so its checks were
+> removed outright. Email retains its `[EmailAddress]` format validation when a value is provided.
+> Templates, CN/DN/RN, Self-Billed documents, recurring invoices, and CSV import all route through
+> these same two mapper validators (or already had no `required` attribute on these fields), so no
+> further per-workflow changes were needed. 4 new regression tests in `InvoiceMapperTests` confirm
+> blank values are accepted for Buyers and still rejected for Supplier.
+
+## 📅 2026-08-28 — Allow a genuine 0% tax rate on any tax category
+
+> MyInvois treats a 0% rate on Sales Tax/Service Tax as a legitimate value, distinct from "Not
+> Applicable" (06) or a statutory "Tax Exemption" (E). The client-side item-row validation on Create
+> Invoice/Edit Invoice previously required `TaxPercentage > 0` for any category other than Not
+> Applicable/Exemption, so a user who correctly entered "Sales Tax, 0.00%" was blocked at the "Next:
+> Review & Submit" step with a "missing required fields" warning even though the field was filled in.
+> A tax line is now valid once its percentage is present and non-negative (blank or negative is still
+> rejected); the Exemption category still additionally requires its exemption reason when shown.
+
+## 📅 2026-08-28 — Curate Unit of Measure dropdown into Common/All Units groups
+
+> The MyInvois/UN-ECE Rec-20 unit-of-measure list has hundreds of codes; SMEs only ever need about two
+> dozen of them. `DropdownHelper.GetUnitOptions()` now groups a curated shortlist (each, piece, set,
+> kilogram, litre, hour, day, month, ...) into a "Common Units" `<optgroup>` shown above the full list
+> ("All Units"), with option text including the code (e.g. "kilogram (KGM)") so the existing select2
+> search matches by code as well as name. New invoices default their first line's unit to `EA` instead
+> of the meaningless `XUN`. Applied via the shared dropdown helper, so Create Invoice, Edit Invoice,
+> and Item Management (Create/Edit) all picked it up automatically; the legacy `CreateCN`/`CreateSBI`/
+> `CreateSBCN` pages (currently excluded from the build) and their shared `invoice-line-items.js` were
+> also updated for consistency.
 
 ## 📅 2026-08-28 — Staging server now actually loads appsettings.Staging.json
 
