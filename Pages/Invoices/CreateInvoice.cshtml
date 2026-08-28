@@ -1853,11 +1853,17 @@
             }
         `;
 
-        // Unit options HTML for dynamic item creation
+        // Unit options HTML for dynamic item creation (grouped to match the initial row's
+        // asp-items-rendered <optgroup>s so newly-added rows look identical)
         const unitOptionsHtml = `
-            @foreach (var unit in Model.UnitOptions)
+            @foreach (var unitGroup in Model.UnitOptions.GroupBy(u => u.Group?.Name ?? ""))
             {
-                    <option value="@unit.Value">@unit.Text</option>
+                    <optgroup label="@unitGroup.Key">
+                    @foreach (var unit in unitGroup)
+                    {
+                            <option value="@unit.Value">@unit.Text</option>
+                    }
+                    </optgroup>
             }
         `;
 
