@@ -1604,8 +1604,63 @@
                     field.classList.remove('is-valid');
                     field.classList.add('is-invalid');
                 }
+                setFieldAriaValidation(field, isValid);
             } catch (error) {
                 console.error('❌ Error in updateFieldStyling:', error, field);
+            }
+        }
+
+        // Wires aria-invalid/aria-describedby for any field passed through updateFieldStyling() or
+        // the generic blur handler, so an error is never communicated by color alone. Composes with
+        // (rather than replaces) any existing aria-describedby reference — e.g. a field's own helper
+        // text — and cleans up again once the field becomes valid. Fields with no adjacent
+        // .invalid-feedback element (most dynamic invoice-item fields today only carry a border
+        // color) simply get aria-invalid alone, which is still meaningful on its own.
+        function setFieldAriaValidation(field, isValid) {
+            try {
+                if (!field) return;
+                const feedback = field.parentElement ? field.parentElement.querySelector(':scope > .invalid-feedback') : null;
+
+                if (!isValid) {
+                    field.setAttribute('aria-invalid', 'true');
+                    if (feedback) {
+                        if (!feedback.id) {
+                            feedback.id = `${field.id || field.name || 'field'}-error`.replace(/[^\w-]/g, '-');
+                        }
+                        const existingIds = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== feedback.id);
+                        field.setAttribute('aria-describedby', [...existingIds, feedback.id].join(' '));
+                    }
+                } else {
+                    field.removeAttribute('aria-invalid');
+                    if (feedback && feedback.id) {
+                        const remainingIds = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== feedback.id);
+                        if (remainingIds.length) {
+                            field.setAttribute('aria-describedby', remainingIds.join(' '));
+                        } else {
+                            field.removeAttribute('aria-describedby');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error in setFieldAriaValidation:', error, field);
+            }
+        }
+
+        // Focuses (and scrolls to) the first invalid field after a failed Next/Review/Submit
+        // attempt. For a Select2-enhanced <select>, focuses its visible Select2 control instead of
+        // the hidden native <select> — focusing the hidden element would be invisible to the user.
+        function focusFirstInvalidField(field) {
+            if (!field) return;
+            try {
+                let target = field;
+                if (window.jQuery && jQuery.fn.select2 && jQuery(field).hasClass('select2-hidden-accessible')) {
+                    const select2Selection = jQuery(field).next('.select2-container').find('.select2-selection')[0];
+                    if (select2Selection) target = select2Selection;
+                }
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.focus({ preventScroll: true });
+            } catch (error) {
+                console.error('❌ Error in focusFirstInvalidField:', error, field);
             }
         }
 
@@ -1628,6 +1683,7 @@
             const itemRows = document.querySelectorAll('.item-row');
             const itemsWithMissingFields = [];
             const itemsWithEmptyTax = [];
+            let firstInvalidField = null;
 
             // Clear previous visual indicators
             clearTaxVisualIndicators();
@@ -1636,9 +1692,12 @@
                 // Use the same validation logic as real-time validation
                 const quantityInput = row.querySelector('.quantity-input');
                 const priceInput = row.querySelector('.price-input');
-                const itemDescription = row.querySelector('textarea[name*=".ItemDescription"]')?.value;
-                const classificationCode = row.querySelector('select[name*=".ClassificationCode"]')?.value;
-                const unitOfMeasure = row.querySelector('select[name*=".UnitOfMeasure"]')?.value;
+                const itemDescriptionField = row.querySelector('textarea[name*=".ItemDescription"]');
+                const classificationField = row.querySelector('select[name*=".ClassificationCode"]');
+                const unitField = row.querySelector('select[name*=".UnitOfMeasure"]');
+                const itemDescription = itemDescriptionField?.value;
+                const classificationCode = classificationField?.value;
+                const unitOfMeasure = unitField?.value;
                 const taxRows = row.querySelectorAll('.tax-row');
 
                 // Validate quantity and price
@@ -1681,12 +1740,20 @@
                 if (!quantityValid || !priceValid || !itemDescription || !classificationCode || !unitOfMeasure) {
                     itemsWithMissingFields.push(index + 1);
                     hasIssues = true;
+                    if (!firstInvalidField) {
+                        firstInvalidField = (!quantityValid && quantityInput) || (!priceValid && priceInput) ||
+                            (!itemDescription && itemDescriptionField) || (!classificationCode && classificationField) ||
+                            (!unitOfMeasure && unitField) || null;
+                    }
                 }
 
                 // Check tax requirements
                 if (!taxValid) {
                     itemsWithEmptyTax.push(index + 1);
                     hasIssues = true;
+                    if (!firstInvalidField) {
+                        firstInvalidField = row.querySelector('.tax-row select[name*=".TaxCategory"]');
+                    }
                 }
 
                 // Add visual indicators using the same logic as real-time validation
@@ -1702,12 +1769,14 @@
             if (itemsWithMissingFields.length > 0) {
                 const itemList = itemsWithMissingFields.join(', ');
                 ErrorHandler.show(`Items ${itemList} have missing required fields (Quantity, Unit Price, Description, Classification, or Unit of Measure).`, 'warning');
+                focusFirstInvalidField(firstInvalidField);
                 return false;
             }
 
             if (itemsWithEmptyTax.length > 0) {
                 const itemList = itemsWithEmptyTax.join(', ');
                 ErrorHandler.show(`Items ${itemList} have empty or incomplete tax entries. Please fill in the tax category and percentage.`, 'warning');
+                focusFirstInvalidField(firstInvalidField);
                 return false;
             }
 
@@ -2402,6 +2471,7 @@
                     event.preventDefault();
                     event.stopPropagation();
                         ErrorHandler.show('Please check all required fields and try again.', 'warning');
+                        focusFirstInvalidField(form.querySelector(':invalid'));
                         return;
                     }
 
@@ -2409,20 +2479,26 @@
                     const itemRows = document.querySelectorAll('.item-row');
                     const itemsWithMissingFields = [];
                     const itemsWithEmptyTax = [];
+                    let firstInvalidField = null;
 
                     itemRows.forEach((row, index) => {
                         const itemIndex = row.getAttribute('data-item-index');
 
                         // Check required item fields
-                        const quantity = row.querySelector('input[name*=".Quantity"]')?.value;
-                        const unitPrice = row.querySelector('input[name*=".UnitPrice"]')?.value;
-                        const itemDescription = row.querySelector('textarea[name*=".ItemDescription"]')?.value;
-                        const classificationCode = row.querySelector('select[name*=".ClassificationCode"]')?.value;
-                        const unitOfMeasure = row.querySelector('select[name*=".UnitOfMeasure"]')?.value;
+                        const quantityInput = row.querySelector('input[name*=".Quantity"]');
+                        const unitPriceInput = row.querySelector('input[name*=".UnitPrice"]');
+                        const itemDescriptionField = row.querySelector('textarea[name*=".ItemDescription"]');
+                        const classificationField = row.querySelector('select[name*=".ClassificationCode"]');
+                        const unitField = row.querySelector('select[name*=".UnitOfMeasure"]');
 
                         // Check if any required field is missing
-                        if (!quantity || !unitPrice || !itemDescription || !classificationCode || !unitOfMeasure) {
+                        if (!quantityInput?.value || !unitPriceInput?.value || !itemDescriptionField?.value || !classificationField?.value || !unitField?.value) {
                             itemsWithMissingFields.push(index + 1);
+                            if (!firstInvalidField) {
+                                firstInvalidField = (!quantityInput?.value && quantityInput) || (!unitPriceInput?.value && unitPriceInput) ||
+                                    (!itemDescriptionField?.value && itemDescriptionField) || (!classificationField?.value && classificationField) ||
+                                    (!unitField?.value && unitField) || null;
+                            }
                         }
 
                         // Check tax requirements
@@ -2431,20 +2507,25 @@
 
                         if (taxRows.length === 0) {
                             itemsWithEmptyTax.push(index + 1);
+                            if (!firstInvalidField) firstInvalidField = taxSection;
                         } else {
                             // Check if any tax row is properly filled
                             let hasValidTax = false;
+                            let firstInvalidTaxField = null;
                             taxRows.forEach(taxRow => {
                                 const taxCategory = taxRow.querySelector('select[name*=".TaxCategory"]')?.value;
                                 const taxPercentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');
 
                                 if (taxCategory && isTaxPercentageProvided(taxPercentageInput)) {
                                     hasValidTax = true;
+                                } else if (!firstInvalidTaxField) {
+                                    firstInvalidTaxField = taxRow.querySelector('select[name*=".TaxCategory"]');
                                 }
                             });
 
                             if (!hasValidTax) {
                                 itemsWithEmptyTax.push(index + 1);
+                                if (!firstInvalidField) firstInvalidField = firstInvalidTaxField;
                             }
                         }
                     });
@@ -2455,6 +2536,7 @@
 
                         const itemList = itemsWithMissingFields.join(', ');
                         ErrorHandler.show(`Items ${itemList} have missing required fields (Quantity, Unit Price, Description, Classification, or Unit of Measure). Please fill in all required fields.`, 'warning');
+                        focusFirstInvalidField(firstInvalidField);
                         return;
                     }
 
@@ -2464,6 +2546,7 @@
 
                         const itemList = itemsWithEmptyTax.join(', ');
                         ErrorHandler.show(`Items ${itemList} have empty or incomplete tax entries. Please fill in the tax category and percentage for these items.`, 'warning');
+                        focusFirstInvalidField(firstInvalidField);
                         return;
                     }
 
@@ -2473,13 +2556,26 @@
 
             // Real-time validation
             form.querySelectorAll('input, select, textarea').forEach(field => {
-                field.addEventListener('blur', function() {
-                    if (this.hasAttribute('required') && !this.value.trim()) {
+                const revalidate = function() {
+                    const isValid = !(this.hasAttribute('required') && !this.value.trim());
+                    if (!isValid) {
                         this.classList.add('is-invalid');
                     } else {
                         this.classList.remove('is-invalid');
                     }
-                });
+                    setFieldAriaValidation(this, isValid);
+                };
+                field.addEventListener('blur', revalidate);
+                // Select2 (used for buyer/supplier/document-type/etc.) commits a selection via
+                // jQuery's `.trigger('change')`, which — unlike a real native change event — is only
+                // ever delivered to jQuery-bound handlers, never to a plain addEventListener('change',
+                // ...) listener. Bind through jQuery too so a Select2 pick is actually caught;
+                // otherwise the field stayed marked invalid until blurred some other way.
+                if (window.jQuery) {
+                    jQuery(field).on('change', revalidate);
+                } else {
+                    field.addEventListener('change', revalidate);
+                }
             });
             },
 
@@ -2502,12 +2598,23 @@
                     }
                 });
 
-                // Add validation for dropdown selections
-                document.addEventListener('change', function(e) {
-                    if (e.target.name && (e.target.name.includes('TaxCategory') || e.target.name.includes('ClassificationCode') || e.target.name.includes('UnitOfMeasure'))) {
-                        validateField(e.target);
+                // Add validation for dropdown selections. Delegated through jQuery, not a plain
+                // addEventListener, because these are Select2-enhanced selects: Select2 commits a
+                // pick via jQuery's `.trigger('change')`, which a vanilla document-level 'change'
+                // listener never receives (jQuery's synthetic trigger doesn't go through native DOM
+                // dispatch) — without this, picking Tax Category/Classification/Unit left the field
+                // marked invalid until something else happened to blur it.
+                if (window.jQuery) {
+                    jQuery(document).on('change', 'select[name*="TaxCategory"], select[name*="ClassificationCode"], select[name*="UnitOfMeasure"]', function() {
+                        validateField(this);
+                    });
+                } else {
+                    document.addEventListener('change', function(e) {
+                        if (e.target.name && (e.target.name.includes('TaxCategory') || e.target.name.includes('ClassificationCode') || e.target.name.includes('UnitOfMeasure'))) {
+                            validateField(e.target);
+                        }
+                    });
                 }
-            });
 
             // Calculate initial totals
             calculateTotals();
@@ -3179,6 +3286,7 @@
             const currentStepElement = document.getElementById(`step${currentStep}`);
             const requiredFields = currentStepElement.querySelectorAll('[required]');
             let isValid = true;
+            let firstInvalidField = null;
 
             requiredFields.forEach(field => {
                 // Skip validation for tax percentage fields that should be exempt
@@ -3200,16 +3308,20 @@
                     }
                 }
 
-                if (!field.value.trim()) {
+                const fieldValid = !!field.value.trim();
+                if (!fieldValid) {
                     field.classList.add('is-invalid');
                     isValid = false;
+                    if (!firstInvalidField) firstInvalidField = field;
                 } else {
                     field.classList.remove('is-invalid');
                 }
+                setFieldAriaValidation(field, fieldValid);
             });
 
             if (!isValid) {
                 ErrorHandler.show('Please fill in all required fields before proceeding.', 'warning');
+                focusFirstInvalidField(firstInvalidField);
             }
 
             return isValid;
@@ -4474,9 +4586,26 @@
         });
 
         // Force validation styling for required fields
-        function forceValidationStyling() {
-            // Find all required fields in the invoice items table
-            const requiredFields = document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]');
+        // Called two ways: (a) as a DOM event handler on the single field the user just interacted
+        // with (marks it touched, then validates just that field), or (b) with no argument after a
+        // structural change elsewhere in the table (row added/removed/cloned) to refresh styling for
+        // fields already touched. Untouched fields are deliberately skipped in mode (b) so a freshly
+        // added row — or any field the user hasn't reached yet — never appears invalid on its own;
+        // previously this ran unconditionally across every required field on page load and after
+        // every row mutation, which is what caused untouched fields to render red prematurely.
+        function forceValidationStyling(eventOrField) {
+            const singleField = eventOrField && eventOrField.target
+                ? eventOrField.target
+                : (eventOrField instanceof Element ? eventOrField : null);
+
+            if (singleField) {
+                singleField.dataset.touched = 'true';
+            }
+
+            const requiredFields = singleField
+                ? [singleField]
+                : Array.from(document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]'))
+                    .filter(field => field.dataset.touched === 'true');
 
             requiredFields.forEach(field => {
                 // Skip validation for tax percentage fields that should be exempt
@@ -4529,10 +4658,12 @@
                     field.removeAttribute('data-bs-valid');
                     field.removeAttribute('data-bs-invalid');
                 }
+                setFieldAriaValidation(field, !isEmpty);
             });
         }
 
-        // Apply validation styling on page load
+        // No-arg call below now validates nothing (no field has been touched yet on page load) —
+        // kept only so the MutationObserver's later no-arg refresh calls share the same code path.
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 forceValidationStyling();
@@ -4541,9 +4672,16 @@
                 const requiredFields = document.querySelectorAll('#lineItemsTable input[required], #lineItemsTable select[required], #lineItemsTable textarea[required]');
                 requiredFields.forEach(field => {
                     field.addEventListener('input', forceValidationStyling);
-                    field.addEventListener('change', forceValidationStyling);
                     field.addEventListener('blur', forceValidationStyling);
                     field.addEventListener('keyup', forceValidationStyling);
+                    // Select2-enhanced fields (classification/unit) commit via jQuery's
+                    // .trigger('change'), which a plain addEventListener('change', ...) never
+                    // receives — bind through jQuery too so a Select2 pick is actually caught.
+                    if (window.jQuery) {
+                        jQuery(field).on('change', forceValidationStyling);
+                    } else {
+                        field.addEventListener('change', forceValidationStyling);
+                    }
                 });
 
                 // Also observe DOM changes to handle dynamically added fields
