@@ -1,0 +1,144 @@
+@model EINVWORLD.Pages.Invoices.CreateInvoiceModel
+<div class="card mb-4 d-none" id="step3">
+    <div class="card-header bg-warning bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+            <i class="ri-clipboard-check-line fs-4 text-warning me-2"></i>
+            <div>
+                <h5 class="card-title mb-0">Review &amp; Submit</h5>
+                <small class="text-muted">Review your invoice and choose your action</small>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <!-- Left: Detailed Review -->
+            <div class="col-lg-8">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Details</h6>
+                                <div class="ci-summary-row"><span>Document Type:</span><strong id="summaryDocType">-</strong></div>
+                                <div class="ci-summary-row"><span>Issue Date:</span><strong id="summaryIssueDate">-</strong></div>
+                                <div class="ci-summary-row"><span>Items Count:</span><strong id="summaryItemsCount">-</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Buyer &amp; Supplier</h6>
+                                <div class="ci-summary-row"><span>Supplier:</span><strong id="summarySupplier">-</strong></div>
+                                <div class="ci-summary-row"><span>Buyer:</span><strong id="summaryBuyer">-</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Summary -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light border-0 d-flex align-items-center justify-content-between">
+                        <h6 class="mb-0"><i class="ri-list-check-2 me-2 text-primary"></i>Item Summary</h6>
+                        <span class="badge bg-primary-lt text-primary" id="summaryItemBadge">0 Items</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" id="reviewItemsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Tax</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reviewItemsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payment & Terms -->
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Payment &amp; Terms</h6>
+                        <div class="ci-summary-row"><span>Payment Terms:</span><strong id="summaryPaymentTerms">-</strong></div>
+                        <div class="ci-summary-row"><span>Billing Frequency:</span><strong id="summaryBillingFrequency">-</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Financial Summary & Validation (sticky) -->
+            <div class="col-lg-4">
+                <div style="position:sticky; top:1rem;">
+                    <div class="card bg-primary text-white mb-3">
+                        <div class="card-body">
+                            <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Total Amount Due</h6>
+                            <div class="fs-2 fw-bold mb-3" id="summaryTotalAmount">0.00</div>
+                            <hr class="border-white opacity-25" />
+                            <div class="d-flex justify-content-between mb-2"><span>Subtotal (Excl. Tax)</span><strong id="summarySubtotal">0.00</strong></div>
+                            <div class="d-flex justify-content-between"><span>Tax Amount</span><strong id="summaryTaxAmount">0.00</strong></div>
+                        </div>
+                    </div>
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Submission Readiness</h6>
+                            <ul class="list-unstyled mb-0">
+                                <li class="d-flex align-items-start gap-2 mb-3">
+                                    <i class="ri-checkbox-circle-fill" id="chkItemsIcon"></i>
+                                    <div>
+                                        <div class="fw-bold" id="chkItemsText">No Items</div>
+                                        <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-start gap-2 mb-3">
+                                    <i class="ri-checkbox-circle-fill" id="chkPartiesIcon"></i>
+                                    <div>
+                                        <div class="fw-bold" id="chkPartiesText">Supplier/Buyer Not Set</div>
+                                        <div class="text-muted" style="font-size:.7rem;">Both supplier and buyer must be selected.</div>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-start gap-2 mb-3">
+                                    <i class="ri-checkbox-circle-fill" id="chkTotalsIcon"></i>
+                                    <div>
+                                        <div class="fw-bold" id="chkTotalsText">Totals Not Calculated</div>
+                                        <div class="text-muted" style="font-size:.7rem;">Subtotal and tax are computed from item rows.</div>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-start gap-2">
+                                    <i class="ri-checkbox-circle-fill" id="chkDraftIcon"></i>
+                                    <div>
+                                        <div class="fw-bold" id="chkDraftText">Draft Not Saved</div>
+                                        <div class="text-muted" style="font-size:.7rem;">Save this invoice as a draft before submitting to LHDN.</div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="handler" value="SubmitDocuments" class="btn btn-danger btn-lg" id="sa-success-submit-lhdn">
+                            <i class="ri-send-plane-fill me-1"></i>Submit to LHDN
+                        </button>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button type="submit" name="action" value="saveDraft" class="btn btn-outline-secondary w-100">
+                                    <i class="ri-save-line me-1"></i>Save Draft
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="button" class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                                    <i class="ri-file-copy-line me-1"></i>Template
+                                </button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-link text-secondary text-decoration-none" onclick="prevStep()">
+                            <i class="ri-arrow-left-line me-1"></i>Back to Items
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" id="draftFilePath" value="@ViewData["DraftFilePath"]" />
+    </div>
+</div>
