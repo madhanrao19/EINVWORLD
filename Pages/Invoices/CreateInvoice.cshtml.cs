@@ -224,7 +224,7 @@ namespace EINVWORLD.Pages.Invoices
                     ItemCode = "",
                     ItemDescription = "",
                     Quantity = (decimal?)0.00,
-                    UnitOfMeasure = "XUN",
+                    UnitOfMeasure = "EA",
                     UnitPrice = 0.00m,
                     Taxes = new List<InvoiceTaxView> {
                         new InvoiceTaxView { TaxCategory = "01", TaxPercentage = 0, TaxAmount = 0.00m }

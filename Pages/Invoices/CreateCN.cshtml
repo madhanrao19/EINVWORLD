@@ -324,7 +324,7 @@
                                         </div>
                                         <div class="col-md-3">
                                             <label class="text-uppercase text-muted small mb-1">Unit Measurement</label>
-                                            <input asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="form-control form-control-sm" />
+                                            <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm unit-select select2"></select>
                                             <span asp-validation-for="Invoice.InvoiceLines[i].UnitOfMeasure" class="text-danger"></span>
                                         </div>
                                         <div class="col-md-3">
@@ -436,6 +436,20 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
+    <script>
+        // Grouped Unit options for rows added dynamically by invoice-line-items.js
+        window.unitOptionsHtml = `
+            @foreach (var unitGroup in Model.UnitOptions.GroupBy(u => u.Group?.Name ?? ""))
+            {
+                    <optgroup label="@unitGroup.Key">
+                    @foreach (var unit in unitGroup)
+                    {
+                            <option value="@unit.Value">@unit.Text</option>
+                    }
+                    </optgroup>
+            }
+        `;
+    </script>
     <script src="~/js/invoice-line-items.js"></script>
 
 }

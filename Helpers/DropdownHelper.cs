@@ -126,18 +126,48 @@ namespace eInvWorld.Helpers
                 .ToList();
         }
 
-        // Method to populate unit of measure options
+        // Curated shortlist of the MyInvois/UN-ECE unit codes that cover the vast majority of
+        // SME invoicing scenarios. Kept in display priority order; every other active unit
+        // remains fully available (and LHDN-compliant) under the "All Units" group.
+        private static readonly string[] CommonUnitCodes =
+        {
+            "EA", "H87", "SET", "KGM", "GRM", "LTR", "MLT", "MTR", "MTK", "MTQ",
+            "HUR", "DAY", "MON", "ANN", "PR", "DZN", "XCT", "TNE", "KWH", "KT",
+            "E48", "E51", "E54", "LS", "XUN"
+        };
+
+        // Method to populate unit of measure options, grouped so the ~24 units SMEs actually
+        // use surface above the full UN/ECE Rec-20 list (hundreds of codes) that LHDN requires
+        // as the source of truth. Select2's built-in search still covers the full list.
         public List<SelectListItem> GetUnitOptions()
         {
-            return _context.UnitTypes
+            var units = _context.UnitTypes
                 .Where(u => u.IsActive)
-                .OrderBy(u => u.Code)
-                .Select(u => new SelectListItem
+                .ToDictionary(u => u.Code, u => u.Name);
+
+            var commonGroup = new SelectListGroup { Name = "Common Units" };
+            var allGroup = new SelectListGroup { Name = "All Units" };
+
+            var common = CommonUnitCodes
+                .Where(units.ContainsKey)
+                .Select(code => new SelectListItem
                 {
-                    Value = u.Code,
-                    Text = u.Name
-                })
-                .ToList();
+                    Value = code,
+                    Text = $"{units[code]} ({code})",
+                    Group = commonGroup
+                });
+
+            var others = units.Keys
+                .Except(CommonUnitCodes)
+                .OrderBy(code => code)
+                .Select(code => new SelectListItem
+                {
+                    Value = code,
+                    Text = $"{units[code]} ({code})",
+                    Group = allGroup
+                });
+
+            return common.Concat(others).ToList();
         }
 
 
