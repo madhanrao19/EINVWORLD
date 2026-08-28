@@ -9,6 +9,10 @@
 // Field names use the exact ASP.NET Core model-binding convention (Invoice.InvoiceLines[i].X,
 // Invoice.InvoiceLines[i].Taxes[j].X) so posted values bind to the same InvoiceLineView/InvoiceTaxView
 // list the server already expects — no PageModel changes needed.
+//
+// New rows' Unit dropdown is built from `window.unitOptionsHtml` (grouped Common/All Units
+// <optgroup> markup rendered by each page from Model.UnitOptions, same as CreateInvoice.cshtml)
+// so it matches the standard invoice Unit picker instead of a free-text field.
 (function () {
     "use strict";
 
@@ -60,7 +64,7 @@
             '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Quantity</label>' +
             '<input name="Invoice.InvoiceLines[' + i + '].Quantity" type="number" step="any" class="form-control form-control-sm line-qty" /></div>' +
             '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Unit Measurement</label>' +
-            '<input name="Invoice.InvoiceLines[' + i + '].UnitOfMeasure" class="form-control form-control-sm" /></div>' +
+            '<select name="Invoice.InvoiceLines[' + i + '].UnitOfMeasure" class="form-control form-control-sm unit-select">' + (window.unitOptionsHtml || '') + '</select></div>' +
             '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Unit Price</label>' +
             '<input name="Invoice.InvoiceLines[' + i + '].UnitPrice" type="number" step="any" class="form-control form-control-sm line-price" /></div>' +
             '<div class="col-md-3"><label class="text-uppercase text-muted small mb-1">Subtotal</label>' +
@@ -161,6 +165,15 @@
                 lineItemsBody().insertAdjacentHTML("beforeend", newLineRowHtml(nextIndex));
                 var itemCount = document.getElementById("itemCount");
                 if (itemCount) itemCount.value = nextIndex + 1;
+
+                if (typeof $ !== "undefined" && $.fn.select2) {
+                    $(lineItemsBody()).find(".item-row").last().find(".unit-select").select2({
+                        theme: "bootstrap-5",
+                        width: "100%",
+                        placeholder: "Select Unit Measurement",
+                        allowClear: false
+                    });
+                }
             });
         }
 
