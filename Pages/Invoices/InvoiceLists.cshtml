@@ -406,6 +406,20 @@
         ["Received"] = Model.TotalReceivedInvoices
     };
 }
+@if (Model.TotalNeedsAttentionInvoices > 0)
+{
+    var isAttentionActive = string.Equals(Request.Query["internalStatus"].ToString(), "NeedsAttention", StringComparison.OrdinalIgnoreCase);
+    <div class="mb-2">
+        <a asp-page="./InvoiceLists"
+           asp-route-invoiceDirection="All"
+           asp-route-internalStatus="NeedsAttention"
+           class="btn btn-sm @(isAttentionActive ? "btn-danger" : "btn-outline-danger") rounded-pill d-inline-flex align-items-center gap-2 fw-semibold"
+           title="Invoices that are Invalid, failed transmission, rejected, or drafts stuck more than 3 days">
+            <i class="ri-error-warning-line"></i> Needs Attention
+            <span class="badge rounded-pill @(isAttentionActive ? "bg-white text-danger" : "bg-danger text-white")">@Model.TotalNeedsAttentionInvoices.ToString("N0")</span>
+        </a>
+    </div>
+}
 <ul class="nav nav-tabs einv-invoice-tabs mb-3">
     @foreach (var tab in mainTabs)
     {
@@ -784,6 +798,10 @@
                                                                 <i class="ri-error-warning-line"></i>
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusRej) ? EnumHelper.GetEnumDescription(internalStatusRej) : invoice.InternalStatusId)
                                                             </button>
+                                                            @if (!string.IsNullOrWhiteSpace(invoice.RejectedReason))
+                                                            {
+                                                                <div class="small text-danger mt-1 text-truncate" style="max-width:220px;" title="@invoice.RejectedReason">@invoice.RejectedReason</div>
+                                                            }
                                                         }
                                                         else
                                                         {
