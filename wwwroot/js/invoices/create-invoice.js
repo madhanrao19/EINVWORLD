@@ -37,6 +37,11 @@
                     return;
                 }
 
+                // Mark the field the user actually interacted with as touched — validateRow()
+                // only styles touched fields, so a sibling field the user hasn't reached yet
+                // doesn't turn red just because this one changed.
+                field.dataset.touched = 'true';
+
                 // Validate the entire row at once
                 validateRow(row);
             } catch (error) {
@@ -78,6 +83,9 @@
                     console.warn('⚠️ Could not find parent item-row for tax field validation');
                     return;
                 }
+
+                // Mark the field the user actually interacted with as touched — see validateField().
+                field.dataset.touched = 'true';
 
                 // Validate the entire row at once
                 validateRow(itemRow);
@@ -133,12 +141,18 @@
                 }
             });
 
-            // Update field styling for all fields
-            updateFieldStyling(quantityInput, quantityValid);
-            updateFieldStyling(priceInput, priceValid);
-            updateFieldStyling(classificationSelect, classificationValid);
-            updateFieldStyling(itemDescriptionTextarea, descriptionValid);
-            updateFieldStyling(unitSelect, unitValid);
+            // Update field styling — but only for fields the user has actually touched, so a
+            // change to one field in the row (e.g. picking a tax category) doesn't paint every
+            // other still-empty, never-touched field in the row red (that's what Next/Submit's
+            // validateCurrentStep() is for — it deliberately marks everything on a submit attempt).
+            const styleIfTouched = (field, valid) => {
+                if (field && field.dataset.touched === 'true') updateFieldStyling(field, valid);
+            };
+            styleIfTouched(quantityInput, quantityValid);
+            styleIfTouched(priceInput, priceValid);
+            styleIfTouched(classificationSelect, classificationValid);
+            styleIfTouched(itemDescriptionTextarea, descriptionValid);
+            styleIfTouched(unitSelect, unitValid);
 
             // Update tax field styling
             taxRows.forEach(taxRow => {
@@ -152,15 +166,15 @@
                 // A rate is valid once it's present and non-negative — 0% is fine on any category.
                 const percentageValid = categoryValid && isTaxPercentageProvided(percentageInput);
 
-                updateFieldStyling(categorySelect, categoryValid);
-                updateFieldStyling(percentageInput, percentageValid);
-                
+                styleIfTouched(categorySelect, categoryValid);
+                styleIfTouched(percentageInput, percentageValid);
+
                 // Validate exemption reason field if visible
                 const exemptionReasonInput = taxRow.querySelector('.tax-exemption-reason input');
-                if (exemptionReasonInput && exemptionReasonInput.style.display !== 'none' && 
+                if (exemptionReasonInput && exemptionReasonInput.style.display !== 'none' &&
                     exemptionReasonInput.closest('.tax-exemption-reason').style.display !== 'none') {
                     const exemptionReasonValid = exemptionReasonInput.value && exemptionReasonInput.value.trim() !== '';
-                    updateFieldStyling(exemptionReasonInput, exemptionReasonValid);
+                    styleIfTouched(exemptionReasonInput, exemptionReasonValid);
                 }
             });
 
@@ -2419,11 +2433,7 @@
                 validateTaxField(this);
             });
 
-            // Set initial validation state (invalid since empty)
-            taxCategorySelect?.classList.add('is-invalid');
-            taxPercentageInput?.classList.add('is-invalid');
-
-            // Apply validation styling
+            // Apply validation styling (only affects fields already touched — see forceValidationStyling)
             setTimeout(() => {
                 forceValidationStyling();
             }, 50);
@@ -3269,9 +3279,17 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            ['buyerSelect', 'currency', 'docTypeCode', 'poDoNo'].forEach(id => {
+            // buyerSelect/currency/docTypeCode are Select2-enhanced — a pick commits via jQuery's
+            // .trigger('change'), which a plain addEventListener('change', ...) never receives
+            // (same issue documented where field-level validation binds to Select2 fields).
+            ['buyerSelect', 'currency', 'docTypeCode'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('change', updateStep1Kpis);
+                if (!el) return;
+                if (window.jQuery) {
+                    jQuery(el).on('change', updateStep1Kpis);
+                } else {
+                    el.addEventListener('change', updateStep1Kpis);
+                }
             });
             const poDoNo = document.getElementById('poDoNo');
             if (poDoNo) poDoNo.addEventListener('input', updateStep1Kpis);
