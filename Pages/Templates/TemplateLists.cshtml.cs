@@ -25,6 +25,10 @@ namespace eInvWorld.Pages.Templates
 
         public IList<InvoiceTemplate> InvoiceTemplate { get;set; } = default!;
 
+        // Real counts: how many recurring profiles are built on each template (RecurringProfile.InvoiceTemplateId).
+        public Dictionary<int, int> RecurringLinkCountByTemplate { get; set; } = new();
+        public int FavoriteCount { get; set; }
+
         [BindProperty]
         public int TemplateId { get; set; }
 
@@ -59,9 +63,19 @@ namespace eInvWorld.Pages.Templates
                .Include(t => t.Supplier)
                .Include(t => t.Customer)
                .Include(t => t.PublicCustomer)
+               .Include(t => t.InvoiceLines)
                .OrderByDescending(t => t.IsFavorite)
                .ThenBy(t => t.TemplateName)
                .ToListAsync();
+
+            FavoriteCount = InvoiceTemplate.Count(t => t.IsFavorite);
+
+            var templateIds = InvoiceTemplate.Select(t => t.Id).ToList();
+            RecurringLinkCountByTemplate = await _context.RecurringProfiles
+                .Where(p => templateIds.Contains(p.InvoiceTemplateId))
+                .GroupBy(p => p.InvoiceTemplateId)
+                .Select(g => new { TemplateId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.TemplateId, g => g.Count);
         }
 
         [BindProperty]

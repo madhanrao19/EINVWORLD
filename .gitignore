@@ -52,3 +52,10 @@ Thumbs.db
 # ---- Local scratch + machine-specific deploy profile (internal host/user details) ----
 /temp/
 Properties/PublishProfiles/IISProfile.pubxml
+
+# Visual Studio's Publish wizard creates a new numbered FolderProfileN.pubxml (hardcoded to
+# whatever local/personal path was picked at the time) instead of reusing FolderProfile.pubxml
+# whenever "New" is picked instead of an existing profile. 52 of these had accumulated in the repo
+# with stale personal machine paths going back to 2024. Keep FolderProfile.pubxml itself tracked
+# (it's the one in active use); ignore any future numbered duplicates.
+Properties/PublishProfiles/FolderProfile[0-9]*.pubxml

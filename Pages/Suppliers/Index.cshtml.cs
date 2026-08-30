@@ -122,8 +122,28 @@ namespace eInvWorld.Pages.Suppliers
             company.IsAdminCreated = true;
             company.IsApproved = User.IsInRole("Admin");
 
+            // Custom roles this company created (CompanyRole.PartyInfoId) have no meaning once the
+            // company is gone and aren't referenced elsewhere, unlike invoices — remove them up front
+            // rather than blocking the delete (the FK is Restrict, not Cascade; see ApplicationDbContext).
+            var customRoles = await _context.CompanyRoles.Where(r => r.PartyInfoId == id).ToListAsync();
+            if (customRoles.Count > 0)
+            {
+                await _context.UserCompanies
+                    .Where(uc => uc.PartyInfoId == id && customRoles.Select(r => r.CompanyRoleId).Contains(uc.CompanyRoleId ?? 0))
+                    .ForEachAsync(uc => uc.CompanyRoleId = null);
+                _context.CompanyRoles.RemoveRange(customRoles);
+            }
+
             _context.PartyInfos.Remove(company);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Number == 547)
+            {
+                _logger.LogWarning(ex, "Cannot delete company {Id}: still referenced by existing invoices.", id);
+                return new JsonResult(new { success = false, message = "This company can't be deleted — it still has invoices referencing it. Remove or reassign those invoices first." });
+            }
             _logger.LogInformation($"Company with ID {id} deleted successfully.");
 
             return new JsonResult(new { success = true, message = "Supplier deleted successfully!" });

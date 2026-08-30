@@ -125,6 +125,9 @@ namespace eInvWorld.Models.InputModel
 		public DateTime? DateTimeReceived { get; set; }  // ✅ Timestamp when document was submitted
         public DateTime? DateTimeValidated { get; set; }  // ✅ Timestamp when document became valid
         public DateTime? CancelDateTime { get; set; }
+        // Persisted so a background retry of the cancellation email (IsCancellationEmailSent below)
+        // can rebuild the email body without the original interactive request's in-memory reason.
+        public string? CancellationReason { get; set; }
 
         // Concurrency claim for submission: set atomically just before a submit to LHDN so two
         // simultaneous requests cannot both post the same document. Cleared on failure; a claim older
@@ -138,6 +141,36 @@ namespace eInvWorld.Models.InputModel
 
         public bool IsPdfGenerated { get; set; } = false;
         public DateTime? PdfGeneratedAt { get; set; }
+
+        // "New e-invoice received" notification (buyer-side, for invoices synced in from LHDN that an
+        // external ERP submitted directly). Defaults to true ("not applicable") so every other invoice
+        // creation path in the app — normal Sent-invoice submission, Credit/Debit notes, etc. — is
+        // automatically exempt without touching those files; InvoiceFullSyncHelper explicitly sets this
+        // to false only for a genuinely new, buyer-side synced invoice, opting it into the retry pass
+        // in InvoiceFinalizer/InvoiceStatusUpdater (same atomic-claim-and-rollback pattern as the
+        // ValidationEmailSent fields above).
+        public bool IsNewInvoiceReceivedEmailSent { get; set; } = true;
+        [MaxLength(500)]
+        public string? NewInvoiceReceivedEmailSentTo { get; set; }
+        public DateTime? NewInvoiceReceivedEmailSentAt { get; set; }
+
+        // Rejection/Cancellation notification emails. Same "true = not applicable" default as
+        // IsNewInvoiceReceivedEmailSent above — every invoice is exempt until it is actually
+        // rejected/cancelled, at which point the handler that performs that transition sets the
+        // flag to false in the SAME save as the status change, opting it into the atomic-claim/
+        // retry pass (InvoiceFinalizer/InvoiceStatusUpdater). The interactive handler still attempts
+        // the send immediately afterwards for a snappy, MyInvois-like "notified right away"
+        // experience; this flag is the safety net for when that immediate attempt fails (SMTP down,
+        // misconfiguration, a locked PDF file, etc.) so the notification is never silently lost.
+        public bool IsRejectionEmailSent { get; set; } = true;
+        [MaxLength(500)]
+        public string? RejectionEmailSentTo { get; set; }
+        public DateTime? RejectionEmailSentAt { get; set; }
+
+        public bool IsCancellationEmailSent { get; set; } = true;
+        [MaxLength(500)]
+        public string? CancellationEmailSentTo { get; set; }
+        public DateTime? CancellationEmailSentAt { get; set; }
 
         /// <summary>
         /// The last terminal LHDN status for which an outbound webhook was enqueued. Used by the webhook

@@ -31,11 +31,22 @@ namespace eInvWorld.Pages.PublicCustomer
         }
 
         public IList<PublicCustomerViewModel> CustomerViewModels { get; set; } = default!;
+        public Dictionary<string, string> StateNames { get; set; } = new();
         public HashSet<string> AssignedBuyerKeys { get; set; } = new();
         public HashSet<int> AssignedPublicCustomerIds { get; set; } = new();
+        public Dictionary<int, int> InvoiceCountByBuyer { get; set; } = new();
+
+        // Real KPI counts, scoped the same way as the main query, before search filtering.
+        public int TotalBuyersCount { get; set; }
+        public int ActiveBuyersCount { get; set; }
+        public int AddedThisMonthCount { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? SearchTerm { get; set; }
+
+        // "active" | "inactive" | null/"" = all. Purely additive filter on the existing IsActive flag.
+        [BindProperty(SupportsGet = true)]
+        public string? StatusFilter { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string? SortBy { get; set; }
@@ -55,8 +66,9 @@ namespace eInvWorld.Pages.PublicCustomer
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             bool isAdmin = User.IsInRole("Admin");
 
+            StateNames = await _context.StateCodes.ToDictionaryAsync(s => s.Code, s => s.State);
+
             var query = from pc in _context.PublicCustomers
-                            .Include(p => p.State)
                             .Include(p => p.Country)
                         join party in _context.PartyInfos
                             on pc.CreatedByCompanyId equals party.PartyInfoId into pcParty
@@ -75,6 +87,15 @@ namespace eInvWorld.Pages.PublicCustomer
                     q.Customer.TIN.Contains(SearchTerm) ||
                     (q.Customer.Email != null && q.Customer.Email.Contains(SearchTerm)) ||
                     q.CreatorCompanyName.Contains(SearchTerm));
+            }
+
+            if (string.Equals(StatusFilter, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => q.Customer.IsActive);
+            }
+            else if (string.Equals(StatusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => !q.Customer.IsActive);
             }
 
             // 2. APPLY ROLE FILTERS
@@ -116,6 +137,31 @@ namespace eInvWorld.Pages.PublicCustomer
                     query = query.Where(p => false);
                 }
             }
+
+            // 2b. REAL KPI COUNTS — scoped by role like the table, but computed before the search
+            // filter so the tiles reflect the whole directory regardless of what's typed in the box.
+            var kpiScope = _context.PublicCustomers.AsQueryable();
+            if (!isAdmin)
+            {
+                var userCompany = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .FirstOrDefaultAsync();
+                kpiScope = userCompany != null
+                    ? kpiScope.Where(p => p.CreatedByCompanyId == userCompany.PartyInfoId)
+                    : kpiScope.Where(p => false);
+            }
+            TotalBuyersCount = await kpiScope.CountAsync();
+            ActiveBuyersCount = await kpiScope.CountAsync(p => p.IsActive);
+            var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            AddedThisMonthCount = await kpiScope.CountAsync(p => p.CreatedDate >= monthStart);
+
+            var buyerIds = await kpiScope.Select(p => p.PublicCustomerId).ToListAsync();
+            InvoiceCountByBuyer = await _context.InvoiceHeaders
+                .Where(i => i.PublicCustomerId.HasValue && buyerIds.Contains(i.PublicCustomerId.Value))
+                .GroupBy(i => i.PublicCustomerId!.Value)
+                .Select(g => new { BuyerId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.BuyerId, g => g.Count);
 
             // 3. APPLY SORTING
             bool isDesc = SortOrder == "desc";
@@ -212,6 +258,20 @@ namespace eInvWorld.Pages.PublicCustomer
                 {
                     _context.SupplierBuyers.Remove(existingAssignment);
                 }
+            }
+
+            // Other suppliers may still be assigned to this buyer (e.g. an Admin-shared buyer, or one
+            // linked to multiple suppliers by an Admin). Only hard-delete the shared PublicCustomer row
+            // once no other SupplierBuyer link references it — otherwise this action is just an unlink.
+            bool hasOtherAssignments = await _context.SupplierBuyers
+                .AnyAsync(sb => sb.PublicCustomerId == buyerId
+                    && (!supplierIdToCheck.HasValue || sb.SupplierId != supplierIdToCheck.Value));
+
+            if (hasOtherAssignments)
+            {
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Buyer removed from your list.";
+                return RedirectToPage();
             }
 
             _context.PublicCustomers.Remove(entity);

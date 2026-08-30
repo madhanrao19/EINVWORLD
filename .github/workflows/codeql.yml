@@ -33,12 +33,12 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup .NET (from global.json)
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v4.37.8
         with:
           languages: csharp
           # security-extended adds broader query coverage beyond the default security-quality set.
@@ -52,6 +52,6 @@ jobs:
         run: dotnet build EINVWORLD.sln --configuration Release --no-restore
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v4.37.8
         with:
           category: "/language:csharp"

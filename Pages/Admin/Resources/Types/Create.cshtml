@@ -1,37 +1,36 @@
-﻿@page
+@page
 @model EINVWORLD.Pages.Admin.Resources.Types.CreateModel
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Resource Type";
 }
 
-<h1>Create</h1>
-
-<h4>ResourceType</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="ResourceType.Code" class="control-label"></label>
-                <input asp-for="ResourceType.Code" class="form-control" />
-                <span asp-validation-for="ResourceType.Code" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ResourceType.Name" class="control-label"></label>
-                <input asp-for="ResourceType.Name" class="form-control" />
-                <span asp-validation-for="ResourceType.Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Create Resource Type</h1>
     </div>
 </div>
 
-<div>
-    <a asp-page="Index">Back to List</a>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="ResourceType.Code" class="form-label"></label>
+                <input asp-for="ResourceType.Code" class="form-control" />
+                <span asp-validation-for="ResourceType.Code" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ResourceType.Name" class="form-label"></label>
+                <input asp-for="ResourceType.Name" class="form-control" />
+                <span asp-validation-for="ResourceType.Name" class="text-danger"></span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a asp-page="Index" class="btn btn-outline-secondary">Back to List</a>
+            </div>
+        </form>
+    </div>
 </div>
 
 @section Scripts {

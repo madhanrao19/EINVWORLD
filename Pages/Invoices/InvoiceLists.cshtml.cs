@@ -54,6 +54,7 @@ namespace eInvWorld.Pages.Invoices
         private readonly InvoiceSyncHelper _invoiceSyncHelper;
         private readonly ISyncJobTracker _jobTracker;
         private readonly IInvoiceFinalizer _invoiceFinalizer;
+        private readonly FilePathConfig _filePathConfig;
 
         public List<InvoiceHeader> DraftInvoices { get; set; } = new List<InvoiceHeader>();
         public List<InvoiceHeader> Invoices { get; set; } = new List<InvoiceHeader>();
@@ -66,8 +67,13 @@ namespace eInvWorld.Pages.Invoices
         public Metadata Metadata { get; set; } = null!;
         public SearchDocumentInput SearchInput { get; set; } = null!;
         public Dictionary<string, int> InvoiceSummaryByStatus { get; set; } = new();
+        public List<SavedInvoiceView> SavedViews { get; set; } = new();
+        public decimal TabTotalAmount { get; set; }
+        public int TotalAllInvoices { get; set; }
+        public int TotalDraftInvoices { get; set; }
         public int TotalSentInvoices { get; set; }
         public int TotalReceivedInvoices { get; set; }
+        public int TotalNeedsAttentionInvoices { get; set; }
         public string invoiceDirection { get; set; } = "Sent"; //  Set Default Value
 
         public string UserType { get; set; } = null!;
@@ -93,7 +99,8 @@ namespace eInvWorld.Pages.Invoices
                                  IHttpClientFactory httpClientFactory,
                                  InvoiceSyncHelper invoiceSyncHelper,
                                  ISyncJobTracker jobTracker,
-                                 IInvoiceFinalizer invoiceFinalizer)
+                                 IInvoiceFinalizer invoiceFinalizer,
+                                 Microsoft.Extensions.Options.IOptions<FilePathConfig> filePathConfig)
         {
             _context = context;
             _configuration = configuration;
@@ -109,6 +116,7 @@ namespace eInvWorld.Pages.Invoices
             _invoiceSyncHelper = invoiceSyncHelper;
             _jobTracker = jobTracker;
             _invoiceFinalizer = invoiceFinalizer;
+            _filePathConfig = filePathConfig.Value;
         }
         public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
         {
@@ -264,7 +272,10 @@ namespace eInvWorld.Pages.Invoices
 
         public async Task<IActionResult> OnGetAsync(int? pageNo, int? pageSize, string status, DateTime? submissionDateFrom, DateTime? submissionDateTo,
                             string invoiceDirection, string? searchQuery = null, string? documentType = null, bool refresh = false,
-                            string? lhdnStatus = null, string? internalStatus = null, string? sortBy = null, string? sortOrder = null)
+                            string? lhdnStatus = null, string? internalStatus = null, string? sortBy = null, string? sortOrder = null,
+                            DateTime? submissionReceivedFrom = null, DateTime? submissionReceivedTo = null, string? createdBy = null,
+                            string? supplierFilter = null, string? buyerFilter = null, decimal? amountMin = null, decimal? amountMax = null,
+                            string? currencyFilter = null)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -295,6 +306,11 @@ namespace eInvWorld.Pages.Invoices
             }
 
             this.invoiceDirection = invoiceDirection;
+
+            SavedViews = await _context.SavedInvoiceViews
+                .Where(v => v.UserId == user.Id && v.InvoiceDirection == invoiceDirection)
+                .OrderBy(v => v.CreatedAtUtc)
+                .ToListAsync();
 
             var docTypes = await _context.EInvoiceTypes.Where(dt => dt.IsActive).ToListAsync();
             ViewData["DocType"] = docTypes;
@@ -411,54 +427,21 @@ namespace eInvWorld.Pages.Invoices
                 int pageSizeValue = Math.Max(1, pageSize ?? 25);
 
                 //  Apply invoice direction logic dynamically (FIXED LOGIC)
-                var selfBilledTypes = new[] { "11", "12", "13", "14" };
+                query = ApplyDirectionFilter(query, invoiceDirection, userTINs);
 
-                if (invoiceDirection == "Draft")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId == "Draft" &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                        )
-                    );
-                }
-                else if (invoiceDirection == "Sent")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId != "Draft" &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                        )
-                    );
-                }
-                else if (invoiceDirection == "Received")
-                {
-                    query = query.Where(i =>
-                        i.InternalStatusId != "Draft" &&
-                        i.InternalStatusId != "Invalid" &&
-                        i.LHDNStatusId != "Invalid" &&
-                        !string.IsNullOrEmpty(i.UUID) &&
-                        (
-                            (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
-                            (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
-                        )
-                    );
-                }
-                else
-                {
-                    // "All" (and any unrecognised direction value): every document where one of the
-                    // user's company TINs is a party — issuer or counterparty. This branch is also the
-                    // security backstop: without it an unexpected invoiceDirection skipped every
-                    // ownership filter above and exposed other companies' invoices (same mandatory
-                    // scoping the export handler applies).
-                    query = query.Where(i =>
-                        userTINs.Contains(i.Supplier.TIN) ||
-                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                    );
-                }
+                // Tab badge counts (Stitch): same ApplyDirectionFilter used for the page query above,
+                // so these can never drift from the real per-TIN ownership scoping. Count-only, no
+                // Include()s needed — cheap indexed queries against a fresh base queryable each.
+                TotalAllInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs).CountAsync();
+                TotalDraftInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Draft", userTINs).CountAsync();
+                TotalSentInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Sent", userTINs).CountAsync();
+                TotalReceivedInvoices = await ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "Received", userTINs).CountAsync();
+
+                // "Needs Attention" (Phase 1C/1D): a distinct-invoice count across ALL directions,
+                // via the same InvoiceNeedsAttentionFilter the Dashboard panel uses — this count and
+                // the filtered grid below (and the Dashboard's headline number) can never drift apart.
+                TotalNeedsAttentionInvoices = await InvoiceNeedsAttentionFilter.Apply(
+                    ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs)).CountAsync();
 
                 // Direction-scoped LHDN status counts for the compliance strip under the table.
                 // One grouped query pushed to the DB, computed BEFORE the user filters so the
@@ -468,10 +451,15 @@ namespace eInvWorld.Pages.Invoices
                     .Select(g => new { Status = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(x => x.Status, x => x.Count);
 
+                // KPI strip total value — same tab-wide, pre-filter scope as InvoiceSummaryByStatus above.
+                TabTotalAmount = await query.SumAsync(i => (decimal?)i.TotalAmountIncTax) ?? 0m;
+
                 //  Apply additional filters. Always call this — besides filtering, ApplyFilters applies a
                 //  deterministic OrderBy that pagination (Skip/Take below) requires.
                 query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
-                    lhdnStatus, internalStatus, sortBy, sortOrder);
+                    lhdnStatus, internalStatus, sortBy, sortOrder,
+                    submissionReceivedFrom, submissionReceivedTo, createdBy, supplierFilter, buyerFilter,
+                    amountMin, amountMax, currencyFilter);
 
                 int totalInvoices = await query.CountAsync();
 
@@ -501,6 +489,46 @@ namespace eInvWorld.Pages.Invoices
         // SearchDocumentsWithRetry helpers) was removed. The "Refresh from API" button now enqueues
         // a paced background import (see the refresh branch in OnGet) instead of blocking the request.
 
+        // Per-TIN ownership scoping for a tab (Draft/Sent/Received/All). Shared by the page query and
+        // the tab badge counts so the counts can never drift from what a tab actually shows — the
+        // "All" branch is also the security backstop for an unrecognised direction value (same mandatory
+        // scoping the export handler applies).
+        private static IQueryable<InvoiceHeader> ApplyDirectionFilter(
+            IQueryable<InvoiceHeader> query, string direction, List<string> userTINs)
+        {
+            var selfBilledTypes = new[] { "11", "12", "13", "14" };
+            return direction switch
+            {
+                // TransmissionError (submission never reached LHDN) is kept alongside Draft — the user
+                // needs to be able to fix and resubmit it exactly like a draft, not chase it into Sent.
+                "Draft" => query.Where(i =>
+                    (i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError") &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
+                    )),
+                "Sent" => query.Where(i =>
+                    i.InternalStatusId != "Draft" && i.InternalStatusId != "TransmissionError" &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
+                    )),
+                "Received" => query.Where(i =>
+                    i.InternalStatusId != "Draft" &&
+                    i.InternalStatusId != "Invalid" &&
+                    i.LHDNStatusId != "Invalid" &&
+                    !string.IsNullOrEmpty(i.UUID) &&
+                    (
+                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
+                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
+                    )),
+                _ => query.Where(i =>
+                    userTINs.Contains(i.Supplier.TIN) ||
+                    (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                    (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN)))
+            };
+        }
+
         private IQueryable<InvoiceHeader> ApplyFilters(
             IQueryable<InvoiceHeader> query,
             DateTime? submissionDateFrom,
@@ -511,7 +539,15 @@ namespace eInvWorld.Pages.Invoices
             string? lhdnStatus,
             string? internalStatus,
             string? sortBy,
-            string? sortOrder)
+            string? sortOrder,
+            DateTime? submissionReceivedFrom = null,
+            DateTime? submissionReceivedTo = null,
+            string? createdBy = null,
+            string? supplierFilter = null,
+            string? buyerFilter = null,
+            decimal? amountMin = null,
+            decimal? amountMax = null,
+            string? currencyFilter = null)
         {
             // Apply existing filters
             if (submissionDateFrom.HasValue && submissionDateTo.HasValue)
@@ -519,12 +555,57 @@ namespace eInvWorld.Pages.Invoices
                 query = query.Where(i => i.IssueDate >= submissionDateFrom.Value && i.IssueDate <= submissionDateTo.Value);
             }
 
+            // Advanced Filters (Stitch): additional, purely narrowing constraints layered on top of the
+            // mandatory per-TIN ownership scoping applied earlier — cannot widen results beyond a user's
+            // own tenant, so no additional IDOR review is needed here.
+            if (submissionReceivedFrom.HasValue && submissionReceivedTo.HasValue)
+            {
+                query = query.Where(i => i.DateTimeReceived >= submissionReceivedFrom.Value && i.DateTimeReceived <= submissionReceivedTo.Value);
+            }
+
+            if (!string.IsNullOrEmpty(createdBy))
+            {
+                query = query.Where(i => EF.Functions.Like(i.CreatedBy, $"%{createdBy}%"));
+            }
+
+            if (!string.IsNullOrEmpty(supplierFilter))
+            {
+                query = query.Where(i => EF.Functions.Like(i.Supplier.CompanyName, $"%{supplierFilter}%")
+                                      || EF.Functions.Like(i.Supplier.TIN, $"%{supplierFilter}%"));
+            }
+
+            if (!string.IsNullOrEmpty(buyerFilter))
+            {
+                query = query.Where(i =>
+                    EF.Functions.Like(i.Customer != null ? i.Customer.CompanyName : i.PublicCustomer!.CompanyName, $"%{buyerFilter}%")
+                    || EF.Functions.Like(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN, $"%{buyerFilter}%"));
+            }
+
+            if (amountMin.HasValue)
+            {
+                query = query.Where(i => i.TotalAmountIncTax >= amountMin.Value);
+            }
+
+            if (amountMax.HasValue)
+            {
+                query = query.Where(i => i.TotalAmountIncTax <= amountMax.Value);
+            }
+
+            if (!string.IsNullOrEmpty(currencyFilter))
+            {
+                query = query.Where(i => i.Currency == currencyFilter);
+            }
+
             if (!string.IsNullOrEmpty(lhdnStatus))
             {
                 query = query.Where(i => i.LHDNStatusId == lhdnStatus);
             }
 
-            if (!string.IsNullOrEmpty(internalStatus))
+            if (string.Equals(internalStatus, "NeedsAttention", StringComparison.OrdinalIgnoreCase))
+            {
+                query = InvoiceNeedsAttentionFilter.Apply(query);
+            }
+            else if (!string.IsNullOrEmpty(internalStatus))
             {
                 query = query.Where(i => i.InternalStatusId == internalStatus);
             }
@@ -613,7 +694,7 @@ namespace eInvWorld.Pages.Invoices
             try
             {
                 var invoice = await _context.InvoiceHeaders
-                    .FirstOrDefaultAsync(i => i.InvoiceNo == input.InvoiceNo && i.InternalStatusId == "Draft");
+                    .FirstOrDefaultAsync(i => i.InvoiceNo == input.InvoiceNo && (i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError"));
 
                 if (invoice == null)
                 {
@@ -937,63 +1018,65 @@ namespace eInvWorld.Pages.Invoices
             string rejectedByUser = User.Identity?.Name ?? "Unknown";
             var rejectedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
 
-            // Update invoice
+            // Update invoice. IsRejectionEmailSent=false opts this row into the atomic-claim/retry
+            // pass (InvoiceFinalizer.SendRejectionEmailAsync / InvoiceStatusUpdater) — set here, in the
+            // SAME save as the status change, so a later failure to send the email can never also
+            // lose the fact that LHDN already accepted the rejection.
             invoice.InternalStatusId = "RequestReject";
             invoice.RejectedBy = rejectedByUser;
             invoice.RejectedReason = rejectionReason;
             invoice.RejectedTimestamp = rejectedTime;
             invoice.LastUpdated = rejectedTime;
+            invoice.IsRejectionEmailSent = false;
             _context.InvoiceHeaders.Update(invoice);
 
-            // Email notifications
+            // The DB write must succeed regardless of the email outcome — LHDN already accepted the
+            // rejection by the time this method is called, so this save is the one thing that must
+            // not be skipped or rolled back by an email failure (that used to abort this save
+            // entirely, leaving the invoice showing as not-yet-rejected locally even though LHDN had
+            // already processed it).
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // A concurrent writer (e.g. the background status sync) updated this invoice between
+                // our read and save. LHDN has already accepted the rejection, so the reject must win:
+                // refresh the concurrency token from the database, keep our values, retry once.
+                _logger.LogWarning(
+                    "Concurrency conflict recording rejection for {DocumentId}; retrying with fresh row version.",
+                    EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
+                foreach (var entry in ex.Entries)
+                {
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+                    if (databaseValues == null)
+                    {
+                        throw; // row deleted concurrently — surface it, don't invent state
+                    }
+                    entry.OriginalValues.SetValues(databaseValues);
+                }
+                await _context.SaveChangesAsync();
+            }
+            _logger.LogInformation("Local database updated successfully for document {DocumentId}", EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
+
+            // Email notification — best-effort, never blocks the response now that the status update
+            // above is already durably saved. A failure here is retried by the background finalizer
+            // pass (IsRejectionEmailSent stays false).
             if (_configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableRejectionEmails"))
             {
                 try
                 {
-                    if (_eInvoiceEmailService == null)
-                    {
-                        _logger.LogError("_eInvoiceEmailService is null.");
-                        return StatusCode(500, "Email service unavailable.");
-                    }
-
-                    var buyerEmail = invoice.Customer != null
-                        ? invoice.Customer.Email
-                        : invoice.PublicCustomer?.Email;
-
-                    if (string.IsNullOrEmpty(buyerEmail) || string.IsNullOrEmpty(invoice.Supplier?.Email))
-                    {
-                        return BadRequest("Customer or supplier email missing.");
-                    }
-
-                    var customerParty = invoice.Customer ?? new PartyInfo
-                    {
-                        CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
-                        Email = invoice.PublicCustomer?.Email ?? "",
-                        TIN = invoice.PublicCustomer?.TIN ?? ""
-                    };
-
-                    _logger.LogInformation($"📄 Generating fresh PDF for rejected invoice {invoice.InvoiceNo} before emailing...");
+                    _logger.LogInformation("📄 Generating fresh PDF for rejected invoice {InvoiceNo} before emailing...", invoice.InvoiceNo);
                     await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
-
-                    // Send the email with the newly generated PDF
-                    _eInvoiceEmailService.SendRejectionNotificationEmail(
-                        customerParty,
-                        invoice.Supplier,
-                        invoice.InvoiceNo,
-                        rejectionReason,
-                        rejectedTime
-                    );
-
+                    await _invoiceFinalizer.SendRejectionEmailAsync(invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error sending rejection email.");
-                    return StatusCode(500, "Failed to send rejection email.");
+                    _logger.LogWarning(ex, "⚠️ Error sending rejection email for document {DocumentId}. Database update succeeded, but email failed.", EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
                 }
             }
 
-            await _context.SaveChangesAsync();
-            _logger.LogInformation($"Local database updated successfully for document {documentId}");
             return null; // Success
         }
 
@@ -1061,6 +1144,10 @@ namespace eInvWorld.Pages.Invoices
             invoice.LHDNStatusId = "Cancelled";
             invoice.CancelDateTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
             invoice.LastUpdated = invoice.CancelDateTime;
+            invoice.CancellationReason = cancellationReason;
+            // Opts this row into the atomic-claim/retry pass (InvoiceFinalizer.SendCancellationEmailAsync
+            // / InvoiceStatusUpdater) — see the matching comment in UpdateLocalDatabaseForRejection above.
+            invoice.IsCancellationEmailSent = false;
 
             _context.InvoiceHeaders.Update(invoice);
 
@@ -1115,46 +1202,9 @@ namespace eInvWorld.Pages.Invoices
             {
                 try
                 {
-                    if (_eInvoiceEmailService == null)
-                    {
-                        _logger.LogWarning("Email service is null. Skipping cancellation email notification.");
-                    }
-                    else
-                    {
-                        // 🔥 HYBRID FIX: Retrieve the correct email
-                        var buyerEmail = invoice.Customer != null ? invoice.Customer.Email : invoice.PublicCustomer?.Email;
-
-                        if (string.IsNullOrEmpty(buyerEmail))
-                        {
-                            _logger.LogWarning($"Customer email is missing for invoice {documentId}. Skipping email notification.");
-                        }
-                        else if (invoice.Supplier == null || string.IsNullOrEmpty(invoice.Supplier.Email))
-                        {
-                            _logger.LogWarning($"Supplier email is missing for invoice {documentId}. Skipping email notification.");
-                        }
-                        else
-                        {
-                            var customerParty = invoice.Customer ?? new PartyInfo
-                            {
-                                CompanyName = invoice.PublicCustomer?.CompanyName ?? "",
-                                Email = invoice.PublicCustomer?.Email ?? "",
-                                TIN = invoice.PublicCustomer?.TIN ?? ""
-                            };
-
-                            _logger.LogInformation($"📄 Generating fresh PDF for cancelled invoice {invoice.InvoiceNo} before emailing...");
-                            await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
-
-                            // Send the email with the newly generated PDF
-                            _eInvoiceEmailService.SendCancellationNotificationEmail(
-                                customerParty,
-                                invoice.Supplier,
-                                invoice.InvoiceNo,
-                                cancellationReason,
-                                invoice.LastUpdated ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"))
-                            );
-                            _logger.LogInformation($" Cancellation email sent successfully for document {documentId}");
-                        }
-                    }
+                    _logger.LogInformation($"📄 Generating fresh PDF for cancelled invoice {invoice.InvoiceNo} before emailing...");
+                    await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                    await _invoiceFinalizer.SendCancellationEmailAsync(invoice.InvoiceNo);
                 }
                 catch (Exception ex)
                 {
@@ -1166,7 +1216,7 @@ namespace eInvWorld.Pages.Invoices
         }
 
 
-        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "")
+        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "", string? uuids = null)
         {
             try
             {
@@ -1202,75 +1252,28 @@ namespace eInvWorld.Pages.Invoices
                     .Include(i => i.InvoiceLines).ThenInclude(l => l.InvoiceTaxes)
                     .AsQueryable();
 
-                // Apply Invoice Direction Filtering
-                if (!string.IsNullOrEmpty(invoiceDirection) && invoiceDirection != "All")
-                {
-                    var selfBilledTypes = new[] { "11", "12", "13", "14" };
-
-                    // ✅ ADDED SUPPORT FOR DRAFT EXPORTS
-                    if (invoiceDirection == "Draft")
-                    {
-                        query = query.Where(i =>
-                            i.InternalStatusId == "Draft" &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                            )
-                        );
-                    }
-                    else if (invoiceDirection == "Sent")
-                    {
-                        // Note: Standard 'Sent' excludes drafts.
-                        // If you want Sent to INCLUDE drafts, remove: i.InternalStatusId != "Draft" &&
-                        query = query.Where(i =>
-                            i.InternalStatusId != "Draft" &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                            )
-                        );
-                    }
-                    else if (invoiceDirection == "Received")
-                    {
-                        query = query.Where(i =>
-                            i.InternalStatusId != "Draft" &&
-                            i.InternalStatusId != "Invalid" &&
-                            i.LHDNStatusId != "Invalid" &&
-                            !string.IsNullOrEmpty(i.UUID) &&
-                            (
-                                (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
-                                (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
-                            )
-                        );
-                    }
-                    else
-                    {
-                        // "All" (or any other value): still MUST scope to the user's own company TINs,
-                        // otherwise the export leaks every company's invoices. The user's TIN may be on
-                        // either party (issuer or counterparty), so accept a match on either side.
-                        query = query.Where(i =>
-                            userTINs.Contains(i.Supplier.TIN) ||
-                            (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                            (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                        );
-                    }
-                }
-                else
-                {
-                    // Empty direction: same mandatory company scope as "All" above (defense against
-                    // dropping the filter entirely via a blank invoiceDirection query param).
-                    query = query.Where(i =>
-                        userTINs.Contains(i.Supplier.TIN) ||
-                        (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                        (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                    );
-                }
+                // Apply Invoice Direction Filtering — reuses the same per-tab scoping the page and its
+                // badge counts use, so an export can never drift out of sync with what a tab shows
+                // (this used to be a hand-duplicated copy of ApplyDirectionFilter and had drifted).
+                query = ApplyDirectionFilter(query, invoiceDirection ?? "All", userTINs);
 
                 // ✅ FIXED: Date range bug. Make the EndDate inclusive to 23:59:59
                 if (submissionDateFrom.HasValue && submissionDateTo.HasValue)
                 {
                     var endOfDay = submissionDateTo.Value.Date.AddDays(1).AddTicks(-1);
                     query = query.Where(i => i.IssueDate >= submissionDateFrom.Value.Date && i.IssueDate <= endOfDay);
+                }
+
+                // Export Scope: "Selected Items" — narrows to the exact rows the user checked on the
+                // list page. Layered on top of the mandatory per-TIN scope above, so a UUID belonging
+                // to another tenant is silently excluded rather than exported.
+                if (!string.IsNullOrEmpty(uuids))
+                {
+                    var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                    if (uuidList.Count > 0)
+                    {
+                        query = query.Where(i => uuidList.Contains(i.UUID));
+                    }
                 }
 
                 // Apply Internal Status Filtering
@@ -1555,7 +1558,7 @@ namespace eInvWorld.Pages.Invoices
                     return SubmitDraftResult.Fail($"Invoice {invoiceNo} not found.");
                 }
 
-                if (invoice.InternalStatusId != "Draft")
+                if (invoice.InternalStatusId != "Draft" && invoice.InternalStatusId != "TransmissionError")
                 {
                     return SubmitDraftResult.Fail($"Invoice {invoiceNo} is not in Draft status.");
                 }
@@ -1835,6 +1838,73 @@ namespace eInvWorld.Pages.Invoices
                 ? "invoiceListColumns:Received"
                 : "invoiceListColumns";
 
+        // Separate key/endpoints for column ORDER (drag-to-reorder), independent of the visibility
+        // toggles above — same per-direction split, same JSON blob on the user record.
+        private static string ColumnOrderPreferenceKey(string? invoiceDirection) =>
+            string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase)
+                ? "invoiceListColumnOrder:Received"
+                : "invoiceListColumnOrder";
+
+        public async Task<IActionResult> OnPostSaveColumnOrderAsync([FromBody] List<string> columnOrder, string? invoiceDirection = null)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                    return new JsonResult(new { success = false, message = "User not found" });
+
+                var preferences = new Dictionary<string, object>();
+                if (!string.IsNullOrEmpty(user.UserPreferences))
+                {
+                    try
+                    {
+                        preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences)
+                                    ?? new Dictionary<string, object>();
+                    }
+                    catch
+                    {
+                        preferences = new Dictionary<string, object>();
+                    }
+                }
+
+                preferences[ColumnOrderPreferenceKey(invoiceDirection)] = columnOrder ?? new List<string>();
+                user.UserPreferences = JsonConvert.SerializeObject(preferences);
+                var result = await _userManager.UpdateAsync(user);
+
+                return new JsonResult(new { success = result.Succeeded });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving column order");
+                return new JsonResult(new { success = false, message = "An error occurred while saving column order" });
+            }
+        }
+
+        public async Task<IActionResult> OnGetLoadColumnOrderAsync(string? invoiceDirection = null)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null || string.IsNullOrEmpty(user.UserPreferences))
+                    return new JsonResult(new { success = true, data = (List<string>?)null });
+
+                var preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences);
+                var key = ColumnOrderPreferenceKey(invoiceDirection);
+                if (preferences != null && preferences.ContainsKey(key))
+                {
+                    var order = JsonConvert.DeserializeObject<List<string>>(preferences[key].ToString() ?? "[]");
+                    return new JsonResult(new { success = true, data = order });
+                }
+
+                return new JsonResult(new { success = true, data = (List<string>?)null });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading column order");
+                return new JsonResult(new { success = true, data = (List<string>?)null });
+            }
+        }
+
         // API method to save user column preferences
         public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings, string? invoiceDirection = null)
         {
@@ -2034,6 +2104,310 @@ namespace eInvWorld.Pages.Invoices
             return new JsonResult(new { success = true, updatedCount = updatedCount });
         }
 
+        // "Bulk Validate" (Stitch): user-triggered re-check of LHDN status for explicitly selected
+        // invoices. Deliberately reuses the exact same safety mechanisms as OnPostSyncActiveSessionAsync
+        // above rather than calling LHDN directly — the same per-user single-flight gate (so this can't
+        // stack with the active-session auto-poll or with itself across double-clicks), the same
+        // "UISession" 60s-cooldown/429-abort rules in InvoiceSyncHelper, and the same centralized
+        // LhdnRateLimitHandler pacing on the underlying HttpClient. Scoped to UUIDs (not InvoiceNo) to
+        // match the checkbox values already rendered on the list page.
+        public async Task<JsonResult> OnPostBulkValidateAsync([FromBody] List<string> uuids)
+        {
+            if (uuids == null || !uuids.Any())
+                return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0 });
 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, updatedCount = 0, checkedCount = 0 });
+
+            var gate = _sessionSyncGates.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+            if (!await gate.WaitAsync(0))
+                return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0, message = "A status check is already running for your account — try again shortly." });
+
+            int updatedCount = 0;
+            int checkedCount = 0;
+            try
+            {
+                var userTINs = await _context.UserCompanies
+                    .Where(uc => uc.UserId == user.Id)
+                    .Select(uc => uc.PartyInfo.TIN)
+                    .Distinct()
+                    .ToListAsync(HttpContext.RequestAborted);
+
+                if (!userTINs.Any())
+                    return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0 });
+
+                // Same mandatory per-TIN ownership scope as everywhere else on this page — a UUID
+                // belonging to another tenant is silently excluded rather than polled.
+                var invoicesToCheck = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .Where(i => uuids.Contains(i.UUID) &&
+                                (userTINs.Contains(i.Supplier.TIN) ||
+                                 (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                                 (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                    .ToListAsync(HttpContext.RequestAborted);
+
+                foreach (var invoice in invoicesToCheck)
+                {
+                    if (HttpContext.RequestAborted.IsCancellationRequested)
+                        break;
+
+                    // Terminal statuses never change — skip rather than waste an LHDN call.
+                    if (EINVWORLD.Helpers.InvoiceSyncRules.IsPermanentStatus(invoice.LHDNStatusId))
+                        continue;
+
+                    checkedCount++;
+                    try
+                    {
+                        bool wasUpdated = await _invoiceSyncHelper.SyncLhdnInvoiceStatusAsync(invoice, "UISession", HttpContext.RequestAborted);
+                        if (wasUpdated)
+                        {
+                            updatedCount++;
+                        }
+                    }
+                    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests || ex.Message.Contains("429"))
+                    {
+                        // Same rule as the active-session sync: abort the whole batch rather than
+                        // hammering the rest — the user can retry once the rate limit window clears.
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                gate.Release();
+            }
+
+            return new JsonResult(new { success = true, updatedCount = updatedCount, checkedCount = checkedCount });
+        }
+
+        // "Send to Buyers" (Stitch): manual resend of the validated-invoice email for explicitly
+        // selected invoices. Reuses the exact same email service/template InvoiceFinalizer already
+        // uses for the automatic first send (SendValidatedNotificationEmail) — no new email content.
+        // Deliberately does NOT touch IsValidationEmailSent/ValidationEmailSentAt (those record the
+        // original automatic send); a manual resend is logged as a separate "EmailResent" history
+        // entry instead, so the audit trail keeps both facts.
+        public async Task<JsonResult> OnPostBulkSendToBuyersAsync([FromBody] List<string> uuids)
+        {
+            if (uuids == null || !uuids.Any())
+                return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, sentCount = 0, skippedCount = 0 });
+
+            var userTINs = await _context.UserCompanies
+                .Where(uc => uc.UserId == user.Id)
+                .Select(uc => uc.PartyInfo.TIN)
+                .Distinct()
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (!userTINs.Any())
+                return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
+
+            // Same mandatory per-TIN ownership scope as every other bulk/export path on this page.
+            var invoices = await _context.InvoiceHeaders
+                .Include(i => i.Supplier)
+                .Include(i => i.Customer)
+                .Include(i => i.PublicCustomer)
+                .Where(i => uuids.Contains(i.UUID) &&
+                            (userTINs.Contains(i.Supplier.TIN) ||
+                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .ToListAsync(HttpContext.RequestAborted);
+
+            int sentCount = 0;
+            var skipped = new List<string>();
+            foreach (var invoice in invoices)
+            {
+                // Only a Valid document actually has a validated PDF + timestamp to email — sending the
+                // "validated invoice" template for anything else would misrepresent its real status.
+                if (invoice.LHDNStatusId != "Valid")
+                {
+                    skipped.Add($"{invoice.InvoiceNo}: not yet LHDN-validated.");
+                    continue;
+                }
+
+                try
+                {
+                    await _eInvoiceEmailService.SendValidatedNotificationEmail(
+                        invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName ?? "Customer",
+                        invoice.Customer,
+                        invoice.Supplier,
+                        invoice.InvoiceNo,
+                        invoice.IssueDate ?? DateTime.Now,
+                        invoice.DateTimeValidated ?? DateTime.Now,
+                        invoice.PublicCustomer);
+
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoice.InvoiceNo,
+                        Action = "EmailResent",
+                        PerformedBy = user.UserName ?? user.Id,
+                        Remarks = invoice.Customer?.Email ?? invoice.PublicCustomer?.Email ?? "(no buyer email on file)",
+                        Timestamp = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync(HttpContext.RequestAborted);
+
+                    sentCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resend invoice email for {InvoiceNo}", invoice.InvoiceNo);
+                    skipped.Add($"{invoice.InvoiceNo}: send failed.");
+                }
+            }
+
+            return new JsonResult(new { success = true, sentCount = sentCount, skippedCount = skipped.Count, skipped = skipped });
+        }
+
+        // Bulk PDF export (Stitch "Export Configuration" — PDF file format): ZIPs the already-generated
+        // PDF for each selected invoice, generating on demand only for the ones missing one. Bounded to
+        // the user's own explicit selection (not "export everything"), so this can't turn into a
+        // synchronous loop over hundreds of documents — the real timeout risk flagged earlier.
+        private const int MaxBulkPdfCount = 50;
+
+        public async Task<IActionResult> OnGetBulkPdfAsync(string uuids)
+        {
+            if (string.IsNullOrEmpty(uuids))
+                return BadRequest("No invoices selected.");
+
+            var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            if (uuidList.Count == 0)
+                return BadRequest("No invoices selected.");
+            if (uuidList.Count > MaxBulkPdfCount)
+                return BadRequest($"Select at most {MaxBulkPdfCount} invoices for a PDF export — use CSV/XLSX for larger batches.");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return RedirectToPage("/Account/Login");
+
+            var userTINs = await _context.UserCompanies
+                .Where(uc => uc.UserId == user.Id)
+                .Select(uc => uc.PartyInfo.TIN)
+                .Distinct()
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (!userTINs.Any())
+                return BadRequest("No company associated with this account.");
+
+            // Same mandatory per-TIN ownership scope as every other bulk/export path on this page.
+            var invoices = await _context.InvoiceHeaders
+                .Include(i => i.Supplier)
+                .Include(i => i.Customer)
+                .Include(i => i.PublicCustomer)
+                .Where(i => uuidList.Contains(i.UUID) &&
+                            (userTINs.Contains(i.Supplier.TIN) ||
+                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
+                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .ToListAsync(HttpContext.RequestAborted);
+
+            if (invoices.Count == 0)
+                return BadRequest("None of the selected invoices could be found.");
+
+            using var zipStream = new MemoryStream();
+            using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            {
+                foreach (var invoice in invoices)
+                {
+                    string pdfPath = System.IO.Path.Combine(_filePathConfig.GeneratedPdfFolder, $"{invoice.InvoiceNo}.pdf");
+                    if (!System.IO.File.Exists(pdfPath))
+                    {
+                        try
+                        {
+                            pdfPath = await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to generate PDF for bulk export: {InvoiceNo}", invoice.InvoiceNo);
+                            continue; // Skip this one; the rest of the batch still succeeds.
+                        }
+                    }
+
+                    if (!System.IO.File.Exists(pdfPath))
+                        continue;
+
+                    var entry = archive.CreateEntry($"{invoice.InvoiceNo}.pdf", System.IO.Compression.CompressionLevel.Fastest);
+                    using var entryStream = entry.Open();
+                    using var fileStream = System.IO.File.OpenRead(pdfPath);
+                    await fileStream.CopyToAsync(entryStream, HttpContext.RequestAborted);
+                }
+            }
+
+            zipStream.Position = 0;
+            string timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
+            return File(zipStream.ToArray(), "application/zip", $"Invoices_PDF_{timestamp}.zip");
+        }
+
+        public class SaveViewInput
+        {
+            public string InvoiceDirection { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string QueryString { get; set; } = string.Empty;
+        }
+
+        // "Saved Views" (Stitch): a user's named filter presets, shown as pill tabs next to the main
+        // direction tabs. Deliberately stores the exact query string the filter form already produces
+        // (see the filter <form> in the view) rather than re-modeling every filter field server-side —
+        // applying a view is just a normal navigation to ./InvoiceLists?{QueryString}.
+        private const int MaxSavedViewsPerDirection = 10;
+
+        public async Task<IActionResult> OnPostSaveViewAsync([FromBody] SaveViewInput input)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, message = "User not found." });
+
+            var name = (input?.Name ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(name))
+                return new JsonResult(new { success = false, message = "Please enter a name for this view." });
+            if (name.Length > 100)
+                name = name.Substring(0, 100);
+
+            var direction = input?.InvoiceDirection ?? "Sent";
+            var existingCount = await _context.SavedInvoiceViews
+                .CountAsync(v => v.UserId == user.Id && v.InvoiceDirection == direction);
+            if (existingCount >= MaxSavedViewsPerDirection)
+                return new JsonResult(new { success = false, message = $"You can save up to {MaxSavedViewsPerDirection} views per tab. Delete one first." });
+
+            var queryString = input?.QueryString ?? string.Empty;
+            if (queryString.Length > 2048)
+                queryString = queryString.Substring(0, 2048);
+            // Defense in depth: a saved view's QueryString is rendered back into an href on every page
+            // load. Razor's default encoding already makes that safe, but reject anything that isn't
+            // plausible query-string content (percent-encoded key=value pairs) rather than store it at all.
+            if (!string.IsNullOrEmpty(queryString) && !System.Text.RegularExpressions.Regex.IsMatch(queryString, @"^[A-Za-z0-9=&%_.,:+-]*$"))
+                return new JsonResult(new { success = false, message = "Invalid filter data — please reapply your filters and try saving again." });
+
+            var view = new SavedInvoiceView
+            {
+                UserId = user.Id,
+                InvoiceDirection = direction,
+                Name = name,
+                QueryString = queryString,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _context.SavedInvoiceViews.Add(view);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+
+            return new JsonResult(new { success = true, id = view.Id, name = view.Name });
+        }
+
+        public async Task<IActionResult> OnPostDeleteSavedViewAsync(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return new JsonResult(new { success = false, message = "User not found." });
+
+            // Ownership check: a view can only be deleted by the user who created it.
+            var view = await _context.SavedInvoiceViews.FirstOrDefaultAsync(v => v.Id == id && v.UserId == user.Id);
+            if (view == null)
+                return new JsonResult(new { success = false, message = "View not found." });
+
+            _context.SavedInvoiceViews.Remove(view);
+            await _context.SaveChangesAsync(HttpContext.RequestAborted);
+            return new JsonResult(new { success = true });
+        }
     }
 }

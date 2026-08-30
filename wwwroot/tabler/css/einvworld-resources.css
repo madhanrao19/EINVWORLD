@@ -1,0 +1,25 @@
+/* Scoped styles for the Manage Resources CMS (list, create/edit, types) — additive to
+ * einvworld-tokens.css, reuses the same --einv-* brand tokens. Not loaded outside these pages. */
+
+.einv-resource-sticky {
+  position: sticky;
+  top: 1rem;
+}
+
+#seoGaugeValue {
+  fill: var(--einv-text, #171d19);
+}
+
+.faq-item-row:last-child {
+  margin-bottom: 0.75rem !important;
+}
+
+/* Resource Types list: mono "code" chip + computed SEO prefix. */
+.einv-code-chip {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: rgba(var(--einv-primary-rgb), 0.08);
+  color: var(--einv-primary);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}

@@ -23,107 +23,118 @@
     }
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🔄 Background Sync Jobs</h3>
-    <div>
-        @if (Model.RunningCount > 0 || Model.QueuedCount > 0)
-        {
-            <span class="badge bg-primary">@Model.RunningCount running</span>
-            <span class="badge bg-secondary">@Model.QueuedCount queued</span>
-            <span class="text-muted ms-2">auto-refreshing…</span>
-        }
-        else
-        {
-            <span class="text-muted">No active jobs</span>
-        }
-        @if (Model.FailedCount > 0)
-        {
-            <a asp-page="/Admin/SyncJobs" asp-route-status="Failed" class="badge bg-danger text-decoration-none ms-1" title="View failed jobs">@Model.FailedCount failed</a>
-        }
-        <a asp-page="/Admin/InvoiceSync" class="btn btn-sm btn-outline-primary ms-2">← Sync controls</a>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Background Sync Jobs</h1>
+                <p class="text-muted mb-0">@(Model.FailedOnly ? "Showing failed jobs (up to 500)." : "Showing the latest 100 jobs.") Times are UTC.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                @if (Model.RunningCount > 0 || Model.QueuedCount > 0)
+                {
+                    <span class="badge bg-primary">@Model.RunningCount running</span>
+                    <span class="badge bg-secondary">@Model.QueuedCount queued</span>
+                    <span class="text-muted">auto-refreshing…</span>
+                }
+                else
+                {
+                    <span class="text-muted">No active jobs</span>
+                }
+                @if (Model.FailedCount > 0)
+                {
+                    <a asp-page="/Admin/SyncJobs" asp-route-status="Failed" class="badge bg-danger text-decoration-none" title="View failed jobs">@Model.FailedCount failed</a>
+                }
+                <a asp-page="/Admin/InvoiceSync" class="btn btn-outline-primary btn-sm">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Sync controls
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
 @if (TempData["Message"] is string msg)
 {
-    <div class="alert alert-info py-2">@msg</div>
+    <div class="alert alert-info" role="alert">@msg</div>
 }
 
 @if (Model.FailedOnly)
 {
-    <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <span class="text-danger fw-semibold">Dead-letter view — showing failed jobs only (@Model.FailedCount).</span>
-        <span>
+        <span class="d-flex gap-2">
             @if (Model.FailedCount > 0)
             {
                 <form method="post" asp-page-handler="RetryAllFailed" class="d-inline"
                       onsubmit="return confirm('Re-queue all @Model.FailedCount failed job(s)?');">
-                    <button type="submit" class="btn btn-sm btn-outline-primary py-0">Retry all failed</button>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Retry all failed</button>
                 </form>
             }
-            <a asp-page="/Admin/SyncJobs" class="btn btn-sm btn-outline-secondary py-0 ms-1">Show all</a>
+            <a asp-page="/Admin/SyncJobs" class="btn btn-outline-secondary btn-sm">Show all</a>
         </span>
     </div>
 }
 
-<p class="text-muted">@(Model.FailedOnly ? "Showing failed jobs (up to 500)." : "Showing the latest 100 jobs.") Times are UTC.</p>
-
-<div class="table-responsive">
-    <table class="table table-sm table-striped align-middle">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Type</th>
-                <th>TIN</th>
-                <th>Status</th>
-                <th>Queued</th>
-                <th>Duration</th>
-                <th>Result</th>
-                <th>By</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (!Model.Jobs.Any())
-            {
-                <tr><td colspan="9" class="text-center text-muted">No sync jobs yet.</td></tr>
-            }
-            @foreach (var j in Model.Jobs)
-            {
-                <tr>
-                    <td>@j.Id</td>
-                    <td>@j.JobType</td>
-                    <td>@j.Tin</td>
-                    <td><span class="badge @BadgeClass(j.Status)">@j.Status</span>
-                        @if (j.AttemptCount > 1)
-                        {
-                            <span class="text-muted ms-1" title="Attempts">×@j.AttemptCount</span>
-                        }
-                    </td>
-                    <td>@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
-                    <td>@Dur(j)</td>
-                    <td style="max-width:480px;"><small>@j.Message</small></td>
-                    <td><small>@j.TriggeredBy</small></td>
-                    <td>
-                        @if (j.Status == SyncJobStatus.Failed)
-                        {
-                            <form method="post" asp-page-handler="Retry" class="d-inline">
-                                <input type="hidden" name="id" value="@j.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-primary py-0">Retry</button>
-                            </form>
-                        }
-                        else if (j.Status == SyncJobStatus.Queued)
-                        {
-                            <form method="post" asp-page-handler="Cancel" class="d-inline">
-                                <input type="hidden" name="id" value="@j.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-0">Cancel</button>
-                            </form>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="einv-table-head">
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>TIN</th>
+                        <th>Status</th>
+                        <th>Queued</th>
+                        <th>Duration</th>
+                        <th>Result</th>
+                        <th>By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Jobs.Any())
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-4">No sync jobs yet.</td></tr>
+                    }
+                    @foreach (var j in Model.Jobs)
+                    {
+                        <tr>
+                            <td>@j.Id</td>
+                            <td>@j.JobType</td>
+                            <td>@j.Tin</td>
+                            <td><span class="badge @BadgeClass(j.Status)">@j.Status</span>
+                                @if (j.AttemptCount > 1)
+                                {
+                                    <span class="text-muted ms-1" title="Attempts">×@j.AttemptCount</span>
+                                }
+                            </td>
+                            <td>@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
+                            <td>@Dur(j)</td>
+                            <td style="max-width:480px;"><small>@j.Message</small></td>
+                            <td><small>@j.TriggeredBy</small></td>
+                            <td>
+                                @if (j.Status == SyncJobStatus.Failed)
+                                {
+                                    <form method="post" asp-page-handler="Retry" class="d-inline">
+                                        <input type="hidden" name="id" value="@j.Id" />
+                                        <button type="submit" class="btn btn-outline-primary btn-sm">Retry</button>
+                                    </form>
+                                }
+                                else if (j.Status == SyncJobStatus.Queued)
+                                {
+                                    <form method="post" asp-page-handler="Cancel" class="d-inline">
+                                        <input type="hidden" name="id" value="@j.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 @section Scripts {

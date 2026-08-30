@@ -4,108 +4,144 @@
     ViewData["Title"] = "AI Settings";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>🤖 AI Settings</h3>
-    <a asp-page="/Assistant" class="btn btn-sm btn-outline-secondary">💬 Open Assistant</a>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">AI Settings</h1>
+                <p class="text-muted mb-0">On-prem AI configuration for the E-Invoice Assistant and Document Capture.</p>
+            </div>
+            <div class="d-flex gap-2">
+                @if (Model.Enabled)
+                {
+                    <span class="einv-badge einv-badge-success"><i class="ri-checkbox-circle-line"></i> Enabled</span>
+                }
+                else
+                {
+                    <span class="einv-badge einv-badge-neutral"><i class="ri-pause-circle-line"></i> Disabled</span>
+                }
+                <a asp-page="/Assistant" class="btn btn-outline-secondary btn-sm">
+                    <i class="ri-chat-3-line align-bottom me-1"></i> Open Assistant
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<p class="text-muted">
-    AI is <strong>optional</strong> and never required for invoicing — if the AI service is unavailable,
-    invoice creation and submission continue to work normally. Settings are configured in
-    <code>appsettings</code> / environment variables (the <code>AI</code> section); this page is read-only
-    and lets you verify connectivity. No API key is ever shown here.
-</p>
+<div class="alert alert-info">
+    <i class="ri-shield-check-line"></i>
+    <div>
+        AI is <strong>optional</strong> and never required for invoicing — if the AI service is unavailable, invoice
+        creation and submission continue to work normally. Settings are configured in <code>appsettings</code> /
+        environment variables (the <code>AI</code> section); this page is read-only and lets you verify connectivity.
+        No API key is ever shown here.
+    </div>
+</div>
 
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>Current configuration</span>
-        @if (Model.Enabled)
-        {
-            <span class="badge bg-success">Enabled</span>
-        }
-        else
-        {
-            <span class="badge bg-secondary">Disabled</span>
-        }
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Current Configuration</h3>
     </div>
     <div class="card-body">
-        <dl class="row mb-0">
-            <dt class="col-sm-3">Provider</dt>
-            <dd class="col-sm-9">@Model.Provider</dd>
-
-            <dt class="col-sm-3">Base URL</dt>
-            <dd class="col-sm-9"><code>@Model.BaseUrl</code></dd>
-
-            <dt class="col-sm-3">Model</dt>
-            <dd class="col-sm-9"><code>@Model.Model</code></dd>
-
-            <dt class="col-sm-3">Timeout</dt>
-            <dd class="col-sm-9">@Model.TimeoutSeconds s</dd>
-
-            <dt class="col-sm-3">Temperature</dt>
-            <dd class="col-sm-9">@Model.Temperature</dd>
-
-            <dt class="col-sm-3">Max tokens</dt>
-            <dd class="col-sm-9">@Model.MaxTokens</dd>
-        </dl>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Provider</p>
+                <p class="mb-0 fw-semibold">@Model.Provider</p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Base URL</p>
+                <p class="mb-0"><code>@Model.BaseUrl</code></p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Model</p>
+                <p class="mb-0"><code>@Model.Model</code></p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Timeout</p>
+                <p class="mb-0">@Model.TimeoutSeconds s</p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                    Keep Alive <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="How long Ollama keeps the model loaded in memory after a request. A larger value avoids repeated slow cold-loads between requests."></i>
+                </p>
+                <p class="mb-0">@Model.KeepAliveMinutes min</p>
+            </div>
+            <div class="col-md-6 mb-3">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Temperature</p>
+                <p class="mb-0">@Model.Temperature</p>
+            </div>
+            <div class="col-md-6 mb-0">
+                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Max Tokens</p>
+                <p class="mb-0">@Model.MaxTokens</p>
+            </div>
+        </div>
     </div>
 </div>
 
 @if (!Model.Enabled)
 {
     <div class="alert alert-secondary">
-        AI is currently <strong>disabled</strong>. To enable it: install the provider (for Ollama, run
-        <code>ollama pull @Model.Model</code>), set <code>AI:Enabled=true</code>, then restart the app.
-        Recommended local models: <code>gemma3:12b</code>, <code>gemma3:27b</code>, <code>qwen3:32b</code>
-        (models are not bundled — pull them separately).
+        <i class="ri-information-line"></i>
+        <div>
+            AI is currently <strong>disabled</strong>. To enable it: install the provider (for Ollama, run
+            <code>ollama pull @Model.Model</code>), set <code>AI:Enabled=true</code>, then restart the app.
+            Recommended local models: <code>gemma3:12b</code>, <code>gemma3:27b</code>, <code>qwen3:32b</code>
+            (models are not bundled — pull them separately).
+        </div>
     </div>
 }
 else if (!Model.ProviderReady)
 {
     <div class="alert alert-warning">
-        AI is enabled but no provider matches "<strong>@Model.Provider</strong>". Check the
-        <code>AI:Provider</code> setting.
+        <i class="ri-error-warning-line"></i>
+        <div>
+            AI is enabled but no provider matches "<strong>@Model.Provider</strong>". Check the
+            <code>AI:Provider</code> setting.
+        </div>
     </div>
 }
 
-<form method="post" asp-page-handler="TestConnection" onsubmit="document.getElementById('testBtn').disabled=true;document.getElementById('testSpin').style.display='inline-block';">
-    <button type="submit" class="btn btn-primary" id="testBtn">
-        <span class="spinner-border spinner-border-sm" id="testSpin" role="status" style="display:none;"></span>
-        Test connection
-    </button>
-</form>
+<div class="card border-0 shadow-sm">
+    <div class="card-header">
+        <h3 class="card-title">Connection Test</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" asp-page-handler="TestConnection" onsubmit="document.getElementById('testBtn').disabled=true;document.getElementById('testSpin').style.display='inline-block';">
+            <button type="submit" class="btn btn-primary" id="testBtn">
+                <span class="spinner-border spinner-border-sm me-1" id="testSpin" role="status" style="display:none;"></span>
+                <i class="ri-pulse-line align-bottom me-1"></i> Test Connection
+            </button>
+        </form>
 
-@if (Model.ProbeResult is not null)
-{
-    var p = Model.ProbeResult;
-    <div class="card mt-3">
-        <div class="card-header">Test result</div>
-        <div class="card-body">
-            <p class="mb-2">
+        @if (Model.ProbeResult is not null)
+        {
+            var p = Model.ProbeResult;
+            <hr />
+            <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
                 @if (p.Reachable && p.ModelAvailable)
                 {
-                    <span class="badge bg-success">Reachable</span>
-                    <span class="badge bg-success">Model ready</span>
+                    <span class="einv-badge einv-badge-success"><i class="ri-checkbox-circle-line"></i> Reachable</span>
+                    <span class="einv-badge einv-badge-success"><i class="ri-checkbox-circle-line"></i> Model Ready</span>
                 }
                 else if (p.Reachable)
                 {
-                    <span class="badge bg-success">Reachable</span>
-                    <span class="badge bg-warning text-dark">Model not pulled</span>
+                    <span class="einv-badge einv-badge-success"><i class="ri-checkbox-circle-line"></i> Reachable</span>
+                    <span class="einv-badge einv-badge-warning"><i class="ri-time-line"></i> Model Not Pulled</span>
                 }
                 else
                 {
-                    <span class="badge bg-danger">Unreachable</span>
+                    <span class="einv-badge einv-badge-danger"><i class="ri-error-warning-line"></i> Unreachable</span>
                 }
                 @if (p.LatencyMs is not null)
                 {
-                    <span class="text-muted ms-2">@p.LatencyMs ms</span>
+                    <span class="text-muted small">@p.LatencyMs ms</span>
                 }
-            </p>
-            <p class="mb-2">@p.Detail</p>
+            </div>
+            <p class="text-muted mb-2">@p.Detail</p>
             @if (p.AvailableModels.Count > 0)
             {
                 <details>
-                    <summary>Available models (@p.AvailableModels.Count)</summary>
+                    <summary class="text-muted small">Available models (@p.AvailableModels.Count)</summary>
                     <ul class="mt-2 mb-0">
                         @foreach (var m in p.AvailableModels)
                         {
@@ -114,6 +150,6 @@ else if (!Model.ProviderReady)
                     </ul>
                 </details>
             }
-        </div>
+        }
     </div>
-}
+</div>

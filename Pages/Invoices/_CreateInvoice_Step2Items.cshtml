@@ -1,0 +1,176 @@
+@model EINVWORLD.Pages.Invoices.CreateInvoiceModel
+@using eInvWorld.Helpers
+<div class="card mb-3 d-none" id="step2">
+                <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-list-check-2 fs-4 text-success me-2"></i>
+                        <div>
+                            <h6 class="card-title mb-0">Invoice Items</h6>
+                            <small class="text-muted">Add products or services to your invoice</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div class="text-muted small">Add products or services to your invoice</div>
+                        <button type="button" class="btn btn-outline-primary" id="addItemBtn">
+                            <i class="ri-add-line me-1"></i>Add Item
+                        </button>
+                    </div>
+
+                    <div id="lineItemsTable">
+                        <div class="irow-head">
+                            <div class="irow-head-num">#</div>
+                            <div class="irow-head-desc">Item / Service Description <span class="text-danger">*</span></div>
+                            <div class="irow-head-classification">Classification <span class="text-danger">*</span></div>
+                            <div class="irow-head-qty text-center">Qty <span class="text-danger">*</span></div>
+                            <div class="irow-head-unit">Unit <span class="text-danger">*</span></div>
+                            <div class="irow-head-price text-end">Price <span class="text-danger">*</span></div>
+                            <div class="irow-head-tax">Tax</div>
+                            <div class="irow-head-total text-end">Subtotal / Total</div>
+                            <div class="irow-head-actions"></div>
+                        </div>
+                        <div id="lineItems">
+                            @for (int i = 0; i < (Model.Invoice?.InvoiceLines.Count ?? 0); i++)
+                            {
+                                <div data-item-index="@i" class="item-row" style="border-left: 4px solid var(--einv-primary, #006948); border-bottom: 1px solid var(--einv-border, #e9ecef);">
+                                    <div class="irow">
+                                        <div class="irow-num">@(i + 1)</div>
+                                        <div class="irow-desc">
+                                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, @i)">
+                                                <option value="">-- Select Saved Item --</option>
+                                                @if (Model.SavedItems != null && Model.SavedItems.Any())
+                                                {
+                                                    foreach (var item in Model.SavedItems)
+                                                    {
+                                                        <option value="@item.Value">@item.Text</option>
+                                                    }
+                                                }
+                                            </select>
+                                            <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                                            <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
+                                        </div>
+                                        <div class="irow-classification">
+                                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
+                                            <select asp-for="Invoice.InvoiceLines[i].ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select form-select-sm item-classification" required>
+                                                <option value="">Select Classification</option>
+                                            </select>
+                                        </div>
+                                        <div class="irow-qty">
+                                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                        </div>
+                                        <div class="irow-unit">
+                                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
+                                            <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
+                                                <option value="">Unit</option>
+                                            </select>
+                                        </div>
+                                        <div class="irow-price">
+                                            <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
+                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                        </div>
+                                        <div class="irow-tax">
+                                            <div class="irow-mlabel">Tax</div>
+                                            <div class="tax-section" id="taxes-@i">
+                                                @if (Model.Invoice?.InvoiceLines[i].Taxes != null)
+                                                {
+                                                    for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
+                                                    {
+                                                        <div class="tax-row mb-2 p-2 border rounded">
+                                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                                <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
+                                                                    <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
+                                                                        <option value="">Tax Category</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
+                                                                    <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Taxes?[j].TaxPercentage)" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
+                                                                </div>
+                                                                <div class="tax-action-wrapper" style="flex: 0 0 auto;">
+                                                                    <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mt-2 tax-exemption-reason" style="display: none;">
+                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxExemptionReason" class="form-control form-control-sm" placeholder="Exemption Reason (Required)" />
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(@i)">
+                                                <i class="ri-add-line me-1"></i>Tax
+                                            </button>
+                                        </div>
+                                        <div class="irow-total">
+                                            <div class="irow-mlabel">Subtotal</div>
+                                            <div class="irow-num-val" id="subtotal-@i">0.00</div>
+                                            <div class="irow-mlabel">Row Total</div>
+                                            <div class="irow-num-val irow-total-val" id="rowtotal-@i">0.00</div>
+                                        </div>
+                                        <div class="irow-actions">
+                                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate">
+                                                <i class="ri-file-copy-line"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- 🔧 Required for model binding -->
+                        <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@(Model.Invoice?.InvoiceLines.Count ?? 0)" />
+                    </div>
+                </div>
+
+                <!-- Invoice Summary (Step 2) -->
+                <div class="card border-0 border-start border-4 border-start-success mt-3">
+                    <div class="card-body">
+                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Summary</h6>
+                        <div class="row g-4 align-items-center">
+                            <div class="col-md-7">
+                                <div class="ci-summary-row"><span>Subtotal:</span><strong id="step2SummarySubtotal">0.00</strong></div>
+                                <div class="ci-summary-row"><span>Tax Amount:</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
+                                <div class="ci-summary-row ci-summary-total"><span>Total Inclusive:</span><strong id="step2SummaryTotalAmount">0.00</strong></div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="p-3 rounded" style="background:rgba(0,105,72,.08);">
+                                    <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Amount Payable</div>
+                                    <div class="fs-3 fw-bold text-primary" id="step2AmountPayable">0.00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tax Management Section -->
+                @* <div class="card border-warning mt-3">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h6 class="mb-0"><i class="ri-taxi-line me-2"></i>Item & Tax Validation <small class="text-muted">(All fields must be filled including taxes)</small></h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-warning" onclick="validateItemRequirements()">
+                                <i class="ri-check-line me-1"></i>Check Item Requirements
+                            </button>
+                            <button type="button" class="btn btn-outline-success" onclick="addTaxToAllItems()">
+                                <i class="ri-add-line me-1"></i>Add Taxes to All Items
+                            </button>
+
+                        </div>
+                    </div>
+                </div> *@
+
+                <!-- Step Navigation -->
+                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
+                        <i class="ri-arrow-left-line me-1"></i>Previous
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">
+                        Next: Review & Submit <i class="ri-arrow-right-line ms-1"></i>
+                    </button>
+                </div>
+            </div>

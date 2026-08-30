@@ -70,11 +70,12 @@ namespace EINVWORLD.Pages.Invoices
             InvoiceTemplateService invoiceTemplateService,
             ITokenService tokenService,
             IBuyerService buyerService,
-            EINVWORLD.Services.Background.ISyncJobTracker jobTracker) : base(context)
+            EINVWORLD.Services.Background.ISyncJobTracker jobTracker,
+            IDocumentSigningService signingService) : base(context)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
-            _invoiceMapper = new InvoiceMapper();
+            _invoiceMapper = new InvoiceMapper(_context, signingService);
             _invoiceService = invoiceService;
             _lhdnApiService = lhdnApiService ?? throw new ArgumentNullException(nameof(lhdnApiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -213,7 +214,7 @@ namespace EINVWORLD.Pages.Invoices
                     InvoiceNo = GenerateNextInvoiceNumber(),
                     InvoicePeriod = InvoicePeriodEnum.Not_Applicable,
                     RefDocumentNo = "NA",
-                    DocTypeCode = "01",
+                    DocTypeCode = string.Equals(type, "SELF", StringComparison.OrdinalIgnoreCase) ? "11" : "01",
                     IssueDate = malaysiaTime,
                     InvoiceLines = new List<InvoiceLineView>
             {
@@ -223,7 +224,7 @@ namespace EINVWORLD.Pages.Invoices
                     ItemCode = "",
                     ItemDescription = "",
                     Quantity = (decimal?)0.00,
-                    UnitOfMeasure = "XUN",
+                    UnitOfMeasure = "EA",
                     UnitPrice = 0.00m,
                     Taxes = new List<InvoiceTaxView> {
                         new InvoiceTaxView { TaxCategory = "01", TaxPercentage = 0, TaxAmount = 0.00m }
@@ -441,7 +442,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             i.ItemCode,
                             i.Description,
-                            i.ClassificationCode
+                            i.ClassificationCode,
+                            i.UnitCode,
+                            i.UnitPrice
                         })
                         .ToListAsync();
 
@@ -455,12 +458,16 @@ namespace EINVWORLD.Pages.Invoices
 
                         return new SelectListItem
                         {
-                            // Store the FULL description in the JSON value so auto-fill still works perfectly
+                            // Store the FULL description in the JSON value so auto-fill still works perfectly.
+                            // UnitCode/UnitPrice are the catalogue's own defaults — only used to prefill a NEW
+                            // line; they never touch a line the user has already typed a value into.
                             Value = System.Text.Json.JsonSerializer.Serialize(new
                             {
                                 ItemCode = i.ItemCode,
                                 Description = desc,
-                                ClassificationCode = i.ClassificationCode
+                                ClassificationCode = i.ClassificationCode,
+                                UnitCode = i.UnitCode,
+                                UnitPrice = i.UnitPrice
                             }),
                             // Display the SHORTENED description in the dropdown UI
                             Text = $"{i.ItemCode} - {shortDesc}"
@@ -1689,6 +1696,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             PartyInfoId = p.PartyInfoId,
                             TIN = p.TIN,
+                            RegTypeCode = p.RegTypeCode,
+                            RegNo = p.RegNo,
+                            SST = p.SST,
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,
@@ -1707,6 +1717,9 @@ namespace EINVWORLD.Pages.Invoices
                         {
                             PartyInfoId = p.PublicCustomerId,
                             TIN = p.TIN,
+                            RegTypeCode = p.RegTypeCode,
+                            RegNo = p.RegNo,
+                            SST = p.SST,
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,

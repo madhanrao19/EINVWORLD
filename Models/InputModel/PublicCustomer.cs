@@ -80,11 +80,14 @@ namespace eInvWorld.Models.InputModel
         public string CityName { get; set; } = null!;
 
         [Required(ErrorMessage = "State is required.")]
+        [StringLength(100, ErrorMessage = "State cannot exceed 100 characters.")]
         [Display(Name = "State Code")]
         public string StateCode { get; set; } = null!;
-
-        [ForeignKey("StateCode")]
-        public virtual StateCode? State { get; set; } // ✅ Navigation Property
+        // No FK to StateCodes: Malaysian buyers are still restricted to the StateCodes
+        // list via server-side validation (Create/Edit OnPostAsync), but a foreign
+        // buyer (CountryCode != "MYS") may hold a free-text state name here — LHDN's
+        // own MyInvois Portal accepts free text for foreign parties, and there is no
+        // LHDN requirement restricting CountrySubentityCode to a fixed code list.
 
         [Required(ErrorMessage = "Country code is required.")]
         [Display(Name = "Country Code")]

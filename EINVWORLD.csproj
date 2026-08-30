@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="EINVWORLD.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="EINVWORLD.Tests\**" />
     <Compile Remove="csharp Helpers\**" />
     <Compile Remove="Documents\**" />
@@ -264,34 +268,34 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="PdfPig" Version="0.1.15" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
 
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="DinkToPdf" Version="1.0.8" />
     <!-- EPPlus removed: v5+ requires a commercial/Polyform license (was being used under NonCommercial,
          a violation for a commercial product). Replaced with ClosedXML (MIT) — see GenerateExcel. -->
     <PackageReference Include="Humanizer" Version="3.0.10" />
-    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.8.1" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.8.5" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.9.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.11" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NToastNotify" Version="8.0.0" />
-    <PackageReference Include="PuppeteerSharp" Version="25.3.1" />
+    <PackageReference Include="PuppeteerSharp" Version="25.8.0" />
     <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Expressions" Version="5.0.0" />
@@ -302,7 +306,7 @@
     <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
     <!-- SixLabors.ImageSharp removed: v4.0+ requires a paid commercial license, and the 3.x split-license
          is also restrictive for commercial use. Image resize/WebP now done with Magick.NET (Apache-2.0, already referenced). -->
-    <PackageReference Include="SkiaSharp" Version="4.150.0" />
+    <PackageReference Include="SkiaSharp" Version="4.151.1" />
     <!-- AI Document Capture OCR (scanned PDFs). FOSS: Tesseract (Apache-2.0) + PDFtoImage (MIT, PDFium
          rasterizer on the already-referenced SkiaSharp; no Ghostscript). Native libs ship but are only
          loaded when DocumentCapture:OcrEnabled=true, so they're inert on installs that leave OCR off. -->

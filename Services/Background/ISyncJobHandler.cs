@@ -32,6 +32,9 @@ namespace EINVWORLD.Services.Background
         public string? Status { get; set; }
         public string? Uuid { get; set; }
 
+        // ── Smart Capture (SyncJobType.SmartCaptureExtraction / SmartCaptureRetention) ──────────
+        public int? SmartCaptureDocumentId { get; set; }
+
         private static readonly JsonSerializerOptions Opts = new() { PropertyNameCaseInsensitive = true };
 
         public static string Create(int lookbackDays) =>
@@ -50,6 +53,26 @@ namespace EINVWORLD.Services.Background
                 Status = status,
                 Uuid = uuid
             });
+
+        /// <summary>Payload for a <see cref="SyncJobType.SmartCaptureExtraction"/> or
+        /// <see cref="SyncJobType.SmartCaptureRetention"/> job.</summary>
+        public static string CreateForSmartCaptureDocument(int smartCaptureDocumentId) =>
+            JsonSerializer.Serialize(new SyncJobPayload { SmartCaptureDocumentId = smartCaptureDocumentId });
+
+        /// <summary>Reads SmartCaptureDocumentId from the job payload, or null if absent/unparsable.</summary>
+        public static int? SmartCaptureDocumentIdOrNull(string? payloadJson)
+        {
+            if (string.IsNullOrWhiteSpace(payloadJson)) return null;
+            try
+            {
+                var p = JsonSerializer.Deserialize<SyncJobPayload>(payloadJson, Opts);
+                return p?.SmartCaptureDocumentId;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
 
         /// <summary>Deserializes the full payload, or null if absent/unparsable.</summary>
         public static SyncJobPayload? Parse(string? payloadJson)

@@ -44,7 +44,7 @@ before moving on. Don't push forward hoping it fixes itself.
 | **Connection string** | One line of text that tells the app how to reach the database (server, database name, login, password). |
 | **`appsettings.json`** | The app's non-secret settings file. **Secrets stay blank here** — real values come from environment variables. |
 | **TLS / SSL / HTTPS** | Encryption so the site is `https://` (padlock). Provided by a certificate on IIS, or by Cloudflare (Part 8b). |
-| **2FA / MFA** | Two-factor authentication — the 6-digit code from a phone app, required for Admin logins. |
+| **2FA / MFA** | Two-factor authentication — the 6-digit code from a phone app. Optional by default for Admin logins; can be enforced (recommended for Production, Part 14). |
 | **DDL rights** | Permission for the app to create/change database tables (it sets up its own tables on first run). |
 
 ---
@@ -82,7 +82,7 @@ Collect all of these **before** you begin. Ask the project lead if anything is m
 | ☐ Windows Server with **Administrator** access | Remote Desktop login |
 | ☐ **IIS** installed (Web Server role) | Server Manager → Add Roles |
 | ☐ **SQL Server** installed + **SSMS** (SQL Server Management Studio) | already on the DB server |
-| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.3.zip` |
+| ☐ The application package (zip) | e.g. `EINVWORLD_release_v1.20.1.zip` |
 | ☐ **SQL database backup** (`.bak`) if migrating an existing DB | from the previous server |
 | ☐ **SSL certificate** for the domain | `.pfx` installed in Windows, or CA cert |
 | ☐ **Domain name** pointing to this server | e.g. `einvworld.com` (prod) / `staging.einvworld.com` |
@@ -105,16 +105,24 @@ Do the **same steps** for both. Only these values differ — write down which se
 |---|---|---|
 | Domain | `einvworld.com` | `staging.einvworld.com` (or a port like `:8443`) |
 | Database name | `EINVWORLD` | `EINVWORLD_STAGING` (a separate DB!) |
-| `ASPNETCORE_ENVIRONMENT` | `Production` | `Production` (still Production — just different DB/URL) |
+| `ASPNETCORE_ENVIRONMENT` | `Production` | `Staging` — this is what makes `appsettings.Staging.json` load automatically; see note below |
 | LHDN `BaseUrl` | `https://api.myinvois.hasil.gov.my/` | `https://preprod-api.myinvois.hasil.gov.my/` (sandbox) |
 | LHDN `ValidationBaseUrl` | `https://myinvois.hasil.gov.my/` | `https://preprod.myinvois.hasil.gov.my/` |
 
 > Staging points at the **LHDN PREPROD sandbox** so test invoices don't go to the real tax authority.
-> If you set the preprod URL while `ASPNETCORE_ENVIRONMENT=Production`, the app logs a harmless
-> **warning** at startup (reminding you it's the sandbox) — that's expected on staging.
 >
-> The LHDN `BaseUrl`/`ValidationBaseUrl` live in `appsettings.json` (not a secret). For staging, edit
-> those two values in the staging server's `appsettings.json` to the preprod URLs.
+> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` are not secrets, and live as explicit,
+> git-tracked values in `appsettings.Production.json` (real production host/Client ID) and
+> `appsettings.Staging.json` (preprod host/Client ID) — no more hand-editing a server's local
+> `appsettings.json` copy for these.
+>
+> **`ASPNETCORE_ENVIRONMENT=Staging` on the staging server** (Part 10) is what makes
+> `appsettings.Staging.json` load by ASP.NET Core's normal convention, on top of the base
+> `appsettings.json` — the same mechanism Production already relies on for `appsettings.Production.json`.
+> One consequence: `ProductionConfigValidator`'s Production-only hard-fail checks (DataProtection key
+> ring required, LHDN ClientId/secrets required, no localhost PDF/Email URLs) run in their looser
+> warning-only mode on Staging — acceptable since Staging isn't real production, but worth knowing if
+> a staging config gap that used to be a hard startup failure now only logs a warning.
 
 ---
 
@@ -201,7 +209,7 @@ Open **SSMS** and connect to the SQL Server.
 
 ## Part 6 — Copy the application files
 
-1. Copy the release zip (e.g. `EINVWORLD_release_v1.3.zip`) onto the server.
+1. Copy the release zip (e.g. `EINVWORLD_release_v1.20.1.zip`) onto the server.
 2. Right-click → **Extract All…**
 3. Copy **everything** from inside the extracted folder into:
    ```
@@ -354,7 +362,7 @@ This is where the passwords go — **not** in `appsettings.json`.
 
    | Name | Value (example) |
    |---|---|
-   | `ASPNETCORE_ENVIRONMENT` | `Production` |
+   | `ASPNETCORE_ENVIRONMENT` | `Production` — or `Staging` on the staging server (see Part 2); this selects which `appsettings.{Environment}.json` file loads |
    | `ConnectionStrings__DefaultConnection` | `Server=localhost,1433;Database=EINVWORLD;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
    | `ConnectionStrings__WebsiteDb` | `Server=localhost,1433;Database=EINVWORLDWEBSITE;User Id=einvworldusr;Password=YOUR_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true` |
 
@@ -364,6 +372,7 @@ This is where the passwords go — **not** in `appsettings.json`.
    > properly trusted certificate, remove it for full chain validation.
    | `LHDNApiConfig__ClientSecret` | `YOUR_LHDN_CLIENT_SECRET` |
    | `LHDNApiConfig__ClientSecret2` | `YOUR_LHDN_CLIENT_SECRET2` |
+   | `DataProtection__KeyRingPath` | `E:\EINVWORLD\Keys` (the folder from Part 3, required — the app refuses to start on the real Production server without it; on Staging it's a startup warning, not a hard failure, but still set it so a redeploy doesn't wipe keys/sessions) |
    | `EmailConfiguration__Default__SmtpUsername` | `YOUR_SMTP_USERNAME` |
    | `EmailConfiguration__Default__SmtpPassword` | `YOUR_SMTP_PASSWORD` |
    | `Turnstile__SecretKey` | `YOUR_TURNSTILE_SECRET` |
@@ -383,12 +392,14 @@ This is where the passwords go — **not** in `appsettings.json`.
 
 6. Click **OK** (close the grid) → on the right click **Apply**.
 
-> 📝 **`DataProtection:KeyRingPath` is already set** to `E:\EINVWORLD\Keys` inside
-> `appsettings.Production.json`. You just made that folder in Part 3 and gave it Modify rights in Part 9,
-> so there's nothing more to do here. **(The app will refuse to start in Production if this folder/path
-> is missing — that's a safety feature.)**
+> 📝 **`DataProtection:KeyRingPath` is deliberately left blank** in `appsettings.Production.json` — it
+> must be supplied per-server via the `DataProtection__KeyRingPath` row added to the environment
+> variables grid above, not inherited from a repo default that might point at the wrong machine.
+> **(The app will refuse to start on the real Production server if this isn't set — that's a safety
+> feature. On Staging it's a startup warning instead, but still set it.)**
 
-✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production`).
+✅ **You should see:** the environment variables listed (with `ASPNETCORE_ENVIRONMENT = Production` on
+the production server, or `Staging` on the staging server).
 
 ---
 
@@ -460,20 +471,26 @@ environment variable).
 
 ## Part 14 — First login + enrol Admin 2FA
 
-The app **requires two-factor authentication for administrator accounts**.
+The app **supports** two-factor authentication for administrator accounts, but it ships **optional/off**
+(`Security:EnforceAdminMfa = false` in `appsettings.json`) — an admin can sign in normally without ever
+enrolling. **We strongly recommend turning enforcement on for Production** (see the box below).
 
 1. On the login page, sign in with the **admin** account given to you.
-2. **First time:** you'll be redirected to a **"Configure authenticator app"** page (this is expected,
-   not an error).
+2. **If enforcement is ON** (see below) and this is the account's first login: you'll be redirected to a
+   **"Configure authenticator app"** page (this is expected, not an error). **If enforcement is OFF**
+   (the shipped default), you land straight on the Dashboard — you can still enrol voluntarily any time
+   from **Profile & Settings → Security**.
 3. On your phone install **Google Authenticator** (or Microsoft Authenticator).
 4. **Scan the QR code** shown on screen, then type the **6-digit code** from the app and submit.
 5. **Save the recovery codes** it shows you somewhere safe — they're your backup if you lose the phone.
-6. You'll land on the **Dashboard**. From now on, admin logins ask for the 6-digit code.
+6. You'll land on the **Dashboard**. From now on, that admin's logins ask for the 6-digit code.
 
-✅ **You should see:** the Dashboard after entering the code.
+✅ **You should see:** the Dashboard after entering the code (or immediately, if 2FA isn't enrolled/enforced).
 
-> Want 2FA off? (not recommended) Add the env var `Security__EnforceAdminMfa` = `false` and restart IIS.
-> There is **no lockout** either way — you always reach the enrolment page and have recovery codes.
+> **To require 2FA for every admin (recommended for Production):** add the env var
+> `Security__EnforceAdminMfa` = `true` and restart IIS. Any admin without 2FA enabled is then redirected
+> to the authenticator-setup page until they enrol — there is **no hard lockout** either way, they always
+> reach the enrolment page and get recovery codes.
 
 ---
 
@@ -572,9 +589,8 @@ By default AI Document Capture reads **digital (text-based) PDFs** only. To also
 PDFs, enable the built-in OCR (Tesseract). The native libraries (Tesseract + PDFium) ship with the app
 and are only loaded when OCR is on, so leaving it off costs nothing.
 
-1. **Stage the language data.** Create a `tessdata` folder, e.g. `D:\EINVWORLD\tessdata`, and copy the
-   Tesseract trained-data files into it: `eng.traineddata` (and `msa.traineddata` for Malay). Get them
-   from `https://github.com/tesseract-ocr/tessdata_fast` (FOSS, Apache-2.0). Grant the app-pool **Read**.
+1. **Stage the `tessdata` folder.** Create a folder, e.g. `D:\EINVWORLD\tessdata`, and grant the app-pool
+   **Modify** rights on it (Part 9) — not just Read, because `TessdataSyncWorker` (below) writes into it.
 2. **Visual C++ runtime.** Ensure the **Microsoft Visual C++ 2015–2022 Redistributable (x64)** is
    installed on the server (the native OCR/PDF libraries need it). Most servers already have it.
 3. Add env vars (Part 10) and `iisreset`:
@@ -583,10 +599,20 @@ and are only loaded when OCR is on, so leaving it off costs nothing.
    | `DocumentCapture__OcrEnabled` | `true` |
    | `DocumentCapture__TessdataPath` | `D:\EINVWORLD\tessdata` |
    | `DocumentCapture__OcrLanguage` | `eng` (or `eng+msa`) |
+4. **Trained-data files are fetched automatically.** With `DocumentCapture:OcrEnabled=true` and
+   `TessdataSync:Enabled` at its default (`true`), a background worker (`TessdataSyncWorker`) downloads
+   `<lang>.traineddata` for every language in `DocumentCapture:OcrLanguage` from the official
+   `tesseract-ocr/tessdata` GitHub repo (FOSS, Apache-2.0) a couple of minutes after startup, then
+   re-checks daily (`TessdataSync:IntervalHours`) — it only re-downloads a file when it's missing or its
+   size no longer matches upstream, and writes atomically so a running OCR call never sees a partial
+   file. **On a server with no/restricted outbound internet access**, set `TessdataSync__Enabled` to
+   `false` and stage the files yourself instead: copy `eng.traineddata` (and `msa.traineddata` for Malay)
+   from `https://github.com/tesseract-ocr/tessdata` into the folder from step 1.
 
 ✅ **Verify:** upload a scanned invoice PDF to **AI Document Capture** — it should extract text and produce
-a suggestion. If you see "couldn't read this document", check the `tessdata` path/permissions and the VC++
-runtime; the app log records the OCR error. (OCR can't be exercised by CI — it must be verified here.)
+a suggestion. If you see "couldn't read this document", check that `tessdata` actually contains the
+`.traineddata` file (the app log records both the sync worker's download result and any OCR error) and
+the VC++ runtime. (OCR can't be exercised by CI — it must be verified here.)
 
 ### 17b — Watched-folder import (drop files to validate)
 
@@ -608,6 +634,58 @@ runtime; the app log records the OCR error. (OCR can't be exercised by CI — it
 1. Add env var `Api__Key` = a long random string, then `iisreset`.
 2. The ERP calls `POST https://einvworld.com/api/import/validate` with header `X-Api-Key: <that key>` and
    a JSON array of invoice rows; it returns a per-row validation report.
+
+### 17d — Smart Capture (persisted, async supplier-invoice capture)
+
+Smart Capture (`/Invoices/SmartCapture`, labelled **Create from Document** in navigation) is the
+productionised version of AI Document Capture above — it persists the upload, processes it via a
+background job (the existing durable `SyncJobs` queue, not a new service), and requires the same
+`DocumentCapture`/`AI` settings from 17a.
+
+> ⚠️ **No application-level malware scanning.** This is a deliberate trade-off, not an oversight — Smart
+> Capture does not run uploaded files through an antivirus engine. Upload security instead relies entirely
+> on the controls below plus normal server-level protection. If your environment's risk profile requires
+> content scanning, add it at the network/endpoint layer (e.g. a Windows Defender/EDR policy that scans the
+> `FilePathConfig:SmartCaptureFolder` directory) — EINVWORLD does not provide one itself.
+
+**What upload security relies on instead:**
+- File extension allowlist (`SmartCapture:AllowedExtensions` — PDF/JPG/JPEG/PNG only)
+- Magic-byte / file-signature validation (rejects a renamed file whose content doesn't match its claimed type)
+- Configurable file-size and page-count limits (`MaxFileSizeMb`, `MaxPages`)
+- Monthly per-company processing quota (`MonthlyProcessedPageQuota`)
+- Storage outside `wwwroot`, under a random internal filename (never the original name), scoped per company
+- Files are never executed — only read as document data by the OCR/text-extraction pipeline
+- Path-traversal protection (`SafePath`) on every read/write
+- Tenant/company ownership enforced on every document read; the download endpoint is IDOR-protected
+- Tiered retention/deletion policy (expired documents' files are deleted on a schedule)
+- Upload/access activity is audit-logged (never the raw OCR content or extracted PII)
+- Normal server hardening: run the IIS app pool with least privilege, keep Windows Server endpoint
+  protection (e.g. Defender) enabled and up to date
+
+1. **Grant the app-pool a writable folder** for uploaded documents, e.g. `E:\EINVWORLD\Documents\SmartCapture`
+   (Part 9, **Modify** rights) — matches `FilePathConfig:SmartCaptureFolder`.
+2. Add env vars (Part 10) and `iisreset`:
+   | Name | Value |
+   |---|---|
+   | `SmartCapture__Enabled` | `true` |
+   | `FilePathConfig__SmartCaptureFolder` | `E:\EINVWORLD\Documents\SmartCapture` |
+
+✅ **Verify:** upload a document via **Create from Document** — it should show "Queued" then move to a
+review screen once the background job finishes. Upload a renamed non-PDF file (e.g. a `.txt` renamed to
+`.pdf`) and confirm it's **rejected** with a signature-mismatch error — this proves the format validation
+is actually enforced, not just the extension check. Select multiple files at once (Stage 3, bulk upload,
+capped at `SmartCapture:MaxFilesPerBulkUpload` — default 20) and confirm each gets its own row/status.
+
+**Stage 4 — conditional automatic submission (optional, off by default).** Do not enable this until Smart
+Capture itself has been signed off end-to-end on this environment. Set `SmartCapture__AutoSubmitEnabled`
+to `true` (global kill switch — still has zero effect until a company is individually opted in), then, as
+a system Admin, configure a specific company at **Admin → Smart Capture Auto-Submit**
+(`/Admin/SmartCaptureAutoSubmit`): a narrow LHDN doc-type allowlist (start with `01` only), a conservative
+value ceiling, and a delay of at least several minutes. Verify by confirming a small, clean-looking Smart
+Capture draft for that company and watching the **Smart Capture** list page show an "Auto-submit HH:mm"
+countdown with a **Cancel** button during the delay window — confirm Cancel actually stops it before
+testing the case where you let it run and it appears on **Admin → Sync Jobs** as a completed
+`SubmitDocument` job.
 
 ---
 
@@ -645,7 +723,8 @@ Tick each before declaring "done":
 - [ ] (if signing) `.p12` in `Cert\` + signing env vars set
 - [ ] **Database backed up** before first start
 - [ ] Site starts; `/health/ready` = **Healthy**
-- [ ] Admin login works; **2FA enrolled**; recovery codes saved
+- [ ] Admin login works; if `Security__EnforceAdminMfa=true` is set (recommended for Production),
+      **2FA enrolled** and recovery codes saved
 - [ ] **Admin → System Health** all OK
 - [ ] Test invoice **submitted to LHDN** (PREPROD on staging) → Valid + QR
 - [ ] Test email received; test PDF downloads

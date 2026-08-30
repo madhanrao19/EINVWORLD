@@ -4,7 +4,7 @@ Complete technical documentation for **EINVWORLD (eInvWorld)** — an e-invoicin
 **Malaysia's LHDN MyInvois** system, self-hosted on a single in-house **Windows / IIS + SQL Server**
 server.
 
-> This document describes the system as of **v1.3.1**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
+> This document describes the system as of **v1.21.4**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
 > for deployment see [`IIS-DEPLOYMENT-GUIDE.md`](IIS-DEPLOYMENT-GUIDE.md) and [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md);
 > for secrets see [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
@@ -112,7 +112,7 @@ EINVWORLD/                     ASP.NET Core web project
 ├── Migrations/                EF migrations + idempotent Apply_*.sql scripts
 ├── Models/                    Entities, input/view models, JSON DTOs (InputModel, JsonModels, Audit, Background, …)
 ├── Pages/                     Razor Pages (Admin, Invoices, Suppliers, Templates, Assistant, …)
-│   └── Shared/                Layouts, _Sidebar, partials (Velzon + parallel Tabler set — see §4.1)
+│   └── Shared/                Layouts, _Sidebar, partials (Velzon fallback + Tabler set — see §4.1)
 ├── Services/
 │   ├── AI/                    Provider-agnostic AI core (IAiProvider/IAiService; Ollama provider)
 │   ├── Assistant/             AI e-invoice assistant (domain prompts; delegates to IAiService)
@@ -128,9 +128,9 @@ EINVWORLD/                     ASP.NET Core web project
 └── *.md                       README, this doc, deployment & secrets guides, changelog
 ```
 
-### 4.1 Front-end theme (Velzon → Tabler migration, in progress)
+### 4.1 Front-end theme (Velzon → Tabler migration, markup complete)
 
-The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated UI is being migrated from
+The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated UI has been migrated from
 the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) theme; both are self-hosted
 (no CDN). Migration state and plan: `docs/TABLER-MIGRATION-AUDIT.md`; user-visible history: `CHANGELOG.md`.
 
@@ -139,15 +139,17 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
 - **Tabler (new):** `_LayoutTabler` composed of `_TablerSidebar` (+ `_AdminNavigation`/
   `_SupplierNavigation`/`_BuyerNavigation`), `_TablerTopbar`, `_UserMenu`, `_Footer`, `_PageHeader`; and
   `_LoginLayoutTabler` for the Identity area. Assets under `wwwroot/tabler/` (Tabler v1.4.0 +
-  `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting).
+  `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting
+  and the desktop sidebar collapse-to-icons toggle, persisted via `localStorage`; mobile keeps Bootstrap's
+  own auto-collapse below `lg`). `einvworld-ui.js` is cache-busted with `asp-append-version`.
 - **Switch mechanism:** a per-folder `Pages/<area>/_ViewStart.cshtml` sets `Layout = "_LayoutTabler"` for
   **authenticated** users only, so anonymous/public pages keep the marketing layout. Delete that file to
   revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
   Toastr, Chart.js, TinyMCE, lord-icon) and behaviour (idle-timeout, app-search, Turnstile on auth) are
   identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
-- **Coverage:** as of 2026-07-11 **all authenticated pages render Tabler** (deployed + Playwright-verified
-  across Supplier/Buyer/Admin). Only public marketing/Home/Resources (`_HomeLayout`) and Error pages
-  (`Layout = null`) are intentionally non-Tabler.
+- **Coverage:** as of 2026-07-27 **all authenticated pages render Tabler with no known remaining raw
+  Velzon markup** (deployed + Playwright-verified across Supplier/Buyer/Admin). Only public
+  marketing/Home/Resources (`_HomeLayout`) and Error pages (`Layout = null`) are intentionally non-Tabler.
 - **Not migrated / deferred (Phase 8):** removing Velzon and retiring the DB-backed global-theme system
   (`/api/Theme/*`) — held until a fully-green re-verification. Two pre-existing (non-Tabler) app bugs were
   surfaced during QA and remain open: company logos emitted as `file:///` paths and 404 resource images.
@@ -175,6 +177,13 @@ Persisted via `ApplicationDbContext` (database `EINVWORLD`). Key entities:
 - `LHDNToken` (per-TIN cached OAuth token, unique on TIN) / `LHDNTokenLog`.
 - `SubmissionRecord` — idempotency: hash of a submitted payload + the response (replay-on-duplicate).
 - `SyncJob` — durable background job rows (queue + retry + lock fields).
+- `CompanyRole` — a company-scoped permission set (ManageUsers/EditProfile/ManageBranding/ViewAudit)
+  assignable to a `UserCompany` membership. 4 system rows (Owner/Admin/Editor/Viewer, `PartyInfoId =
+  null`) are shared by every company; a Supplier Owner/Admin can additionally create custom roles
+  scoped to just their own company (`PartyInfoId` set) via Roles & Permissions.
+- `RoleModulePermission` — whether a global Identity role (Supplier/Buyer; Admin always has full access)
+  may access a given app module (Invoices, Recurring Invoices, Company Management, ...). Managed on
+  **Admin → Role Management**; a missing row defaults to allowed.
 
 **Reference data** (seeded from `wwwroot/codes/*.json`)
 - `ClassificationCode`, `TaxType`, `CurrencyCode`, `CountryCode`, `StateCode`, `UnitType`,
@@ -199,6 +208,11 @@ submit/cancel/reject/poll/search.
 **Document types** (8): `01` Invoice, `02` Credit Note, `03` Debit Note, `04` Refund Note, `11`
 Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed RN.
 
+**Field validation** — `InvoiceMapper` enforces LHDN SDK constraints before building the UBL JSON:
+currency exchange rate required when the currency isn't MYR, and every invoice line's unit-of-measure
+code validated against the active `UnitType` table (the official LHDN unit-code list) — not just the
+Create Invoice form's dropdown, so CSV import, templates, and recurring invoices are covered too.
+
 **Endpoints used** (`api/v1.0/…`): `taxpayer/validate`, `documentsubmissions` (submit + poll by
 `submissionUid`), `documents/search`, `documents/state/{id}/state` (cancel/reject), document details.
 
@@ -207,7 +221,12 @@ Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed 
 `TokenRenewalService` keeps tokens warm.
 
 **Rate limiting** — `LhdnRateLimitHandler` is attached to **every** LHDN client (incl. the token
-client) and paces each endpoint below MyInvois' per-minute limits to avoid `429` storms.
+client) and paces each endpoint below MyInvois' per-minute limits to avoid `429` storms. Per-endpoint
+ceilings are read from `LHDNApiConfig:RateLimits:*` (`TokenPerMinute`, `ValidatePerMinute`,
+`SubmitPerMinute`, `PollPerMinute`, `SearchPerMinute`, `GetDocPerMinute`, `StatePerMinute`,
+`GeneralPerMinute`), falling back to the current SDK's preprod limits if unset — override per
+environment if production limits are confirmed to differ. Registered as a DI **singleton** (not
+transient) so the token buckets survive `IHttpClientFactory`'s periodic handler-pool rotation.
 > **Single-instance assumption:** these rate-limit buckets are **per process** (in-memory). The app is
 > designed to run as a **single instance**. If you ever scale to multiple instances behind a load
 > balancer, the per-instance buckets would multiply the effective LHDN call rate — move to a shared
@@ -223,6 +242,9 @@ POST could create a duplicate document).
 **`ICertificateProvider`** (`Services/Signing/`), selected by `LHDNApiConfig:SigningKeyProvider` —
 `"File"` (default) loads the `.p12` from `CertPath`; a vault/HSM provider (e.g. Azure Key Vault) is a
 drop-in registration with no signing-service change (see SECRETS-SETUP.md "Signing-key custody").
+`InvoiceMapper` reads `IDocumentSigningService.Enabled`/`DocVersion` to pick the document version it
+declares: 1.0 (unsigned) / 1.1 (signed) normally, 1.2 (unsigned) / 1.3 (signed) for SVDP — so enabling
+signing correctly upgrades both regular and SVDP submissions to their signed version.
 
 ---
 
@@ -253,6 +275,14 @@ drop-in registration with no signing-service change (see SECRETS-SETUP.md "Signi
 **Status sync** — `InvoiceStatusUpdater` (background) and the manual sync/import jobs poll LHDN and
 update internal/LHDN status, capturing the `LongId`/QR once Valid.
 
+**External-ERP invoices (buyer-side sync).** `InvoiceFullSyncHelper` pulls documents from LHDN's
+`documents/search` API, which is TIN-scoped, not submitter-scoped — it returns every document where the
+company is a party, including ones submitted directly to LHDN by a different system entirely (an
+external ERP), not through EINVWORLD. When such a document is first discovered and the local company is
+the buyer, `InvoiceFullSyncHelper` creates the missing `PartyInfo` for the supplier (if EINVWORLD has
+never seen them) and the invoice appears in the Buyer's Received tab automatically. See §8 for the
+"new e-invoice received" notification this triggers.
+
 ---
 
 ## 8. Background services
@@ -261,9 +291,24 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 
 | Service | Purpose |
 |---|---|
-| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw — reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
-| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`). |
+| **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw, and — since Smart Capture Stage 4 — the same job type an eligible auto-submit schedules with a delay via `NextRunAtUtc`; reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **SmartCaptureExtraction** (OCR/LLM extraction for one uploaded document) / **SmartCaptureRetention** (tiered document/file cleanup, §10) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
+| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`), the PDF/validation-email finalizer safety net, the new-e-invoice-received-email safety net (below), and — every 10th cycle — the full LHDN `documents/search` import for every registered company TIN (`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`, default 7 days; this is what catches invoices an external ERP submitted directly to LHDN — see §7). |
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
+
+**Email retry pattern (Valid-status, new-invoice-received, rejection, cancellation).**
+`IInvoiceFinalizer.FinalizeInvoiceAsync` (Valid-status PDF + email), `SendNewInvoiceReceivedEmailAsync`
+(buyer notification for an externally-submitted invoice, `EmailConfiguration:NewInvoiceReceivedEmailSettings`,
+default 7-day recency window, `EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails` kill
+switch), and `SendRejectionEmailAsync`/`SendCancellationEmailAsync` (`EnableRejectionEmails`/
+`EnableCancellationEmails`) all use the same atomic-claim-then-send pattern: an
+`ExecuteUpdateAsync WHERE <flag> = false` claims the row so concurrent callers can't double-send; a
+thrown exception during the actual send rolls the claim back so `InvoiceStatusUpdater`'s background
+pass retries it on the next cycle — indefinitely, no age cutoff. `InvoiceHeader.
+IsNewInvoiceReceivedEmailSent`/`IsRejectionEmailSent`/`IsCancellationEmailSent` all default to `true`
+("not applicable") for every invoice, so normal Sent-invoice submission is unaffected — the reject/
+cancel handlers set the relevant flag to `false` only when that invoice is actually rejected/cancelled,
+in the same save as the status transition, and attempt the send immediately for a snappy user
+experience; the background pass is the safety net for when that immediate attempt fails.
 | **`RecurringInvoiceWorker`** | Generates invoices from `RecurringProfile`s on schedule (roll-forward, no catch-up storms). |
 | **`TokenRenewalService`** | Keeps per-TIN LHDN tokens fresh. |
 | **`LogCleanupService`** | Prunes old `SystemLogs` rows (older than `LogCleanupSettings:RetentionDays`, default 30) every 4 h. Deletes in batches of `LogCleanupSettings:BatchSize` (default 5000) so a large backlog never holds a table lock or hits the command timeout — a large pre-existing backlog drains over several runs. |
@@ -294,6 +339,16 @@ Appends are serialised and isolated (own DbContext); writing never throws to the
 **Authorization / IDOR** — per-TIN ownership checks (`OwnsTinAsync`, `UserCompany`) gate invoice
 access; `SafePath.TryResolve` blocks path traversal on all file-serving endpoints; uploads are
 extension/size/magic-byte validated and stored outside `wwwroot`.
+
+**Module access (Role Management)** — a global Razor Pages filter (`ModuleAccessPageFilter`) runs after
+each page's own `[Authorize(Roles=...)]` gate and checks the `RoleModulePermission` grid (**Admin →
+Role Management**) for the current user's role. Admin always passes; a module with no configured row
+defaults to allowed, so this is purely additive on top of existing authorization — it only ever
+narrows access an Admin has explicitly restricted, never widens it.
+
+**Company user management** — a Supplier Owner/Admin (`CompanyPermission.ManageUsers`) can invite,
+remove, and reassign the role of members within their own company (`Pages/Suppliers/Users.cshtml.cs` /
+`RolesPermissions.cshtml.cs`); guarded against self-removal and removing the last Owner.
 
 **Transport / headers** — HTTPS + HSTS; security headers (`X-Content-Type-Options`, `X-Frame-Options`,
 `Referrer-Policy`, …); **CSP in Report-Only** mode with a `/csp-report` collector (to be promoted to
@@ -333,13 +388,45 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 - **Manual sync / import / refresh** run as durable background jobs (visible on **Sync Jobs**).
 - **Templates** and **recurring invoices**.
 - PDF generation (DinkToPdf/Puppeteer) and validated-invoice email notifications.
+- **New-e-invoice-received email** — when an external ERP submits an invoice directly to LHDN and the
+  local company is the buyer, EINVWORLD's LHDN sync discovers it (§7) and emails the buyer once it's
+  synced in, with the same indefinite-retry robustness as the validated-invoice email (§8).
 
 **AI (optional, on-prem, OFF by default)**
 - **AI E-Invoice Assistant** (`/Assistant`) — answers MyInvois questions and turns a plain-English
   description into a reviewed invoice **suggestion** (grounded on real LHDN codes + the user's
   customers). Suggest-only; never submits. (`AI` config; Ollama provider by default.)
 - **AI Document Capture** (`/Invoices/CreateFromFile`) — upload a digital PDF → extract text (PdfPig) →
-  suggestion → review. Draft-safe. (`DocumentCapture` config; needs `AI:Enabled`.)
+  suggestion → review. Draft-safe, synchronous. (`DocumentCapture` config; needs `AI:Enabled`.) Being
+  superseded by Smart Capture below; kept unadvertised in nav as a rollback path.
+- **Smart Capture** (`/Invoices/SmartCapture`, labelled **"Create from Document"** in nav) — the
+  persisted/async successor to AI Document Capture, built in 5 staged, deliberately reduced increments
+  (`SmartCapture` config; needs `DocumentCapture` + `AI:Enabled`; OFF by default in Development/Production,
+  Staging-only pending real-Ollama sign-off):
+  - **Stage 1 — assisted capture.** Upload a PDF/JPG/PNG → durable background job (extract text/OCR → AI
+    suggestion → `InvoiceSuggestionValidator` review checklist) → the user always explicitly confirms the
+    LHDN document type and buyer (never auto-decided) → draft via the unchanged `InvoiceDraftService`. No
+    application-level malware scanning (file-type/signature validation, size/page/quota limits, and
+    tenant-scoped storage instead — see `IIS-DEPLOYMENT-GUIDE.md` PART 17d).
+  - **Stage 1.5 — duplicate flag + condensed review.** An exact-content re-upload within the same company
+    is flagged as a review Warning (never blocked); an extraction with zero errors/warnings gets a
+    condensed "all checks passed" view instead of the full checklist expanded by default.
+  - **Stage 2 — learned company hints.** A per-company row (`SmartCaptureCompanyHints`) tracks the most
+    commonly confirmed doc type/currency/tax via a streaming majority vote, surfaced as advisory-only
+    context in the AI prompt once a company has confirmed a few drafts. Never sets a field directly.
+  - **Stage 3 — bulk upload.** The upload form accepts multiple files at once
+    (`SmartCapture:MaxFilesPerBulkUpload`), each going through the identical per-file pipeline as a single
+    upload; one bad file in a batch never blocks the others.
+  - **Stage 4 — conditional automatic submission.** A system Admin can opt a company into unattended LHDN
+    submission of Smart Capture drafts (`/Admin/SmartCaptureAutoSubmit`, never company self-service),
+    gated by a global kill switch (`SmartCapture:AutoSubmitEnabled`, default false), a per-company doc-type
+    allowlist + value ceiling, and a deterministic per-document check (zero review issues, matched buyer,
+    under ceiling) re-evaluated on every confirmation — never a fuzzy confidence score. Reuses the
+    existing `SubmitDocumentJobHandler`/`InvoiceSubmissionHelper` pipeline unchanged (idempotency/signing/
+    retry/audit untouched) via a delayed, cancellable job; the Smart Capture list page shows a countdown +
+    Cancel button during the delay window.
+  - See `CLAUDE.md` § "Invoice-input mechanisms" for the standing architecture rule these all follow
+    (capture is invoice-*input* only, never a parallel subsystem) and the Stage 4 exception's reasoning.
 - **Admin → AI Settings** (`/Admin/AiSettings`) — read-only view of the active AI config + a **Test
   connection** probe (reachable / model pulled / latency). Never shows the API key.
 
@@ -364,8 +451,9 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 - **Admin → Webhooks** manages subscriptions (register / rotate secret / enable-disable / delete / test).
   Secrets are generated server-side, shown once, and stored encrypted (DataProtection). Config: `Webhooks`.
 
-**Admin & ops** — user/company management, resources (CMS), system logs, **Sync Jobs**, **Audit Trail**,
-**System Health**, **Webhooks**, global theme, dashboards/KPIs.
+**Admin & ops** — user/company management, **Role Management** (global role catalog + per-role module
+access grid), resources (CMS), system logs, **Sync Jobs**, **Audit Trail**, **System Health**,
+**Webhooks**, global theme, dashboards/KPIs.
 
 ---
 
@@ -410,7 +498,7 @@ blank in files and supplied via env vars / user-secrets.
 | `SyncFailureAlerts` | Optional email when failed sync jobs pile up: `Enabled` (default false), `RecipientEmail`, `Threshold`, `CheckMinutes`, `CooldownHours`. Throttled. |
 | `Webhooks` | Outbound customer-ERP webhooks (default OFF): `Enabled`, `DeliveryTimeoutSeconds` (default 15), `BlockPrivateNetworks` (SSRF guard, default true), `RequireHttps` (default true). Subscriptions managed in Admin → Webhooks; signing secrets encrypted at rest. |
 | `PDFGenerationSettings:TimeoutSeconds` | Max wait for a DinkToPdf render before abandoning it (default 60) so a hung render can't block the request. |
-| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois `BaseUrl`/`ValidationBaseUrl`, `ClientId`, **secrets** (`ClientSecret`/`2`), `OnBehalfOf`, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (1.2 unsigned / 1.3 signed), `CertPath`/`CertPass`, `SigningKeyProvider` (certificate custody — `File` default; vault/HSM drop-in), `SyncRetentionDays`, `RateLimits:*` (per-endpoint requests-per-minute; see §6). |
 | `TaxpayerValidationSettings` | Default TIN/ID used for token caching & system identity. |
 | `EmailConfiguration` | SMTP (**`SmtpPassword` secret**), base URLs, per-event subjects, notification toggles. |
 | `PDFGenerationSettings` | `Engine` (DinkToPdf/Puppeteer), `BaseUrl`, render delay, `ChromiumExecutablePath`. |
@@ -421,8 +509,9 @@ blank in files and supplied via env vars / user-secrets.
 | `LogCleanupSettings` | `RetentionDays` (default 30) and `BatchSize` (default 5000) for the batched `SystemLogs` prune. |
 | `InvoiceSettings` | e.g. `BackdateSeconds`. |
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |
-| `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
+| `AI` | Provider-agnostic AI: `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120 — may need raising for a large model's first cold load), `KeepAliveMinutes` (default 30; sent as Ollama's `keep_alive` so the model stays resident between requests instead of unloading after Ollama's own 5-minute default, avoiding a repeat cold-load penalty), `Temperature`, `MaxTokens`, `ApiKey` (**secret**, cloud providers only — env var). The old `AIAssistant` section is retired — rename any `AIAssistant__*` env vars to `AI__*`. |
 | `DocumentCapture` | AI Document Capture: `Enabled`, `MaxFileSizeMb`, `MaxPages`. |
+| `SmartCapture` | Persisted/async Smart Capture (needs `DocumentCapture`+`AI:Enabled`): `Enabled` (OFF in Development/Production, Staging-only), `AllowedExtensions`, `MaxFileSizeMb`, `MaxPages`, retention day tiers, `MonthlyProcessedPageQuota`, `MaxFilesPerBulkUpload` (Stage 3, default 20), `AutoSubmitEnabled` (Stage 4 global kill switch, default **false everywhere** — a company's opt-in via `/Admin/SmartCaptureAutoSubmit` has no effect while this is false). No application-level malware scanning — see `IIS-DEPLOYMENT-GUIDE.md` PART 17d. |
 | `WatchedFolderImport` | `Enabled`, `InboxPath`, `PollSeconds`. |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate`. |
 | `ExtractInvoice:ServiceUrl` | Legacy OCR service endpoint. |
@@ -434,11 +523,24 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **84 migrations** under `Migrations/`. In Production migrations apply **automatically on startup**
-  (`AutoMigrateOnStartup=true`) — they are **additive** (new tables/columns/indexes; no `Up()` drops),
-  so existing data is preserved. **Always back up first** and ensure the runtime SQL login has DDL rights.
-- Every migration has an idempotent **`Apply_*.sql`** for the manual path (`AutoMigrateOnStartup=false`);
-  ordered list in [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md).
+- **83 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+  into one, `ConsolidatedSchemaCatchup_v1_11_0`). Two new additive migrations in v1.13.0:
+  `AddRoleModulePermissions` (new `RoleModulePermissions` table) and `AddCompanyRolePartyInfoScope`
+  (nullable `CompanyRole.PartyInfoId`). One more in v1.14.0: `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`
+  (3 new `InvoiceHeaders` columns backing the new-e-invoice-received notification, §8). One more in
+  v1.14.1: `AddRejectionCancellationEmailTrackingToInvoiceHeader` (7 new `InvoiceHeaders` columns
+  backing retry-safe rejection/cancellation emails, same section). Three more for Smart Capture (§10):
+  `AddSmartCaptureDocument` (v1.17.0, the core `SmartCaptureDocuments` table), `AddSmartCaptureCompanyHint`
+  (v1.18.0, Stage 2's learned-hints table), and `AddSmartCaptureAutoSubmit` (v1.20.0, Stage 4's
+  `SmartCaptureAutoSubmitSettings` table + `SmartCaptureDocuments.PendingAutoSubmitJobId`) — see
+  `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
+  (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
+  tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
+  `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not
+  automatically on boot. **Always back up first** and ensure the runtime/migration SQL login has DDL
+  rights.
+- Every migration has an idempotent **`Apply_*.sql`** for the manual path; ordered list and current
+  environment-catch-up guidance in [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md) §1.
 - `SystemLogs` is created/owned by the **Serilog MSSqlServer sink**, not EF.
 - Reference-code tables are seeded at startup from `wwwroot/codes/*.json` (`DataSeeder`).
 

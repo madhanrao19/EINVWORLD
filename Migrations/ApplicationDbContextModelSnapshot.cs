@@ -17,7 +17,7 @@ namespace eInvWorld.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -611,6 +611,137 @@ namespace eInvWorld.Migrations
                     b.ToTable("ClassificationCodes");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.CompanyInvitation", b =>
+                {
+                    b.Property<int>("CompanyInvitationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompanyInvitationId"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CompanyRoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvitedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("CompanyInvitationId");
+
+                    b.HasIndex("CompanyRoleId");
+
+                    b.HasIndex("PartyInfoId");
+
+                    b.HasIndex("TokenHash");
+
+                    b.ToTable("CompanyInvitations");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
+                {
+                    b.Property<int>("CompanyRoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CompanyRoleId"));
+
+                    b.Property<bool>("CanEditProfile")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanManageBranding")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanManageUsers")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanViewAudit")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystemDefined")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("PartyInfoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CompanyRoleId");
+
+                    b.HasIndex("PartyInfoId");
+
+                    b.ToTable("CompanyRoles");
+
+                    b.HasData(
+                        new
+                        {
+                            CompanyRoleId = 1,
+                            CanEditProfile = true,
+                            CanManageBranding = true,
+                            CanManageUsers = true,
+                            CanViewAudit = true,
+                            IsSystemDefined = true,
+                            Name = "Owner"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 2,
+                            CanEditProfile = true,
+                            CanManageBranding = true,
+                            CanManageUsers = true,
+                            CanViewAudit = true,
+                            IsSystemDefined = true,
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 3,
+                            CanEditProfile = true,
+                            CanManageBranding = false,
+                            CanManageUsers = false,
+                            CanViewAudit = false,
+                            IsSystemDefined = true,
+                            Name = "Editor"
+                        },
+                        new
+                        {
+                            CompanyRoleId = 4,
+                            CanEditProfile = false,
+                            CanManageBranding = false,
+                            CanManageUsers = false,
+                            CanViewAudit = false,
+                            IsSystemDefined = true,
+                            Name = "Viewer"
+                        });
+                });
+
             modelBuilder.Entity("eInvWorld.Models.ContactUs", b =>
                 {
                     b.Property<int>("Id")
@@ -925,6 +1056,16 @@ namespace eInvWorld.Migrations
                     b.Property<DateTime?>("CancelDateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CancellationEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CancellationEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -975,7 +1116,16 @@ namespace eInvWorld.Migrations
                     b.Property<int?>("InvoicePeriod")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsCancellationEmailSent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsNewInvoiceReceivedEmailSent")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPdfGenerated")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRejectionEmailSent")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsSvdp")
@@ -998,6 +1148,13 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("LongId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("NewInvoiceReceivedEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewInvoiceReceivedEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -1045,6 +1202,13 @@ namespace eInvWorld.Migrations
 
                     b.Property<DateTime?>("RejectedTimestamp")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RejectionEmailSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionEmailSentTo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -1239,6 +1403,12 @@ namespace eInvWorld.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UnitCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("UnitPrice")
+                        .HasColumnType("decimal(18, 4)");
+
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
@@ -1325,6 +1495,19 @@ namespace eInvWorld.Migrations
                     b.Property<string>("InviteCode")
                         .HasMaxLength(8)
                         .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("InvoiceAccentColorHex")
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<string>("InvoiceFooterNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("InvoiceShowBankDetails")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1536,7 +1719,8 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("StateCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("TIN")
                         .IsRequired()
@@ -1558,8 +1742,6 @@ namespace eInvWorld.Migrations
                     b.HasIndex("CountryCode");
 
                     b.HasIndex("RegTypeCode");
-
-                    b.HasIndex("StateCode");
 
                     b.ToTable("PublicCustomers");
                 });
@@ -1781,6 +1963,9 @@ namespace eInvWorld.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CompanyRoleId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("HasCompanyAccess")
                         .HasColumnType("bit");
 
@@ -1801,6 +1986,8 @@ namespace eInvWorld.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyRoleId");
 
                     b.HasIndex("PartyInfoId");
 
@@ -2113,6 +2300,71 @@ namespace eInvWorld.Migrations
                     b.ToTable("RecurringRunHistories");
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.RoleModulePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModuleKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleName", "ModuleKey")
+                        .IsUnique();
+
+                    b.ToTable("RoleModulePermissions");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SavedInvoiceView", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceDirection")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("QueryString")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SavedInvoiceViews");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.Settings.GlobalThemeSettings", b =>
                 {
                     b.Property<int>("Id")
@@ -2186,6 +2438,208 @@ namespace eInvWorld.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("GlobalThemeSettings");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureAutoSubmitSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AllowedDocTypesCsv")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DelayMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MaxAutoSubmitValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId")
+                        .IsUnique();
+
+                    b.ToTable("SmartCaptureAutoSubmitSettings");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CurrencyVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DocTypeVotes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MostCommonCurrency")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("MostCommonDocTypeCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal?>("MostCommonTaxRatePercent")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("MostCommonTaxType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxRateVotes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaxTypeVotes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId")
+                        .IsUnique();
+
+                    b.ToTable("SmartCaptureCompanyHints");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyPartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConfirmedDocTypeCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTime?>("FileDeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FileHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InternalStorageReference")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NormalizedExtractionJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<decimal?>("OverallConfidence")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int?>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PendingAutoSubmitJobId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelatedInvoiceHeaderInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("UsedOcr")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserSafeFailureMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyPartyInfoId");
+
+                    b.HasIndex("FileDeletedAtUtc");
+
+                    b.HasIndex("FileHash");
+
+                    b.ToTable("SmartCaptureDocuments");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.StateCode", b =>
@@ -2820,6 +3274,34 @@ namespace eInvWorld.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.CompanyInvitation", b =>
+                {
+                    b.HasOne("eInvWorld.Models.CompanyRole", "CompanyRole")
+                        .WithMany()
+                        .HasForeignKey("CompanyRoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
+                        .WithMany()
+                        .HasForeignKey("PartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyRole");
+
+                    b.Navigation("PartyInfo");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
+                        .WithMany()
+                        .HasForeignKey("PartyInfoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("PartyInfo");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.InputModel.AllowanceCharge", b =>
                 {
                     b.HasOne("eInvWorld.Models.InputModel.InvoiceHeader", null)
@@ -2927,17 +3409,9 @@ namespace eInvWorld.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("eInvWorld.Models.StateCode", "State")
-                        .WithMany()
-                        .HasForeignKey("StateCode")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Country");
 
                     b.Navigation("RegType");
-
-                    b.Navigation("State");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBuyer", b =>
@@ -2966,6 +3440,11 @@ namespace eInvWorld.Migrations
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.UserCompany", b =>
                 {
+                    b.HasOne("eInvWorld.Models.CompanyRole", "CompanyRole")
+                        .WithMany("UserCompanies")
+                        .HasForeignKey("CompanyRoleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
                         .WithMany("UserCompanies")
                         .HasForeignKey("PartyInfoId")
@@ -2981,6 +3460,8 @@ namespace eInvWorld.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CompanyRole");
 
                     b.Navigation("PartyInfo");
 
@@ -3015,6 +3496,39 @@ namespace eInvWorld.Migrations
                         .IsRequired();
 
                     b.Navigation("InvoiceTemplate");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureAutoSubmitSettings", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "CompanyPartyInfo")
+                        .WithMany()
+                        .HasForeignKey("CompanyPartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyPartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplate", b =>
@@ -3057,6 +3571,11 @@ namespace eInvWorld.Migrations
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("UserCompanies");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
                 {
                     b.Navigation("UserCompanies");
                 });

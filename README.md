@@ -11,10 +11,11 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 ## Tech stack
 
 - **.NET 10 (LTS)** — ASP.NET Core, Razor Pages + MVC API controllers
-- **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). Migrating the authenticated theme from
-  Velzon to the free MIT **Tabler** — in progress; see `docs/TABLER-MIGRATION-AUDIT.md`.
+- **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). Authenticated theme migrated from Velzon
+  to the free MIT **Tabler** — markup migration complete; see `docs/TABLER-MIGRATION-AUDIT.md`.
 - **EF Core 10** on **SQL Server**
-- **ASP.NET Core Identity** (roles: Admin, Supplier, Buyer)
+- **ASP.NET Core Identity** (core roles: Admin, Supplier, Buyer — Admins can add further assignable
+  roles via **Admin → Role Management**)
 - **Serilog** (file + SQL `SystemLogs`)
 - PDF: **DinkToPdf** (default) or **Puppeteer** (switchable)
 - Excel export: **ClosedXML**; images: **Magick.NET**
@@ -26,8 +27,10 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   `14` Self-billed Refund Note.
 - Submit to MyInvois (UBL 2.1 JSON), poll validation status, capture **LongId** (QR code), cancel/reject.
 - **Centralised LHDN rate limiting** (`LhdnRateLimitHandler`) — evenly paced per endpoint so the system
-  stays under MyInvois limits and avoids `429` storms. _Buckets are per-process — the app is designed for
-  **single-instance** deployment (scale-out needs a shared/Redis limiter)._
+  stays under MyInvois limits and avoids `429` storms. Per-minute ceilings are configurable per
+  environment (`LHDNApiConfig:RateLimits:*`) so production and sandbox tiers can differ without a code
+  change. _Buckets are per-process — the app is designed for **single-instance** deployment (scale-out
+  needs a shared/Redis limiter)._
 - **Durable background jobs** — manual sync/import/refresh run as **SQL-backed** jobs that survive an
   IIS app-pool recycle / reboot: a worker claims each job, retries with backoff, and recovers orphaned
   jobs on startup. Progress + **Retry/Cancel** on the **Sync Jobs** admin page (`/Admin/SyncJobs`).
@@ -38,10 +41,18 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   duplicating at LHDN).
 - **Health + ops** — `/health/live` and `/health/ready` probes, an **Admin → System Health** dashboard,
   fail-fast startup config validation, and CSP violation reporting (`/csp-report`).
-- **Invoice ingestion** (draft-safe — validate/suggest only, never auto-create or submit): **AI Document
-  Capture** (PDF → reviewed suggestion), **Bulk Import** (CSV/XLSX validation + template), a
-  **watched-folder** importer, and a **REST validate API** (`POST /api/import/validate`). All OFF by
-  default.
+- **Invoice ingestion** (draft-safe by default — validate/suggest only, human always confirms the doc
+  type and buyer): **AI Document Capture** (PDF → reviewed suggestion), **Smart Capture** ("Create from
+  Document" in nav — persisted, async version of the above, shipped in 5 staged increments — upload a
+  supplier PDF/JPG/PNG (single or bulk), background OCR/LLM extraction via the durable job queue,
+  format/signature-validated tenant-scoped storage (no application-level malware scanning — a deliberate
+  trade-off, see PART 17d), explicit document-type + buyer confirmation, then a real Draft through the
+  normal invoice pipeline. **One narrow, opt-in exception**: a system Admin may enable conditional
+  automatic LHDN submission for a specific company (`/Admin/SmartCaptureAutoSubmit`), gated by a global
+  kill switch + a per-company doc-type allowlist/value ceiling + deterministic per-document checks — off
+  everywhere by default, and even then reuses the same manual-submission pipeline with a cancellable
+  delay), **Bulk Import** (CSV/XLSX validation + template), a **watched-folder** importer, and a **REST
+  validate API** (`POST /api/import/validate`). All OFF by default.
 - **AI features** (optional, OFF by default) — a **provider-agnostic** AI layer that answers e-invoicing
   questions and turns a plain-English description into a suggested invoice that pre-fills the Create
   Invoice form. Ships with a local, on-prem [Ollama](https://ollama.com) provider (**no invoice data
@@ -50,9 +61,19 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   and submission continue normally. Verify connectivity at **Admin → AI Settings** ("Test connection").
   It only suggests, never submits. See deployment guide PART O.
 - **v1.1 digital signing** (XAdES) is built and config-gated **OFF** until a signing certificate is
-  purchased — flip `LHDNApiConfig:SigningEnabled` to enable.
+  purchased — flip `LHDNApiConfig:SigningEnabled` to enable. Also signs SVDP invoices (version 1.3
+  instead of the unsigned 1.2) automatically once enabled.
+- **Role Management** (Admin → User Management → Role Management) — manage the assignable Identity role
+  catalog and restrict which app modules the Supplier/Buyer roles can reach. Supplier Owners/Admins can
+  additionally define custom roles scoped to just their own company (Company Management → Roles &
+  Permissions).
 - Security: per-TIN ownership checks (IDOR protection), secrets externalised, security response headers,
   client-side rate limiting, configurable DataProtection key-ring path.
+- **Dark mode** (authenticated Tabler app) — topbar toggle, follows the OS/browser preference for
+  first-time visitors and remembers an explicit choice via cookie (no flash of the wrong theme).
+- **New-e-invoice-received email** — a buyer is notified when EINVWORLD's LHDN sync discovers an invoice
+  an external ERP submitted directly to LHDN (not through EINVWORLD), with the same indefinite-retry
+  robustness as the validated-invoice email.
 
 ---
 
@@ -82,6 +103,13 @@ Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 dotnet test
 ```
 
+UI/visual regression is covered by the Playwright suite (requires a running instance):
+
+```bash
+npm run qa                                  # all specs
+EINVWORLD_BASE_URL=http://localhost:5260 COMPANY_ID=1 npx playwright test 11-company-details-parity
+```
+
 Unit tests always run. The `EINVWORLD.Tests/Integration/` suite additionally runs against a **real SQL
 Server** when `INTEGRATION_SQLSERVER` is set (CI does this automatically via LocalDB); it no-ops otherwise,
 so `dotnet test` passes with or without a database available:
@@ -100,19 +128,21 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | Section | Purpose |
 |---|---|
 | `ConnectionStrings` | Database connections (**secret** — left blank, supplied via user-secrets / env vars). |
-| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP 1.2 switch; programme runs until 31 Dec 2027), `SyncRetentionDays`. |
+| `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP switch — 1.2 unsigned / 1.3 signed; programme runs until 31 Dec 2027), `SyncRetentionDays`, `RateLimits:*` (per-endpoint requests-per-minute ceilings, overridable per environment). |
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
-| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` in `appsettings.Production.json` — migrations are additive (data preserved), but **back up first**. Set `false` to apply `Apply_*.sql` manually. |
+| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` by default (Development/Staging); **`false` in `appsettings.Production.json`** — Production always applies migrations manually via `Apply_*.sql` (see `DEPLOY-NOTES.md` §1). Migrations are additive (data preserved), but **back up first** either way. |
 | `CodeTableSync` | Daily additive sync of the 9 LHDN code tables from the official SDK JSON files (`Enabled` default `true`, `IntervalHours` 24). Inserts/renames only — never deletes or deactivates, admin `IsActive` choices preserved. |
 | `Security:EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`; no lockout — they self-enrol). |
 | `Security:HttpsRedirectPort` | HTTP→HTTPS redirect. **Smart default:** off when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel — an in-app redirect would loop); `443` for a direct IIS HTTPS binding. Set explicitly to force: a port = on, `0` = off. |
 | `ForwardedHeaders` | Reverse-proxy / Cloudflare Tunnel support (default on). Honours `X-Forwarded-Proto` (scheme) and `X-Forwarded-For` (real client IP) from a trusted proxy — needed so cookies, redirects, rate limiting and audit IPs are correct when TLS terminates upstream. |
 | `PDFGenerationSettings:Engine` | `DinkToPdf` (default) or `Puppeteer` — see note below. |
-| `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds`, `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. (Replaces the retired `AIAssistant` section — rename any `AIAssistant__*` env vars to `AI__*`.) |
+| `AI` | Optional provider-agnostic AI (OFF by default). `Enabled`, `Provider` (Ollama today), `BaseUrl`, `Model` (default `gemma3:12b`), `TimeoutSeconds` (default 120), `KeepAliveMinutes` (default 30 — how long Ollama keeps the model loaded between requests), `Temperature`, `MaxTokens`. Cloud `ApiKey` via env var only. (Replaces the retired `AIAssistant` section — rename any `AIAssistant__*` env vars to `AI__*`.) |
 | `DocumentCapture` | Optional AI Document Capture (PDF → suggestion; OFF; needs `AI:Enabled`). |
+| `SmartCapture` | Optional persisted/async Smart Capture, labelled "Create from Document" in nav (OFF; needs `DocumentCapture`+`AI:Enabled`). No application-level malware scanning — relies on file-type/signature validation, size/page/quota limits, and tenant-scoped storage instead; see deployment guide PART 17d. `AutoSubmitEnabled` (default `false`) is a separate global kill switch for conditional automatic LHDN submission — has no effect unless a company is also individually opted in via `/Admin/SmartCaptureAutoSubmit` (Admin-only, never company self-service). |
 | `WatchedFolderImport` | Optional Inbox folder validator (OFF; set `InboxPath`). |
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
-| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. |
+| `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `7`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. Runs for every company registered in EINVWORLD (all distinct `UserCompanies` TINs), not just one. |
+| `EmailConfiguration:NewInvoiceReceivedEmailSettings` | "New e-Invoice Received" notification (buyer-side, for invoices synced in from an external ERP) — `Subject`, `MaxAgeDaysForNotification` (default `7`, avoids emailing about invoices merely new to EINVWORLD's database from a large historical import). Kill switch: `EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`. |
 
 > **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
 > upstream, but it is kept as the default because it renders fully **offline** — the right choice for an

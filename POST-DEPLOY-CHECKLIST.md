@@ -10,14 +10,31 @@ bottom; stop and investigate on the first ❌.
 
 ## 0. Startup & configuration (fail-fast gates)
 - [ ] App pool starts; site responds. ✅ no crash on boot.
-- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, AutoMigrate=…`). ✅ flags match what you intend.
+- [ ] Logs show the one-line **startup summary** (`EINVWORLD vX.Y.Z starting — Environment=…, PDFEngine=…, AI=…, DocumentCapture=…, OCR=…, SmartCapture=…, AutoMigrate=…`). ✅ flags match what you intend.
 - [ ] No **config-validation** error in the log. ✅ the fail-fast validator passed (connection string, `DataProtection:KeyRingPath` set outside `App\`, LHDN BaseUrl, signing cert if `SigningEnabled`, no localhost URLs in Production).
 - [ ] `GET /health` ✅ returns Healthy (DB reachable + writable folders).
 - [ ] `DataProtection:KeyRingPath` folder exists, is **outside** `App\`, and the app-pool identity has Modify. ✅ existing users stay logged in across a redeploy (keys not rotated).
 
 ## 1. Database & migrations
-- [ ] First boot applied pending migrations (or you ran `Apply_*.sql`). ✅ no migration error; `__EFMigrationsHistory` up to date.
+- [ ] First boot applied pending migrations (or you ran `Apply_*.sql`). ✅ no migration error; `__EFMigrationsHistory` up to date — compare its last row against the newest filename in `Migrations\*.cs`.
 - [ ] Spot-check a few tables load in the app (invoice list, users). ✅ data intact (migrations are additive — no data loss).
+- [ ] **v1.11.0 one-time step:** after migrations land, go to **Admin → System Health → Encrypt PII** and run the backfill (once per environment). ✅ existing bank-account/address data is now encrypted at rest, not just the schema widened. Safe to click again if unsure — it's idempotent.
+- [ ] **v1.13.0:** confirm `__EFMigrationsHistory` includes `AddRoleModulePermissions` and `AddCompanyRolePartyInfoScope` (last row). ✅ both additive — no data loss expected.
+- [ ] **v1.14.0:** confirm `__EFMigrationsHistory` includes `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader` (last row). ✅ additive — existing `InvoiceHeaders` rows backfill `IsNewInvoiceReceivedEmailSent = 1` (not applicable), no retroactive emails sent.
+- [ ] **v1.14.1:** confirm `__EFMigrationsHistory` includes `AddRejectionCancellationEmailTrackingToInvoiceHeader` (last row) **before** the new app code goes live — the EF model expects these columns, so running the new code against an un-migrated DB will error on every `InvoiceHeaders` query. ✅ additive — existing rows backfill `IsRejectionEmailSent`/`IsCancellationEmailSent = 1` (not applicable), no retroactive emails sent.
+- [ ] **v1.14.1:** confirm `EmailConfiguration:Default:GlobalBccEmail` is set to a real address (or intentionally blank) on this server. ✅ either way, Rejection/Cancellation emails to Supplier/Buyer now send regardless — a blank BCC only skips the admin copy and logs a warning, it no longer blocks the notification entirely.
+- [ ] **v1.14.1:** reject a test document, then check both the Supplier and Buyer received the rejection email (and the Cancel flow, cancelling a different test document). ✅ both parties receive it; if the immediate send fails, `InvoiceHeader.IsRejectionEmailSent`/`IsCancellationEmailSent` stays `false` so the next background cycle (`InvoiceStatusUpdater.RunRejectionCancellationFinalizerAsync`) retries it — indefinitely, no age cutoff.
+- [ ] **Smart Capture:** confirm `__EFMigrationsHistory` includes `AddSmartCaptureDocument`, `AddSmartCaptureCompanyHint` (Stage 2), and `AddSmartCaptureAutoSubmit` (Stage 4). ✅ all additive — new tables / a new nullable column only, no existing table altered.
+- [ ] **Smart Capture ("Create from Document"):** before enabling `SmartCapture:Enabled=true`, note there is **no application-level malware scanning** (deliberate — see `IIS-DEPLOYMENT-GUIDE.md` PART 17d for the upload-security controls relied on instead). Upload a real test PDF — it should queue and process; then upload a renamed non-PDF file (e.g. `.txt` renamed to `.pdf`) — it must be **rejected** with a signature-mismatch error, proving format validation is actually enforced.
+- [ ] **Smart Capture:** end-to-end — upload a supplier invoice at `/Invoices/SmartCapture`, wait for it to leave "Processing", confirm the LHDN document type and a registered buyer on the review screen, create the draft, and confirm it opens correctly in the normal `InvoiceEdit` page. ✅ draft is fully editable and submits through the unchanged MyInvois path — Smart Capture never bypasses review or submission.
+- [ ] **Smart Capture Stage 1.5 (duplicate + condensed review):** re-upload the exact same file for the same company. ✅ the second upload's review screen shows a "possible duplicate" **Warning**, never blocks draft creation. Upload a clean document with no review issues. ✅ the review screen shows a condensed "all checks passed" summary with the full checklist collapsed behind a toggle, not expanded by default.
+- [ ] **Smart Capture Stage 3 (bulk upload):** select several files at once in the upload picker (capped at `SmartCapture:MaxFilesPerBulkUpload`, default 20). ✅ each file gets its own row/status on the list page; include one invalid file in the batch and confirm it's reported as a per-file failure without blocking the others.
+- [ ] **Smart Capture Stage 4 (conditional auto-submission) — only if enabling `SmartCapture:AutoSubmitEnabled=true`:** at **Admin → Smart Capture Auto-Submit** (`/Admin/SmartCaptureAutoSubmit`), opt in one test company with a narrow doc-type allowlist, a small value ceiling, and a short delay. Confirm a small, clean Smart Capture draft for that company. ✅ the Smart Capture list page shows an "Auto-submit HH:mm" badge with a **Cancel** button; clicking Cancel before the delay elapses stops it (job shows Cancelled in Admin → Sync Jobs); letting it run submits automatically via the normal `SubmitDocument` job. Then disable the company's opt-in **while a job is still pending** in its delay window. ✅ (v1.20.1+) that pending job is also retracted (Cancelled), not just future ones blocked.
+
+- [ ] **v1.20.1 auto-submit cancel-race fix:** if upgrading from v1.20.0, this patch closes a narrow timing
+      window where Cancel could show "Cancelled" on a job the durable worker had already completed (a real
+      LHDN submission may have already gone through) — no action needed beyond confirming the version, this
+      is a correctness fix with no schema/config change.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
@@ -32,11 +49,42 @@ bottom; stop and investigate on the first ❌.
       no invisible/low-contrast text; the invoice list is usable on mobile.
 - [ ] Public pages (home/about/contact/resources) still use the **marketing** layout; error pages are
       standalone. ✅
+- [ ] **(v1.11.0) Admin sidebar on mobile** (<992px): the hamburger toggle opens a sliding off-canvas
+      drawer with a backdrop and its own close button, not the old inline collapse. ✅ at desktop widths
+      the sidebar is unchanged (fixed column, collapsible to icon-only with tooltips on hover).
 - [ ] (Automated) With Turnstile **test** keys + `Security__EnforceAdminMfa=false` set temporarily, run
       `tests/playwright/10-tabler-modules.spec.js` — ✅ all module pages pass; then revert those env vars.
       (See DEPLOY-NOTES / `docs/TABLER-MIGRATION-AUDIT.md`.)
+- [ ] **(v1.14.0) Dark mode toggle** (topbar sun/moon icon, authenticated Tabler pages only): click it —
+      ✅ theme flips instantly, persists across a page reload (cookie), and legibility holds across
+      cards/tables/badges/sidebar/pagination. First visit in a fresh/incognito session with the OS set to
+      dark ✅ loads dark by default, no flash of the wrong theme.
+- [ ] **(v1.14.0) Skip-navigation link:** press Tab once on page load (before clicking anything). ✅ a
+      "Skip to main content" link becomes visible as the first focusable element; activating it moves
+      focus past the sidebar/topbar into the page content.
 
-## 3. Invoice lifecycle (the core money path)
+## 2b. Company Management workspace (v1.11.0)
+- [ ] **My Company** shows the tabbed workspace (Overview/Profile/Users/Roles & Permissions/Invoice Branding/Security/Audit). ✅ all tabs load without error.
+- [ ] Invite a new user by email (Users tab). ✅ invitation email sends (reuses existing SMTP), accept link works, invitee sets their **own** password (no admin-set-password path exists anymore).
+- [ ] Assign a company role (Owner/Admin/Editor/Viewer) to a member (Roles & Permissions tab). ✅ their effective permissions change accordingly; a member with no role assigned still works via the legacy `HasCompanyAccess`/`IsViewOnly` fallback.
+- [ ] Set an invoice accent color / footer note / bank-details visibility (Invoice Branding tab). ✅ saves; note this is **not yet wired into PDF rendering** in this release (settings-only).
+- [ ] Audit tab loads recent `AuditLog` entries filtered to the company's TIN. ✅ no cross-tenant rows visible.
+
+## 2c. Buyer Management & Items (v1.11.0)
+- [ ] Buyer List/Create/Edit/Details/Import render the new Tabler layout. ✅ KPI cards, search/status filter, sortable table.
+- [ ] Duplicate Review page loads (read-only — no merge/delete actions in this phase). ✅
+- [ ] Deleting a buyer shared with another supplier **unlinks** rather than hard-deletes it. ✅ the other supplier still sees the record.
+- [ ] Create/Edit an Item with a **Unit** and **Unit Price**. ✅ Unit validates against active LHDN unit codes; Unit Price stores 4 decimal places (`decimal(18,4)`) — check a fractional price like `12.3456` round-trips exactly, not rounded to 2dp.
+- [ ] Select a saved item on **Create Invoice**. ✅ the line's unit and price auto-fill from the item.
+
+## 2d. Role Management & company user administration (v1.13.0)
+- [ ] **Admin → User Management → Role Management** loads. ✅ shows the Identity role list (with `Admin`/`Supplier`/`Buyer` marked "Core") and the Module Access grid.
+- [ ] Create a new role, then delete it. ✅ appears in Manage Users' "Change Role" dropdown immediately; delete succeeds since unassigned.
+- [ ] Try to delete `Admin`, `Supplier`, or `Buyer`, or a role currently assigned to a user. ✅ blocked with a clear message.
+- [ ] Restrict a module for the Supplier role (uncheck it, Save), then log in as a Supplier and visit that module. ✅ redirected to Access Denied; re-check the box and access is restored. ✅ Admin is never affected by any restriction.
+- [ ] **Company Management → Users**: as a Supplier Owner/Admin, remove a team member. ✅ succeeds; trying to remove yourself or the last Owner ✅ blocked with a clear message.
+- [ ] **Company Management → Roles & Permissions**: create a custom role scoped to your company (name + permission checkboxes), assign it to a member, then delete it. ✅ the role and its "Custom" badge only appear for your own company; assigned members fall back to "no role" after deletion.
+
 - [ ] Create a **standard invoice (01)** with ≥2 lines + tax. ✅ totals correct (line extension / tax-exclusive / tax-inclusive / payable); draft saved with a `.json` file.
 - [ ] Create one of each remaining type used: **02 credit, 03 debit, 04 refund**, and **11–14 self-billed**. ✅ each maps and the `BillingReference` shape is right (01 = additional ref; 02–04 = invoice ref; 11–14 = both).
 - [ ] Edit a draft. ✅ header + lines update atomically.
@@ -55,6 +103,8 @@ bottom; stop and investigate on the first ❌.
 - [ ] **Cancel/Reject** within the 72h window. ✅ succeeds; outside the window ✅ blocked with a clear message.
 - [ ] **Cancel vs background sync (v1.8.2):** cancel an invoice while background sync is enabled, then wait one sync cycle. ✅ the invoice stays **Cancelled** (concurrency token prevents a stale sync overwriting it; sync log may show a benign "concurrency conflict … skipping" warning).
 - [ ] Intermediary submit with `onbehalfof`. ✅ uses the right per-TIN token.
+- [ ] **(v1.13.0) Unit-code validation:** try to create/import an invoice line with an invalid/blank unit code (e.g. via CSV import, bypassing the Create Invoice dropdown). ✅ submission is rejected with a clear "invalid or missing unit of measure" error, not silently accepted.
+- [ ] **(v1.13.0) Signed SVDP, only if `SigningEnabled=true`:** submit an SVDP-flagged invoice. ✅ document declares version `1.3` (not `1.2`) and carries a valid XAdES signature; with `SigningEnabled=false`, SVDP invoices still submit as unsigned `1.2` as before.
 
 ## 5. Bulk import & connectors
 - [ ] **Bulk Import** a CSV and an XLSX (download the template first). ✅ per-row validation report against LHDN codes; valid rows create drafts.
@@ -71,6 +121,13 @@ bottom; stop and investigate on the first ❌.
 ## 7. Email & notifications
 - [ ] Trigger a notification email (e.g. account confirm, validated invoice). ✅ delivered; links use the configured public base URL (not localhost).
 - [ ] Confirm SMTP creds are supplied via **env vars** (not committed). ✅ (`appsettings.json` ships blank).
+- [ ] **(v1.14.0) New-e-invoice-received email:** trigger an LHDN sync for a company that has a genuinely
+      new buyer-side invoice from an external ERP (or use "Refresh from API" on the Received tab shortly
+      after one lands). ✅ the buyer gets a "New e-Invoice Received" email (not the "Validated" one).
+      Temporarily stop the SMTP relay and repeat — ✅ the send fails, is logged, and
+      `InvoiceHeader.IsNewInvoiceReceivedEmailSent` stays `false` so the next background cycle (every
+      `InvoiceStatusUpdaterSettings:PollingIntervalSeconds`) retries it once SMTP is back, with no manual
+      resend needed.
 
 ## 8. Admin & observability
 - [ ] Admin → **Audit Trail** → Verify Chain. ✅ hash chain intact (tamper-evident).
@@ -86,6 +143,16 @@ bottom; stop and investigate on the first ❌.
 - [ ] **Rocket Loader is OFF** in the Cloudflare zone (*Speed → Optimization*). With it on, every page's
       `DOMContentLoaded` stalls ~20 s and Turnstile becomes unreliable (documented incompatibility).
       Verify: page source must NOT contain `rocket-loader.min.js` / `type="…-text/javascript"` rewrites.
+- [x] **Web Analytics / Browser Insights is OFF** in the Cloudflare zone (*Analytics & Logs → Web Analytics*,
+      or wherever the zone exposes the auto-injected beacon toggle). Cloudflare auto-injects a `defer`
+      `<script src="https://static.cloudflareinsights.com/beacon.min.js/...">` into every response; on
+      networks where that host is slow/unreachable this stalls `DOMContentLoaded` 20-35 s — same failure
+      class as Rocket Loader, confirmed via HAR on `/` and `/login` (2026-08-01). The app already has its
+      own GTM-based analytics, so this beacon is redundant. Not fixable from app code — it is not referenced
+      anywhere in our HTML/JS; Cloudflare injects it at the edge. Verify: page source must NOT contain
+      `static.cloudflareinsights.com/beacon.min.js`.
+      **Done and re-verified 2026-08-01: RUM disabled for `einvworld.com`; HAR confirms `DOMContentLoaded`
+      down from 21-34 s to 0.9-2.5 s.**
 
 ---
 

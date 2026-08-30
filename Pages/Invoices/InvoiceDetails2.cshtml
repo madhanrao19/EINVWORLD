@@ -51,6 +51,19 @@
         width: 100%;
     }
 
+    /* The invoice preview below is a fixed-width A4 facsimile of the generated PDF (deliberately
+     * NOT responsive — it must match the downloaded document exactly). On narrow viewports this
+     * wrapper scrolls horizontally instead of forcing the whole page to overflow. */
+    .invoice-preview-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    @@media print {
+        .invoice-preview-scroll {
+            overflow-x: visible;
+        }
+    }
+
         #invoiceWrapper h4 {
             font-size: 12pt !important;
             font-weight: bold !important;
@@ -383,13 +396,14 @@
     {
         return action switch
         {
-            "StatusChanged" => new HtmlString("<span class='me-1'>🟢</span>"),
-            "EmailSent" => new HtmlString("<span class='me-1'>✉️</span>"),
-            "PDFGenerated" => new HtmlString("<span class='me-1'>📄</span>"),
-            "DateTimeReceived" => new HtmlString("<span class='me-1'>📥</span>"),
-            "DateTimeValidated" => new HtmlString("<span class='me-1'>✅</span>"),
-            "Cancelled" => new HtmlString("<span class='me-1'>❌</span>"),
-            "LongIdUpdated" => new HtmlString("<span class='me-1'>🔗</span>"),
+            "StatusChanged" => new HtmlString("<i class='ri-checkbox-blank-circle-fill text-success me-1' aria-hidden='true'></i>"),
+            "EmailSent" => new HtmlString("<i class='ri-mail-line me-1' aria-hidden='true'></i>"),
+            "PDFGenerated" => new HtmlString("<i class='ri-file-pdf-2-line me-1' aria-hidden='true'></i>"),
+            "DateTimeReceived" => new HtmlString("<i class='ri-inbox-line me-1' aria-hidden='true'></i>"),
+            "DateTimeValidated" => new HtmlString("<i class='ri-checkbox-circle-line text-success me-1' aria-hidden='true'></i>"),
+            "Cancelled" => new HtmlString("<i class='ri-close-circle-line text-danger me-1' aria-hidden='true'></i>"),
+            "RequestReject" => new HtmlString("<i class='ri-forbid-line text-warning me-1' aria-hidden='true'></i>"),
+            "LongIdUpdated" => new HtmlString("<i class='ri-link me-1' aria-hidden='true'></i>"),
             _ => HtmlString.Empty
         };
     }
@@ -398,15 +412,74 @@
 }
 
 <!-- Page Title -->
-<div class="row d-print-none">
+<div class="row mb-3 d-print-none">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-            <h4 class="mb-sm-0">Invoice Details</h4>
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="/Invoices/InvoiceLists">Invoice Lists</a></li>
-                    <li class="breadcrumb-item active">Invoice Details</li>
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Invoice Details</h1>
+                <p class="text-muted mb-0">E-INVOICE NO: @invoice.InvoiceNo</p>
+            </div>
+            <a href="/Invoices/InvoiceLists" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Invoice Lists
+            </a>
+        </div>
+    </div>
+</div>
+
+@{ var badgeClass = GetBadgeClass(Model!.DisplayStatusName); var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown"; }
+<div class="row mb-3 d-print-none">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                    <div class="badge rounded-pill fs-12 @badgeClass px-3 py-2">@displayStatus</div>
+                    <div>
+                        <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">Total Payable</p>
+                        <span class="fw-bold fs-5">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(invoice.UUID))
+                    {
+                        <div>
+                            <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">UUID</p>
+                            <span class="font-monospace small">@invoice.UUID</span>
+                        </div>
+                    }
+                    @if (invoice.DateTimeValidated.HasValue)
+                    {
+                        <div>
+                            <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">Validated</p>
+                            <span>@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</span>
+                        </div>
+                    }
+                </div>
+                <div class="hstack gap-2 flex-wrap">
+                    @{
+                        bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+                        bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+                    }
+                    @if (canReject)
+                    {
+                        var rejectTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN ?? "";
+                        <button type="button" id="rejectInvoiceBtn" class="btn btn-outline-warning btn-sm"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@rejectTin">
+                            <i class="ri-forbid-line align-middle me-1"></i>Request Rejection
+                        </button>
+                    }
+                    @if (canCancel)
+                    {
+                        var cancelTin = invoice.Supplier?.TIN ?? "";
+                        <button type="button" id="cancelInvoiceBtn" class="btn btn-outline-danger btn-sm"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@cancelTin">
+                            <i class="ri-close-circle-line align-middle me-1"></i>Cancel Invoice
+                        </button>
+                    }
+                    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                        <i class="ri-printer-line align-middle me-1"></i>Print
+                    </button>
+                    <a href="?handler=DownloadPdf&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-primary btn-sm">
+                        <i class="ri-download-2-line align-middle me-1"></i>Download PDF
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -414,62 +487,10 @@
 
 <div class="row">
     <div class="col-xxl-12">
-        <div class="card">
-            <div class="card-header d-print-none">
-                <div class="d-flex align-items-center">
-                    <div class="flex-grow-1 mb-0">
-                        <h5 class="card-title mb-0 d-inline-block me-2">E-INVOICE NO : @invoice.InvoiceNo</h5>
-                        @{ var badgeClass = GetBadgeClass(Model!.DisplayStatusName); var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown"; }
-                        <div class="badge rounded-pill fs-12 d-print-none @badgeClass d-inline-block">
-                            @displayStatus
-                        </div>
-                    </div>
-                    <div class="flex-shrink-0 d-print-none">
-                        <div class="hstack gap-2">
-                            <!-- Primary Actions -->
-                            <button onclick="window.print()" class="btn btn-primary btn-sm" style="background-color:#006948; border-color:#006948;">
-                                <i class="ri-printer-line align-middle me-1"></i>Print
-                            </button>
-                            <a href="?handler=DownloadPdf&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-primary btn-sm" style="background-color:#187447; border-color:#187447;">
-                                <i class="ri-download-2-line align-middle me-1"></i>Download PDF
-                            </a>
-                            
-                            <!-- Conditional Actions -->
-                            <!--@if (Model.InvoiceDetail?.LHDNStatusId != "Draft" && Model.InvoiceDetail?.LHDNStatusId != null)
-                            {
-                                @if (Model.InvoiceDetail.LHDNStatusId == "Valid" && Model.InvoiceDetail.InternalStatusId != "RequestReject")
-                                {
-                                    <button id="rejectInvoiceBtn" data-uuid="@Model.InvoiceDetail.UUID"
-                                            data-invoiceno="@Model.InvoiceDetail.InvoiceNo"
-                                            data-tin="@Model.InvoiceDetail.Supplier?.TIN"
-                                            class="btn btn-danger btn-sm"
-                                            @(isOver72Hours ? "disabled" : "")>
-                                        <i class="ri-close-circle-line align-middle me-1"></i>Request Reject eInvoice
-                                    </button>
-                                }
-
-                                @if (Model.InvoiceDetail.LHDNStatusId != "Cancelled" && Model.InvoiceDetail.InternalStatusId != "Cancelled")
-                                {
-                                    <button id="cancelInvoiceBtn" data-uuid="@Model.InvoiceDetail.UUID"
-                                            data-invoiceno="@Model.InvoiceDetail.InvoiceNo"
-                                            data-tin="@Model.InvoiceDetail.Supplier?.TIN"
-                                            class="btn btn-warning btn-sm"
-                                            @(isOver72Hours ? "disabled" : "")>
-                                        <i class="ri-close-circle-line align-middle me-1"></i>Cancel eInvoice
-                                    </button>
-                                }
-                            }-->
-                            
-                            <!-- Back Button -->
-                            <a href="/Invoices/InvoiceLists" class="btn btn-secondary btn-sm" style="background-color:#777676; border-color:#777676;">
-                                <i class="ri-arrow-left-line align-middle me-1"></i>Back to Invoice Lists
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <div class="col-lg-12">
+                    <div class="invoice-preview-scroll d-print-block">
                     <div class="invoice-web-container">
                         <div id="invoiceWrapper">
 
@@ -547,7 +568,7 @@
                                                 var buyerCity = invoice.Customer != null ? invoice.Customer.CityName : invoice.PublicCustomer?.CityName;
                                                 var buyerTIN = invoice.Customer != null ? invoice.Customer.TIN : invoice.PublicCustomer?.TIN;
                                                 var buyerAttention = invoice.Customer != null ? invoice.Customer.Attention : invoice.PublicCustomer?.Attention;
-                                                var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer?.State?.State;
+                                                var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer != null ? Model.DropdownHelper.GetStateName(invoice.PublicCustomer.StateCode) : null;
                                                 var buyerCountry = invoice.Customer != null ? invoice.Customer.Country?.Country : invoice.PublicCustomer?.Country?.Country;
                                                 var buyerCountryTitle = string.IsNullOrEmpty(buyerCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(buyerCountry.ToLower());
                                             }
@@ -637,7 +658,7 @@
                                             <td class="col-desc" style="white-space:pre-wrap; text-align:left;">
                                                 @Html.Raw(System.Net.WebUtility.HtmlEncode(item.ItemDescription ?? "").Replace("\n", "<br/>"))
                                             </td>
-                                            <td class="col-qty" style="text-align:center;">@item.Quantity</td>
+                                            <td class="col-qty" style="text-align:center;">@item.Quantity?.ToString("N2")</td>
                                             <td class="col-unit" style="text-align:right;">@item.UnitPrice?.ToString("N2")</td>
                                             <td class="col-total" style="text-align:right;">@((item.Quantity * item.UnitPrice)?.ToString("N2"))</td>
                                         </tr>
@@ -741,16 +762,17 @@
                             </div>
                         </div><span id="invoiceNumber" style="display:none;">@invoice.InvoiceNo</span>
                     </div>
+                    </div>
                 </div>
             </div>
          </div>
 
-        <div class="card d-print-none">
-            <div class="card-header">
-                <div class="d-flex align-items-center">
+        <div class="card border-0 shadow-sm d-print-none">
+            <div class="card-header-clean">
+                <div class="d-flex align-items-center flex-wrap gap-2">
                     <div class="flex-grow-1 mb-0">
-                        <h5 class="card-title mb-0 d-inline-block me-3">e-Invoice Activity Log</h5>
-                        <select id="actionFilter" class="form-select d-inline-block" style="width: auto;">
+                        <h5 class="mb-0 fw-bold text-dark d-inline-block me-3">e-Invoice Activity Log</h5>
+                        <select id="actionFilter" class="form-select form-select-sm d-inline-block" style="width: auto;">
                             <option value="">All Actions</option>
                             <option value="EmailSent">✉️ Email Sent</option>
                             <option value="PDFGenerated">📄 PDF Generated</option>
@@ -759,7 +781,7 @@
                         </select>
                     </div>
                     <div class="flex-shrink-0">
-                        <a href="?handler=ExportHistory&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-soft-info material-shadow-none btn-sm">
+                        <a href="?handler=ExportHistory&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-outline-secondary btn-sm">
                             <i class="ri-download-2-line align-middle me-1"></i>Export History CSV
                         </a>
                     </div>
@@ -769,8 +791,8 @@
                 @if (Model.InvoiceHistories != null && Model.InvoiceHistories.Any())
                 {
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead class="table-light">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
                                 <tr>
                                     <th>#</th>
                                     <th>Timestamp</th>
@@ -792,7 +814,7 @@
 
                                     <tr class="@(h.Action == "FileMoved" ? "table-warning" : "")">
                                         <td>@(i + 1)</td>
-                                        <td>@h.Timestamp.ToString("yyyy-MM-dd hh:mm:ss tt")</td>
+                                        <td class="text-muted small">@h.Timestamp.ToString("yyyy-MM-dd hh:mm:ss tt")</td>
                                         <td>@GetActionIcon(h.Action) @h.Action</td>
                                         <td>@h.PerformedBy</td>
                                         <td title="@h.Remarks">@h.Remarks</td>
@@ -805,7 +827,7 @@
                 }
                 else
                 {
-                    <p>No history found for this invoice.</p>
+                    <p class="text-muted mb-0">No history found for this invoice.</p>
                 }
             </div>
         </div>

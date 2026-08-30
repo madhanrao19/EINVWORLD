@@ -14,8 +14,13 @@ namespace EINVWORLD.Services.Assistant
         public string Content { get; init; } = string.Empty;
         public string? Error { get; init; }
 
+        /// <summary>Why the call failed (Disabled/Unreachable/etc are expected states, not crashes) —
+        /// lets the page render a soft warning instead of a red "error" alert for non-fault cases.</summary>
+        public AiErrorKind ErrorKind { get; init; }
+
         public static AssistantResult Success(string content) => new() { Ok = true, Content = content };
-        public static AssistantResult Fail(string error) => new() { Ok = false, Error = error };
+        public static AssistantResult Fail(string error, AiErrorKind kind = AiErrorKind.Unexpected) =>
+            new() { Ok = false, Error = error, ErrorKind = kind };
     }
 
     public interface IEInvoiceAssistantService
@@ -42,9 +47,15 @@ namespace EINVWORLD.Services.Assistant
         /// the user can review before creating a draft. The model never submits anything itself.
         /// When <paramref name="knownBuyers"/> is supplied, the model is told to pick the buyer from that
         /// list (the user's real customers) and use its exact TIN, rather than inventing one.
+        /// When <paramref name="companyHints"/> is supplied, the model is told what this company usually
+        /// confirms (doc type/currency/tax) as a non-binding hint — it may still choose differently when
+        /// the document itself indicates otherwise, and the human review step downstream is unchanged.
         /// </summary>
         Task<AssistantResult> SuggestInvoiceAsync(
-            string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default);
+            string description,
+            IReadOnlyList<KnownBuyer>? knownBuyers = null,
+            CompanyCaptureHints? companyHints = null,
+            CancellationToken ct = default);
 
         /// <summary>
         /// Validates a suggestion JSON against the real LHDN reference data + basic rules and returns a
@@ -154,8 +165,11 @@ namespace EINVWORLD.Services.Assistant
             => ChatAsync(RejectionSystemPrompt, rejectionDetails, jsonMode: false, ct);
 
         public Task<AssistantResult> SuggestInvoiceAsync(
-            string description, IReadOnlyList<KnownBuyer>? knownBuyers = null, CancellationToken ct = default)
-            => ChatAsync(BuildSuggestSystemPrompt(knownBuyers), description, jsonMode: true, ct);
+            string description,
+            IReadOnlyList<KnownBuyer>? knownBuyers = null,
+            CompanyCaptureHints? companyHints = null,
+            CancellationToken ct = default)
+            => ChatAsync(BuildSuggestSystemPrompt(knownBuyers, companyHints), description, jsonMode: true, ct);
 
         public SuggestionReview ReviewSuggestion(string suggestionJson, IReadOnlyCollection<string>? knownBuyerTins = null)
         {
@@ -167,7 +181,7 @@ namespace EINVWORLD.Services.Assistant
             return InvoiceSuggestionValidator.Review(suggestion, reference.ClassificationCodes, reference.TaxCodes, buyerSet);
         }
 
-        private string BuildSuggestSystemPrompt(IReadOnlyList<KnownBuyer>? knownBuyers)
+        private string BuildSuggestSystemPrompt(IReadOnlyList<KnownBuyer>? knownBuyers, CompanyCaptureHints? companyHints = null)
         {
             var reference = GetReference();
             var prompt = SuggestSystemPromptBase;
@@ -193,6 +207,20 @@ namespace EINVWORLD.Services.Assistant
                               "set \"buyerName\" and \"buyerTin\" to the single best-matching entry, copying its TIN exactly. " +
                               "If none clearly match, leave \"buyerName\" and \"buyerTin\" blank and explain in \"notes\". " +
                               "Never invent a TIN. List: " + list;
+            }
+
+            if (companyHints is not null)
+            {
+                var parts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(companyHints.DocTypeCode)) parts.Add($"documentType is usually \"{companyHints.DocTypeCode}\"");
+                if (!string.IsNullOrWhiteSpace(companyHints.Currency)) parts.Add($"currency is usually \"{companyHints.Currency}\"");
+                if (!string.IsNullOrWhiteSpace(companyHints.TaxType)) parts.Add($"taxType is usually \"{companyHints.TaxType}\"");
+                if (companyHints.TaxRatePercent is not null) parts.Add($"taxRatePercent is usually {companyHints.TaxRatePercent}");
+
+                if (parts.Count > 0)
+                    prompt += " Hint from this company's own past confirmed invoices (NOT a rule — only use it when the " +
+                              "document itself doesn't clearly indicate otherwise, and never let it override what the " +
+                              "document actually says): " + string.Join("; ", parts) + ".";
             }
 
             return prompt;
@@ -281,7 +309,7 @@ namespace EINVWORLD.Services.Assistant
             var result = await _ai.ChatAsync(new AiChatRequest { Messages = messages, JsonMode = jsonMode }, ct);
             return result.Ok
                 ? AssistantResult.Success(result.Content)
-                : AssistantResult.Fail(result.Error ?? "Unexpected error talking to the AI service.");
+                : AssistantResult.Fail(result.Error ?? "Unexpected error talking to the AI service.", result.ErrorKind);
         }
 
         private sealed class ClassificationCodeDto

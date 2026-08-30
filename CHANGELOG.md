@@ -1,10 +1,1522 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.10.0`** (`AppInfo:Version` in `appsettings.json`). v1.10.0 is a **minor**
-> release (new backward-compatible feature) that consolidates the accumulated post-v1.9.9 work in the
-> three 2026-07-10…12 sections below: the **Tabler UI migration** (all authenticated pages), the
-> **Forest Tech Precision** reskin (login / Supplier dashboard / invoice list), the new **bulk
-> Submit-to-LHDN** action for drafts, and the **bulk cancel/reject hardening**. No schema/migration change.
+> **Current version: `v1.21.10`** (`AppInfo:Version` in `appsettings.json`). v1.21.10 is a **patch**
+> release: Business Description, Primary Email, Fax Number, and Postal Code are no longer mandatory
+> for Buyers — MyInvois doesn't require them for the buyer party, but the app force-required them in
+> three places (the Buyer Create form's HTML `required` attributes, and two LHDN-submission-time
+> validators in `InvoiceMapper` that threw before a UBL payload could even be built). Supplier
+> requirements are unchanged — the shared validator now branches on role. See the dated entry below
+> for details. v1.21.9 was a **patch** release: a genuine 0% tax rate (e.g. Sales Tax at 0.00%) is now
+> accepted on any tax category instead of only "Not Applicable"/"Exemption" — the client-side item-row
+> validation on Create Invoice/Edit Invoice previously required `TaxPercentage > 0` for every other
+> category, incorrectly blocking a legitimate 0% Sales/Service Tax entry with a "missing required
+> fields" warning. See the dated entry below for details. v1.21.8 was a **patch** release: the Unit of
+> Measure dropdown (Create Invoice, Edit Invoice, Item Management) now shows a curated "Common Units"
+> group (~24 codes covering the vast majority of SME invoicing) above the full MyInvois/UN-ECE
+> "All Units" list, instead of forcing users to scroll hundreds of unit codes; a new invoice line now
+> defaults to `EA` (each) instead of `XUN`. See the dated entry below for details. v1.21.7 was a **patch**
+> release: a foreign Buyer's (`PublicCustomer`, `CountryCode != "MYS"`) State/Province field is now
+> free text instead of being locked to the Malaysian `StateCodes` list — that restriction was
+> self-imposed (a DB foreign key), not an LHDN requirement; LHDN's own MyInvois Portal accepts free
+> text for a foreign party's state, and `CountrySubentityCode` in the UBL payload was already an
+> unconstrained string. Malaysian buyers are unaffected — still a dropdown, still validated against
+> `StateCodes`, just enforced at the application layer now instead of the database FK. See the dated
+> entry below for details. v1.21.6 was a **patch**
+> release: fixes a data-integrity bug where the background/manual "full sync from LHDN" pipeline
+> (`InvoiceFullSyncHelper`) could silently overwrite a submitted invoice's Buyer with the wrong
+> party — an unscoped TIN-only lookup mismatched LHDN's shared general TINs against whichever
+> `PartyInfo` row happened to carry that TIN first (e.g. the "Foreign Buyer / Shipping Recipient"
+> placeholder), unconditionally replacing the correct `PublicCustomerId` on every re-sync of a
+> not-yet-"stable" invoice, with no audit trail. See the dated entry below for details. v1.21.5
+> was a **patch**
+> release: closes the one gap found in a follow-up LHDN SDK 1.0 compliance sweep (releases newer than the
+> last audit) — a 12-character length cap on Passport-type registration numbers, enforced in
+> `InvoiceMapper` on every submission path. Not urgent (Production-effective 23 Oct 2026); everything else
+> audited was already compliant. See the dated entry below for details. v1.21.4 was a **patch**
+> release: three more fixes from the same full production-verification QA pass on staging.einvworld.com
+> that produced v1.21.3 — the demo Buyer account was linked to an LHDN generic placeholder TIN that can
+> never complete an intermediary OAuth token exchange (now points at a real onboarded company); the
+> Supplier/Buyer dashboard's "LHDN Invalid"/"Connection Failed" action tiles always rendered with
+> alarming static text even with zero actual issues (now hidden when there's nothing to act on, plus a
+> missing filter dropdown option); and demo accounts got "Access Denied" viewing their own company's
+> "My Company" page because `RoleSeeder` never granted the legacy `HasCompanyAccess`/`IsPrimaryCompany`
+> flags that gate it (a separate mechanism from the newer "Roles & Permissions" system). All four fixes
+> from this QA pass (this one plus the three that shipped as v1.21.3) have been live-verified against
+> Staging post-redeploy: Admin, Supplier, and Buyer all log in and reach a fully working dashboard, "My
+> Company" loads correctly, and the dashboard action tiles no longer show false alarms. See the dated
+> entries below for details. v1.21.3 was a **patch**
+> release, found during the same QA pass: fixes a
+> false-positive "Row 1: contents were altered after it was written" from Admin → Audit Trail →
+> "Verify chain integrity" (a `DateTimeKind` round-trip bug in the hash recomputation, not a real tamper
+> event — proven with a real-SQL-Server integration test that reproduces the exact error on a
+> brand-new database and passes once fixed). See the dated entry below for details. v1.21.2 was a
+> **patch**
+> release: `CreateInvoice.cshtml`/`InvoiceEdit.cshtml` were rendering `Quantity`/`UnitPrice`/
+> `TaxPercentage`/`ExchangeRate` inputs at their raw `decimal(18,6)`/`decimal(18,4)` database precision
+> (e.g. `1.000000`, `1500.0000`) instead of the 2 decimal places every other amount on the form already
+> used — fixed by formatting the rendered `value` for display only (storage precision unchanged). Also
+> fixes a real bug found in the same pass: the Step 1 sticky "Invoice Summary" sidebar card on both forms
+> was never wired up to the totals calculation, so it stayed frozen at `RM 0.00` regardless of the
+> invoice's actual items/totals, even while the "Running Total" KPI right next to it updated correctly.
+> See the dated entry below for details. v1.21.1 was a **patch**
+> release: adds `TessdataSyncWorker`, a background job that automatically keeps AI Document Capture/Smart
+> Capture's OCR language files (`eng.traineddata`, `msa.traineddata`, ...) current from the official
+> `tesseract-ocr/tessdata` GitHub repo, replacing the previous fully-manual "download and copy the file in
+> yourself" process (still documented as the fallback for air-gapped servers). Only runs at all when
+> `DocumentCapture:OcrEnabled=true` (off by default) — independently switchable off via
+> `TessdataSync:Enabled=false` for servers with restricted/no outbound internet access. See the dated
+> entry below for details. v1.21.0 was a **minor**
+> release: brings `Pages/Invoices/InvoiceEdit.cshtml` (the page every Smart Capture confirmation and
+> every "Edit" click hands off to) to full visual and functional parity with `CreateInvoice.cshtml` —
+> the two had quietly drifted apart over several UI-migration commits, and a side-by-side comparison
+> against live staging screenshots confirmed InvoiceEdit was still showing an older, plainer layout
+> despite being restyled in the same commits. All 3 steps now match: Step 1 gets the KPI stat row
+> (Buyer Status/Currency/Running Total/Document Type), collapsible Document Setup/Buyer & Supplier/
+> Additional Party Information sections, and a sticky Invoice Summary + live Validation Checklist
+> sidebar; Step 2 gets a Row Total column per line item and an Invoice Summary/Amount Payable block;
+> Step 3 gets Invoice Details/Buyer & Supplier cards, an Item Summary table, a Submission Readiness
+> checklist, and a sticky Total Amount sidebar — while keeping InvoiceEdit's own Save Draft/Save as
+> Template/Submit to LHDN button set and handlers completely unchanged (only CreateInvoice's Review
+> step's markup/layout was reused, never its buttons). Found and fixed one real pre-existing bug along
+> the way: `calculateTotals()` never updated a line item's own "Subtotal" display for an already-saved
+> draft — only a live `oninput` handler did — so a freshly-opened existing invoice showed "0.00"
+> everywhere that value fed into (the Step 2 Subtotal box and, worse, the new Step 3 Item Summary
+> table's Tax column, computed as Row Total − Subtotal). Now `calculateTotals()` keeps that value in
+> sync directly, like it already did for Row Total. No schema change; pure Razor markup + JavaScript.
+> v1.20.2 was a **patch**:
+> fixes a **Critical** IDOR/tenant-isolation gap on `Pages/Invoices/InvoiceEdit.cshtml` — the page every
+> Smart Capture confirmation hands its new draft off to had no ownership check at all on loading (GET) or
+> saving (POST) an invoice by id; `SupplierBasePage`'s own authorization never actually engaged for this
+> page (it parses `id` as a query-string int `PartyInfoId`, but this page's `id` is a route-value
+> `InvoiceNo` string, so the parse always silently fails and falls back to checking the current user's
+> *own* company instead of the invoice actually requested). Fixed by reusing the same
+> `CanAccessInvoiceAsync` helper already guarding this page's own Submit handler and every other
+> invoice-by-id endpoint in the app. Also removed **AI Document Capture** from the sidebar/admin nav menus
+> — fully superseded by Smart Capture ("Create from Document") across all 5 shipped stages; the route
+> stays alive as a documented rollback path (`CLAUDE.md`), only the nav links were removed. No schema
+> change. See the dated entry below for details. v1.20.1 was a **patch**:
+> fixes a race condition found during a full Smart Capture re-verification pass —
+> `SmartCaptureAutoSubmitEligibilityService.CancelAsync` could, under a real timing race with the durable
+> worker, blindly overwrite an already-`Completed` `SyncJob` row back to `Cancelled`, showing "Cancelled"
+> in the UI even though the invoice had already been submitted to MyInvois. Fixed with a single atomic
+> conditional `UPDATE ... WHERE Status = Queued` (via `ExecuteUpdateAsync`) instead of a load-check-save
+> round trip. Also fixes disabling a company's auto-submit opt-in
+> (`/Admin/SmartCaptureAutoSubmit`) not retracting jobs already scheduled during their delay window — it
+> now cancels them too (`CancelAllPendingForCompanyAsync`). No schema change. See the dated entry below
+> for the full re-verification findings. v1.20.0 was a **minor** release: **Smart Capture Stage 4
+> (reduced first cut)** — conditional automatic LHDN submission. A
+> system Admin can opt a company into unattended submission of Smart Capture drafts
+> (`/Admin/SmartCaptureAutoSubmit`, never self-service); a global kill switch
+> (`SmartCapture:AutoSubmitEnabled`, default **false everywhere**) must also be on. Every confirmed draft
+> is still re-evaluated against deterministic gates (doc-type allowlist, zero review warnings/errors,
+> exact buyer match, a per-company value ceiling) — never a fuzzy confidence score — before a delayed,
+> cancellable `SubmitDocument` job is enqueued through the existing, unchanged submission pipeline
+> (idempotency/signing/retry/audit untouched). New additive migration (`SmartCaptureAutoSubmitSettings`
+> table + `SmartCaptureDocuments.PendingAutoSubmitJobId`). v1.19.0 shipped Stage 3 (reduced first cut):
+> bulk upload. The upload form accepts multiple files at once (capped at
+> `SmartCapture:MaxFilesPerBulkUpload`, default 20); each file goes through the exact same per-file
+> validation/quota/storage/durable-job path as a single upload
+> (`SmartCaptureDocumentService.UploadAsync`, unchanged) — one bad file in a batch never blocks the
+> others. v1.18.0 shipped Stage 2 (reduced first cut): per-company "learned hints" fed into the AI
+> suggestion prompt as advisory-only context, new additive `ApplicationDbContext` migration
+> (`SmartCaptureCompanyHints`). v1.17.3 (folded into v1.18.0) documented Stage 1.5 (2026-08-08, PR #173):
+> exact-content duplicate-upload detection (flag, never block) and a condensed review view for
+> extractions with zero warnings. v1.17.2 removed application-level malware scanning (ClamAV) from Smart
+> Capture — a deliberate architecture decision; see that entry for the reasoning and the upload-security
+> controls it relies on instead. v1.17.1 fixed a **Critical** bug where every Smart Capture "Confirm"
+> attempt failed (`InvoiceDraftService.SaveDraft` never set the NOT-NULL `PrefixedID` column). v1.17.0
+> was the **minor** release that introduced **Smart Capture (Stage 1)** — persisted, async
+> supplier-invoice capture → draft, now labelled **"Create from Document"** in navigation — via PR #170,
+> with a new additive `ApplicationDbContext` migration (`SmartCaptureDocuments`). Feature-flagged **OFF
+> by default** in Development and Production; enabled on Staging only, for verification (real Ollama
+> sign-off still outstanding — see
+> `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-08-28 — Buyer optional fields: Business Description, Email, Fax, Postal Code
+
+> MyInvois does not mandate Business Description, Primary Email, Fax Number, or Postal Code for the
+> buyer party, but the app force-required them for Buyers in three places: the Buyer Create form's
+> HTML `required` attributes (Email, Postal Code — FaxNo/BizDescription were already optional there;
+> `Edit.cshtml` and the `PublicCustomer` model already had no `[Required]` on any of the four), and two
+> LHDN-submission-time validators in `InvoiceMapper` that threw before a UBL payload could even be
+> built — `ValidatePartyInfo` (for a buyer stored as a full registered company) and
+> `ValidatePublicCustomer` (for a buyer stored as a lightweight public-customer record).
+>
+> `ValidatePartyInfo` is shared with Supplier validation (`role == "Supplier"` vs
+> `role == "Customer"`), so the two checks are now skipped only when `role == "Customer"` — Supplier
+> requirements are unchanged. `ValidatePublicCustomer` only ever validates a buyer, so its checks were
+> removed outright. Email retains its `[EmailAddress]` format validation when a value is provided.
+> Templates, CN/DN/RN, Self-Billed documents, recurring invoices, and CSV import all route through
+> these same two mapper validators (or already had no `required` attribute on these fields), so no
+> further per-workflow changes were needed. 4 new regression tests in `InvoiceMapperTests` confirm
+> blank values are accepted for Buyers and still rejected for Supplier.
+
+## 📅 2026-08-28 — Allow a genuine 0% tax rate on any tax category
+
+> MyInvois treats a 0% rate on Sales Tax/Service Tax as a legitimate value, distinct from "Not
+> Applicable" (06) or a statutory "Tax Exemption" (E). The client-side item-row validation on Create
+> Invoice/Edit Invoice previously required `TaxPercentage > 0` for any category other than Not
+> Applicable/Exemption, so a user who correctly entered "Sales Tax, 0.00%" was blocked at the "Next:
+> Review & Submit" step with a "missing required fields" warning even though the field was filled in.
+> A tax line is now valid once its percentage is present and non-negative (blank or negative is still
+> rejected); the Exemption category still additionally requires its exemption reason when shown.
+
+## 📅 2026-08-28 — Curate Unit of Measure dropdown into Common/All Units groups
+
+> The MyInvois/UN-ECE Rec-20 unit-of-measure list has hundreds of codes; SMEs only ever need about two
+> dozen of them. `DropdownHelper.GetUnitOptions()` now groups a curated shortlist (each, piece, set,
+> kilogram, litre, hour, day, month, ...) into a "Common Units" `<optgroup>` shown above the full list
+> ("All Units"), with option text including the code (e.g. "kilogram (KGM)") so the existing select2
+> search matches by code as well as name. New invoices default their first line's unit to `EA` instead
+> of the meaningless `XUN`. Applied via the shared dropdown helper, so Create Invoice, Edit Invoice,
+> and Item Management (Create/Edit) all picked it up automatically; the legacy `CreateCN`/`CreateSBI`/
+> `CreateSBCN` pages (currently excluded from the build) and their shared `invoice-line-items.js` were
+> also updated for consistency.
+
+## 📅 2026-08-28 — Staging server now actually loads appsettings.Staging.json
+
+> Follow-up to the LHDN config consolidation below: the real Staging server has run with
+> `ASPNETCORE_ENVIRONMENT=Production` since the very first deployment (per `IIS-DEPLOYMENT-GUIDE.md`
+> Part 2), meaning `appsettings.Staging.json` has never actually been loaded there — every
+> Staging-specific setting instead required hand-editing that server's own local
+> `appsettings.Production.json` or, per a previous workaround (see the 2026-08-07 Smart Capture
+> entry), setting individual `{Section}__*` environment variables one at a time in IIS. Both are the
+> same "invisible to git" pattern the LHDN fix below addresses, just for the whole Staging config
+> instead of one setting.
+>
+> Fixed at the root: `ASPNETCORE_ENVIRONMENT=Staging` on the staging IIS server now makes
+> `appsettings.Staging.json` load automatically via ASP.NET Core's own convention — the same
+> mechanism Production already relies on. Verified the blast radius first: `Environment.IsProduction()`
+> is read in exactly one place in the whole codebase (`Program.cs`, gating
+> `ProductionConfigValidator`'s strictness) and `EnvironmentName` only feeds two display/log lines
+> (`Program.cs` startup log, Admin → System Health) — no hardcoded `"Production"` string comparisons
+> anywhere. Net effect on Staging: `ProductionConfigValidator`'s hard-fail checks (DataProtection key
+> ring required, LHDN ClientId/secrets required, no localhost PDF/Email URLs) now run in warning-only
+> mode there instead of blocking startup — an accepted, documented trade-off since Staging isn't real
+> production. `IIS-DEPLOYMENT-GUIDE.md` Parts 2/10 and `DEPLOY-NOTES.md` updated accordingly. This is
+> a server-side env var change the operator applies directly — no code depends on it, so existing
+> deployments are unaffected until the env var is actually changed on that box.
+
+## 📅 2026-08-28 — Consolidate LHDN BaseUrl/ClientId into git-tracked environment overrides
+
+> A production login started failing with LHDN's OAuth token endpoint returning `invalid_client`
+> right after a routine deploy. Investigation traced the actual confusion (not the root cause of
+> that specific incident, which turned out to be an IIS-level env var) to a real config-hygiene gap:
+> `LHDNApiConfig:BaseUrl`/`ValidationBaseUrl`/`ClientId` were the only environment-specific,
+> non-secret values in the app that lived nowhere in git — each server carried its own hand-edited
+> copy of the base `appsettings.json` with no template, no diff history, and no mention in
+> `SECRETS-SETUP.md`. Every other per-environment override already has a proper home
+> (`appsettings.Production.json`). Moved these three values into `appsettings.Production.json`
+> (real production host/Client ID — safe to commit, since OAuth `client_id` is public; only
+> `ClientSecret`/`ClientSecret2` stay env-var-only, unchanged) and, for reference,
+> `appsettings.Staging.json` (preprod values — see caveat below). `Helpers/ProductionConfigValidator`
+> now also fails startup in Production on a blank `ClientId` or both `ClientSecret`/`ClientSecret2`
+> blank — previously nothing caught a missing credential until the first confusing runtime
+> `invalid_client`/`unauthorized_client`, exactly like this incident (5 new tests in
+> `ProductionConfigValidatorLhdnCredentialTests`). Also fixed two stale doc claims found along the
+> way: `IIS-DEPLOYMENT-GUIDE.md`/`SECRETS-SETUP.md` both incorrectly said
+> `DataProtection:KeyRingPath` is "already set"/"preset" in `appsettings.Production.json` — it's
+> deliberately blank there (forces an explicit per-server `DataProtection__KeyRingPath` env var), and
+> that env var was missing from the guide's required-variables table entirely.
+>
+> **Caveat surfaced but deliberately not fixed in this change:** both servers run with
+> `ASPNETCORE_ENVIRONMENT=Production` (per the deployment guide's own Production-vs-Staging table),
+> so `appsettings.Staging.json` is not actually loaded by any real deployment today — the staging
+> server's true running config comes from its own separately hand-maintained local
+> `appsettings.Production.json`. The `appsettings.Staging.json` LHDN block added here is reference
+> only until that's addressed as a separate, explicitly-scoped follow-up.
+
+## 📅 2026-08-27 — Free-text State/Province for foreign Buyers
+
+> `PublicCustomer.StateCode` had a hard EF Core foreign key to the `StateCodes` table (16 Malaysian
+> states + code "17" "Not Applicable"), enforced for every Buyer regardless of `CountryCode`. A user
+> asked whether a foreign Buyer's State could be free text, and pointed to LHDN's own MyInvois
+> Portal, which renders State as a dropdown for Malaysia but a free-text input for any other country
+> — direct evidence that free text is acceptable to LHDN for a foreign party. Investigation confirmed
+> there is no LHDN document restricting `CountrySubentityCode` to a fixed code list; it's a plain
+> unconstrained string in the UBL JSON model, and `InvoiceMapper`'s only related rule
+> (`IsRestrictedState17`) forbids state code `"17"` for a *domestic* Malaysian party — it says
+> nothing about a foreign party's state format. The FK was a self-imposed EINVWORLD restriction.
+>
+> Fixed by removing `PublicCustomer`'s `State` navigation/FK (migration
+> `RemovePublicCustomerStateCodeForeignKey`, purely additive — drops the FK + its auto-generated
+> index, narrows `StateCode` from `nvarchar(450)` to `nvarchar(100)`; all existing values are
+> 2-character codes, safe) and moving Malaysian-buyer validation to the application layer
+> (`Pages/PublicCustomer/Create.cshtml.cs`/`Edit.cshtml.cs`: still rejects an invalid/tampered state
+> code when `CountryCode == "MYS"`). The Create/Edit forms now toggle between the existing State
+> dropdown and a new free-text input based on the selected Country, matching LHDN's own portal
+> behavior. Every display site that read the removed navigation (Buyer Details page, Buyer list,
+> duplicate-review list, invoice Bill To preview and PDF) now resolves the name via a new
+> `DropdownHelper.GetStateName(code)` helper, which falls back to the raw value when it doesn't match
+> a `StateCodes` row — Malaysian codes still show their friendly name, foreign free text passes
+> through unchanged. Scoped to Buyers only; a Supplier's own company address (`PartyInfo`, same
+> dropdown pattern) is untouched — separate entity, separate FK, out of scope for this change.
+> `Services/Mappers/InvoiceMapper.cs` needed no change at all — it already sent `StateCode` verbatim.
+> Migration verified locally end-to-end against a real SQL Server (LocalDB) via the existing
+> `EINVWORLD.Tests.Integration.SqlServerIntegrationTests` fixture (`Migrate()` on a throwaway DB).
+
+## 📅 2026-08-27 — Fix LHDN full-sync silently overwriting a submitted invoice's Buyer
+
+> Reported live on staging: invoice EINV100506 was created for Buyer "PT Kustodian Sentral Efek
+> Indonesia" (a `PublicCustomer` carrying LHDN's shared general TIN `EI00000000020`), submitted,
+> reached **Valid** — then its Bill To silently flipped to the generic placeholder "Foreign Buyer /
+> Shipping Recipient" (a different `PartyInfo` row sharing the same general TIN), with no Activity
+> Log entry recording the change.
+>
+> Root cause: `Helpers/InvoiceFullSyncHelper.cs`'s `SyncAllFromApiAsync` — the pipeline behind the
+> `InvoiceStatusUpdater` background hosted service and the manual "Refresh from API"/"Import All"
+> actions — re-resolves an invoice's Buyer on **every** re-check of a not-yet-"stable" invoice (up
+> to 72h after validation), via an unscoped, TIN-only lookup against the global `PartyInfos` table.
+> LHDN's general TINs (`EI00000000010/20/30/40`) are shared by design — many different real buyers,
+> plus EINVWORLD's own pre-seeded placeholder `PartyInfo` rows, legitimately carry the same one —
+> so `FirstOrDefault` nondeterministically matched the placeholder, and the update branch then
+> unconditionally overwrote the invoice's correct `PublicCustomerId` with the wrong `CustomerId`.
+> No history/audit-log call exists anywhere in that file, so the corruption was silent.
+>
+> Fixed with two guards in `InvoiceFullSyncHelper.cs`: (1) never overwrite an already-set buyer
+> link when re-syncing an existing invoice — only fill a genuine gap; (2) skip the unscoped global
+> `PartyInfos` lookup entirely for general TINs, resolving only against the company-scoped
+> `PublicCustomers` table instead (protects newly sync-discovered invoices too, not just re-syncs).
+> Added a warning log when a general-TIN buyer can't be resolved at all, instead of failing
+> silently. Two new integration tests
+> (`EINVWORLD.Tests.Integration.InvoiceFullSyncBuyerOverwriteTests`) exercise the real helper
+> against a real SQL Server — verified to fail against the pre-fix code (reproducing the exact bug)
+> and pass against the fix. `Services/Background/InvoiceStatusUpdater.cs` and
+> `Services/Background/SyncJobHandlers.cs` needed no change — they only orchestrate *when*
+> `SyncAllFromApiAsync` runs. **Known follow-up (not done here):** EINV100506 itself is still
+> corrupted — LHDN-validated invoices can't have their Buyer edited through the UI, so recovering
+> it (and checking for any other invoices affected the same way) needs a manual, case-by-case data
+> correction, not an automated script.
+
+## 📅 2026-08-11 — LHDN SDK 1.0 compliance: Passport ID 12-character cap
+
+> Follow-up sweep against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`, covering the three releases newer
+> than the last audit (PR merged 2026-07-29): 17 Jul 2026 (docs-only tax-exemption clarification), 03 Jul
+> 2026 (field-validation rules, Production-effective 15 Aug 2026), and 06 Aug 2026 (money-field digit cap
+> + Passport ID length cap, Production-effective 23 Oct 2026). EINVWORLD was already compliant on every
+> rule from all three releases — date formats, UOM codes, bank account number, e-Invoice Code/Number,
+> Certified Exporter Authorisation Number, Incoterms, Payment Terms, Prepayment Reference Number,
+> Frequency of Billing, Business Activity Description, tax-exemption `TaxAmount` handling, and money-field
+> digit counts (structurally below the new 26-digit cap given existing `decimal(18,2)/(18,4)/(18,6)`
+> columns) — **except one**: `PartyInfo`/`Buyer`/`Supplier`/`PublicCustomer.RegNo` had no length limit, so
+> a Passport-type registration number (`RegTypeCode == "PASSPORT"`) longer than the new 12-character cap
+> could be submitted. Fixed by adding an `InvoiceMapper` validation check (`IsPassportTooLong`, scoped to
+> `RegTypeCode == "PASSPORT"` only — NRIC/BRN/ARMY are untouched, matching the SDK release's actual scope)
+> in the same place as the existing State-Code-17 and unit-of-measure checks, so it's enforced on every
+> submission path (manual entry, CSV import, templates, recurring invoices), not just the create/edit
+> forms. No DB change (`RegNo` is already `nvarchar(max)`), no migration, no config. Not urgent — the
+> Production deadline is 23 Oct 2026 — but small and safe enough to close out now. Known follow-up (not
+> fixed here, out of scope): no UI-level hint yet, so an over-length Passport number surfaces only as a
+> server error at submission time, same UX tier as the existing State-Code-17 check.
+
+## 📅 2026-08-10 — Fix demo Supplier/Buyer "My Company" Access Denied
+
+Continuing the same QA pass, re-verified live on Staging after the TIN-missing fix's redeploy:
+`supplier@einvworld.com` logged in cleanly, but **Company Management → My Company
+(`/Suppliers/Details?id=...`) returned "Access denied"** for the account viewing its own company.
+
+`SupplierBasePage.OnPageHandlerExecutionAsync` (the gate for `/Suppliers/Details`, `/Edit`, `/Users`,
+`/RolesPermissions`, `/Security`, `/Audit`) only grants access when the caller's `UserCompanies` row has
+`HasCompanyAccess=true` or `IsPrimaryCompany=true`. `RoleSeeder`'s `UserCompany` inserts only ever set
+`UserId`/`PartyInfoId`, leaving both flags at their default `false` — every demo account's company link
+has always failed this check. A real, properly onboarded user gets these flags set correctly via the
+app's own "Invite a teammate" flow. Note this is a genuinely separate mechanism from the newer
+"Roles & Permissions" tab (`UserCompany.CompanyRoleId` → `CompanyRoles`) — assigning a role there only
+ever writes `CompanyRoleId`, never `HasCompanyAccess`/`IsPrimaryCompany`, so it would not have fixed this
+on its own either.
+
+`RoleSeeder` now sets `IsPrimaryCompany=true` on the first company in each demo account's list and
+`HasCompanyAccess=true` on all of them. The stale pre-fix `UserCompanies` rows were removed directly via
+Admin → Company Management → Users on the live Staging database so the self-heal logic recreated them
+correctly on the next restart — confirmed post-redeploy: "My Company" now loads the full Company Profile
+with all tabs.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
+## 📅 2026-08-10 — Fix misleading dashboard action tiles + missing filter option
+
+Continuing the same QA pass, found as Supplier: the dashboard's "LHDN Invalid" and "Connection Failed"
+Action Center tiles always rendered with alarming static text ("Fix & Resubmit", "Server down. Retry
+later.") even when there was nothing to act on — only the small badge count next to each tile was
+conditional on `Model.ActionInvalidCount`/`ActionTransmissionErrorCount > 0`, not the tile itself.
+
+Wrapped each tile in the same `> 0` condition already used for its badge — unchanged when there IS
+something to act on, hidden entirely when there isn't. Also added the missing `TransmissionError`
+`<option>` to the Internal Status filter dropdown on `Invoices/InvoiceLists` — the backend already
+filtered on this `InternalStatusId` correctly, and the dashboard's "Connection Failed" tile already
+deep-linked to `?InternalStatus=TransmissionError`, but the dropdown never listed it as a selectable
+option. Live-verified via local dev (shares the Staging database) and again post-redeploy: both tiles
+are correctly absent for accounts with zero qualifying invoices.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass (pure Razor markup change).
+
+## 📅 2026-08-10 — Fix demo Buyer login: point at a real company, not a placeholder TIN
+
+Continuing the same QA pass, re-verified live on Staging after the TIN-missing fix's redeploy:
+`supplier@einvworld.com` now logged in cleanly, but `buyer@einvworld.com` progressed to a new, different
+failure: `Login succeeded but failed to retrieve system token: LHDN rejected intermediary token for
+EI00000000020. Reason: {"error":"unauthorized_client"}`.
+
+Traced via Admin → Companies: `PartyInfoId 3` (`EI00000000020`) is **"Foreign Buyer / Shipping
+Recipient"** — one of LHDN's official generic placeholder TINs for buyers without a real Malaysian TIN,
+not a real onboarded company with its own MyInvois intermediary authorization. It was never going to
+complete an OAuth token exchange — expected LHDN behavior for a synthetic TIN, not a code bug. The
+hardcoded company id was just always the wrong choice for a login-able demo persona.
+
+Operator confirmed the replacement: `PartyInfoId 12`, **"Datamation (M) Sdn. Bhd."** (TIN
+`C2899917070`) — a real onboarded company already used successfully by `supplier@einvworld.com`. Also
+removed the erroneous `UserCompanies` row (`buyer@einvworld.com` → `PartyInfoId 3`) directly from the
+live Staging database. Confirmed post-redeploy: Buyer logs in and reaches a fully working dashboard with
+real data (7 invoices received, RM 3,132 valid/payable, spend trends chart).
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
+## 📅 2026-08-10 — Fix demo Supplier/Buyer login stuck on "company TIN is missing"
+
+Found during a full production-verification QA pass on staging.einvworld.com using the credentials the
+operator provided: both `supplier@einvworld.com` and `buyer@einvworld.com` were completely unable to
+log in, rejected with "Your company TIN is missing. Please contact support." This exact symptom was
+already flagged in this changelog on 2026-08-01 as a "pre-existing seeded-data issue" and was never
+actually fixed.
+
+Root cause: `RoleSeeder.SeedUserAsync`'s company-link step (`UserCompanies` → `PartyInfo`, which is
+exactly what the login page's TIN check reads) only ever ran at the moment a demo user is first
+created. On a freshly-created database the required `PartyInfo` rows didn't exist yet, so the link was
+correctly skipped with a warning at seed time — but because the demo users already existed as of that
+point, the link was never retried on any later startup, even once those `PartyInfo` rows landed in a
+subsequent deploy. Permanently company-less demo accounts.
+
+Fixed by decoupling "create the user" from "ensure the company link exists" — the latter now runs on
+every startup (still gated behind `Seeding:SeedDefaultUsers`, off in Production) and only adds a link
+that's actually missing, self-healing once the target `PartyInfo` exists. No existing `UserCompanies`
+rows are touched or removed. Once deployed and the app restarts, `supplier@einvworld.com`/
+`buyer@einvworld.com` should self-heal without any manual DB fix.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, no regressions.
+
+## 📅 2026-08-10 — Fix false-positive tamper detection in audit chain verification
+
+Found during a full production-verification QA pass on staging.einvworld.com: **Admin → Audit Trail →
+"Verify chain integrity" reports "Row 1: contents were altered after it was written"** on a database
+with no actual tampering.
+
+`AuditService.ComputeRowHash` hashes `CreatedAtUtc.ToString("O")`. At write time `CreatedAtUtc =
+DateTime.UtcNow` has `Kind=Utc`, so `ToString("O")` ends in `Z`. SQL Server's `datetime2` has no
+`DateTimeKind` concept, so when `VerifyChainAsync` streams rows back via EF Core, `CreatedAtUtc` comes
+back with `Kind=Unspecified` — `ToString("O")` then omits the `Z`, producing a different string and
+therefore a different SHA-256 hash for every single row. `VerifyChainAsync` returns on the first
+mismatch, so this always surfaced as "row 1 altered" regardless of whether every row was equally
+affected (it was).
+
+Fixed by normalizing `CreatedAtUtc` to `Kind=Utc` via `DateTime.SpecifyKind` (a reinterpretation, not a
+conversion — the stored value already represents UTC) before hashing. No-op at write time; makes the
+verify-time recomputation match. Existing stored `RowHash` values are unaffected — no data migration
+needed. Proven with a real-SQL-Server integration test
+(`EINVWORLD.Tests/Integration/AuditServiceTests.cs`): reverting the fix reproduces the exact Staging
+error on a brand-new, never-touched database; restoring it passes — confirming this was always a false
+positive, never a real tamper event.
+
+dotnet build: 0 errors. dotnet test: 242/242 pass, including real SQL Server LocalDB integration tests.
+
+## 📅 2026-08-10 — Create/Edit Invoice: 2dp number display + Step 1 Invoice Summary fix
+
+Reported with staging screenshots: on `InvoiceEdit.cshtml` (and, on inspection, identically on
+`CreateInvoice.cshtml`), the Quantity, Unit Price, and Tax Percentage inputs — and the header Exchange
+Rate field — rendered whatever raw precision their `decimal(18,6)`/`decimal(18,4)` database column
+happened to carry (`1.000000`, `1500.0000`) instead of the 2 decimal places every other amount on the same
+form already showed. The Review & Submit step's Item Summary table had the identical gap for its QTY
+column (Unit Price there was already correctly formatted).
+
+- **Fix (display only):** all 4 inputs now render via a small `Fmt2(decimal?)` Razor helper
+  (`value.ToString("F2", CultureInfo.InvariantCulture)`) passed as an explicit `value="…"` attribute
+  alongside `asp-for` — ASP.NET Core's `InputTagHelper` never overwrites an explicitly-set `value`, so this
+  only changes what's rendered, not the model binding path, the POST payload shape, or the underlying
+  `decimal(18,6)`/`decimal(18,4)` column precision (per the "correct decimal precision" architecture note
+  in `CLAUDE.md` — nothing there regressed). Matches the `step="0.01"` these inputs already declared.
+  Applied to `CreateInvoice.cshtml` too since it reaches the same raw-precision values via its
+  `templateId`/`cloneId`/`invoiceNo` prefill paths (a blank new invoice was never affected — its fields
+  start empty).
+- The Review & Submit Item Summary table's QTY cell now goes through `parseFloat(qty).toFixed(2)`,
+  matching the pattern its own Unit Price cell already used.
+- **Real defect found and fixed in the same pass:** the Step 1 sticky "Invoice Summary" card
+  (`step1SummarySubtotal`/`step1SummaryTax`/`step1SummaryTotal`) on both forms was declared in the markup
+  but never referenced anywhere in `calculateTotals()` — it stayed frozen at its initial `RM 0.00` no
+  matter how many items or how large the actual total was, which is exactly the "RM 42.98 running total
+  vs. `RM 0.00` Invoice Summary" mismatch shown in the reported screenshots. `calculateTotals()` now
+  updates all three elements alongside the KPI tile and the Step 2 card it already kept in sync.
+
+Verified live against a real Staging draft invoice via local dev (Admin login, `EINV00017`): Quantity/Unit
+Price both display `1.00` instead of `1.000000`/`1.0000` on Step 2, the Item Summary table shows `1.00` on
+Step 3, the Step 1 Invoice Summary card tracks the real total instead of staying at `RM 0.00`, and
+resaving via "Update Draft" round-trips correctly (`RM 1.08` unchanged on reload) with no console errors.
+`dotnet build`: 0 errors. `dotnet test`: 241/241 pass (no test changes needed — pure Razor/JS display
+fix, no calculation logic touched). No schema, config, or LHDN-submission changes.
+
+## 📅 2026-08-09 — Automatic Tesseract OCR trained-data sync
+
+Replaces the fully-manual "download `eng.traineddata`/`msa.traineddata` from GitHub and copy them into
+the `tessdata` folder yourself" step (`IIS-DEPLOYMENT-GUIDE.md` PART 17a-OCR) with a new background
+worker, `Services/Background/TessdataSyncWorker.cs`, mirroring the existing `CodeTableSyncWorker` pattern
+(config-gated `BackgroundService`, named `HttpClient`, startup delay + interval loop, per-item try/catch
+isolation).
+
+- **Source:** the official, FOSS (Apache-2.0) `tesseract-ocr/tessdata` GitHub repository, fetched via
+  `raw.githubusercontent.com` — the same repo the user asked to track (`.../blob/main/eng.traineddata`,
+  `.../blob/main/msa.traineddata`). Previously the deployment guide pointed at `tessdata_fast` (a
+  smaller/lower-accuracy variant); this switches the documented/automated source to the standard,
+  best-accuracy repo.
+- **Which languages:** derived from the existing `DocumentCapture:OcrLanguage` setting (split on `+`, e.g.
+  `eng+msa`) rather than hardcoded — a deployment that only enables `eng` never fetches `msa`, and vice
+  versa.
+- **Change detection:** a cheap `HEAD` request compares upstream `Content-Length` to the local file's size;
+  a file already up to date is never re-downloaded — a normal app-pool recycle costs one HEAD request per
+  language, not a repeat multi-MB download.
+- **Corruption safety:** downloads write to a `.downloading` temp file, then atomically `File.Move(...,
+  overwrite: true)` into place — a cancelled/interrupted download can never leave a partial file for a
+  concurrent OCR call to load. A plausibility floor (< 100 KB is almost certainly an HTML error page, not
+  real trained data) discards an implausible response instead of applying it.
+- **Fail-safe/toggleable:** entirely inert unless `DocumentCapture:OcrEnabled=true` (off by default) *and*
+  `TessdataSync:Enabled` (new section, defaults to `true`, independently switchable off) — a server with
+  restricted/no outbound internet access sets `TessdataSync__Enabled=false` and keeps staging files
+  manually, exactly as before. One language's failure (network, 404, disk) is logged and skipped; it never
+  blocks another language or crashes the app.
+- New config section `TessdataSync` (`appsettings.json`): `Enabled` (default `true`), `BaseUrl` (default
+  `https://raw.githubusercontent.com/tesseract-ocr/tessdata/main/`), `IntervalHours` (default `24`),
+  `StartupDelayMinutes` (default `2`).
+- `IIS-DEPLOYMENT-GUIDE.md` PART 17a-OCR updated: the `tessdata` folder now needs app-pool **Modify**
+  (not just Read) rights since the worker writes into it; manual download is now documented as the
+  air-gapped fallback, pointing at `tesseract-ocr/tessdata` (not `tessdata_fast`).
+
+No schema change, no LHDN/invoice-calculation impact — purely an operational improvement to an
+already-optional, already-off-by-default OCR feature. 5 new unit tests
+(`EINVWORLD.Tests/Services/TessdataSyncWorkerTests.cs`) cover: download-when-missing, skip-when-unchanged,
+discard-when-implausibly-small, multi-language fetch, and one-language-failure-doesn't-block-another —
+all against a stubbed `HttpMessageHandler` and a real temp directory, no network or database involved.
+
+## 📅 2026-08-09 — InvoiceEdit brought to full parity with Create e-Invoice
+
+Follow-up to the same-day IDOR fix below: the user reported (with staging screenshots) that the invoice
+editor Smart Capture hands drafts off to still "looked old" compared to Create e-Invoice, even after
+confirming the routing itself was correct. Comparing the two Razor views side by side confirmed it —
+`InvoiceEdit.cshtml` never received the richer redesign `CreateInvoice.cshtml` got in earlier "Stitch
+parity" commits (`db90425`, `206a5a2`); it only got a lighter "consistent header" touch-up and the
+shared brand-token restyle (`#154`, `#162`), which explains why both looked "restyled" in git history
+but not actually alike on screen.
+
+**Step 1 — Basic Information**: added the Bento KPI row (Buyer Status/Currency/Running Total/Document
+Type, live-updated), wrapped the existing fields in collapsible "Document Setup" / "Buyer & Supplier"
+sections (matching Create e-Invoice's exact field boundaries — no new fields added), restyled
+"Additional Party Information" into its own collapsed-by-default section with the "PRE-FILLED"/"SYSTEM
+PRE-FILLED" badges, and added the sticky right-hand Invoice Summary + Validation Checklist sidebar. Also
+added the SVDP Notice banner (config-gated, same as Create e-Invoice) that InvoiceEdit was missing
+entirely.
+
+**Step 2 — Invoice Items**: added a "Row Total" box next to each line's "Subtotal" box, moved "+ Add
+Item" to the top of the card (matching Create e-Invoice), and added the Invoice Summary / Amount Payable
+block at the bottom. Applied to both the server-rendered items and the two JS templates used when adding
+a new row / re-adding a removed row, plus the row-reindexing logic.
+
+**Step 3 — Review & Submit**: replaced the plain two-table layout with Invoice Details / Buyer & Supplier
+cards, an Item Summary table (built client-side from the live item rows, no server round-trip), a
+Submission Readiness checklist, a Payment & Terms card, and a sticky Total Amount sidebar — while leaving
+InvoiceEdit's own action buttons (Save as Draft / Save as Template / Submit to LHDN, and the
+`IsTemplateMode` "Update Template" variant) completely untouched; only Create e-Invoice's simpler "Submit
+Draft/Template" button set was *not* copied over, since InvoiceEdit's own handlers are real, different,
+already-correct backend behavior specific to editing an existing draft.
+
+**Real bug found and fixed along the way**: `calculateTotals()` computed each line's subtotal internally
+but only ever wrote it to the DOM's Row Total display — the separate per-row "Subtotal" box was actually
+maintained by a different function (`calculateSubtotal()`) triggered only by the user typing into a
+qty/price field. For a freshly-opened *existing* draft, that never fires, so the Subtotal box silently
+stayed at its "0.00" placeholder — and the new Step 3 Item Summary table, which derives its Tax column as
+`Row Total − Subtotal`, showed the full row total as "tax" instead of the real tax amount. Fixed by
+having `calculateTotals()` keep the per-row Subtotal box in sync directly, the same way it already did
+for Row Total — this also fixes the pre-existing Step 2 display bug for existing drafts, not just the
+new Step 3 table.
+
+No schema change, no backend/`.cs` changes at all — pure `.cshtml` markup and inline JavaScript. Verified
+live against the real Staging database (local dev environment, per `local-f5-staging-db` — Turnstile uses
+Cloudflare's public test keys locally, so automated login works here unlike against the deployed Staging
+host) by logging in as Admin, opening a real draft invoice (`EINV100464`), and walking all 3 steps: KPI
+tiles and Validation Checklist correctly reflected the invoice's real supplier/buyer/currency, the Item
+Summary table showed the correct Tax/Total after the fix, Submission Readiness showed all green, and the
+existing Save Draft / Save as Template / Submit to LHDN buttons rendered with their original behavior
+intact. The invoice was only viewed and navigated — never saved/submitted — so no shared data was
+modified. `dotnet build`/`dotnet test`: unaffected (236/236 pass) since this is a pure front-end change
+with no C# logic touched; verification here was via live browser testing rather than new unit tests.
+
+## 📅 2026-08-09 — Critical IDOR fix on InvoiceEdit + AI Document Capture removed from nav
+
+Requested check: confirm Smart Capture's "Open it in the invoice editor" link points at the current,
+actively-maintained Create/Edit Invoice form. It does — `InvoiceEdit.cshtml` and `CreateInvoice.cshtml`
+were restyled together in the same commit (#162) and both use the Tabler layout; no routing bug. While
+verifying that, inspection of the target page turned up a real, pre-existing, **Critical** authorization
+gap unrelated to Smart Capture itself but reachable by every draft it creates:
+
+- `InvoiceEdit.cshtml` uses `@page "{id?}"` — `id` is a route value (`/Invoices/InvoiceEdit/INV-000123`),
+  not a query-string value, and it's an `InvoiceNo` string, not a `PartyInfoId` int.
+- `InvoiceEditModel : SupplierBasePage`. `SupplierBasePage.OnPageHandlerExecutionAsync` — the *only*
+  cross-cutting authorization on this page — tries `int.TryParse(Request.Query["id"], ...)` to check the
+  requested company's permission. Because this page's `id` is neither a query value nor an int, that
+  parse always silently fails, and the check falls back to verifying the *current user's own* primary/any
+  company — completely independent of which invoice was actually requested.
+- `OnGetAsync` (load for edit) and `OnPostAsync` (save) then loaded/wrote the invoice by `id` with **no
+  further ownership check at all**. `OnPostSubmitDocumentsAsync` (the LHDN-submit handler on the same
+  page) already had the correct guard — `EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync`, the
+  same helper used consistently by `InvoiceDetails2`, `CreateInvoice`/`CreateCN`/`CreateSBCN`/`CreateSBI`'s
+  submit handlers, and `InvoiceLists` — making the gap on load/save conspicuous by omission.
+
+**Net effect: any authenticated Supplier-role user with edit rights on any one company could view AND
+overwrite any other company's draft invoice** by navigating directly to
+`/Invoices/InvoiceEdit/{someOtherCompanysInvoiceNo}` — a cross-tenant financial-data read+write
+vulnerability on the exact page every Smart Capture confirmation redirects to.
+
+**Fixed** by adding the same `CanAccessInvoiceAsync` guard already used everywhere else in the app:
+- `OnGetAsync` — applied unconditionally right after the invoice is loaded (this handler already 404s if
+  `id` is missing or the invoice doesn't exist, so there's no dual-purpose "new invoice" case to special-case).
+- `OnPostAsync` — applied **only** when `id` is non-empty *and* an invoice with that number already
+  exists in the database. This handler is also used to save a brand-new invoice for the first time (a
+  pre-generated `InvoiceNo` that legitimately doesn't exist yet), and `CanAccessInvoiceAsync` correctly
+  returns `false` for a non-existent invoice — applying it unconditionally would have broken that
+  legitimate flow. AJAX saves get a 403 JSON response (`AjaxFail`, matching the page's existing
+  convention); non-AJAX gets a standard `Forbid()`.
+- Deliberately reused `CanAccessInvoiceAsync`'s existing supplier-OR-customer-OR-public-customer
+  semantics rather than tightening to supplier-only: self-billed invoice types (`11`-`14`) treat the
+  *customer* as the effective issuer/editor (mirrors `CreateInvoice.cshtml.cs`'s own TIN-selection logic
+  for who may submit them), so a supplier-only check would have incorrectly broken self-billed editing.
+  Admin bypass is preserved (the helper short-circuits `true` for Admins, as it already does everywhere
+  else it's used).
+
+**Also removed "AI Document Capture" from the sidebar and admin nav menus** (`Pages/Shared/_Sidebar.cshtml`
+×2, `_AdminNavigation.cshtml`, `_SupplierNavigation.cshtml`) — functionally superseded by Smart Capture
+("Create from Document") across all 5 shipped stages, sharing the same extraction/AI/validation services
+and the same `InvoiceDraftService.SaveDraft` path. Matches the convergence plan already documented in
+`CLAUDE.md` § "Invoice-input mechanisms": the `/Invoices/CreateFromFile` route and its page/services are
+**not** deleted — kept alive as the documented rollback path — only the nav links were removed.
+
+No schema change. `dotnet test`: 236/236 pass against real SQL Server LocalDB, including 3 new tests
+against `CanAccessInvoiceAsync` directly (cross-tenant denial, same-tenant + self-billed-customer
+allowance, and confirming it correctly returns `false` for a not-yet-existing `InvoiceNo` — the exact
+precondition `OnPostAsync`'s guard relies on).
+
+## 📅 2026-08-09 — Smart Capture full re-verification pass: 2 real defects found and fixed
+
+A fresh "check if Smart Capture has been fully implemented" pass (roast → plan → fix → test) across all 5
+already-shipped stages. Both real, concrete findings were in Stage 4's auto-submit cancellation path —
+everything else (tenant isolation on the Stage 2/4 tables, Admin-page authorization, the
+`OnPostCancelAutoSubmitAsync` ownership check, migration additivity, hint-value prompt-injection surface)
+held up under review with no changes needed.
+
+- **`SmartCaptureAutoSubmitEligibilityService.CancelAsync` TOCTOU race (real, not theoretical).**
+  `SyncJob` has no concurrency token, and the durable worker claims a job via an atomic
+  `UPDATE ... WHERE Status = Queued` inside a short transaction, then releases the row lock and runs the
+  handler (a real LHDN submission) to completion in a separate later write. The old `CancelAsync` read the
+  job, checked its status in C#, then unconditionally wrote `Status = Cancelled` — if the worker's claim
+  and completion happened in between that read and that write, Cancel's own write would silently overwrite
+  `Completed` back to `Cancelled`, showing the user a false "cancelled" state for an invoice that had
+  actually already gone to MyInvois. Fixed with a single atomic conditional UPDATE
+  (`_context.SyncJobs.Where(j => j.Id == jobId && j.Status == Queued).ExecuteUpdateAsync(...)`), whose
+  affected-row-count tells the caller which case actually happened — no intermediate read to go stale.
+- **Disabling a company's auto-submit didn't retract already-scheduled jobs.** An Admin flipping
+  `Enabled` to `false` on `/Admin/SmartCaptureAutoSubmit` only stopped *future* schedulings — any job
+  already queued during its delay window kept its `NextRunAtUtc` and would still fire. Added
+  `SmartCaptureAutoSubmitEligibilityService.CancelAllPendingForCompanyAsync`, called on the true→false
+  transition, using the same atomic-UPDATE pattern in bulk (a job the worker already claimed is simply
+  outside the `WHERE Status = Queued` filter, so it's correctly left untouched either way).
+
+Also removed one unused local variable (`checksJson` in `ApplyAsync`) found during the pass. No schema
+change, no behavior change to the eligibility/scheduling logic itself — this is purely a cancellation-path
+correctness fix. `dotnet test`: 233/233 pass against real SQL Server LocalDB, including 2 new tests
+reproducing the exact race (job already `Completed` when Cancel runs — never overwritten) and the bulk
+retraction (2 pending jobs cancelled, 1 already-`Completed` job for the same company left alone).
+
+## 📅 2026-08-09 — Smart Capture Stage 4 (reduced first cut): conditional automatic submission
+
+The first Smart Capture capability that can submit to MyInvois without a manual click, built as a narrow,
+multi-layer-gated exception rather than a new submission path (see `CLAUDE.md` § "Invoice-input
+mechanisms" for the full reasoning). Three independent layers must all agree:
+
+1. **Global kill switch** — `SmartCapture:AutoSubmitEnabled` (config, default **false** in every
+   committed appsettings file). A company's opt-in has zero effect while this is false.
+2. **Per-company opt-in** — `SmartCaptureAutoSubmitSettings`, one row per company, set only from
+   `/Admin/SmartCaptureAutoSubmit` (`[Authorize(Roles = "Admin")]`) — never self-service on the
+   company's own Supplier workspace. Configures an LHDN doc-type allowlist (default `01` only), a
+   required value ceiling (`MaxAutoSubmitValue` — no "unlimited" tier), and a delay in minutes.
+3. **Per-document deterministic gate** (`SmartCaptureAutoSubmitEligibilityService`, re-evaluated on
+   every single confirmation) — confirmed doc type is in the company's allowlist, the review checklist
+   has zero warnings *and* zero errors (reuses Stage 1.5's existing signal), the confirmed buyer has a
+   real TIN, and the invoice's total is under the company's ceiling. No fuzzy "confidence score" —
+   today's AI provider returns none, so every condition is a plain deterministic check, and the full
+   check list (pass/fail + the actual values compared) is written to the audit trail either way.
+
+When all three pass, `SmartCaptureReviewModel.OnPostConfirmAsync` enqueues a `SyncJobType.SubmitDocument`
+job — the exact same job type and handler already used to retry a failed interactive submission
+(`InvoiceSubmissionHelper.SubmitInvoiceAsync`, with its existing payload-hash idempotency guard, XAdES
+signing, retry/backoff, and audit chain, all completely unchanged) — with `NextRunAtUtc` set
+`DelayMinutes` in the future. During that window the Smart Capture list page shows an "Auto-submit
+HH:mm" badge with a **Cancel** button per document; cancelling just flips the job's `Status` to
+`Cancelled`, which the durable worker's existing `WHERE Status = Queued` claim query already excludes —
+no new worker logic needed. Evaluation and scheduling are both best-effort or try/caught around the
+existing draft-creation flow: any failure here is logged and swallowed, never turns an already-successful
+Confirm into a 500, and simply falls back to the pre-existing manual "Submit" flow on `InvoiceEdit`.
+
+New additive migration: `SmartCaptureAutoSubmitSettings` table (unique index on `CompanyPartyInfoId`,
+cascade FK to `PartyInfos`) plus a nullable `SmartCaptureDocuments.PendingAutoSubmitJobId` column.
+
+**Deliberately out of scope for this first cut** (can be added later without a schema change): per-company
+email notification on scheduling/outcome, a richer confidence signal than "zero review issues", and
+per-supplier (not just per-company) granularity.
+
+## 📅 2026-08-09 — Smart Capture Stage 3 (reduced first cut): bulk upload
+
+The Smart Capture upload form now accepts multiple files in one submission (`<input multiple>`), capped
+at a configurable `SmartCapture:MaxFilesPerBulkUpload` (default 20 per batch). Each file is passed through
+`SmartCaptureDocumentService.UploadAsync` exactly as before — same per-file signature/size/quota
+validation, same tenant-scoped storage, same one-durable-job-per-document queuing — so a single upload is
+just a batch of one and nothing about the existing per-file pipeline changed. Results are aggregated
+per-file: a batch reports "N of M documents uploaded" plus a list of which files failed and why, so one
+bad file (wrong signature, over quota, unsupported type) never blocks the rest of the batch. Also fixed a
+stale claim on the Smart Capture page ("Scanned for malware before storage") left over from the v1.17.2
+ClamAV removal — replaced with an accurate description of the file-type/signature validation it actually
+performs.
+
+**Known limitation, not addressed in this cut**: the monthly processing quota is measured in
+*successfully extracted* pages (`PageCount`, set only once background extraction completes), not upload
+count — so a large bulk batch can queue well past the quota before any of it finishes processing and the
+quota check reflects it. This is an existing Stage 1 characteristic, not new to bulk; bulk just makes the
+burst more visible. `MaxFilesPerBulkUpload` bounds the worst case per batch. Revisit if real Staging usage
+shows this needs a reservation-based quota instead.
+
+Still produces drafts one at a time through the unchanged, always-confirm review screen — no batch draft
+creation, no auto-submission. That remains explicitly out of scope until Stage 4, which requires its own
+scoped approval given the LHDN-submission blast radius.
+
+## 📅 2026-08-09 — Smart Capture Stage 2 (reduced first cut): learned per-company hints
+
+Each company's Smart Capture extractions now learn from that company's own confirmed drafts: a new
+`SmartCaptureCompanyHints` row (one per company) tracks the most commonly confirmed LHDN document type,
+currency, tax type, and tax rate using a streaming Boyer-Moore majority-vote counter per field — no
+per-confirmation history table needed, and a single early or outlier confirmation can't dominate it. Once
+a company has confirmed at least 3 drafts, `SmartCaptureCompanyHintService.GetAsync` surfaces the current
+majority as advisory-only context appended to the AI suggestion prompt ("this company's invoices are
+usually type X — use this only if the document doesn't clearly indicate otherwise"); the model is free to
+disagree, and the review/confirm screen behaviour is completely unchanged. Recorded once per successful
+Confirm (`SmartCaptureReviewModel.OnPostConfirmAsync`), never before — a document that fails or is
+abandoned never influences future suggestions. `IEInvoiceAssistantService.SuggestInvoiceAsync` gained a
+new optional `companyHints` parameter (backward compatible; the AI Assistant chat page and the legacy
+`CreateFromFile` page pass none). Deliberately scoped down from the full Stage 2 roadmap (per-supplier
+templates with field-level provenance, a 3-tier deterministic/OCR/AI extraction pipeline) — this is a
+company-level, fully-automatic, zero-UI first cut; the richer template model remains a future increment
+if real Staging usage shows it's worth the complexity.
+
+## 📅 2026-08-08 — Smart Capture Stage 1.5 (reduced first cut): duplicate detection + condensed review
+
+`SmartCaptureExtractionJobHandler` now flags an exact-content re-upload within the same company as a
+review-checklist **Warning** (never a block) using the already-indexed `FileHash` column — a different
+company uploading byte-identical content (e.g. a shared template) is not flagged, preserving tenant
+isolation. On the review screen, an extraction with zero errors and zero warnings now shows a condensed
+"All checks passed" summary with the full checklist/raw-suggestion collapsed behind a toggle, instead of
+always expanding the full review — the Confirm click is still always required either way; nothing is
+auto-decided. This was deliberately scoped down (via `/roast`) from the user's original "Smart Review"
+proposal, which would have auto-created drafts for high-confidence extractions with no review screen at
+all — that tier was deferred pending a real confidence signal (today's AI provider returns none) and real
+Staging usage data. PR #173.
+
+## 📅 2026-08-08 — Smart Capture: remove application-level malware scanning (ClamAV)
+
+**Deliberate architecture decision, explicitly requested and confirmed**, not a bug fix. Smart Capture no
+longer scans uploaded files with ClamAV. Upload security instead relies entirely on: file extension
+allowlist, magic-byte/file-signature validation (rejects a renamed file whose content doesn't match its
+claimed type), configurable file-size/page-count limits, monthly per-company processing quota, storage
+outside `wwwroot` under a random internal filename, `SafePath` path-traversal protection, tenant/company
+ownership enforcement on every read, an IDOR-protected download endpoint, tiered retention/deletion, and
+audit logging — plus normal server-level protection (least-privilege app pool, Windows Server endpoint
+protection). This does **not** provide the same guarantee as content-level antivirus scanning; a
+well-formed PDF can still carry an embedded exploit that format/signature validation cannot detect. If a
+deployment's risk profile requires content scanning, add it at the network/endpoint layer (e.g. scan the
+`FilePathConfig:SmartCaptureFolder` directory via Windows Defender/EDR) — EINVWORLD does not provide one.
+
+- **Removed**: `Services/Security/IMalwareScanner.cs`, `Services/Security/ClamAvMalwareScanner.cs`,
+  `SmartCaptureOptions.MalwareScanRequired`/`ClamAvHost`/`ClamAvPort`/`ClamAvTimeoutSeconds`, the
+  `MalwareDetected`/`ScannerRequiredButUnavailable` upload-failure reasons, the
+  `SmartCaptureMalwareDetected`/`SmartCaptureMalwareScanSkipped` audit actions, the `MalwareScanRequired`
+  field from the startup log line, and the ClamAV install/verify steps from `IIS-DEPLOYMENT-GUIDE.md`
+  PART 17d and the EICAR test step from `POST-DEPLOY-CHECKLIST.md`.
+- **Updated**: all three `appsettings*.json` `SmartCapture` sections (no more `MalwareScanRequired`/
+  `ClamAv*` keys), `README.md`, `IIS-DEPLOYMENT-GUIDE.md` PART 17d (now documents the upload-security
+  controls Smart Capture relies on instead, and a renamed-file-rejection verification step in place of
+  the EICAR test), `POST-DEPLOY-CHECKLIST.md`, and `CLAUDE.md` (new "Upload security (Smart Capture — no
+  malware scanning)" note alongside the existing invoice-input-mechanism architecture rule).
+- `dotnet test`: 220/220 pass (unchanged — no test asserted on ClamAV behavior beyond a fake "always
+  clean" double, which is simply no longer needed).
+
+## 📅 2026-08-08 — Smart Capture: fix Critical "Confirm" failure (`PrefixedID` NOT NULL)
+
+While closing a testing gap (no live run in this environment ever reached the actual "Confirm → create
+draft" step, since there's no reachable Ollama here — every live attempt terminated earlier at
+`NoTextExtracted`), added an integration test that exercises the **real** extraction → review → confirm
+pipeline end-to-end (only the AI provider network call is faked; every EINVWORLD service and table
+involved is real, against real SQL Server). It failed immediately: `InvoiceDraftService.SaveDraft` — a
+**pre-existing service, not touched by the Smart Capture port** (traces back to the repo's first commit)
+— has always thrown when creating a new invoice, because it never sets `InvoiceHeaders.PrefixedID`, a
+NOT NULL column. It was simply never called by anything until Smart Capture added its one and only
+caller (`SmartCaptureReviewModel.OnPostConfirmAsync`). **Every Smart Capture "Confirm" click would have
+failed** with "Failed to create the draft invoice. Please try again." — deterministically, with no way
+to recover — while `CreateInvoice.cshtml.cs` was unaffected because it uses a separate save path that
+already sets `PrefixedID = Invoice.InvoiceNo` correctly.
+
+- **Fix**: `Services/InvoiceDraftService.cs` — set `PrefixedID = model.InvoiceNo ?? string.Empty` in the
+  new-invoice branch, matching the existing pattern in `CreateInvoice.cshtml.cs`. One line.
+- **New test**: `Successful_Extraction_Through_Confirm_Creates_A_Real_Draft_Invoice` — the first test in
+  the suite to exercise the full pipeline with a successful (faked-provider) extraction, proving a real
+  `InvoiceHeader` is created with correct totals, doc type, and line items, and the `SmartCaptureDocument`
+  is correctly linked (`Status=DraftCreated`, `RelatedInvoiceHeaderInvoiceNo` set).
+- `dotnet test`: 220/220 pass against real SQL Server LocalDB (219 prior + this new one).
+- This does **not** change the outstanding Stage 1 gate — real Ollama extraction, real ClamAV scanning,
+  and full Staging end-to-end sign-off are still required before production. It does mean that gate is
+  now worth pursuing: the step it was ultimately gating (draft creation) is confirmed working.
+
+## 📅 2026-08-08 — Smart Capture (Stage 1): ported from the stale, never-merged PR #164
+
+Merged to `main` via **PR #170** (squash), which closed the original **PR #164** as superseded. Smart
+Capture Stage 1 (persisted, async supplier-invoice capture → draft) was fully built and locally verified
+back on 2026-08-04 on branch `fix/lhdn-getdoc-burst-429` (PR #164), but that branch was never merged and
+went stale — `main` picked up unrelated work in the meantime (the LHDN full-import widen fix, the
+Quantity/ExchangeRate display fix, and the Manage Resources CMS/SEO-GEO redesign above), none of which
+PR #164 ever incorporated.
+
+- **Ported cleanly onto current `main`**, file-by-file and hunk-by-hunk — not a raw branch merge — so
+  none of PR #164's staleness (reverted Resources pages, reverted LHDN lookback default, reverted
+  CreateInvoice/InvoiceEdit CSS token rebrand) came along with it. Regenerated the EF migration
+  (`Migrations/20260808063519_AddSmartCaptureDocument`) fresh against `main`'s current model instead of
+  reusing the old branch's Designer/ModelSnapshot, so it chains correctly after
+  `20260807120000_AddSeoGeoFieldsToResourceItem`; table shape verified byte-identical to the original.
+- **Two config defaults fixed during the port**: the base `appsettings.json` `SmartCapture` section had
+  `Enabled=true`/`MalwareScanRequired=true`, contradicting its own comment and meaning Staging (which
+  never overrides `Enabled`) would have silently shipped the feature on. `appsettings.Production.json`
+  had both `SmartCapture.Enabled` and unrelated `AI.Enabled` flipped `true` with no corresponding
+  Staging/Ollama/ClamAV sign-off. Both reverted to the project's stated default (`false`).
+  Deploy/config reference is unchanged (`README.md`, `POST-DEPLOY-CHECKLIST.md` already document the
+  `SmartCapture` section and the ClamAV/EICAR verification step — no new doc entries needed there).
+- **One defect found and fixed via `/roast`** (Medium): `SmartCaptureReviewModel.OnPostConfirmAsync` had
+  no double-submit guard — two concurrent "Confirm" POSTs could both create a draft invoice, and the
+  losing request would throw an unhandled `DbUpdateConcurrencyException`. Fixed by catching the conflict
+  and redirecting to whichever invoice actually won, reusing the existing `SmartCaptureDocument.RowVersion`
+  concurrency token — no new abstraction, no schema change. Regression-tested against real SQL Server.
+- **Two pre-existing Playwright test bugs fixed** in `tests/playwright/13-smart-capture.spec.js`
+  (inherited from the original branch, unrelated to the port itself): a hardcoded `localhost:5210` in the
+  anonymous-download check (now uses the configured `baseURL`), and a 60s terminal-state wait that didn't
+  account for `AI:TimeoutSeconds` (180s) when Ollama is unreachable (extended to 200s/240s).
+- **Verified this session**: `dotnet build` clean; `dotnet test` 219/219 against real SQL Server LocalDB
+  (not the in-memory provider); a focused security review (tenant isolation, IDOR, malware fail-closed
+  behavior, secrets/PII handling — no findings); the migration applied to the shared Staging database
+  (idempotent — reconciled pre-existing schema drift from an earlier unmerged deploy attempt rather than
+  re-creating anything); and the full `13-smart-capture.spec.js` Playwright spec, 4/4 pass on a clean,
+  verified single app instance.
+- **Still outstanding** (the user's own stated Stage 1 production gate, not achievable from this
+  environment): a successful extraction using real Ollama output, real ClamAV clean/infected-file
+  scanning, and full Staging end-to-end sign-off. **Not production-ready until those pass.**
+- **`appsettings.Staging.json`: `SmartCapture:Enabled` flipped `true`.** Note: per `IIS-DEPLOYMENT-GUIDE.md`
+  Part 2 / Part 10 and `DEPLOY-NOTES.md`, the real Staging server runs with `ASPNETCORE_ENVIRONMENT=Production`
+  (the "Staging" distinction is DB/URL only, via manually-edited `appsettings.json` values on that box) —
+  so `appsettings.Staging.json` is **not loaded there** and this file change alone does not enable the
+  feature on the real server. **To actually enable it on Staging, set the `SmartCapture__*` environment
+  variables** in IIS (Part 10) per the new PART 17d below, then `iisreset`. The `appsettings.Staging.json`
+  change only takes effect if something is explicitly run with `ASPNETCORE_ENVIRONMENT=Staging` (e.g. a
+  future differently-configured environment, or local `dotnet run` in that mode).
+- **`IIS-DEPLOYMENT-GUIDE.md` PART 17d added** (was referenced by README/`POST-DEPLOY-CHECKLIST.md` but
+  missing from the port) — ClamAV install/verify steps and the `SmartCapture__*`/`FilePathConfig__*` env
+  vars needed to enable this feature on a real server.
+
+## 📅 2026-08-07 — Manage Resources (CMS): SEO/GEO redesign
+
+- **New SEO/GEO metadata on `ResourceItem`**: `MetaTitle`, `MetaDescription`, `FocusKeyword`,
+  `CanonicalUrl`, `OgText`, `ImageAlt`, `Author`, `Tldr` (AI-answer-engine summary), `SchemaType`
+  (Article/FAQ/HowTo), and `FaqItemsJson` (FAQ Q&A pairs, stored as JSON — not a child table). All
+  nullable/defaulted — additive migration
+  (`Migrations/20260807120000_AddSeoGeoFieldsToResourceItem` + `Apply_AddSeoGeoFieldsToResourceItem.sql`),
+  targets `WebsiteDbContext` (its own, separate `__EFMigrationsHistory`).
+- **New `Helpers/ResourceSeoScorer`**: single source of truth for the 0-100 SEO/GEO readiness score
+  (slug, meta title/description length, focus keyword, canonical URL, image alt, author, TL;DR, schema
+  type, and FAQ-question-count-when-FAQ). Mirrored in `wwwroot/js/resource-seo.js` for the live gauge
+  on Create/Edit (no round trip) — the two are kept in sync intentionally; update both if the checklist
+  changes.
+- **Manage Resources (list)**: added a per-row SEO score chip and "AI SEO Assistant" sidebar (Global
+  Site Health % + static suggestions), plus **real server-side pagination** (previously loaded every
+  resource on one page). Existing filters, Add Type modal, and Backfill Slugs untouched.
+- **Create/Edit Resource**: two-column layout — SEO/GEO panel (live gauge, char counters, Meta
+  Title/Description/Focus Keyword/Canonical URL/Social Share Text), Alt Text, AI Summary/TL;DR, and a
+  Structured Data section with a Schema Type select + FAQ Q&A builder (shown only when Schema Type =
+  FAQ). Title→slug auto-derive, TinyMCE, and the ImageMagick image pipeline are unchanged.
+- **Resource Types**: added a computed "SEO Prefix" (`/{code}/`) column; fixed a pre-existing bug where
+  creating a type with a duplicate Code threw an unhandled 500 instead of a validation error (now
+  matches the existing duplicate-check already used by the Manage Resources "Add Type" modal).
+- **Public Article page**: `<title>`/meta-description now fall back to the new MetaTitle/MetaDescription
+  when set (else Title/Summary as before) — the only change to the public-facing page.
+- **Hygiene**: `Create.cshtml.cs` now has an explicit `[Authorize(Roles="Admin")]` matching its siblings
+  (the `/Admin` folder policy already covered it — defence-in-depth, not a live vulnerability fix).
+- **Fixed `appsettings.json`**: a missing comma after `CompanyLogosFolder` (introduced in a recent
+  appsettings update) made the entire file invalid JSON, so the app failed to start locally at all.
+  Restored valid JSON; no config values changed.
+- New unit tests: `ResourceSeoScorerTests` (score/tier boundaries, FAQ JSON round-trip) and
+  `WebsiteDbContextModelTests` (catches EF model-validation regressions — e.g. a public `List<T>`
+  property on an entity being mis-mapped as a navigation — without needing a live DB connection).
+
+## 📅 2026-08-05 — Format Quantity/ExchangeRate to 2 decimal places in invoice display/PDF
+
+- **Quantity showed 6 decimal places instead of 2** (`1.000000` instead of `1.00`) on the Invoice
+  Details page and in Print/Download PDF — reported with a screenshot. `@item.Quantity` rendered raw
+  in three places while the sibling `UnitPrice`/`TaxAmount`/`Total` columns in the same tables already
+  used `.ToString("N2")`. Fixed to match: `Pages/Invoices/InvoiceDetails2.cshtml`,
+  `Views/Invoices/PdfTemplate_v2.cshtml` (the live template `PDFGeneratorService` renders for Print/
+  Download PDF), and `Pages/Invoices/PdfTemplate.cshtml` (legacy, not currently wired into any code
+  path, fixed anyway). Audited every other decimal field in those three files — all already correctly
+  formatted; Quantity was the only outlier.
+- **`InvoiceTemplate.ExchangeRate` had no `[DisplayFormat]`**, so `@Html.DisplayFor` on
+  `Pages/Templates/Details.cshtml`/`Delete.cshtml` rendered it at raw precision too (same bug class).
+  Added `[DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = false)]` on the model
+  property (`Models/Templates/InvoiceTemplate.cs`) — fixes both pages at once, doesn't affect the
+  editable `<input>` in Create/Edit. Confirmed by grep this is the only read-only render of
+  `ExchangeRate` anywhere in the app.
+
+## 📅 2026-08-05 — Widen admin "Import All Invoices from LHDN" to every registered company
+
+- **`Pages/Admin/InvoiceSync.cshtml.cs` `OnPostFullImportAllAsync`** previously enqueued a `FullImport`
+  job only for TINs linked to the clicking admin's own account (`User.GetUserCompanies`), so a manual
+  deep backfill silently missed every other company registered in EINVWORLD. Investigated after a user
+  report of external-ERP-submitted invoices not appearing in the Buyer "Received" tab; confirmed the
+  *scheduled* background import (`InvoiceStatusUpdater.RunLhdnImportAsync`, every 10th poll cycle) was
+  already correctly iterating all TINs in `UserCompanies` system-wide — only the manual admin trigger
+  was narrower than intended. Changed to query `UserCompanies` distinct TINs directly, matching the
+  scheduled job's scope.
+- Still one `SyncJob` row per TIN, drained sequentially by the single `DurableSyncJobWorker` instance
+  and paced within each run by `LhdnRateLimitHandler` — widening the TIN list only increases queue
+  depth, not request concurrency, so LHDN rate-limit exposure is unchanged.
+- **`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`** widened `3` → `7` days
+  (`appsettings.json`, default in `Models/Settings/InvoiceStatusUpdaterSettings.cs`) so the scheduled
+  background import (`InvoiceStatusUpdater.RunLhdnImportAsync`) doesn't miss an external-ERP invoice
+  that lands a few days late. 7 days still fits inside `GetAllUuidsForTinAsync`'s single 10-day
+  date-chunk, so this adds zero extra `/documents/search` calls per cycle per TIN — no change in LHDN
+  request volume, only in how far back each existing call looks.
+
+## 📅 2026-08-03 — Restyle: finish rolling the "EinvWorld Professional" tokens onto Create/Edit Invoice
+
+> A Stitch mockup (`stitch_einvworld_tabler_redesign/`) proposed a much larger "AI Workspace" product
+> redesign (per-field AI suggestion cards, inline compliance checks, a collaborative audit timeline,
+> etc.) — that's a multi-phase product initiative with no existing data model or AI backend to support
+> it, not a UI ticket, so it was **not** implemented (see the written assessment from this
+> conversation). What *was* in scope: `CreateInvoice.cshtml`/`InvoiceEdit.cshtml` still had leftover
+> hardcoded Bootstrap-default colors (`#dc3545`/`#198754` for validation, `#e9ecef`/`#ced4da` for
+> borders) predating the earlier "EinvWorld Professional" rebrand (`einvworld-tokens.css`), and a local
+> `.card, .card-body { box-shadow: none; }` override that flattened these two pages' cards relative to
+> the rest of the app. Visual-only fix — same data, same backend, no new features.
+
+### Fixed
+- `CreateInvoice.cshtml`/`InvoiceEdit.cshtml`: replaced hardcoded validation colors
+  (`#dc3545`/`#198754` + their `rgba()` focus-ring shadows) with `var(--einv-error)`/
+  `var(--einv-success)`, and border colors (`#e9ecef`/`#ced4da`) with `var(--einv-border)`, in both
+  the CSS and the two JS validation-state assignments (`field.style.borderColor = ...`).
+- `CreateInvoice.cshtml`: removed a local `.card, .card-body { box-shadow: none; }` override that
+  killed the app-wide soft card shadow (`0 2px 4px rgba(0,0,0,.02)`, from `einvworld-tokens.css`) on
+  this page only — restored to match; also fixed `.page-title-box`/`.form-group-card`/
+  `.table-responsive`/`.tax-row`/`.progress` to the same border/shadow tokens.
+- Checked `CreateCN.cshtml`/`CreateSBI.cshtml`/`CreateSBCN.cshtml` — none have this legacy CSS
+  (simpler pages), no changes needed. Left the SweetAlert submission-success popup's own color set
+  untouched — a self-contained decorative treatment, out of scope for this pass.
+
+## 📅 2026-08-03 — CodeQL follow-up: path-traversal + log-injection hardening on the new reject/cancel code
+
+> CI's CodeQL scan flagged 8 new alerts (2 high, 6 medium) in the PR above — all genuinely in the new
+> code, not pre-existing findings resurfacing. Fixed all 8 before merging.
+
+### Fixed
+- **`PDFGeneratorService.GeneratePdfFromHtmlAsync`** (high, CWE-22 path traversal) — `invoiceNo`
+  reaches this method from user-facing routes (e.g. the PDF-download handler) and was combined into
+  the file path with a raw `Path.Combine`. Switched to `SafePath.TryResolve` (the same guard already
+  used for resource/logo/editor-upload paths) so it can never escape the PDF folder.
+- **6 new log statements** (medium, CWE-117 log injection) added by the reject/cancel concurrency-retry
+  and PDF-retry code in the PR above logged a route/query value (`documentId`, the resolved PDF path)
+  without stripping CR/LF, which could forge extra-looking lines in the text log file. Added
+  `LogSanitizer.ForLog` (strips CR/LF; existing `MaskTin`/`MaskId` are for PII, a different concern)
+  and applied it at all 6 sites.
+
+## 📅 2026-08-03 — Fix Rejection/Cancellation email delivery + related reject/cancel reliability bugs
+
+> Investigated a production report: "RejectionEmails and CancellationEmails not received by both
+> Supplier and Buyer" despite MyInvois's own emails arriving immediately, plus a review of the day's
+> log file for other errors worth fixing. Root cause of the email issue: `SendRejectionNotificationEmail`/
+> `SendCancellationNotificationEmail` threw `InvalidOperationException: GlobalBccEmail is empty`
+> **before reaching the buyer/supplier send logic at all** — confirmed by every single occurrence in
+> the log. This exact class of bug (an optional admin-CC address treated as required) was already
+> found and fixed for the Valid-status email in an earlier session, but the fix was never applied to
+> Rejection/Cancellation.
+>
+> Investigating further surfaced a second, more serious bug: in `InvoiceListsModel.
+> UpdateLocalDatabaseForRejection`, the rejection email was sent *before* `SaveChangesAsync()`, inside
+> the same try block — so the GlobalBccEmail exception (or any other email failure) aborted the local
+> database update entirely, even though LHDN had already accepted the rejection. The interactive
+> request then returned HTTP 500 to the user, who — seeing an apparent failure — retried the same
+> reject action, which LHDN correctly rejected a second time with `IncorrectState` ("already requested
+> for rejection"), matching a repeated failure pattern for the same document seen in the log across
+> several hours. The equivalent Cancel handler in the same file already saved first and emailed
+> best-effort afterward (with its own concurrency retry) — this fix brings Reject up to the same
+> standard, and extends it to both handlers in `InvoiceDetails2.cshtml.cs` for consistency.
+
+### Fixed
+- **`EInvoiceNotificationService.SendRejectionNotificationEmail`/`SendCancellationNotificationEmail`**
+  — no longer throw when `GlobalBccEmail` is blank; log a warning and send without the BCC, matching
+  `SendValidatedNotificationEmail`. Converted to `async Task<bool>` (was `void`, synchronous,
+  catch-and-swallow) so the caller can tell success from failure and retry — same contract as
+  `SendNewInvoiceReceivedNotificationEmail`. Sends to whichever of buyer/supplier has a valid email
+  independently (previously some call sites required *both* to be present or sent to neither).
+- **`InvoiceListsModel.UpdateLocalDatabaseForRejection`** — the local status-update save no longer
+  depends on the email succeeding; it's saved first (with a concurrency-conflict retry, matching the
+  Cancel handler's existing pattern), then the email is attempted best-effort afterward.
+- **`InvoiceDetails2Model.OnPutRejectDocumentAsync`/`OnPutCancelDocumentAsync`** — added the same
+  concurrency-conflict retry-once as the `InvoiceLists` handlers, for parity/defense in depth against
+  a concurrent background status-sync write.
+- **`PDFGeneratorService.GeneratePdfFromHtmlAsync`** — retries once after a short delay on `IOException`
+  writing the PDF file, mitigating a transient Windows file-sharing-violation seen once in the log
+  (another process briefly holding the same freshly-written PDF).
+- **`appsettings.Staging.json`** — added a `LHDNApiConfig:RateLimits` override, roughly halving
+  `SearchPerMinute`/`GetDocPerMinute`, after the log showed ~20 real 429 responses from LHDN across
+  the day (all recovered within the existing retry/backoff budget — no permanent failures, but
+  frequent delays). This is a conservative empirical adjustment, not a guaranteed fix; keep
+  monitoring and tune further if 429s are still frequent.
+
+### Added
+- **`InvoiceHeader.IsRejectionEmailSent`/`RejectionEmailSentAt`/`RejectionEmailSentTo`** and
+  **`IsCancellationEmailSent`/`CancellationEmailSentAt`/`CancellationEmailSentTo`** (migration
+  `20260803200000_AddRejectionCancellationEmailTrackingToInvoiceHeader`, additive, 4 artifacts incl.
+  idempotent `Apply_*.sql`) — same "`true` = not applicable" default pattern as
+  `IsNewInvoiceReceivedEmailSent`, so every existing invoice is automatically exempt; the reject/cancel
+  handlers set the relevant flag to `false` in the *same save* as the status transition, opting that
+  row into the retry pipeline below.
+- **`InvoiceHeader.CancellationReason`** — persisted (Reject already had `RejectedReason`) so a
+  background retry of a failed cancellation email can rebuild the email body without the original
+  interactive request's in-memory value.
+- **`IInvoiceFinalizer.SendRejectionEmailAsync`/`SendCancellationEmailAsync`** — same atomic-claim
+  (`ExecuteUpdateAsync WHERE !IsXEmailSent`) and rollback-on-failure pattern as
+  `SendNewInvoiceReceivedEmailAsync`, so a failed immediate send is retried by the next background
+  pass instead of being lost. The interactive handlers still attempt the send immediately for a
+  snappy, MyInvois-like experience — these are the safety net for when that attempt fails.
+- **`InvoiceStatusUpdater.RunRejectionCancellationFinalizerAsync`** — new step in the existing
+  background loop, alongside the pre-existing Valid-status and new-invoice-received finalizer passes.
+
+## 📅 2026-08-03 — Diagnose & mitigate E-Invoice Assistant timeout on Staging
+
+> User report: `Admin/AiSettings` "Test Connection" showed Reachable + Model Ready in ~2s, but
+> asking a real question in `/Assistant` timed out after 120s ("AI chat failed via Ollama/gemma3:12b
+> (Timeout)"). Root cause: the two calls do very different things. "Test Connection" hits Ollama's
+> `/api/tags` — a cheap metadata list, no model loading. A real chat hits `/api/chat`, which forces
+> Ollama to load the full `gemma3:12b` (12B params) from disk into memory first if it isn't already
+> resident — and Ollama unloads an idle model after 5 minutes by default, so a question asked after
+> any gap pays that full cold-load cost again. On Staging's hardware that's evidently taking longer
+> than the 120s timeout.
+
+### Added
+- **`AI:KeepAliveMinutes`** (default 30, `AiSettings.cs`) — sent as Ollama's own `keep_alive`
+  parameter on every chat request (`OllamaAiProvider.ChatAsync`), keeping the model resident for
+  this long after each use instead of Ollama's 5-minute default. Only a genuinely long idle gap
+  pays the cold-load cost again; every question asked within the window reuses the loaded model.
+  Surfaced read-only on `Admin/AiSettings` next to the other AI config values.
+
+### Operator action (no deploy needed, do this now if Staging is still timing out)
+- Bump `AI__TimeoutSeconds` (env var) or `AI:TimeoutSeconds` (`appsettings.Production.json`/
+  `appsettings.Staging.json`) on the Staging server to something like `240`–`300` and restart the
+  app pool, so *today's* first cold load has enough time to finish. The `KeepAliveMinutes` fix
+  above (once deployed) prevents this from recurring on every subsequent question, but doesn't
+  change how long that unavoidable first cold load takes.
+
+## 📅 2026-08-03 — Fix stale resource-image 404 tolerance in `10-tabler-modules.spec.js` (test-only)
+
+> Investigated the last remaining Playwright failure — turned out to be a real, fixable test bug,
+> not an environment gap as first suspected. The test author had already anticipated "some
+> article/company images are missing on staging (404)" and added a tolerance regex for it
+> (`/\/images\/resources\/|\/Companies\/Logos\//i`), but that regex was written for the **old**
+> static-file route. `ResourcesMigrationController`/`Pages/Admin/Resources/Create.cshtml.cs`/
+> `Edit.cshtml.cs` all moved resource images to a new API-served route,
+> `/api/resources/images/{category}/{size}/{fileName}` (segment order reversed, `/api/` prefix
+> added) — so the tolerance silently stopped matching anything created after that migration, and
+> `/Admin/Resources/Manage` started failing on 404s it was always meant to ignore.
+
+### Fixed
+- `tests/playwright/10-tabler-modules.spec.js` — extended the tolerance regex to also match
+  `/api/resources/images/`, alongside the still-valid old `/images/resources/` pattern (for any
+  resource rows that predate the migration) and `/Companies/Logos/`.
+
+## 📅 2026-08-03 — Investigate & skip admin-2FA demo-data drift (test-only)
+
+> Root-caused the last remaining pre-existing Playwright failure from the full-suite pass above.
+> Not a code bug: `Login.cshtml.cs`'s 2FA redirect (`result.RequiresTwoFactor`) is standard,
+> correct ASP.NET Identity behavior driven entirely by the account's `TwoFactorEnabled` flag.
+> Confirmed via the account's own Manage > Two-factor authentication page ("Add authenticator
+> app", not "Disable 2FA") that the shared demo `admin@einvworld.com` account currently has 2FA
+> **disabled** in this DB — the test's name/assumption ("admin with 2FA enrolled") predates that.
+
+### Fixed
+- `tests/playwright/02-auth.spec.js` — the admin-2FA test now accepts landing on either
+  `LoginWith2fa` (enrolled) or `Dashboard` (not enrolled) and skips gracefully in the latter case,
+  matching the honest-skip pattern already used elsewhere in this suite, instead of failing on a
+  precondition the test can't control. Deliberately did **not** enable 2FA on the account directly
+  — TOTP enrollment is a one-time interactive step (scan a QR code, can't be seeded via
+  migration/script) on a *shared* demo account, and doing it silently would break anyone else's
+  manual login with that account, who'd suddenly be asked for a code they don't have. Enrolling it
+  through the app's own UI, by whoever owns that shared credential, re-enables the real check.
+
+## 📅 2026-08-03 — Full Playwright suite pass: 82/112 → 106/110 (test-only)
+
+> Ran the entire suite for the first time in a while. Went from 82 passed/28 failed/2 skipped to
+> 106 passed/2 failed/2 skipped. The 2 remaining failures are confirmed pre-existing/environment,
+> not app bugs (see below) — nothing in this pass touched app code.
+
+### Fixed
+- `auth-layout-fix.spec.js` — hardcoded its own `BASE = 'http://localhost:5280'` fallback instead
+  of using the shared `playwright.config.js` `baseURL` every other spec relies on, so all 23 of its
+  tests were failing with `ERR_CONNECTION_REFUSED` against the real dev server (port 5210). Switched
+  to relative `page.goto()` calls. Also updated a stale assertion — `auth: forgot-password shows
+  "What happens next?" reassurance` expected an info box that no longer exists; the page went
+  through the Stitch auth-pages restyle since this test was written and now uses a single
+  descriptive sentence instead. Updated the assertion to match the current, intentional design.
+- `stitch-create-invoice-stepper.spec.js` — same hardcoged-port problem (`BASE_URL` env var,
+  defaulting to port 5261), *and* asserted markup (`#stepDot1..3`, `#formProgressLine`) that no
+  longer exists in `CreateInvoice.cshtml` — fully superseded by `12-create-invoice-parity.spec.js`
+  (which already covers the stepper plus full wizard navigation, and actually logs in). Deleted
+  rather than patched, to avoid two overlapping stepper tests.
+- `11-company-details-parity.spec.js` — the "Verified" status pill assertion failed because
+  `COMPANY_ID=1` (the test's default) isn't owned by the logged-in `supplier@einvworld.com` account
+  in this environment's DB, so the per-company IDOR guard correctly denied access ("Access denied")
+  — the guard working as intended, not a bug. Added the same honest-skip pattern the test already
+  uses for a missing PartyInfo row (404/500), so an access denial skips gracefully too instead of
+  failing.
+
+### Confirmed pre-existing, not fixed (out of scope — no app code involved)
+- `02-auth.spec.js` admin-2FA test — documented demo-data drift from an earlier session.
+- `10-tabler-modules.spec.js` — `/Admin/Resources/Manage` 404s on `/api/resources/images/...`: the
+  app correctly points `ResourceImagesFolder` at Staging's `E:\EINVWORLD_STAGING\...` path (shared
+  DB), but that folder only exists on the real Staging server, not a local dev machine — an
+  environment/file-storage gap, not a code defect.
+
+## 📅 2026-08-03 — Fix pre-existing `12-create-invoice-parity.spec.js` failure (test-only)
+
+> Flagged in the prior review pass as pre-existing (reproduced identically on pre-#154 file
+> versions). Root cause: the test clicked "Next: Invoice Items" without filling every
+> `[required]` field in Step 1 first — `validateCurrentStep()` correctly blocks the wizard from
+> advancing until they're set, exactly like it would for a real user. Not an app bug; the test
+> never simulated filling them in.
+
+### Fixed
+- `tests/playwright/12-create-invoice-parity.spec.js` — Select2 hides the underlying `<select>`
+  (`display:none`), which fails Playwright's `.selectOption()` actionability check, so added a
+  `selectFirstRealOption()` helper that sets `.value` + dispatches `change` directly (matching what
+  the wizard's own validation JS reads). Used it to pick a Document Type, Currency, and Buyer before
+  advancing from Step 1, and to fill the default blank line item's classification/description/
+  quantity/unit/price/tax before advancing from Step 2. Also fixed an unrelated locator collision —
+  `#step2 .btn-primary` matched both the "+ Tax" button and "Next: Review & Submit"; scoped to
+  `button[onclick="nextStep()"]`.
+- Verified stable over repeated runs, and re-ran the public + auth Playwright suites alongside it —
+  no other regressions.
+
+## 📅 2026-08-02 — Review cleanup: dead variable + duplicate audit row in the new-invoice-received email
+
+> Follow-up from a full review of this session's recent PRs (#150-154): confirmed correct via a
+> fresh build, full test run, and Playwright checks (public pages, supplier/buyer login, the
+> reverted-file A/B check below). Two small, low-severity findings fixed; nothing else needed
+> changing. No functional behavior change to the notification itself.
+
+### Fixed
+- **`InvoiceFullSyncHelper.cs`** — removed an unused `isNewInvoice` local variable left over from
+  an earlier draft of the new-invoice-received email logic; its comment claimed to "drive" the
+  notification but the actual behavior is governed entirely by the `if (invoice == null)` branch
+  structure a few lines below. Dead code, not a functional bug.
+- **`EInvoiceNotificationService.SendNewInvoiceReceivedNotificationEmail`** — removed a duplicate
+  `InvoiceHistory` write. The method wrote its own "NewInvoiceReceivedEmailSent" history row, and
+  its caller (`InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync`) *also* wrote one after a
+  successful send — every send produced two near-identical audit rows on the invoice's activity
+  timeline. (The pre-existing `SendValidatedNotificationEmail`/`FinalizeInvoiceAsync` pair has the
+  same double-write; left untouched here as out of scope for this cleanup — flagged as a follow-up.)
+
+### Verified (no code change needed)
+- Migration `20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader` — additive, correct
+  `DEFAULT 1` backfill, `.Designer.cs`/`ModelSnapshot.cs` consistent.
+- `InvoiceFinalizer`'s atomic-claim-then-send pattern (both the existing Valid-email flow and the
+  new one) — correctly claims via `ExecuteUpdateAsync WHERE <flag> = false` and rolls back on a
+  thrown exception for indefinite retry.
+- Dark mode cookie handling (`_LayoutTabler.cshtml`) — the cookie value is validated against an
+  exact `"dark"`/`"light"` allowlist before being interpolated into the `<html>` tag; no injection
+  path even if the cookie were tampered with.
+- A pre-existing, unrelated Playwright failure (`12-create-invoice-parity.spec.js`, step-1 → step-2
+  navigation) was confirmed present on the pre-PR-154 file versions too (reverted-file A/B test) —
+  not a regression from this session's UI fixes.
+- Full test suite (186/186) and `dotnet build` pass; ad hoc Playwright checks confirmed the Step 1
+  KPI tile updates live and all three E-Invoice Assistant mode panels hold a consistent height, with
+  zero browser console errors on either page.
+
+## 📅 2026-08-02 — UI balance/layout fixes: Create/Edit Invoice wizard, E-Invoice Assistant
+
+> User-reported, screenshot-annotated UI issues across the invoice-creation wizard and the AI
+> assistant page. No functional/data changes — CSS and markup only.
+
+### Fixed
+- **`CreateInvoice.cshtml`** — Step 1 "Running Total" KPI tile now updates live as items are added
+  (`calculateTotals()` previously never wrote to it, so it stayed frozen at "RM 0.00"). An unscoped
+  `.form-control:valid`/`.form-select:valid` rule painted every optional field (Reference Document
+  Number, PO/DO No, Exchange Rate) with a permanent green border, since HTML5 treats a
+  constraint-free field as always-valid even when empty — scoped to `[required]` fields only,
+  matching the pattern already used for the invalid-state rules. The Reference UUID Select2 dropdown
+  (Credit Note flow) had its internal padding zeroed out, so a long UUID ran straight into the clear
+  (×) and dropdown-arrow icons — reserved space for both icons and added ellipsis truncation. The
+  line-item tax row's percentage input was squeezed into a 50–65px box (conflicting
+  `min-width`/`flex-basis`) — widened to a consistent 90px with more breathing room. Step 1/Step 2
+  Previous/Next button footers had no visual separation from the content above — added a top border.
+- **`InvoiceEdit.cshtml`** — same tax-row width/spacing and button-footer separator fixes (shares the
+  same wizard markup as `CreateInvoice.cshtml`); its `:valid` CSS was already correctly scoped, no
+  change needed there.
+- **`Assistant/Index.cshtml`** (E-Invoice Assistant) — the "Create from Description" and "Fix an
+  Error" mode panels are just a header + one input row until a result appears, while "Ask a
+  Question" is a fixed-height chat panel; switching to either of the shorter panels collapsed the
+  card to a sliver at the top of the page. Gave all three mode panels a shared minimum height so
+  switching modes no longer causes a jarring size collapse.
+- `CreateCN.cshtml`, `CreateSBI.cshtml`, `CreateSBCN.cshtml` were checked and don't share any of the
+  above code paths (simpler single-form pages) — no changes needed.
+
+## 📅 2026-08-02 — Email notification (with retry) for new e-invoices received from external ERPs
+
+> Follow-up to the LHDN-sync questions above. `InvoiceFullSyncHelper` was already correctly detecting
+> and importing e-invoices submitted directly to LHDN by an external ERP (buyer-side sync), but it
+> deliberately set `IsValidationEmailSent = true` on creation specifically to suppress the "Validated"
+> email — reusing that email for a first-time-received invoice would have been misleading copy ("your
+> invoice has been validated" implies we submitted it). Added a distinct notification, then — per a
+> follow-up question about whether the existing Valid-status email has a completion/retry check — gave
+> it the same atomic-claim-and-retry robustness as that flow, rather than shipping it best-effort.
+
+### Added
+- **`InvoiceHeader.IsNewInvoiceReceivedEmailSent`/`NewInvoiceReceivedEmailSentAt`/`NewInvoiceReceivedEmailSentTo`**
+  (migration `20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`, additive, 4 artifacts
+  incl. idempotent `Apply_*.sql`) — mirrors the existing `IsValidationEmailSent` trio exactly. Defaults
+  to `true` ("not applicable") both in the C# model and via the migration's column default, so every
+  other invoice-creation path in the app (normal Sent-invoice submission, Credit/Debit notes, and every
+  pre-existing row backfilled by the migration) is automatically exempt without touching those files.
+  `InvoiceFullSyncHelper` explicitly sets it to `false` only for a genuinely new, buyer-side invoice
+  synced from LHDN, opting that one row into the retry pipeline below.
+- **`IInvoiceFinalizer.SendNewInvoiceReceivedEmailAsync`** (`InvoiceFinalizer.cs`) — same
+  atomic-claim-then-send, roll-back-on-failure pattern already used for the Valid-status email:
+  claims the row (`ExecuteUpdateAsync WHERE !IsNewInvoiceReceivedEmailSent`), attempts the send, and on
+  a thrown exception (SMTP down, bad config) rolls the claim back so the **next background pass retries
+  it — indefinitely, no age cutoff**, exactly like the existing Valid-email safety net. Distinguishes
+  "no valid buyer email" (permanent, marks done, never retried) from a transient send failure (retried).
+  Also handles the disabled-feature and expired-recency cases by claiming and marking done without
+  sending, so neither keeps reappearing in every future pass.
+- **`InvoiceStatusUpdater.RunNewInvoiceReceivedFinalizerAsync`** — new step in the existing background
+  loop (runs every poll cycle, alongside the pre-existing `RunFinalizerAsync` safety net for the
+  Valid-status email), querying simply `WHERE !IsNewInvoiceReceivedEmailSent` — no other precondition
+  needed, since the flag itself is only ever set `false` for the exact rows that should get this email.
+- **`SendNewInvoiceReceivedNotificationEmail`** (`IEInvoiceNotificationService`/`EInvoiceNotificationService`)
+  — buyer-only (the supplier already knows they sent it), new template
+  `wwwroot/EmailTemplates/NewInvoiceReceivedEmailTemplate.html`, new
+  `EmailConfiguration:NewInvoiceReceivedEmailSettings:Subject` config (environment-prefixed in
+  Staging/Production, matching every other email type). Returns `false` (not an error) when there's no
+  valid buyer email; throws on an actual send failure so `InvoiceFinalizer` can tell the two apart. Sent
+  without a PDF attachment — fires before the separate PDF-generation pass has necessarily run.
+- **`EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`** kill switch (default `true`).
+- **Recency guard** — `EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification`
+  (default `7`), checked in `SendNewInvoiceReceivedEmailAsync` at send time. Only genuinely recent
+  invoices (by `IssueDate`/`DateTimeReceived`) get emailed; older invoices that are merely new to
+  EINVWORLD's database (e.g. pulled in by the Admin's 60-day historical "Import All Invoices from LHDN")
+  are claimed and marked done without sending. Without this, a large backfill would email buyers about
+  invoices they already know about — a spam risk, not a helpful notification.
+
+### Tests
+- `dotnet build`: 0 errors (pre-existing unrelated warnings only).
+- `dotnet test`: 186/186 passing, no regressions.
+- Migration **not** applied locally against the real Staging DB (local `dotnet run` uses
+  `AutoMigrateOnStartup: true` against the live shared Staging database — not something to trigger
+  without being asked). CI's SQL Server LocalDB integration tests apply it with `Migrate()` for real,
+  which is the intended verification path per `CLAUDE.md`.
+
+## 📅 2026-08-02 — Configurable lookback for the automatic LHDN full-document-search import
+
+> Follow-up to a question about whether externally-submitted e-invoices (an external ERP submitting
+> directly to LHDN, with the local company as Buyer) show up in the Received tab. Confirmed they do —
+> `InvoiceFullSyncHelper.SyncAllFromApiAsync` already handles the "we are the buyer" case, creating the
+> supplier's `PartyInfo` from LHDN's data if EINVWORLD has never seen them. The automatic background
+> import (`InvoiceStatusUpdater.RunLhdnImportAsync`, every 10th 600s poll cycle) is what catches these,
+> but its lookback window was hardcoded to 3 days with no way to widen it if a sync cycle is missed for
+> longer (app restart, LHDN outage).
+
+### Added
+- `InvoiceStatusUpdaterSettings.BackgroundImportLookbackDays` (default `3`, matching prior hardcoded
+  behaviour — no behaviour change unless the config is edited). Wired into the
+  `RunFullImportFromLhdnAsync` call in `InvoiceStatusUpdater.cs`. Kept separate from
+  `LHDNApiConfig:SyncRetentionDays` (a much longer one-time deep-backfill window used only by the
+  Admin-triggered manual "Import All Invoices from LHDN" — the two settings serve different purposes
+  and shouldn't share a value).
+
+## 📅 2026-08-02 — DESIGN.md system-wide audit + skip-navigation links
+
+> Audited the app against the just-expanded `docs/DESIGN.md` (TABLES/FORMS/ACCESSIBILITY/
+> COMPONENT LIBRARY sections). The Velzon→Tabler migration itself is effectively complete — every
+> functional module already defaults to `_LayoutTabler`/`_LoginLayoutTabler` via folder-level
+> `_ViewStart.cshtml`; only the public marketing pages (Home, Resources) intentionally use a
+> different layout. Two real gaps found; one fixed here, one deferred pending scoping.
+
+### Fixed
+- **No skip-navigation link anywhere** (WCAG 2.2 AA gap). Added a "Skip to main content" link — the
+  first focusable element on the page — to `_LayoutTabler.cshtml`, `_LoginLayoutTabler.cshtml`, and
+  `_HomeLayout.cshtml`, targeting a `tabindex="-1"` anchor (`#einv-main-content`) on each layout's
+  content container. Uses Bootstrap's standard `.visually-hidden-focusable` utility, already present
+  in both `tabler.min.css` and the public site's `bootstrap.min.css` — no new CSS. Verified in a real
+  browser: hidden by default, becomes visible on focus, `#einv-main-content` target resolves.
+
+### Deferred (needs scoping, not fixed here)
+- **49 files use inline `style="..."` attributes**, spread across every module (Invoices 11,
+  Suppliers 8, Admin 8, PublicCustomer 5, Items 4, RecurringInvoices 3, Dashboard 3, Templates 2,
+  Profile 2, Lead 2, Assistant 1) — violates `CLAUDE-UI-RULES.md` §14. Each needs individual review
+  (some may be legitimate dynamic/computed values) rather than a blind find-replace; not actioned in
+  this change per CLAUDE.md's "surface a scoped plan and get agreement first" for high-blast-radius
+  changes touching every module.
+- Minor: the FAB button's hover transition (`einvworld-tokens.css`) has no `prefers-reduced-motion`
+  guard — low priority, single rule.
+
+## 📅 2026-08-02 — Dark mode for the Tabler app (authenticated pages only)
+
+> Adds a light/dark toggle to the Tabler-based authenticated app (Admin/Supplier/Buyer). Public
+> marketing pages and the Velzon fallback layout are unchanged.
+
+### Added
+- **Theme toggle** in the topbar (`_TablerTopbar.cshtml`) — sun/moon icon button using Tabler's
+  built-in `.hide-theme-dark` / `.hide-theme-light` convention (already shipped in `tabler.min.css`,
+  no new CSS needed for the icon swap).
+- **`_LayoutTabler.cshtml`**: reads an `einv-theme` cookie server-side and renders `data-bs-theme`
+  directly on `<html>` for returning visitors — zero flash of the wrong theme, works even before JS
+  runs. First-time visitors (no cookie) get a blocking inline script, first thing in `<head>`, that
+  follows `prefers-color-scheme` instead (Tabler's own CSS has no pure-CSS auto-dark fallback, so this
+  has to be JS). Cookie value is allowlisted (`"dark"`/`"light"` only) before touching the HTML attribute.
+- **`einvworld-ui.js`**: `initThemeToggle()` — click handler flips `data-bs-theme` and persists the
+  choice as a 1-year cookie so the next server render already knows it.
+- **`einvworld-tokens.css`**: `--einv-page-bg`/`--einv-surface`/`--einv-text`/`--einv-text-muted`/
+  `--einv-border` now flip under `[data-bs-theme="dark"]`, matched to Tabler's own dark gray-900/800/700
+  palette so the rebrand blends with Tabler's built-in dark components instead of introducing a second
+  dark palette. A handful of rules used hardcoded (non-variable) light colors and needed explicit dark
+  overrides: the green-tinted table headers (`.table thead th`, `#invoiceTable`/`.einv-mobile-stack`
+  `thead.einv-table-head th`) and the topbar search pill.
+- Verified in a real browser (dev server, self-hosted asset files) against a smoke-test page built from
+  the actual shipped markup/CSS/JS: light→dark→light toggle, cookie persistence, icon swap, card/table/
+  badge/sidebar/pagination legibility all confirmed correct.
+
+### Not changed (deliberately)
+- Public marketing pages and Velzon fallback pages are out of scope — Velzon already has its own,
+  separate dark-mode toggle from before the Tabler migration.
+
+### QA note (unrelated to this change)
+- The local/Staging demo accounts `buyer@einvworld.com` and `supplier@einvworld.com` both currently fail
+  login with "Your company TIN is missing. Please contact support." — a pre-existing seeded-data issue on
+  this Staging DB snapshot, not caused by this change. Blocked authenticated-page Playwright verification
+  for this PR; flagging in case it's blocking other QA too.
+
+## 📅 2026-08-01 — Diagnosed remaining page-load stall: Cloudflare Web Analytics beacon (not CSP)
+
+> Investigated a "site still feels slow" report using staging HAR captures (`/`, `/login` ×2) and
+> `SystemLogs`. The reported hypothesis (CSP causing the slowdown) does not hold: CSP ships as
+> `Content-Security-Policy-**Report-Only**` (`Program.cs`), which never blocks a request — it only logs
+> violations to `/csp-report`. It cannot be the cause of a network-level stall.
+
+### Root cause (confirmed via HAR, no code bug)
+- All three captured page loads show the identical pattern: `DOMContentLoaded` delayed **21–34 s** by
+  `https://static.cloudflareinsights.com/beacon.min.js` (status 0, fully spent in the browser's `blocked`
+  phase — a hung/slow fetch, not a CSP block), followed by `www.googletagmanager.com/gtm.js` adding another
+  20-35 s to `onLoad`. The GTM half is already mitigated (`_GoogleAnalytics.cshtml` injects GTM only after
+  `DOMContentLoaded`, per the 2026-07-09/#144 fixes) — the CF beacon is a **new, third instance** of the
+  same failure class as the Rocket Loader issue in v1.9.6: an uncontrolled third-party script gating the
+  page lifecycle.
+- `static.cloudflareinsights.com/beacon.min.js` is **not referenced anywhere in our HTML/JS** (confirmed —
+  only a Playwright analytics-noise filter matches the hostname). It is injected directly by the
+  **Cloudflare edge** (the zone's "Web Analytics"/"Browser Insights" auto-beacon), the same mechanism as
+  Rocket Loader, and is outside application code entirely.
+
+### Required operator action (Cloudflare dashboard — cannot be fixed from code)
+- **Disable Web Analytics / Browser Insights auto-injection** for the zone (*Analytics & Logs → Web
+  Analytics*, or the equivalent toggle exposing the auto-beacon). The app already has its own GTM-based
+  analytics, so this beacon is redundant — same reasoning as disabling Rocket Loader in v1.9.6. See
+  `POST-DEPLOY-CHECKLIST.md`.
+- **Done and verified 2026-08-01.** RUM was set to "Disable" for the `einvworld.com` Web Analytics site.
+  Re-captured HAR on `/` and `/login` confirms `DOMContentLoaded` dropped from 21-34 s to **0.9-2.5 s**,
+  and `static.cloudflareinsights.com/beacon.min.js` no longer appears at all.
+- **`gtm.js` still hung 23-57 s** in the same network path (same `status: 0`, fully-`blocked` pattern as the
+  CF beacon had) even after the Cloudflare fix above — it no longer stalls `DOMContentLoaded` (the existing
+  post-DCL-injection fix already isolates it), but it delayed `onLoad`. **Fix:** `appsettings.Staging.json`
+  now overrides `GoogleAnalytics.MeasurementId` to empty, the same mitigation already in place for
+  `appsettings.Development.json` — GTM never loads on Staging, so this hang can't happen there either.
+  **Trade-off (accepted):** Staging can no longer be used to smoke-test GTM/GA tag behavior before a
+  Production release; Production is unaffected — this override applies to Staging only, and Production
+  never had a mitigation removing it.
+
+### Not changed (deliberately)
+- CSP was **not** promoted from Report-Only to enforcing, and `cloudflareinsights.com` was **not** added to
+  the CSP allowlist — Report-Only never blocked the beacon in the first place (so allowlisting it would not
+  improve speed), and promoting to enforcing is a separate, higher-blast-radius change gated behind the CDN
+  cleanup already noted in `Program.cs`.
+
+## 📅 2026-07-29 — Role Management, company user removal, LHDN SDK 1.0 compliance, bug fixes
+
+> Five-PR stacked release, all merged to `main`. Additive migrations only (`AddRoleModulePermissions`,
+> `AddCompanyRolePartyInfoScope`) — no drops, no breaking changes. See `DEPLOY-NOTES.md` §1 for the
+> manual-apply scripts (Production requires them; Staging/dev auto-migrate).
+
+- **Fixed: supplier invitation "Create Account & Join" silently failing.** `AcceptInvite`'s forms were
+  missing hidden `Id`/`Token` fields — `asp-page-handler` posts lost the route data, so every submission
+  looked like an invalid/expired invitation even with a fresh link.
+- **Fixed: no email on invoice Reject/Cancel.** The `InvoiceDetails2` reject/cancel handlers updated LHDN
+  and logged history but never sent the notification email (that logic only existed on the other
+  invoice-list page). Now sends immediately once the LHDN status update is committed.
+- **Fixed: RBAC access-denied bugs** — Recurring Invoices denied Owner-role access (checked legacy
+  `HasCompanyAccess`/`IsViewOnly` flags, ignored `CompanyRole` assignments); Company Profile was
+  Admin-only by omission even though its sibling Company Management tabs already allow Supplier, with
+  proper tenant-membership + `EditProfile` permission checks added.
+- **Added: Supplier Owner/Admin can remove a company member** (blocks self-removal and removing the last
+  Owner) — the capability existed for invite/revoke but not removal.
+- **UI**: one-click "Enable 2FA" for a user who disabled it but kept their authenticator (previously
+  forced a full re-setup); Received/Buyer tab actions cleaned up (removed supplier-only actions leaking
+  into the buyer view, added the missing Print action); E-Invoice Assistant restyled into a
+  scrolling message-bubble chat thread, and disabled/unreachable states now render as a warning instead
+  of an indistinguishable-from-a-crash red error alert.
+- **New: Admin → Role Management** (User Management → Role Management) — manage the global Identity role
+  catalog (create/delete roles assignable via Manage Users' "Change Role"; `Admin`/`Supplier`/`Buyer` are
+  protected as core roles) and a **Module Access** grid restricting which app modules the Supplier/Buyer
+  roles can reach, enforced by a new `ModuleAccessPageFilter` layered on top of each page's existing
+  `[Authorize(Roles=...)]` gate. A module with no configured row defaults to allowed — purely additive.
+- **New: company-scoped custom roles.** A Supplier Owner/Admin can create a custom role (name + the 4
+  permission flags) scoped to just their own company (`CompanyRole.PartyInfoId`, nullable — `null` =
+  the shared system roles every company sees), alongside Roles & Permissions' existing role assignment.
+- **LHDN MyInvois SDK 1.0 compliance** (audited against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`):
+  - **Unit-of-measure validation**: `InvoiceMapper` now validates every invoice line's unit code against
+    the official LHDN code list before building the UBL JSON — previously only enforced client-side by
+    the Create Invoice form's dropdown, with no server-side check and no check at all for CSV import,
+    templates, or recurring invoices.
+  - **Signed SVDP 1.3**: document version is now correctly computed from `SigningEnabled`/`DocVersion` —
+    previously hardcoded to "1.0"/"1.2" regardless of config, so turning on v1.1 signing (once the
+    certificate is purchased) would inject a valid signature but the document would still declare the
+    unsigned version, and signed SVDP (1.3) was unreachable entirely.
+  - **Configurable rate limits**: `LhdnRateLimitHandler`'s per-endpoint limits moved from hardcoded
+    constants to `LHDNApiConfig:RateLimits:*` in `appsettings.json` (existing values kept as defaults),
+    so production and sandbox tiers can differ without a code change.
+
+## 📅 2026-07-27 — Tabler migration completion (Invoices, Admin, Company/Lead), homepage redirect fix, responsive QA fixes
+
+> Nine-PR stacked release, all merged to `main`. No breaking changes, no schema changes.
+> - **Invoices & Templates**: InvoiceDetails2/CreateSBI/CreateCN/CreateSBCN/BulkImport/ImportCSV and
+>   TemplateLists/InvoiceEdit restyled to Tabler; extracted a shared `invoice-line-items.js` module; fixed
+>   a Razor bug rendering subtotal as literal `qty * price` text instead of the computed product.
+> - **Admin subsystem** (ops/monitoring, Notifications, Resources + Types, Users, 9 Codes list pages,
+>   RecurringInvoices): full Tabler restyle, removing remaining emoji headers, FontAwesome icons, and
+>   lord-icon CDN widgets.
+> - **Company/Lead management**: Suppliers/Index (List of Companies), Import, AssignBuyers, Lead/List
+>   restyled. Fixed a real cross-cutting bug — `einvworld-tokens.css` shimmed Velzon's `.avatar-title` but
+>   never its `avatar-xxs`–`xl` size scale, so ~90 avatar-sized images app-wide rendered unconstrained.
+> - **Fix**: `Pages/Index.cshtml` (public homepage) had no auth check — a logged-in user hitting `/` saw
+>   the marketing page rendered inside the legacy Velzon `_Layout` fallback, exposing its dev-only Theme
+>   Customizer panel. Now redirects authenticated users to `/Dashboard/Dashboard`.
+> - **Responsive QA**: ran `tests/playwright/05-responsive.spec.js` and `10-tabler-modules.spec.js` with
+>   real viewport sizing against a live instance for the first time (prior browser-automation tooling
+>   couldn't actually resize the viewport). Found and fixed four overflow bugs: a Dashboard gutter/container
+>   mismatch, a CSS rule that disabled horizontal-scroll containment above the mobile breakpoint on
+>   Items/Index and PublicCustomer/List, an unwrapped button group plus a non-shrinking flex label/value
+>   pair on PublicCustomer/List, and TemplateLists' table wrapped in Velzon-only dead CSS classes.
+> - **Cleanup**: removed 189 unused Velzon component-showcase demo pages (`wwwroot/assets/libs/*.html`,
+>   42MB) — confirmed zero references anywhere in the app before deleting.
+
+## 📅 2026-07-26 — Company Management workspace, Buyer/Items/AI Tabler migration, Admin sidebar off-canvas
+
+> Five-PR stacked release. No breaking changes; the migration is additive. See `DEPLOY-NOTES.md` §1
+> for the squash rationale (a backlog of previously-unapplied migrations found on Production) and the
+> required post-migration PII-encryption backfill step.
+
+- **Buyer Management** (`Pages/PublicCustomer/*`) restyled to Tabler (KPI cards, sortable table, mobile
+  card-stacking). Adds a read-only **Duplicate Review** page for TIN/name collisions. Fixes a Delete IDOR
+  (unlinking a shared buyer record was hard-deleting it even when other suppliers still referenced it)
+  and a pre-existing import-preview bug (`PreviewRecords != null` was always true).
+- **Company Management workspace**: "My Company" is now a tabbed workspace — Overview, Profile, **Users**
+  (token-based invitations; invitees always set their own password), **Roles & Permissions**
+  (company-scoped Owner/Admin/Editor/Viewer roles, falling back to the legacy access flags for
+  unassigned members), **Invoice Branding** (accent color/footer/bank-visibility — settings only, not
+  yet wired into PDF rendering), **Security** (2FA status, recent activity), and **Audit** (paginated,
+  TIN-scoped `AuditLog` view). Removed the old "Create User" modal that let an admin set another user's
+  password directly.
+- **AI Assistant / Document Capture** pages restyled to Tabler; new read-only **Processing History** page.
+- **Items & Services**: added **Unit** (LHDN unit-of-measure code) and **Unit Price** (`decimal(18,4)`)
+  across create/edit/list/import/invoice-line-picker. Restyled to Tabler.
+- **Admin sidebar**: mobile nav is now a true Bootstrap off-canvas drawer (was a plain inline collapse);
+  desktop collapsed (icon-only) state gained tooltips.
+- **Database:** a production backup audit during this release's rollout found the live database was
+  ~3.5 months behind head (last applied: `RemovePreFix`, 2026-04-15) — 22 pending migrations, 2 of which
+  (`AddLhdnIntermediaryRejectedFlag`, `FixPendingModelChanges`) had never had a hand-authored apply
+  script. Rather than ship 22 more individually-numbered migrations on top of that gap, all 22
+  (this release's 4 plus the 18-migration backlog) were **squashed into one**:
+  `20260726135229_ConsolidatedSchemaCatchup_v1_11_0`. Rehearsed against a full restore of the actual
+  production backup in three states — fully behind, fully caught-up (simulating an already-auto-migrated
+  Staging), and re-run for idempotency — zero errors in every case, and confirmed `SystemLogs` (111k+
+  existing rows, owned by the Serilog sink, not EF) is never dropped. See `DEPLOY-NOTES.md` §1 for why
+  Staging needs the new script run manually once before its next deploy.
+
+## 📅 2026-07-26 — Bigger logo, cleaner login header, collapsible sidebar, local AI enabled
+
+> Presentation + local-dev-config pass across the Tabler shell and the Identity auth pages. No
+> schema/migration change; Production/Staging AI defaults are unchanged (still OFF).
+
+- **Brand logo, bigger everywhere:** sidebar brand (`_TablerSidebar`) grown 2.25rem→3rem on desktop
+  (2rem→2.5rem on mobile); all 10 Identity auth pages (Login, Register, Forgot/Reset Password, 2FA,
+  Recovery Code, Resend/Register Confirmation) grown 100px→140px.
+- **Login header decluttered:** removed the redundant `<p>eInvWorld</p>` wordmark under the logo on all
+  10 auth pages — the logo image already carries the brand name.
+- **Sidebar collapse-to-icons (desktop):** new toggle button in `_TablerSidebar` shrinks the sidebar to a
+  4.5rem icon rail and back, persisted via `localStorage` and applied synchronously on load (no flash of
+  the expanded sidebar) via an inline script in `_LayoutTabler`. Mobile's existing Bootstrap
+  auto-collapse below the `lg` breakpoint is unchanged.
+- **AI Assistant + AI Document Capture enabled for local Development only**
+  (`appsettings.Development.json`), pointed at whatever Ollama model is actually pulled on the dev
+  machine. Verified end-to-end against a running local Ollama instance. Production/Staging remain OFF
+  by default per existing policy — `AI:Enabled` is not required for invoicing to keep working.
+- **Bug fix:** `einvworld-ui.js` was missing `asp-append-version`, so browsers could cache it indefinitely
+  across deploys and silently run stale JS. Added, matching the CSS links in the same layout.
+
+## 📅 2026-07-23 — Company Details (My Company) Stitch-parity restyle
+
+> Presentation-only restyle of `Pages/Suppliers/Details.cshtml` to the Stitch design mockup
+> (`screen.png`). All handlers, role checks, assign/unassign modals and the `PartyInfo` data
+> binding are preserved. No schema/migration change.
+
+- **Identity card:** Verified / Active / Supplier status pills added (Verified ← `PartyInfo.IsApproved`,
+  Active ← `IsActive`; no new fields invented).
+- **Two-column data grid:** the flat field list is split into **Legal & Registration** and
+  **Contact & Finance** sections matching the mockup.
+- **Assigned Buyers:** the `<ul>` list is replaced by a table (Buyer Entity / TIN / Industry /
+  Manage + Unassign) reusing the existing `unassignBuyer` handler and assign modals. "Manage" is a
+  `mailto:` (no buyer-detail route exists on this page — left as a link, not a dead button).
+- **Verified by Playwright:** new `tests/playwright/11-company-details-parity.spec.js` asserts the pills,
+  both grid sections and the buyers table, and screenshots the page for visual diff. Run via
+  `npm run qa` against a live instance (`EINVWORLD_BASE_URL`, `COMPANY_ID`).
+
+## 📅 2026-07-23 — Create e-Invoice wizard → Stitch parity (UI migration)
+
+> Full UI migration of `Pages/Invoices/CreateInvoice.cshtml` to the Stitch design system (3-step
+> mockup). Markup rebuilt with reusable Tabler components; **all** business logic, `asp-for` bindings,
+> validation, JS (`nextStep`/`prevStep`/`calculateTotals`/`addItemRow`/auto-fill), LHDN handlers and
+> permissions preserved. No schema/migration change.
+
+- **Stepper:** the thin Bootstrap progress bar is replaced by a Stitch 3-node step indicator
+  (`.ci-stepper`) that still drives the existing `#formProgress` fill and `InvoiceManager.updateProgress()`.
+- **SVDP notice:** Stitch info banner, gated on `LHDNApiConfig:SvdpEnabled` (unchanged behaviour).
+- **Step 1 (Basic Information):** card header restyled to icon style; Additional Party Information
+  card gets a primary left-accent border + `SYSTEM PRE-FILLED` badge; footer split into
+  **Discard Draft** + green **Next** (matches mockup; "Reset" renamed, same `location.reload()`).
+- **Step 2 (Invoice Items):** header icon style; **Add Item** paired with a live subtotal/tax/total
+  readout (`#step2Subtotal/.../Total`) beside the line-items table (rows/columns/bindings unchanged).
+- **Step 3 (Review & Submit):** summary rebuilt as two Stitch accent cards (`.ci-summary-row`) keeping
+  every `summary*` id; action row = Previous / Save as Draft / Save as Template / Submit to LHDN.
+- **Branding:** EINVWORLD green (`--einv-primary:#006948`) only; no mockup brand text, no Tailwind/
+  Material-Symbols/Inter CDN imported (Tabler + Remix icons used).
+- **Verified by Playwright:** `tests/playwright/12-create-invoice-parity.spec.js` asserts stepper,
+  step visibility toggles, add-item, review summary ids and submit handlers (appearance + function).
 
 ## 📅 2026-07-16 — Stitch batch 6: invoice list module redesign (All/Draft/Sent/Received)
 

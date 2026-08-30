@@ -1,0 +1,85 @@
+@page
+@model eInvWorld.Pages.PublicCustomer.DuplicateReviewModel
+@{
+    ViewData["Title"] = "Duplicate Review Center";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Duplicate Review Center</h1>
+                <p class="text-muted mb-0">Buyers that share a TIN or company name — review before they cause a duplicate submission.</p>
+            </div>
+            <a asp-page="./List" class="btn btn-outline-secondary"><i class="ri-arrow-left-line align-bottom me-1"></i> Back to List</a>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info d-flex align-items-start gap-2">
+    <i class="ri-information-line fs-18"></i>
+    <div>This view is read-only for now. Merging or deleting duplicate records is a future update — use <strong>Edit</strong> on the older record to keep buyer data consistent in the meantime.</div>
+</div>
+
+@if (!Model.DuplicateGroups.Any())
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="ri-shield-check-line fs-24 d-block mb-2 text-success"></i>
+            No duplicate buyers detected.
+        </div>
+    </div>
+}
+else
+{
+    foreach (var group in Model.DuplicateGroups)
+    {
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div>
+                    <span class="einv-badge einv-badge-warning me-2"><i class="ri-error-warning-line"></i> Possible Duplicate</span>
+                    <span class="fw-semibold">@group.Reason:</span> <span class="text-muted">@group.MatchValue</span>
+                </div>
+                <span class="text-muted small">@group.Buyers.Count records</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 einv-mobile-stack" id="duplicateReviewTable">
+                    <thead class="einv-table-head">
+                        <tr>
+                            <th class="col-name">Buyer</th>
+                            <th>TIN / Registration</th>
+                            <th>Location</th>
+                            <th>Created</th>
+                            <th class="col-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var buyer in group.Buyers)
+                        {
+                            <tr>
+                                <td class="col-name" data-label="Buyer">
+                                    <span class="fw-semibold">@buyer.CompanyName</span>
+                                    @if (!buyer.IsActive)
+                                    {
+                                        <span class="einv-badge einv-badge-neutral ms-1">Inactive</span>
+                                    }
+                                </td>
+                                <td data-label="TIN / Registration">
+                                    <span class="d-block">@buyer.TIN</span>
+                                    <span class="text-muted small">@buyer.RegTypeCode @buyer.RegNo</span>
+                                </td>
+                                <td data-label="Location">@buyer.CityName, @(Model.StateNames.TryGetValue(buyer.StateCode, out var buyerStateName) ? buyerStateName : buyer.StateCode)</td>
+                                <td data-label="Created">@buyer.CreatedDate.ToString("yyyy-MM-dd")</td>
+                                <td class="col-action" data-label="Action">
+                                    <a asp-page="./Details" asp-route-id="@buyer.PublicCustomerId" class="btn btn-sm einv-action-btn">
+                                        <i class="ri-eye-fill align-bottom me-1"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}

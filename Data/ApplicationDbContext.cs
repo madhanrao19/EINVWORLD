@@ -5,6 +5,7 @@ using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
 using eInvWorld.Models.Logs;
 using eInvWorld.Models.Settings;
+using eInvWorld.Models.SmartCapture;
 using eInvWorld.Models.Templates;
 using eInvWorld.Models.ViewModels;
 using eInvWorld.Models.Webhooks;
@@ -49,6 +50,7 @@ namespace eInvWorld.Data
         }
 
         public DbSet<LHDNToken> LHDNTokens { get; set; }
+        public DbSet<SavedInvoiceView> SavedInvoiceViews { get; set; } = default!;
 
         public DbSet<InvoiceHistory> InvoiceHistories { get; set; }
         public DbSet<ContactUs> ContactUs { get; set; }
@@ -56,6 +58,9 @@ namespace eInvWorld.Data
         public DbSet<Status> Statuses { get; set; }
         public DbSet<RegistrationType> RegistrationTypes { get; set; }
         public DbSet<UserCompany> UserCompanies { get; set; }
+        public DbSet<CompanyRole> CompanyRoles { get; set; } = default!;
+        public DbSet<CompanyInvitation> CompanyInvitations { get; set; } = default!;
+        public DbSet<RoleModulePermission> RoleModulePermissions { get; set; } = default!;
 
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<PartyInfo> PartyInfos { get; set; } = default!;
@@ -100,6 +105,11 @@ namespace eInvWorld.Data
 
         // --- Tamper-evident audit trail (hash-chained, append-only) ---
         public DbSet<eInvWorld.Models.Audit.AuditLog> AuditLogs { get; set; }
+
+        // --- Smart Capture (persisted, async AI Document Capture — Stage 1) ---
+        public DbSet<SmartCaptureDocument> SmartCaptureDocuments { get; set; } = default!;
+        public DbSet<SmartCaptureCompanyHint> SmartCaptureCompanyHints { get; set; } = default!;
+        public DbSet<SmartCaptureAutoSubmitSettings> SmartCaptureAutoSubmitSettings { get; set; } = default!;
 
         // --- Outbound webhook subscriptions (customer ERP callbacks) ---
         public DbSet<WebhookSubscription> WebhookSubscriptions { get; set; }
@@ -155,6 +165,8 @@ namespace eInvWorld.Data
                 .Property(l => l.Quantity).HasColumnType("decimal(18, 6)");
             modelBuilder.Entity<Models.InputModel.InvoiceLine>()
                 .Property(l => l.UnitPrice).HasColumnType("decimal(18, 4)");
+            modelBuilder.Entity<Models.InputModel.ItemDescription>()
+                .Property(i => i.UnitPrice).HasColumnType("decimal(18, 4)");
 
             // Existing Configurations
             modelBuilder.Entity<LHDNToken>().HasKey(t => t.Id);
@@ -191,6 +203,48 @@ namespace eInvWorld.Data
                 .WithMany(p => p.UserCompanies)
                 .HasForeignKey(uc => uc.PartyInfoId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserCompany>()
+                .HasOne(uc => uc.CompanyRole)
+                .WithMany(r => r.UserCompanies)
+                .HasForeignKey(uc => uc.CompanyRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasOne(ci => ci.PartyInfo)
+                .WithMany()
+                .HasForeignKey(ci => ci.PartyInfoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasOne(ci => ci.CompanyRole)
+                .WithMany()
+                .HasForeignKey(ci => ci.CompanyRoleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CompanyInvitation>()
+                .HasIndex(ci => ci.TokenHash);
+
+            modelBuilder.Entity<RoleModulePermission>()
+                .HasIndex(p => new { p.RoleName, p.ModuleKey })
+                .IsUnique();
+
+            // Restrict, not Cascade: PartyInfo already cascades to UserCompany, which also references
+            // CompanyRole — a second cascade path from PartyInfo to CompanyRole creates the "multiple
+            // cascade paths" error SQL Server refuses to build. Company-scoped custom roles are instead
+            // deleted explicitly in code right before the company itself (Suppliers/Index.cshtml.cs).
+            modelBuilder.Entity<CompanyRole>()
+                .HasOne(r => r.PartyInfo)
+                .WithMany()
+                .HasForeignKey(r => r.PartyInfoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CompanyRole>().HasData(
+                new CompanyRole { CompanyRoleId = 1, Name = "Owner", CanManageUsers = true, CanEditProfile = true, CanManageBranding = true, CanViewAudit = true, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 2, Name = "Admin", CanManageUsers = true, CanEditProfile = true, CanManageBranding = true, CanViewAudit = true, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 3, Name = "Editor", CanManageUsers = false, CanEditProfile = true, CanManageBranding = false, CanViewAudit = false, IsSystemDefined = true },
+                new CompanyRole { CompanyRoleId = 4, Name = "Viewer", CanManageUsers = false, CanEditProfile = false, CanManageBranding = false, CanViewAudit = false, IsSystemDefined = true }
+            );
 
             modelBuilder.Entity<Status>().HasData(
                new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft", Description = "Invoice is in draft state" },
@@ -272,6 +326,12 @@ namespace eInvWorld.Data
                     .IsUnique()
                     .HasFilter("[TIN] <> 'EI00000000010' AND [TIN] <> 'EI00000000020' AND [TIN] <> 'EI00000000030' AND [TIN] <> 'EI00000000040'");
 
+            // Existing companies keep showing bank details on invoices exactly as before — only an
+            // explicit opt-out via the Invoice Branding tab turns this off.
+            modelBuilder.Entity<PartyInfo>()
+                    .Property(p => p.InvoiceShowBankDetails)
+                    .HasDefaultValue(true);
+
             modelBuilder.Entity<SupplierBuyer>()
                             .HasKey(sb => sb.Id);
 
@@ -345,6 +405,32 @@ namespace eInvWorld.Data
             Encrypt<PublicCustomer>(c => c.BankAccountNo);
 
             Encrypt<InvoiceTemplate>(t => t.BankAccountNo);
+
+            // Smart Capture: the extraction JSON is an OCR/LLM reading of a supplier's own invoice and may
+            // carry the supplier's bank details (see InvoiceSuggestion's field set) — same protection as the
+            // BankAccountNo columns above.
+            Encrypt<SmartCaptureDocument>(d => d.NormalizedExtractionJson);
+
+            modelBuilder.Entity<SmartCaptureDocument>(b =>
+            {
+                // Retention sweep filters on "file not yet deleted" every run.
+                b.HasIndex(d => d.FileDeletedAtUtc);
+                // Exact-content duplicate-upload detection (SmartCaptureExtractionJobHandler.IsDuplicateUploadAsync).
+                b.HasIndex(d => d.FileHash);
+            });
+
+            // Smart Capture Stage 2: one learned hint row per company, looked up on every extraction.
+            modelBuilder.Entity<SmartCaptureCompanyHint>(b =>
+            {
+                b.HasIndex(h => h.CompanyPartyInfoId).IsUnique();
+            });
+
+            // Smart Capture Stage 4: one auto-submit opt-in row per company.
+            modelBuilder.Entity<SmartCaptureAutoSubmitSettings>(b =>
+            {
+                b.HasIndex(s => s.CompanyPartyInfoId).IsUnique();
+                b.Property(s => s.MaxAutoSubmitValue).HasPrecision(18, 2);
+            });
 
             // Webhook subscription: encrypt the HMAC signing secret at rest (distinct secret protector),
             // and index by TIN for the dispatcher's per-company lookup.

@@ -88,6 +88,7 @@
     @await Html.PartialAsync("_GoogleAnalytics")
 </head>
 <body data-logout-reason="@logoutReason" class="einv-auth">
+    <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>
     <div class="auth-page-wrapper">
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -99,7 +100,7 @@
         </script>
 
         <div class="auth-page-content">
-            <div class="container">
+            <div id="einv-main-content" class="container" tabindex="-1">
                 @RenderBody()
             </div>
         </div>
@@ -128,6 +129,28 @@
 
     <!-- SweetAlert2 + Toastr -->
     <script src="~/assets/libs/sweetalert2/sweetalert2.min.js"></script>
+    <script>
+        // Sitewide brand default for Swal.fire() calls that don't set their own button color —
+        // without this, SweetAlert2's built-in default (blue/purple) shows through instead of the
+        // eInvWorld green. Individual Swal.fire calls that already pass confirmButtonColor are untouched.
+        (function () {
+            if (typeof Swal === "undefined") return;
+            var originalFire = Swal.fire.bind(Swal);
+            Swal.fire = function () {
+                var args = Array.prototype.slice.call(arguments);
+                var opts = args[0];
+                if (typeof opts === "string") {
+                    opts = { title: args[0], text: args[1], icon: args[2] };
+                    args = [opts];
+                }
+                if (opts && typeof opts === "object" && !Array.isArray(opts)) {
+                    if (opts.confirmButtonColor === undefined) opts.confirmButtonColor = "#006948";
+                    if (opts.showCancelButton && opts.cancelButtonColor === undefined) opts.cancelButtonColor = "#6c757d";
+                }
+                return originalFire.apply(Swal, args);
+            };
+        })();
+    </script>
     <script src="~/assets/js/pages/sweetalerts.init.js"></script>
     <script src="~/assets/libs/toastr/toastr.min.js"></script>
 

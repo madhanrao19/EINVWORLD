@@ -272,5 +272,155 @@ namespace EINVWORLD.Tests
             var json = new InvoiceMapper().MapToJsonModel(header);
             Assert.Contains("EI00000000010", json);
         }
+
+        // ── Free-text State for a foreign Buyer (PublicCustomer.StateCode no longer FK-restricted
+        // to the StateCodes list — LHDN's own MyInvois Portal accepts free text for a foreign
+        // party's CountrySubentityCode, and InvoiceMapper never validated its format beyond the
+        // State-17 domestic restriction above) ─────────────────────────────────────────────────
+        [Fact]
+        public void Map_PublicCustomerForeignFreeTextState_PassesThroughVerbatim()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000020", "Foreign Buyer Inc");
+            header.PublicCustomer.CountryCode = "IDN";
+            header.PublicCustomer.StateCode = "CUSTOM STATE"; // not a StateCodes row — free text
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("\"CUSTOM STATE\"", json);
+        }
+
+        // ── Passport ID length cap (LHDN SDK, 06 Aug 2026, effective Production 23 Oct 2026) ──
+        private static PublicCustomer ValidPublicCustomer(string tin, string company) => new()
+        {
+            IndustryClassificationCode = "01111",
+            BizDescription = "Growing of maize",
+            CompanyName = company,
+            TIN = tin,
+            RegTypeCode = "BRN",
+            RegNo = "201901234567",
+            Addr1 = "Lot 1, Jalan Test",
+            CityName = "Kuala Lumpur",
+            StateCode = "14",
+            PostalCode = "50000",
+            CountryCode = "MYS",
+            PhoneNo = "+60312345678",
+            SST = "NA",
+            TTX = "NA",
+        };
+
+        // ── Buyer optional fields: Business Description, Primary Email, Fax Number, Postal Code ──
+        // MyInvois does not mandate these for the buyer party; requiring them blocked otherwise-valid
+        // invoices whose buyer record simply didn't carry that data. Supplier requirements (below)
+        // are intentionally left unchanged.
+        [Fact]
+        public void Map_BuyerCompanyWithBlankOptionalFields_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.BizDescription = "";
+            header.Customer.Email = null;
+            header.Customer.FaxNo = null;
+            header.Customer.PostalCode = null;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.NotNull(json);
+        }
+
+        [Fact]
+        public void Map_PublicCustomerBuyerWithBlankOptionalFields_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000020", "Blank Fields Buyer");
+            header.PublicCustomer.BizDescription = "";
+            header.PublicCustomer.Email = null;
+            header.PublicCustomer.FaxNo = null;
+            header.PublicCustomer.PostalCode = null;
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.NotNull(json);
+        }
+
+        [Fact]
+        public void Map_SupplierWithBlankBusinessDescription_StillThrows()
+        {
+            // Guards the role-based branch: relaxing this field for the Buyer must not leak to Supplier.
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Supplier.BizDescription = "";
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Supplier Business Description is required", ex.Message);
+        }
+
+        [Fact]
+        public void Map_SupplierWithBlankPostalCode_StillThrows()
+        {
+            // Guards the role-based branch: relaxing this field for the Buyer must not leak to Supplier.
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Supplier.PostalCode = "";
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Supplier Postal Code is required", ex.Message);
+        }
+
+        [Fact]
+        public void Map_PassportOver12Chars_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.RegTypeCode = "PASSPORT";
+            header.Customer.RegNo = "A1234567890123"; // 14 chars — exceeds the 12-char cap
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Passport Registration Number cannot exceed 12 characters", ex.Message);
+        }
+
+        [Fact]
+        public void Map_Passport12CharsOrFewer_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.RegTypeCode = "PASSPORT";
+            header.Customer.RegNo = "A123456789"; // 10 chars — within the cap
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("A123456789", json);
+        }
+
+        [Fact]
+        public void Map_NonPassportOver12Chars_Succeeds()
+        {
+            // Scope discipline: the 06 Aug 2026 SDK rule only names Passport — BRN et al. are untouched.
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer.RegTypeCode = "BRN";
+            header.Customer.RegNo = "20190123456789012345"; // 21 chars — would fail if the cap leaked to BRN
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("20190123456789012345", json);
+        }
+
+        [Fact]
+        public void Map_PublicCustomerPassportOver12Chars_Throws()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000010", "Walk-in Buyer");
+            header.PublicCustomer.RegTypeCode = "PASSPORT";
+            header.PublicCustomer.RegNo = "A1234567890123"; // 14 chars
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(header));
+            Assert.Contains("Passport Registration Number cannot exceed 12 characters", ex.Message);
+        }
+
+        [Fact]
+        public void Map_PublicCustomerPassport12CharsOrFewer_Succeeds()
+        {
+            var header = Header("01", LineWithTax(1, 10, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000010", "Walk-in Buyer");
+            header.PublicCustomer.RegTypeCode = "PASSPORT";
+            header.PublicCustomer.RegNo = "A123456789"; // 10 chars
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            Assert.Contains("A123456789", json);
+        }
     }
 }

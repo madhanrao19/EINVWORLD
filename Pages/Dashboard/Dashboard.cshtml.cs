@@ -36,6 +36,19 @@ namespace eInvWorld.Pages.Invoices
         public int TotalBuyerCount { get; set; }
         public int ActionInvalidCount { get; set; }
         public int ActionTransmissionErrorCount { get; set; }
+        /// <summary>
+        /// Distinct-invoice "Needs Attention" headline count (Phase 1D) — NOT a sum of
+        /// ActionInvalidCount/ActionTransmissionErrorCount/RejectRequestInvoices/aging drafts, since
+        /// an invoice can match more than one of those simultaneously. See InvoiceNeedsAttentionFilter.
+        /// </summary>
+        public int NeedsAttentionCount { get; set; }
+        // Breakdown rows under the headline (Phase 1D) — all-time, same scope as NeedsAttentionCount,
+        // deliberately separate from the legacy month-scoped ActionInvalidCount/ActionTransmissionErrorCount
+        // tiles above so this new panel's numbers stay internally consistent without changing those tiles.
+        public int NeedsAttentionInvalidCount { get; set; }
+        public int NeedsAttentionTransmissionErrorCount { get; set; }
+        public int NeedsAttentionRejectedCount { get; set; }
+        public int NeedsAttentionAgingDraftsCount { get; set; }
         public decimal TotalValidAmount { get; set; }
         public decimal SubmittedAmount { get; set; }
         public decimal InvalidAmount { get; set; }
@@ -96,6 +109,17 @@ namespace eInvWorld.Pages.Invoices
                         .Where(i => companyIds.Contains(i.CustomerId ?? 0) || companyIds.Contains(i.SupplierId ?? 0));
 
                     ActionTransmissionErrorCount = invoiceQuery.Count(i => i.InternalStatusId == "TransmissionError");
+
+                    // Needs Attention (Phase 1D): distinct-invoice count, not a sum of the four action
+                    // tiles below — same predicate the Invoice List's "Needs Attention" chip filters on
+                    // (InvoiceNeedsAttentionFilter), computed here before the date-range filter is applied
+                    // so it reflects the whole company scope like the other action counters do.
+                    NeedsAttentionCount = InvoiceNeedsAttentionFilter.Apply(invoiceQuery).Count();
+                    var needsAttentionCutoff = DateTime.Now.AddDays(-3);
+                    NeedsAttentionInvalidCount = invoiceQuery.Count(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft");
+                    NeedsAttentionTransmissionErrorCount = ActionTransmissionErrorCount;
+                    NeedsAttentionRejectedCount = invoiceQuery.Count(i => i.InternalStatusId == "RequestReject");
+                    NeedsAttentionAgingDraftsCount = invoiceQuery.Count(i => i.InternalStatusId == "Draft" && i.CreatedDate <= needsAttentionCutoff);
 
                     // Apply Date Filters
                     if (FilterType == "Day")

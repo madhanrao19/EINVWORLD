@@ -118,6 +118,10 @@ builder.Services.AddHttpClient(eInvWorld.Services.Webhooks.WebhookDeliveryJobHan
 // Tamper-evident, hash-chained audit trail.
 builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();
 
+// Company workspace (Roles & Permissions tab) authorization.
+builder.Services.AddScoped<EINVWORLD.Services.Authorization.ICompanyAuthorizationService, EINVWORLD.Services.Authorization.CompanyAuthorizationService>();
+builder.Services.AddScoped<EINVWORLD.Services.Authorization.ICompanyInvitationService, EINVWORLD.Services.Authorization.CompanyInvitationService>();
+
 
 // 🔐 Data Protection (Persist Keys)
 // IMPORTANT: keep the key ring OUTSIDE the deployable App folder, otherwise a redeploy that clears
@@ -165,8 +169,12 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Login");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/Register");
     options.Conventions.AllowAnonymousToAreaPage("Identity", "/Account/ForgotPassword");
-
 });
+
+// Enforces the Role Management module grid (Admin > User Management > Role Management) on top of
+// each page's own [Authorize(Roles=...)] gate.
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+    options.Filters.Add(typeof(EINVWORLD.Services.Authorization.ModuleAccessPageFilter)));
 
 builder.Services.Configure<GoogleAnalyticsSettings>(
     builder.Configuration.GetSection("GoogleAnalytics"));
@@ -263,6 +271,16 @@ builder.Services.AddHttpClient(EINVWORLD.Services.Background.CodeTableSyncWorker
     c.DefaultRequestHeaders.UserAgent.ParseAdd("EINVWORLD-CodeTableSync/1.0");
 });
 builder.Services.AddHostedService<EINVWORLD.Services.Background.CodeTableSyncWorker>();
+// Keeps Tesseract OCR language files (tessdata/<lang>.traineddata) current from the official
+// tesseract-ocr/tessdata GitHub repo, replacing the previous fully-manual copy-in process (still
+// documented as the fallback for air-gapped servers). Inert unless DocumentCapture:OcrEnabled=true;
+// independently switchable off via TessdataSync:Enabled for restricted-outbound-internet deployments.
+builder.Services.AddHttpClient(EINVWORLD.Services.Background.TessdataSyncWorker.HttpClientName, c =>
+{
+    c.Timeout = TimeSpan.FromMinutes(5); // trained-data files can be several MB
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("EINVWORLD-TessdataSync/1.0");
+});
+builder.Services.AddHostedService<EINVWORLD.Services.Background.TessdataSyncWorker>();
 builder.Services.AddSingleton<QRCodeGeneratorService>();
 builder.Services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
 
@@ -364,6 +382,11 @@ if (string.IsNullOrWhiteSpace(baseUrl))
     Log.Warning("LHDN API BaseUrl configuration is missing.");
 }
 
+// Buckets are Singleton (state must survive IHttpClientFactory's periodic handler-pool rotation and
+// be shared across both typed clients below); the DelegatingHandler itself is Transient (default for
+// AddHttpMessageHandler<T>) since IHttpClientFactory requires a distinct handler instance per pipeline
+// — see LhdnRateLimitHandler's doc comment.
+builder.Services.AddSingleton<EINVWORLD.Services.LhdnRateLimitBuckets>();
 builder.Services.AddTransient<EINVWORLD.Services.LhdnRateLimitHandler>();
 
 // Single consolidated registration for the LHDNApiService typed client (was previously
@@ -448,6 +471,21 @@ builder.Services.AddSingleton(docCaptureOptions);
 builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentTextExtractor, EINVWORLD.Services.DocumentCapture.PdfDocumentTextExtractor>();
 // OCR fallback for scanned PDFs (Tesseract + PDFium). Inert unless DocumentCapture:OcrEnabled + tessdata.
 builder.Services.AddScoped<EINVWORLD.Services.DocumentCapture.IDocumentOcrService, EINVWORLD.Services.DocumentCapture.TesseractDocumentOcrService>();
+
+// Smart Capture (Stage 1): persists + asynchronizes AI Document Capture via the existing SyncJobs queue.
+// OFF by default; also requires DocumentCapture + the AI assistant to be enabled (it reuses their services).
+// No application-level malware scanning — see IIS-DEPLOYMENT-GUIDE.md PART 17d for the upload-security
+// controls this relies on instead (format/signature validation, size/page/quota limits, tenant-scoped
+// storage outside wwwroot, safe random filenames, no execution, OS/endpoint-level protection).
+var smartCaptureOptions = builder.Configuration.GetSection(EINVWORLD.Services.SmartCapture.SmartCaptureOptions.SectionName)
+    .Get<EINVWORLD.Services.SmartCapture.SmartCaptureOptions>() ?? new EINVWORLD.Services.SmartCapture.SmartCaptureOptions();
+builder.Services.AddSingleton(smartCaptureOptions);
+builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureDocumentService>();
+builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureCompanyHintService>();
+builder.Services.AddScoped<EINVWORLD.Services.SmartCapture.SmartCaptureAutoSubmitEligibilityService>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureExtractionJobHandler>();
+builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobHandler, EINVWORLD.Services.SmartCapture.SmartCaptureRetentionJobHandler>();
+builder.Services.AddHostedService<EINVWORLD.Services.SmartCapture.SmartCaptureRetentionScheduler>();
 
 // Bulk invoice import (validate-only): parse a CSV/XLSX and validate rows against the LHDN reference codes.
 builder.Services.AddScoped<EINVWORLD.Services.Import.IBulkInvoiceImportService, EINVWORLD.Services.Import.BulkInvoiceImportService>();
@@ -539,6 +577,17 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+// Gzip/Brotli compress responses (HTML + the ~6.7 MB of unminified-transfer CSS/JS/fonts under
+// wwwroot). Built into the framework, no new dependency. EnableForHttps is safe here — the app
+// only ever serves HTTPS via an edge/tunnel that already terminates TLS (see ForwardedHeaders
+// above), so this process's own HTTPS responses (if any) aren't subject to BREACH-style concerns.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+
 var app = builder.Build();
 
 // Fail fast on broken/missing critical config (blank connection string, missing DataProtection key
@@ -549,13 +598,14 @@ EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Envi
 // One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
 // (no secrets — just feature/mode flags).
 Log.Information(
-    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, AutoMigrate={AutoMigrate}",
+    "EINVWORLD {Version} starting — Environment={Environment}, PDFEngine={PdfEngine}, AI={AiEnabled}, DocumentCapture={CaptureEnabled}, OCR={OcrEnabled}, SmartCapture={SmartCaptureEnabled}, AutoMigrate={AutoMigrate}",
     app.Configuration["AppInfo:Version"] ?? "?",
     app.Environment.EnvironmentName,
     app.Configuration["PDFGenerationSettings:Engine"] ?? "DinkToPdf",
     app.Configuration.GetValue("AI:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
+    app.Configuration.GetValue("SmartCapture:Enabled", false),
     app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
 
 // Apply migrations and seed data
@@ -691,7 +741,17 @@ if (httpsRedirectPort > 0)
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles(); // Serves static files from wwwroot
+app.UseResponseCompression();
+app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
+{
+    // Not every asset under wwwroot is cache-busted (asp-append-version covers the Tabler
+    // layouts' core CSS/JS, but images/fonts aren't), so a moderate 7-day cache — not a
+    // year-long "immutable" — bounds staleness after a logo/icon change to a week.
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.CacheControl = "public,max-age=604800";
+    }
+}); // Serves static files from wwwroot
 // Structured per-request log (method, path, status, elapsed ms) — one tidy line per request instead of
 // the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
 app.UseSerilogRequestLogging();

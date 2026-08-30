@@ -146,12 +146,24 @@ namespace EINVWORLD.Helpers
                     // --- WE ARE THE SUPPLIER (SENT INVOICE) ---
                     supplier = await ParsePartyInfoFromJson.GetOrCreatePartyInfoAsync(_dbContext, supplierJson); // Just returns us
 
-                    // Resolve Buyer: Try global PartyInfo first (in case it's a known B2B partner)
-                    customer = await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == customerTinFromJson);
+                    // Resolve Buyer: LHDN general TINs (EI0000000001x/2x/3x/4x) are shared by design —
+                    // many different real buyers legitimately carry the same one (General Public,
+                    // Foreign Buyer, Government, ...), including EINVWORLD's own pre-seeded placeholder
+                    // PartyInfo rows. An unscoped TIN-only lookup against the global PartyInfos table
+                    // would nondeterministically match whichever row happens to come first (e.g. the
+                    // placeholder "Foreign Buyer / Shipping Recipient"), silently mis-attributing a real
+                    // buyer. Skip the global lookup entirely for general TINs and resolve only against
+                    // our own company-scoped PublicCustomers table, where the buyer was actually created.
+                    if (!GeneralTINHelper.IsGeneralTIN(customerTinFromJson))
+                    {
+                        // Try global PartyInfo first (in case it's a known B2B partner)
+                        customer = await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == customerTinFromJson);
+                    }
 
                     if (customer == null)
                     {
-                        // Not in PartyInfo. Check our isolated PublicCustomer table under OUR company ID
+                        // Not in PartyInfo (or a general TIN, skipped above). Check our isolated
+                        // PublicCustomer table under OUR company ID.
                         publicCustomer = await _dbContext.PublicCustomers.FirstOrDefaultAsync(p => p.TIN == customerTinFromJson && p.CreatedByCompanyId == submittingCompanyId);
 
                         if (publicCustomer == null && customerJson != null)
@@ -163,6 +175,12 @@ namespace EINVWORLD.Helpers
                                 _dbContext.PublicCustomers.Add(publicCustomer);
                                 await _dbContext.SaveChangesAsync(); // Save immediately so we can get the ID
                             }
+                        }
+
+                        if (publicCustomer == null && GeneralTINHelper.IsGeneralTIN(customerTinFromJson))
+                        {
+                            _logger.LogWarning("⚠️ Could not resolve a company-scoped PublicCustomer for general TIN {TIN} (company {CompanyId}) during full sync — buyer link left unresolved rather than risking a mis-attribution.",
+                                LogSanitizer.MaskTin(customerTinFromJson), submittingCompanyId);
                         }
                     }
                 }
@@ -188,7 +206,12 @@ namespace EINVWORLD.Helpers
 
                 if (customer == null && publicCustomer == null && !string.IsNullOrWhiteSpace(summary.receiverTin))
                 {
-                    customer = await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == summary.receiverTin);
+                    // Same general-TIN collision risk as the primary resolution above — skip the
+                    // unscoped global PartyInfos lookup for a shared LHDN general TIN.
+                    if (!GeneralTINHelper.IsGeneralTIN(summary.receiverTin))
+                    {
+                        customer = await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == summary.receiverTin);
+                    }
 
                     // Optional: If we STILL didn't find them in PartyInfos, check PublicCustomer using the fallback TIN
                     if (customer == null)
@@ -258,6 +281,11 @@ namespace EINVWORLD.Helpers
                         IsValidationEmailSent = true,
                         ValidationEmailSentAt = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow),
                         ValidationEmailSentTo = "System (Skipped for Sync)",
+
+                        // Opt a genuinely new buyer-side (received) invoice into the "new e-invoice
+                        // received" notification's retry pass (InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync);
+                        // a sent invoice discovered via sync is not applicable (matches the C# default anyway).
+                        IsNewInvoiceReceivedEmailSent = isSentInvoice,
 
                         UUID = summary.uuid,
                         SubmissionID = summary.submissionUid,
@@ -330,15 +358,26 @@ namespace EINVWORLD.Helpers
                     invoice.LastUpdated = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
 
                     invoice.SupplierId = supplier?.PartyInfoId ?? invoice.SupplierId;
-                    if (customer != null)
+
+                    // Only fill the buyer link when this invoice genuinely has none yet (e.g. it was
+                    // discovered purely via LHDN sync, never created as a local draft). Once a buyer is
+                    // set — correctly, via the Buyer dropdown at Draft/Submit time — never let a later
+                    // re-sync silently reassign it: re-resolving by TIN alone is unsafe for LHDN's
+                    // shared general TINs (see the resolution guard above), and this update runs on
+                    // every re-sync of a not-yet-"stable" invoice, repeatedly, until 72h after
+                    // validation.
+                    if (invoice.CustomerId == null && invoice.PublicCustomerId == null)
                     {
-                        invoice.CustomerId = customer.PartyInfoId;
-                        invoice.PublicCustomerId = null;
-                    }
-                    else if (publicCustomer != null)
-                    {
-                        invoice.PublicCustomerId = publicCustomer.PublicCustomerId;
-                        invoice.CustomerId = null;
+                        if (customer != null)
+                        {
+                            invoice.CustomerId = customer.PartyInfoId;
+                            invoice.PublicCustomerId = null;
+                        }
+                        else if (publicCustomer != null)
+                        {
+                            invoice.PublicCustomerId = publicCustomer.PublicCustomerId;
+                            invoice.CustomerId = null;
+                        }
                     }
 
                     if (invoiceJson != null)
@@ -407,6 +446,12 @@ namespace EINVWORLD.Helpers
 
                 await _dbContext.SaveChangesAsync();
                 await txn.CommitAsync();
+
+                // The "new e-invoice received" notification itself is NOT sent inline here — only the
+                // IsNewInvoiceReceivedEmailSent flag above decides eligibility. Actually sending (with the
+                // recency check, atomic claim, and rollback-on-failure retry) is InvoiceFinalizer's job,
+                // run by the same background pass that already handles the Valid-status PDF/email — see
+                // InvoiceFinalizer.SendNewInvoiceReceivedEmailAsync and InvoiceStatusUpdater.RunFinalizerAsync.
 
                 return true;
 

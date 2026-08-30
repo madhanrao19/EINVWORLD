@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using eInvWorld.Helpers;
 using EINVWORLD.Data;
 using InputModels = EINVWORLD.Models.InputModel;
 using JsonModels = EINVWORLD.Models.JsonModels;
@@ -41,6 +42,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly IConfiguration _configuration;
         private readonly IStatusMappingService _statusMappingService;
         private readonly EINVWORLD.Services.Background.ISyncJobTracker _jobTracker;
+        private readonly DropdownHelper _dropdownHelper;
 
 
         public CreateCNModel(
@@ -52,11 +54,13 @@ namespace EINVWORLD.Pages.Invoices
             IOptions<FilePathConfig> filePathConfig,
             IConfiguration configuration,
             IStatusMappingService statusMappingService,
-            EINVWORLD.Services.Background.ISyncJobTracker jobTracker)
+            EINVWORLD.Services.Background.ISyncJobTracker jobTracker,
+            eInvWorld.Services.IDocumentSigningService signingService,
+            DropdownHelper dropdownHelper)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
-            _invoiceMapper = new InvoiceMapper();
+            _invoiceMapper = new InvoiceMapper(_context, signingService);
             _invoiceService = invoiceService;
             _lhdnApiService = lhdnApiService ?? throw new ArgumentNullException(nameof(lhdnApiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -64,12 +68,14 @@ namespace EINVWORLD.Pages.Invoices
             _configuration = configuration;
             _statusMappingService = statusMappingService;
             _jobTracker = jobTracker;
+            _dropdownHelper = dropdownHelper;
         }
 
         [BindProperty]
         public InvoiceHeaderView Invoice { get; set; }
         public List<SelectListItem> CurrencyCodes { get; set; }
         public List<SelectListItem> InvoicePeriodEnum { get; set; }
+        public List<SelectListItem> UnitOptions { get; set; }
         public List<SelectListItem> Suppliers { get; set; }
         public List<SelectListItem> Customers { get; set; }
         public List<EInvoiceType> EInvoiceTypes { get; set; }
@@ -422,6 +428,7 @@ namespace EINVWORLD.Pages.Invoices
                 .Where(c => c.IsActive)
                 .Select(c => new SelectListItem { Text = $"{c.Currency} ({c.Code})", Value = c.Code })
                 .ToList();
+            UnitOptions = _dropdownHelper.GetUnitOptions();
             InvoicePeriodEnum = Enum.GetValues(typeof(InputModels.InvoicePeriodEnum))
                 .Cast<InputModels.InvoicePeriodEnum>()
                 .Select(e => new SelectListItem { Text = e.ToString(), Value = e.ToString() })

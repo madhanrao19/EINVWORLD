@@ -24,10 +24,16 @@ namespace eInvWorld.Pages.RecurringInvoices
 
         public IList<RecurringProfile> Profiles { get; set; } = new List<RecurringProfile>();
 
+        // Latest run per profile (ProfileId -> most recent history row), for the "Last Run" column.
+        public Dictionary<int, RecurringRunHistory> LastRunByProfile { get; set; } = new();
+
         // Data properties for the summary cards
         public int TotalProfiles { get; set; }
         public int ActiveProfiles { get; set; }
         public int PausedProfiles { get; set; }
+        public int DueNext7DaysCount { get; set; }
+        public int FailedRunsLast30DaysCount { get; set; }
+        public int GeneratedThisMonthCount { get; set; }
 
         // 1. Change 'Task' to 'Task<IActionResult>'
         public async Task<IActionResult> OnGetAsync()
@@ -50,15 +56,42 @@ namespace eInvWorld.Pages.RecurringInvoices
             TotalProfiles = Profiles.Count;
             ActiveProfiles = Profiles.Count(p => p.Status == "Active");
             PausedProfiles = Profiles.Count(p => p.Status == "Paused");
+            var sevenDaysOut = DateTime.Today.AddDays(7);
+            DueNext7DaysCount = Profiles.Count(p => p.Status == "Active" && p.NextRunDate.Date <= sevenDaysOut);
+
+            var profileIds = Profiles.Select(p => p.Id).ToList();
+            if (profileIds.Count > 0)
+            {
+                var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+                var monthStart = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+                var runHistories = await _context.RecurringRunHistories
+                    .Where(h => profileIds.Contains(h.RecurringProfileId))
+                    .ToListAsync();
+
+                LastRunByProfile = runHistories
+                    .GroupBy(h => h.RecurringProfileId)
+                    .ToDictionary(g => g.Key, g => g.OrderByDescending(h => h.RunTimestamp).First());
+
+                FailedRunsLast30DaysCount = runHistories.Count(h =>
+                    h.RunTimestamp >= thirtyDaysAgo && (h.RunStatus.StartsWith("Failed") || h.RunStatus == "LHDN_Failed"));
+
+                GeneratedThisMonthCount = runHistories.Count(h =>
+                    h.RunTimestamp >= monthStart && h.RunStatus.StartsWith("Success"));
+            }
 
             var userCompany = await _context.UserCompanies
+                .Include(uc => uc.CompanyRole)
                 .Where(uc => uc.UserId == userId)
                 .OrderByDescending(uc => uc.IsPrimaryCompany)
                 .FirstOrDefaultAsync();
 
-            // Added a null check here (userCompany != null) to prevent a NullReferenceException 
-            // just in case FirstOrDefaultAsync() doesn't find a record!
-            if (userCompany == null || !userCompany.HasCompanyAccess || userCompany.IsViewOnly)
+            // A CompanyRole assignment (Owner/Admin/Editor/Viewer) always grants at least read
+            // access; fall back to the legacy flags only for memberships never migrated to a role.
+            bool hasAccess = userCompany != null &&
+                (userCompany.CompanyRole != null || (userCompany.HasCompanyAccess && !userCompany.IsViewOnly));
+
+            if (!hasAccess)
             {
                 return Redirect("/Identity/Account/AccessDenied");
             }

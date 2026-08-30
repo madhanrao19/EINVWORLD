@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Dashboard";
     Layout = "_LayoutTabler";
+    var hour = DateTime.Now.Hour;
+    var timeGreeting = hour < 12 ? "Good Morning" : (hour < 18 ? "Good Afternoon" : "Good Evening");
 }
 
 
@@ -52,9 +54,16 @@
     }
 
     .metric-label-top {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
         font-weight: 600;
-        color: var(--text-main);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    /* Forest Enterprise reference favors flat, dense cards over decorative fills. */
+    .wave-container {
+        display: none;
     }
 
     .metric-label-bottom {
@@ -158,9 +167,15 @@
                         <li class="breadcrumb-item active fw-semibold text-primary">Overview</li>
                     </ol>
                 </nav>
-                <h1 class="einv-page-title mb-1">Dashboard Overview</h1>
+                <h1 class="einv-page-title mb-1">
+                    @timeGreeting@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "" : $", {Model.DisplayName.Split(' ')[0]}")
+                </h1>
                 <p class="text-muted mb-0">
-                    Welcome back@(string.IsNullOrWhiteSpace(Model.DisplayName) ? "" : $", {Model.DisplayName}"). Here is what's happening with your invoices today.
+                    @if (Model.FilterType == "Month" && Model.UserType != "Buyer")
+                    {
+                        @($"{Model.TotalInvoices} invoice{(Model.TotalInvoices == 1 ? "" : "s")} this month. ")
+                    }
+                    Here is what's happening with your invoices today.
                 </p>
             </div>
             
@@ -334,6 +349,51 @@ else if (Model.UserType == "Supplier")
 
     string dateParams = $"&submissionDateFrom={start:s}&submissionDateTo={end:s}";
 
+    @* Needs Attention panel (Phase 1D) — reordered above the KPI row per the plan. A distinct-invoice
+       headline (never a sum of the badges below it, since one invoice can match more than one
+       condition) that deep-links into the same "Needs Attention" filter chip the Invoice List
+       page added in Phase 1C, so this is one filtering mechanism, not two parallel ones. *@
+    @if (Model.NeedsAttentionCount > 0)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <a href="/Invoices/InvoiceLists?invoiceDirection=All&internalStatus=NeedsAttention"
+                   class="card p-4 shadow-sm border-0 text-decoration-none d-block transition-hover"
+                   style="border-left: 5px solid #dc3545 !important; background-color: #fef2f2;">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="shadow-sm bg-danger text-white rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 46px; height: 46px;">
+                                <i class="ri-error-warning-line fs-4"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold text-dark mb-0">@Model.NeedsAttentionCount Invoice@(Model.NeedsAttentionCount == 1 ? "" : "s") Need@(Model.NeedsAttentionCount == 1 ? "s" : "") Attention</h5>
+                                <p class="text-muted small mb-0">Invalid, failed transmission, rejected, or drafts stuck more than 3 days</p>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (Model.NeedsAttentionInvalidCount > 0)
+                            {
+                                <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">@Model.NeedsAttentionInvalidCount Invalid</span>
+                            }
+                            @if (Model.NeedsAttentionTransmissionErrorCount > 0)
+                            {
+                                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">@Model.NeedsAttentionTransmissionErrorCount Transmission Error</span>
+                            }
+                            @if (Model.NeedsAttentionRejectedCount > 0)
+                            {
+                                <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">@Model.NeedsAttentionRejectedCount Rejected</span>
+                            }
+                            @if (Model.NeedsAttentionAgingDraftsCount > 0)
+                            {
+                                <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-3 py-2">@Model.NeedsAttentionAgingDraftsCount Aging Draft@(Model.NeedsAttentionAgingDraftsCount == 1 ? "" : "s")</span>
+                            }
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    }
+
     <div class="row g-3 mb-4">
         <div class="col-lg-4 col-md-6">
             <div class="card einv-kpi einv-kpi-primary p-4 position-relative overflow-hidden">
@@ -465,7 +525,7 @@ else if (Model.UserType == "Supplier")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-7">
             <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #0c5434 !important;">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -504,54 +564,57 @@ else if (Model.UserType == "Supplier")
                         </a>
                     </div>
                 
-                    <div class="col-md-6">
-                        <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&LHDNStatus=Invalid&status=Invalid@(dateParams)"
-                               class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-danger-subtle transition-hover position-relative"
-                               style="background-color: #fef2f2;">
-                        
-                            @if (Model.ActionInvalidCount > 0)
-                            {
+                    @* Both tiles below are alerts, not permanent shortcuts (unlike Create Invoice/Manage
+                       Buyers/My Company above) — only render them when there's something to actually act
+                       on. Previously these always rendered with alarming static text ("Fix & Resubmit",
+                       "Server down. Retry later.") even when the count badge was 0, misleadingly implying
+                       an active problem when there wasn't one. *@
+                    @if (Model.ActionInvalidCount > 0)
+                    {
+                        <div class="col-md-6">
+                            <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&LHDNStatus=Invalid&status=Invalid@(dateParams)"
+                                   class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-danger-subtle transition-hover position-relative"
+                                   style="background-color: #fef2f2;">
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light shadow-sm" style="font-size: 0.8rem; padding: 0.35em 0.65em;">
                                     @Model.ActionInvalidCount
                                 </span>
-                            }
-                            <div class="me-3 shadow-sm bg-danger text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
-                                <i class="ri-error-warning-line fs-4"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">LHDN Invalid</span>
-                                <span class="small text-muted" style="font-size: 0.85rem;">Fix & Resubmit</span>
-                            </div>
-                        </a>
-                    </div>
+                                <div class="me-3 shadow-sm bg-danger text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                    <i class="ri-error-warning-line fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">LHDN Invalid</span>
+                                    <span class="small text-muted" style="font-size: 0.85rem;">Fix & Resubmit</span>
+                                </div>
+                            </a>
+                        </div>
+                    }
 
-                    <div class="col-md-6">
-                        <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&InternalStatus=TransmissionError"
-                               class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-warning-subtle transition-hover position-relative"
-                               style="background-color: #fffbeb;">
-                        
-                            @if (Model.ActionTransmissionErrorCount > 0)
-                            {
+                    @if (Model.ActionTransmissionErrorCount > 0)
+                    {
+                        <div class="col-md-6">
+                            <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&InternalStatus=TransmissionError"
+                                   class="d-flex align-items-center p-3 h-100 text-decoration-none rounded-3 border border-warning-subtle transition-hover position-relative"
+                                   style="background-color: #fffbeb;">
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-dark border border-light shadow-sm" style="font-size: 0.8rem; padding: 0.35em 0.65em; background-color: #fbbf24;">
                                     @Model.ActionTransmissionErrorCount
                                 </span>
-                            }
-                            <div class="me-3 shadow-sm text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background-color: #f59e0b;">
-                                <i class="ri-wifi-off-line fs-4"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                                <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">Connection Failed</span>
-                                <span class="small text-muted" style="font-size: 0.85rem;">Server down. Retry later.</span>
-                            </div>
-                        </a>
-                    </div>
+                                <div class="me-3 shadow-sm text-white rounded-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; background-color: #f59e0b;">
+                                    <i class="ri-wifi-off-line fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <span class="fw-bold text-dark d-block" style="font-size: 0.95rem;">Connection Failed</span>
+                                    <span class="small text-muted" style="font-size: 0.85rem;">Server down. Retry later.</span>
+                                </div>
+                            </a>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
 
     @* Stitch dashboard grid: Invoice Trends (8 cols) beside Status Breakdown (4 cols). *@
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-8">
             <div class="card h-100 mb-0 shadow-sm border-0">
                 <div class="card-header-clean d-flex justify-content-between align-items-center">
@@ -573,7 +636,7 @@ else if (Model.UserType == "Supplier")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-6">
             <div class="card h-100 mb-0 shadow-sm border-0">
                 <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Customer Share</h5></div>
@@ -592,7 +655,7 @@ else if (Model.UserType == "Supplier")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-5">
             <div class="card h-100 mb-0 shadow-sm border-0">
                 <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Rejections & Cancellations</h5></div>
@@ -611,7 +674,7 @@ else if (Model.UserType == "Supplier")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-6">
             <div class="card h-100 mb-0 shadow-sm border-0">
                 <div class="card-header-clean d-flex justify-content-between align-items-center">
@@ -824,7 +887,7 @@ else if (Model.UserType == "Buyer")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-12">
             <div class="card p-4 shadow-sm border-0 bg-white h-100 mb-0" style="border-left: 5px solid #f59e0b !important;">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -875,7 +938,7 @@ else if (Model.UserType == "Buyer")
         </div>
     </div>
 
-    <div class="row g-4 mb-4 align-items-stretch">
+    <div class="row g-3 g-lg-4 mb-4 align-items-stretch">
         <div class="col-lg-6">
             <div class="card h-100 mb-0 shadow-sm border-0">
                 <div class="card-header-clean"><h5 class="mb-0 fw-bold text-dark">Top Suppliers by Spend</h5></div>

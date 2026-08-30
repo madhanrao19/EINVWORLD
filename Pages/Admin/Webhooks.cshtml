@@ -4,12 +4,16 @@
     ViewData["Title"] = "Webhooks";
 }
 
-<h3 class="mb-3">🔔 Webhooks</h3>
-<p class="text-muted">
-    Notify customer ERPs over HTTP when an invoice reaches a terminal LHDN status
-    (Valid / Cancelled / Rejected / Invalid). Deliveries run on the durable job queue, so a receiver being
-    down is retried automatically and surfaces in <a asp-page="/Admin/SyncJobs">Sync Jobs</a>.
-</p>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">Webhooks</h1>
+        <p class="text-muted mb-0">
+            Notify customer ERPs over HTTP when an invoice reaches a terminal LHDN status
+            (Valid / Cancelled / Rejected / Invalid). Deliveries run on the durable job queue, so a receiver being
+            down is retried automatically and surfaces in <a asp-page="/Admin/SyncJobs">Sync Jobs</a>.
+        </p>
+    </div>
+</div>
 
 @if (!Model.WebhooksEnabled)
 {
@@ -38,7 +42,7 @@
     </div>
 }
 
-<div class="card mb-4">
+<div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold">Register a subscription</div>
     <div class="card-body">
         <form method="post" asp-page-handler="Create" class="row g-2">
@@ -63,9 +67,11 @@
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-sm align-middle">
-        <thead>
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+    <div class="table-responsive">
+    <table class="table align-middle mb-0">
+        <thead class="einv-table-head">
             <tr>
                 <th>#</th><th>TIN</th><th>Callback URL</th><th>Enabled</th><th>Last delivery</th><th>Actions</th>
             </tr>
@@ -73,7 +79,7 @@
         <tbody>
         @if (Model.Subscriptions.Count == 0)
         {
-            <tr><td colspan="6" class="text-muted">No subscriptions registered yet.</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">No subscriptions registered yet.</td></tr>
         }
         @foreach (var s in Model.Subscriptions)
         {
@@ -123,4 +129,6 @@
         }
         </tbody>
     </table>
+    </div>
+    </div>
 </div>

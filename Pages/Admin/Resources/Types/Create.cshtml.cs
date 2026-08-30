@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using EINVWORLD.Data;
 using EINVWORLD.Models.Public;
 
@@ -32,6 +33,12 @@ namespace EINVWORLD.Pages.Admin.Resources.Types
         {
             if (!ModelState.IsValid)
             {
+                return Page();
+            }
+
+            if (await _context.ResourceTypes.AnyAsync(rt => rt.Code == ResourceType.Code))
+            {
+                ModelState.AddModelError("ResourceType.Code", "This code is already in use by another resource type.");
                 return Page();
             }
 

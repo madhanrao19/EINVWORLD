@@ -46,6 +46,18 @@
   --tblr-info-rgb: 14, 165, 233;
 }
 
+/* Dark mode: only the canvas/surface/text/border tokens need to flip — every rule elsewhere in this
+ * file that uses var(--einv-page-bg|surface|text|text-muted|border) picks this up automatically.
+ * Values match Tabler's own dark palette (tabler.min.css gray-900/800/700/200/400) so the rebrand
+ * blends with Tabler's built-in dark-mode components instead of introducing a second dark palette. */
+[data-bs-theme="dark"] {
+  --einv-page-bg: #111827;
+  --einv-surface: #1f2937;
+  --einv-text: #e5e7eb;
+  --einv-text-muted: #9ca3af;
+  --einv-border: #374151;
+}
+
 /* Primary buttons: explicit hover/active so the darker brand step is used instead of a derived tint. */
 .btn-primary:hover, .btn-primary:focus-visible, .btn-primary:active,
 .btn-primary.active, .btn-primary.show {
@@ -83,28 +95,22 @@
   font-weight: 600;
 }
 
-/* Flat sectioned menu (Navigation Master): small tracked section labels between link groups,
- * and a utility block pinned to the sidebar bottom on desktop. */
-.einv-nav-section {
-  list-style: none;
-  padding: 1rem .75rem .25rem;
-  font-size: .68rem;
-  font-weight: 600;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #8a948d;
+/* Bottom-pinned Profile & Settings / Logout. #einv-sidebar-menu carries both `.offcanvas-lg`
+ * (Bootstrap's responsive drawer) and `.navbar-collapse` (Tabler's vertical-nav flex-grow hook) —
+ * the two frameworks' own flex defaults don't agree on direction/growth for this combination, so
+ * this is spelled out explicitly (ID selector to win outright) rather than relying on either. */
+#einv-sidebar-menu.offcanvas-lg {
+  display: flex;
+  flex-direction: column;
 }
-@media (min-width: 992px) {
-  .navbar-vertical .navbar-collapse {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .navbar-vertical .einv-nav-bottom {
-    margin-top: auto;
-    padding-bottom: .75rem;
-    border-top: 1px solid var(--einv-border);
-  }
+#einv-sidebar-menu .offcanvas-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.navbar-vertical .einv-nav-bottom {
+  margin-top: auto;
+  padding-bottom: .75rem;
+  border-top: 1px solid var(--einv-border);
 }
 
 /* Invoice list: subtle zebra striping (scoped to the invoice table only — the page canvas tone
@@ -162,6 +168,18 @@ td .badge.bg-info:not(:has(i))::before { content: "\f0da"; } /* ri-send-plane-li
 td .badge.bg-dark,
 td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; color: #3d4a42 !important; }
 
+/* Solid badges outside table cells (page headers, detail views, status pills): Tabler's own .badge
+ * base rule defaults text to --tblr-secondary (a mid-gray) regardless of background — bg-success/
+ * bg-danger/etc. only ever set the background, never the text colour. Framework-correct pairing only
+ * lives on the separate .text-bg-* classes, which most of the app doesn't use, so solid badges (e.g.
+ * "Valid" on invoice status) rendered gray-on-color with poor contrast. Match Tabler's own
+ * .text-bg-* pairing (#f9fafb) so these badges read the same as buttons. Lower specificity than the
+ * td-scoped tinted rules above, so table badges keep their light-tint/dark-text look untouched. */
+.badge.bg-success, .badge.bg-danger, .badge.bg-warning, .badge.bg-info,
+.badge.bg-primary, .badge.bg-dark, .badge.bg-secondary {
+  color: #f9fafb;
+}
+
 /* Table headers: subtle green-tinted fill with tracking-heavy uppercase labels (DESIGN.md). */
 .table thead th {
   background-color: #e9efe9 !important;
@@ -169,6 +187,9 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   font-size: .72rem;
   letter-spacing: .04em;
   text-transform: uppercase;
+}
+[data-bs-theme="dark"] .table thead th {
+  background-color: rgba(var(--einv-primary-rgb), .16) !important;
 }
 
 /* Topbar search: quiet rounded pill with an inline magnifier, brand focus ring. */
@@ -184,6 +205,13 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   background-color: #fff;
   border-color: var(--einv-primary);
   box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .10);
+}
+[data-bs-theme="dark"] .app-search .form-control {
+  background-color: rgba(255, 255, 255, .06);
+  color: var(--einv-text);
+}
+[data-bs-theme="dark"] .app-search .form-control:focus {
+  background-color: rgba(255, 255, 255, .09);
 }
 
 /* KPI metric cards: 4px semantic left-accent (Stitch dashboard). Cards opt in via einv-kpi-*.
@@ -251,14 +279,33 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
  * (the HTML height="26" attribute is overridden by Tabler's CSS, so this rule is required). */
 .navbar-brand img,
 .navbar-brand-autodark img {
-  height: 2.25rem !important;
+  height: 3rem !important;
   width: auto !important;
   max-width: 100%;
 }
 /* On the collapsed mobile navbar, keep the brand compact next to the toggler. */
 @media (max-width: 991.98px) {
   .navbar-vertical .navbar-brand { padding-top: .25rem; padding-bottom: .25rem; }
-  .navbar-vertical .navbar-brand img { height: 2rem !important; }
+  .navbar-vertical .navbar-brand img { height: 2.5rem !important; }
+}
+
+/* Desktop sidebar collapse-to-icons (toggled by #einv-sidebar-collapse-toggle, einvworld-ui.js).
+ * Below lg the sidebar is its own off-canvas drawer (Bootstrap's offcanvas-lg), so this only
+ * applies at the lg breakpoint where the sidebar is a fixed 15rem column (see tabler.min.css). */
+@media (min-width: 992px) {
+  body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg { width: 4.5rem; }
+  body.einv-sidebar-collapsed .page-wrapper { margin-left: 4.5rem; }
+  body.einv-sidebar-collapsed .navbar-vertical .container-fluid { flex-direction: column; }
+  body.einv-sidebar-collapsed .navbar-vertical .navbar-brand { margin: 0 0 .5rem; }
+  body.einv-sidebar-collapsed #einv-sidebar-collapse-toggle { margin: 0 0 .5rem; transform: rotate(180deg); }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link-title,
+  body.einv-sidebar-collapsed .navbar-vertical .badge:not(.nav-link-icon .badge) {
+    display: none;
+  }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link { justify-content: center; padding: .625rem; }
+  body.einv-sidebar-collapsed .navbar-vertical .nav-link-icon { margin-right: 0; }
+  /* Collapsed = icon-only; the expand chevron has nothing left to point at. */
+  body.einv-sidebar-collapsed .navbar-vertical .dropdown-toggle::after { display: none; }
 }
 
 /* Long inline code / tokens (e.g. env-var names on AI Settings, the import-instructions block) and
@@ -360,6 +407,15 @@ pre { overflow-x: auto; max-width: 100%; }
   height: 100%;
   color: #fff;
 }
+
+/* Velzon avatar size scale — Tabler has no equivalent, so unsized avatar-* images/containers
+ * (e.g. Suppliers/Index company logos) would otherwise render at native/unconstrained size. */
+.avatar-xxs { height: 1.5rem; width: 1.5rem; }
+.avatar-xs  { height: 2rem;   width: 2rem; }
+.avatar-sm  { height: 3rem;   width: 3rem; }
+.avatar-md  { height: 4.5rem; width: 4.5rem; }
+.avatar-lg  { height: 6rem;   width: 6rem; }
+.avatar-xl  { height: 7.5rem; width: 7.5rem; }
 
 /* ── Auth pages (Phase 7): shim the Velzon auth chrome so login/2FA/register/manage render
  * as a centered card under Tabler. The auth PAGE markup (forms, ids, Turnstile) is unchanged;
@@ -548,4 +604,103 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable tbody td.col-checkbox::before,
   #invoiceTable tbody td.col-action::before { content: ""; }
   #invoiceTable tbody tr:nth-child(even) > td { background-color: transparent; }
+}
+
+/* ============================================================
+ * Shared data-table pattern (Stitch): tinted header / einv-badge / mobile-
+ * stacked-card layout. Apply via the `einv-table-head` class on <thead> (already
+ * used across the app) and by giving any narrow (<=6 column) table's <table>
+ * element the `einv-mobile-stack` class — NOT by adding more per-page IDs here.
+ * Wrap it in a `.table-responsive.einv-table-scroll-x` container (see below)
+ * so the row-action dropdown-clipping fix also applies.
+ * ============================================================ */
+.einv-mobile-stack thead.einv-table-head th {
+  background-color: #eef4ef;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--einv-text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--einv-border);
+  padding: .6rem .6rem;
+}
+[data-bs-theme="dark"] #invoiceTable thead.einv-table-head th,
+[data-bs-theme="dark"] .einv-mobile-stack thead.einv-table-head th {
+  background-color: rgba(var(--einv-primary-rgb), .16);
+}
+.einv-mobile-stack thead.einv-table-head th a { color: inherit; text-decoration: none; }
+.einv-mobile-stack thead.einv-table-head th a:hover { color: var(--einv-primary); }
+.einv-mobile-stack tbody td { padding: .6rem .6rem; vertical-align: middle; }
+.einv-mobile-stack td.truncate { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Row-action dropdowns inside .table-responsive get clipped by its overflow-x. Per the CSS overflow
+ * spec, `overflow-x: auto` + `overflow-y: visible` is not a valid combination — the UA silently
+ * forces both axes to `auto`, so overflow-y can't be freed while overflow-x stays scrollable.
+ * Below the 767.98px breakpoint the table switches to stacked cards (no tabular layout, so no
+ * scroll is ever needed) — safe to drop the scroll wrapper there. At md+ the table stays tabular
+ * and can genuinely overflow (measured: Items/Index and PublicCustomer/List overflow by 400-600px
+ * at 768px), so keep the scroll containment there instead of fighting the spec. */
+.einv-table-scroll-x { overflow-x: auto; }
+@media (max-width: 767.98px) {
+  .einv-table-scroll-x { overflow: visible; }
+}
+
+/* Round initials avatar for buyer rows (no photo — company/contact initials only). */
+.einv-avatar-initials {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .5rem;
+  background: rgba(var(--einv-primary-rgb), .12);
+  color: var(--einv-primary);
+  font-weight: 700;
+  font-size: .8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+  .einv-mobile-stack thead { display: none; }
+  .einv-mobile-stack tbody tr {
+    display: block;
+    border: 1px solid var(--einv-border);
+    border-radius: .5rem;
+    margin: .75rem;
+    background: var(--einv-surface);
+    overflow: hidden;
+  }
+  /* Flex items default to a content-based min-width even when their text could wrap, so a long
+   * value (e.g. a long company name) refuses to shrink and forces the row — and the whole table —
+   * wider than the viewport. min-width: 0 lets wrapping/truncation actually take effect. The
+   * ::before label (content: attr(data-label)) can't take min-width: 0 since it has no children,
+   * so a long label (e.g. "TIN / Registration") plus its value can still be jointly wider than the
+   * viewport — flex-wrap lets the value drop to its own line under the label instead of overflowing. */
+  .einv-mobile-stack tbody td > * { min-width: 0; }
+  .einv-mobile-stack tbody td .d-flex > * { min-width: 0; }
+  .einv-mobile-stack tbody td {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: .25rem 1rem;
+    border: 0 !important;
+    padding: .45rem .75rem;
+    text-align: right;
+  }
+  .einv-mobile-stack tbody td.truncate { max-width: none; white-space: normal; }
+  .einv-mobile-stack tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--einv-text-muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .einv-mobile-stack tbody td.col-action::before { content: ""; }
+  .einv-mobile-stack tbody td.col-name { text-align: left; }
+  .einv-mobile-stack tbody tr:nth-child(even) > td { background-color: transparent; }
 }

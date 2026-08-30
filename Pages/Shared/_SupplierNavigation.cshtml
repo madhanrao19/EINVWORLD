@@ -2,11 +2,22 @@
 @using System.Security.Claims
 @inject eInvWorld.Data.ApplicationDbContext DbContext
 @*
-    Supplier role navigation (Tabler, "EinvWorld Professional"). Flat sectioned menu per the
-    Navigation Master reference — every link the previous grouped menu carried is preserved, just
-    rendered flat under small section labels (einvworld-ui.js highlights the active link by href).
-    Resolves the caller's own company id (same query as before) for the "My Company" link.
-    Cosmetic only — authorization is enforced server-side and unchanged.
+    Supplier role navigation (Tabler). Mirrors the Admin navigation's collapsible dropdown-group
+    pattern and module naming exactly (Invoice Management, Item Management, Buyers Management,
+    Company Management) so the sidebar UX and labels are consistent across roles. Unique ids per
+    submenu (no duplicate DOM ids). Resolves the caller's own company id (same query as before) for
+    the "My Company" link. Cosmetic only — authorization is enforced server-side and unchanged.
+
+    Grouped into OVERVIEW / E-INVOICING / MASTER DATA / COMPANY section headers (Phase 1E nav
+    reorganization). REPORTS and HELP sections from the redesign plan are intentionally omitted:
+    no report or help/support page exists for the Supplier role today, so there is nothing to link
+    to — add the section headers back when those pages ship.
+
+    "+ Create" deep-links: Credit/Debit/Refund Note always require an existing source invoice
+    (LHDN requires a referencing document for these types — see CreateInvoice.cshtml.cs's
+    isAdjustmentDocCreation, which needs both a type AND a uuid), so unlike Invoice/Self-Billed
+    Invoice there is no valid "blank" CN/DN/RN to deep-link to. That item routes to the Invoice
+    List instead, where "Issue CN/DN" already exists as a per-invoice row action.
 *@
 @{
     string? companyId = null;
@@ -20,82 +31,87 @@
     }
 }
 <ul class="navbar-nav pt-lg-2" role="menubar">
+    <li class="nav-item px-3 pt-2 pb-1" role="none">
+        <span class="text-uppercase text-muted fw-bold" style="font-size:.65rem;letter-spacing:.05em;">Overview</span>
+    </li>
     <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard">
+        <a class="nav-link" role="menuitem" href="/Dashboard/Dashboard" title="Dashboard">
             <span class="nav-link-icon" aria-hidden="true"><i class="ri-dashboard-2-line"></i></span>
             <span class="nav-link-title">Dashboard</span>
         </a>
     </li>
 
-    <li class="einv-nav-section" role="none" aria-hidden="true">Invoices</li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Invoices/InvoiceLists">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-3-line"></i></span>
-            <span class="nav-link-title">All e-Invoices</span>
-        </a>
+    <li class="nav-item px-3 pt-3 pb-1" role="none">
+        <span class="text-uppercase text-muted fw-bold" style="font-size:.65rem;letter-spacing:.05em;">E-Invoicing</span>
     </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Invoices/CreateInvoice">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-add-box-line"></i></span>
-            <span class="nav-link-title">Create e-Invoice</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Invoices/ImportCsv">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-upload-cloud-2-line"></i></span>
-            <span class="nav-link-title">Bulk Invoice Import</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Templates/TemplateLists">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-layout-line"></i></span>
-            <span class="nav-link-title">Templates</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/RecurringInvoices/Index">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-repeat-2-line"></i></span>
-            <span class="nav-link-title">Recurring Invoices</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Assistant">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-robot-line"></i></span>
-            <span class="nav-link-title">E-Invoice Assistant</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Invoices/CreateFromFile">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-scan-line"></i></span>
-            <span class="nav-link-title">AI Document Capture</span>
-        </a>
-    </li>
-
-    <li class="einv-nav-section" role="none" aria-hidden="true">Items &amp; Buyers</li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Items/Index">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-price-tag-3-line"></i></span>
-            <span class="nav-link-title">Items</span>
-        </a>
-    </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Items/Create">
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-create" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Create">
             <span class="nav-link-icon" aria-hidden="true"><i class="ri-add-circle-line"></i></span>
-            <span class="nav-link-title">Create Item</span>
+            <span class="nav-link-title">Create</span>
         </a>
+        <div class="dropdown-menu" id="einv-supplier-create">
+            <a class="dropdown-item" href="/Invoices/CreateInvoice">Invoice</a>
+            <a class="dropdown-item" href="/Invoices/CreateInvoice?type=SELF">Self-Billed Invoice</a>
+            <a class="dropdown-item" href="/Invoices/InvoiceLists" title="Select the invoice to issue it against">Credit / Debit / Refund Note</a>
+        </div>
     </li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/PublicCustomer/List">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-group-line"></i></span>
-            <span class="nav-link-title">Buyers</span>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-invoices" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Invoice Management">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-3-line"></i></span>
+            <span class="nav-link-title">Invoice Management</span>
         </a>
+        <div class="dropdown-menu" id="einv-supplier-invoices">
+            <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
+            <a class="dropdown-item" href="/Invoices/ImportCsv">Bulk Invoice Import</a>
+            <a class="dropdown-item" href="/Templates/TemplateLists">Templates</a>
+            <a class="dropdown-item" href="/RecurringInvoices/Index">Recurring Invoices</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-aitools" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="AI Tools">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-robot-line"></i></span>
+            <span class="nav-link-title">AI Tools</span>
+        </a>
+        <div class="dropdown-menu" id="einv-supplier-aitools">
+            <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
+            <a class="dropdown-item" href="/Invoices/SmartCapture">Create from Document <span class="badge bg-primary-soft text-primary" style="font-size: 0.6rem;">BETA</span></a>
+            <a class="dropdown-item" href="/Assistant/ProcessingHistory">AI Processing History</a>
+        </div>
     </li>
 
-    <li class="einv-nav-section" role="none" aria-hidden="true">Company</li>
-    <li class="nav-item" role="none">
-        <a class="nav-link" role="menuitem" href="/Suppliers/Details?id=@companyId">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-building-line"></i></span>
-            <span class="nav-link-title">My Company</span>
+    <li class="nav-item px-3 pt-3 pb-1" role="none">
+        <span class="text-uppercase text-muted fw-bold" style="font-size:.65rem;letter-spacing:.05em;">Master Data</span>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-items" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Item Management">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-line"></i></span>
+            <span class="nav-link-title">Item Management</span>
         </a>
+        <div class="dropdown-menu" id="einv-supplier-items">
+            <a class="dropdown-item" href="/Items/Index">Items</a>
+            <a class="dropdown-item" href="/Items/Create">Create Item</a>
+        </div>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-buyers" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Buyers Management">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-team-line"></i></span>
+            <span class="nav-link-title">Buyers Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-supplier-buyers">
+            <a class="dropdown-item" href="/PublicCustomer/List">Buyer Directory</a>
+        </div>
+    </li>
+
+    <li class="nav-item px-3 pt-3 pb-1" role="none">
+        <span class="text-uppercase text-muted fw-bold" style="font-size:.65rem;letter-spacing:.05em;">Company</span>
+    </li>
+    <li class="nav-item dropdown" role="none">
+        <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-company" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Company Management">
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-store-line"></i></span>
+            <span class="nav-link-title">Company Management</span>
+        </a>
+        <div class="dropdown-menu" id="einv-supplier-company">
+            <a class="dropdown-item" href="/Suppliers/Details?id=@companyId">My Company</a>
+        </div>
     </li>
 </ul>

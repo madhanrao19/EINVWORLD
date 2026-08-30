@@ -29,21 +29,21 @@
     }
 </style>
 
-<div class="container-fluid p-4">
-    @* Page Header *@
-    <div class="mb-4">
-        <h2 class="fw-bold text-dark">@ViewData["Title"]</h2>
-        <p class="text-muted">
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="einv-page-title mb-1">@ViewData["Title"]</h1>
+        <p class="text-muted mb-0">
             @(isNew ? "Create a new user profile, configure their credentials, and assign system roles."
                         : "Update the existing user's contact information, security settings, and permissions.")
         </p>
     </div>
+</div>
 
+<div class="container-fluid p-0">
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm border-0 bg-white">
 
-                @* ✅ Visually Distinct Card Header *@
                 <div class="card-header @(isNew ? "new-user-header text-success" : "edit-user-header text-primary") d-flex justify-content-between align-items-center p-3">
                     <h5 class="mb-0 fw-bold">
                         <i class="@headerIcon me-2"></i>
@@ -168,7 +168,6 @@
                             </div>
                         </div>
 
-                        @* ✅ Visually Distinct Footer Actions *@
                         <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                             <a asp-page="/Admin/Users/ManageUser" class="btn btn-secondary waves-effect waves-light px-4">
                                 <i class="ri-arrow-left-line me-1"></i>Cancel

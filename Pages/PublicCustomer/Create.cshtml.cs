@@ -162,6 +162,20 @@ namespace eInvWorld.Pages.PublicCustomer
                 }
             }
 
+            // A Malaysian buyer's state must still be a real StateCodes entry (the dropdown enforces
+            // this client-side, but the FK constraint no longer does at the DB level — see
+            // Models/InputModel/PublicCustomer.cs). A foreign buyer's state is free text, already
+            // covered by [Required]/[StringLength(100)] on the model.
+            if (string.Equals(PublicCustomer.CountryCode, "MYS", StringComparison.OrdinalIgnoreCase))
+            {
+                var isValidState = await _context.StateCodes
+                    .AnyAsync(s => s.Code == PublicCustomer.StateCode && s.IsActive);
+                if (!isValidState)
+                {
+                    ModelState.AddModelError("PublicCustomer.StateCode", "Invalid state selected.");
+                }
+            }
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors);
@@ -229,6 +243,25 @@ namespace eInvWorld.Pages.PublicCustomer
 
             _context.PublicCustomers.Add(publicCustomer);
             await _context.SaveChangesAsync();
+
+            if (publicCustomer.CreatedByCompanyId.HasValue)
+            {
+                var linkExists = await _context.SupplierBuyers.AnyAsync(sb =>
+                    sb.SupplierId == publicCustomer.CreatedByCompanyId.Value &&
+                    sb.PublicCustomerId == publicCustomer.PublicCustomerId);
+
+                if (!linkExists)
+                {
+                    _context.SupplierBuyers.Add(new SupplierBuyer
+                    {
+                        SupplierId = publicCustomer.CreatedByCompanyId.Value,
+                        BuyerId = null,
+                        PublicCustomerId = publicCustomer.PublicCustomerId
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+            }
 
             TempData["SuccessMessage"] = "Buyer successfully created!";
 

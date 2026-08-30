@@ -71,11 +71,12 @@ namespace eInvWorld.Pages.Invoices
            InvoiceTemplateService invoiceTemplateService,
            ITokenService tokenService,
            IBuyerService buyerService,
-           EINVWORLD.Services.Background.ISyncJobTracker jobTracker) : base(context)
+           EINVWORLD.Services.Background.ISyncJobTracker jobTracker,
+           IDocumentSigningService signingService) : base(context)
         {
             _webHostEnvironment = webHostEnvironment;
             _context = context;
-            _invoiceMapper = new InvoiceMapper();
+            _invoiceMapper = new InvoiceMapper(_context, signingService);
             _invoiceService = invoiceService;
             _lhdnApiService = lhdnApiService ?? throw new ArgumentNullException(nameof(lhdnApiService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -198,6 +199,18 @@ namespace eInvWorld.Pages.Invoices
                 if (existingInvoice == null)
                 {
                     return NotFound($"Invoice {id} not found.");
+                }
+
+                // IDOR guard: SupplierBasePage's own check never actually engages for this page (it
+                // parses "id" as a query-string int PartyInfoId, but this page's "id" is a route-value
+                // InvoiceNo string, so the parse always fails and it silently falls back to checking the
+                // current user's OWN company instead — independent of which invoice was requested). Same
+                // helper/pattern already used by OnPostSubmitDocumentsAsync below and every other
+                // invoice-by-id endpoint (InvoiceDetails2, CreateInvoice's submit handler, InvoiceLists).
+                if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, id))
+                {
+                    _logger.LogWarning("InvoiceEdit view denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, id);
+                    return Forbid();
                 }
 
                 // Map existing invoice to view model
@@ -524,6 +537,19 @@ namespace eInvWorld.Pages.Invoices
 
             try
             {
+                // IDOR guard: only when "id" refers to an invoice that ALREADY EXISTS — this handler is
+                // also used to save a brand-new invoice for the first time (Invoice.InvoiceNo = id ??
+                // GenerateNextInvoiceNumber() below), whose pre-generated number legitimately doesn't
+                // exist in the database yet, and CanAccessInvoiceAsync would (correctly) return false for
+                // a non-existent invoice — this must not block genuine new-invoice creation, only editing
+                // someone else's existing one. See the matching guard in OnGetAsync above.
+                if (!string.IsNullOrWhiteSpace(id) && await _context.InvoiceHeaders.AnyAsync(h => h.InvoiceNo == id)
+                    && !await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, id))
+                {
+                    _logger.LogWarning("InvoiceEdit save denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, id);
+                    return isAjax ? AjaxFail("You are not authorized to edit this invoice.", 403) : Forbid();
+                }
+
                 if (string.IsNullOrWhiteSpace(action))
                     action = Request.Form["invoiceAction"].ToString();
 

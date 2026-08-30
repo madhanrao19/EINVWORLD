@@ -17,7 +17,10 @@ namespace EINVWORLD.Helpers
     {
         /// <summary>
         /// Validates configuration. <paramref name="isProduction"/> tightens checks that only
-        /// matter on a real server (DataProtection key ring, localhost URLs, preprod LHDN host).
+        /// matter on a real server (DataProtection key ring, localhost URLs, preprod LHDN host,
+        /// LHDN ClientId/secrets). Callers pass <c>app.Environment.IsProduction()</c>, which is
+        /// <c>false</c> on the Staging server (<c>ASPNETCORE_ENVIRONMENT=Staging</c>) — deliberate:
+        /// Staging gets these checks as warnings instead of hard startup failures.
         /// <paramref name="contentRoot"/> (the deployable App folder) is used only to reject a key-ring
         /// path that resolves INSIDE it; pass null to skip that containment check.
         /// Throws <see cref="InvalidOperationException"/> aggregating all blocking problems.
@@ -70,6 +73,16 @@ namespace EINVWORLD.Helpers
                 errors.Add("LHDNApiConfig:BaseUrl is empty.");
             else if (isProduction && config["LHDNApiConfig:BaseUrl"]!.Contains("preprod", StringComparison.OrdinalIgnoreCase))
                 warnings.Add("LHDNApiConfig:BaseUrl points at the PREPROD/sandbox host while ASPNETCORE_ENVIRONMENT=Production — switch to the production MyInvois host before going live.");
+
+            // ClientId/secret blank checks are Production-only (like ClientSecret below) rather than
+            // unconditional like BaseUrl: a blank pair only ever surfaces later as a confusing
+            // "invalid_client" from LHDN on first login, not at startup, and this is specifically a
+            // production-deploy risk (dev/test configs routinely omit these).
+            if (isProduction && Blank(config["LHDNApiConfig:ClientId"]))
+                errors.Add("LHDNApiConfig:ClientId is empty.");
+
+            if (isProduction && Blank(config["LHDNApiConfig:ClientSecret"]) && Blank(config["LHDNApiConfig:ClientSecret2"]))
+                errors.Add("LHDNApiConfig:ClientSecret and ClientSecret2 are both empty — set at least one via env var LHDNApiConfig__ClientSecret (or ClientSecret2) or user-secrets.");
 
             // Digital signing: if turned on, the certificate must be fully specified or signing will crash at submit time.
             if (config.GetValue("LHDNApiConfig:SigningEnabled", false))

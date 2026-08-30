@@ -37,17 +37,31 @@ changes are additive and AI/features stay off unless already enabled.
      verified UUID/SubmissionUid rows into the script, then run SECTION 2. Do **not** run it
      verbatim — the fill-in rows are environment-specific (it refuses to run with none filled in).
      It is idempotent and never overwrites an already-recorded submission.
-   - **Tabler UI migration (unreleased):** the authenticated UI is being migrated from the Velzon theme
-     to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It ships as a normal
-     build — no extra deploy step. As of 2026-07-11 **all authenticated pages render Tabler** and the build
-     has been Playwright-verified across all three roles on staging. After any deploy, re-run the automated
-     check: set Cloudflare **test** Turnstile keys and disable admin MFA *temporarily* for QA, run
-     `tests/playwright/10-tabler-modules.spec.js` (exact env vars in `docs/TABLER-MIGRATION-AUDIT.md`), then
-     **revert** those env vars. Known residual: a small AI-Settings mobile overflow. Velzon `_Layout`/
-     `_LoginLayout` remain the fallback until Phase 8; to roll a folder back to Velzon, delete its
+   - **v1.11.0 (this release):** Buyer Management, Company Management (new tabbed workspace — Users,
+     Roles & Permissions, Invoice Branding, Security, Audit), AI Assistant, Items & Services, and the
+     Admin sidebar were all restyled to Tabler and the Company workspace gained real backing features
+     (company-scoped roles, token-based user invitations, invoice branding settings). **No new required
+     secrets** — user invitations reuse the existing `EmailConfiguration` SMTP settings (same sender as
+     other app emails). See §1 for the 4 new migrations and the two-step PII encryption note.
+   - **Tabler UI migration (v1.12.0, markup complete):** the authenticated UI has been migrated from the
+     Velzon theme to the self-hosted MIT **Tabler** theme (assets under `wwwroot/tabler/`, no CDN). It
+     ships as a normal build — no extra deploy step. As of 2026-07-27 **all authenticated pages render
+     Tabler with no known remaining raw Velzon markup**, Playwright-verified across all three roles
+     (`tests/playwright/05-responsive.spec.js`, `10-tabler-modules.spec.js`) with real viewport sizing.
+     To re-run the check after a deploy: set Cloudflare **test** Turnstile keys and disable admin MFA
+     *temporarily* for QA (exact env vars in `docs/TABLER-MIGRATION-AUDIT.md`), run the two specs above,
+     then **revert** those env vars. Velzon `_Layout`/`_LoginLayout` remain the fallback until Phase 8
+     (retiring the theme entirely); to roll a folder back to Velzon, delete its
      `Pages/<area>/_ViewStart.cshtml` (or restore the one line in `Areas/Identity/Pages/_ViewStart.cshtml`
-     for the auth pages). **Not Tabler but surfaced during QA — fix separately:** company logos emitted as
-     `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404.
+     for the auth pages). **Not Tabler, still open — fix separately:** company logos emitted as
+     `file:///E:/…png` paths (Suppliers/Index → browser-blocked) and some resource images 404 on
+     `/Admin/Resources/Manage`.
+   - **v1.13.0 (this release):** new Admin → Role Management (global role catalog + per-role module
+     access grid) and company-scoped custom roles (Supplier Owners/Admins can define a role limited to
+     just their own company). Also a bug-fix pass (supplier invitation join, LHDN reject/cancel emails,
+     several access-denied fixes) and MyInvois SDK 1.0 compliance work (unit-code validation, signed
+     SVDP 1.3, configurable LHDN rate limits — see `LHDNApiConfig:RateLimits:*`). **No new required
+     secrets.** See §1 for the 2 new migrations — both additive, no data loss, safe to auto-migrate.
 5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
    has DDL rights and start in a **low-traffic window** with a **single** worker process.
 6. **Start the site**, then **verify**:
@@ -59,52 +73,211 @@ changes are additive and AI/features stay off unless already enabled.
 
 ## 1. Database migrations
 
-**Default: automatic.** `appsettings.Production.json` ships with
-`DatabaseSettings:AutoMigrateOnStartup = true`, so on the first start of a new version the app applies
-any pending EF migrations itself. The migrations are **additive** (new tables/columns/indexes — no
-`Up()` drops data), so existing data is preserved. Before that first start you MUST:
+### ⚠️ v1.11.0 pre-flight: confirm how far behind each environment is
+
+A production backup taken 2026-07-26 (`__EFMigrationsHistory` check) showed the live database was on
+migration `20260415075935_RemovePreFix` — **22 migrations behind head**, i.e. it had not been
+schema-migrated since mid-April even though `AutoMigrateOnStartup` policy and code shipped well past
+that point. `AutoMigrateOnStartup=false` in Production means migrations only ever apply when someone
+runs them as a deploy step — if that step gets skipped on a release, the gap silently grows until the
+next person notices (usually because a newer feature 500s on a missing column/table). Those 22
+migrations have since been **squashed into one**, `20260726135229_ConsolidatedSchemaCatchup_v1_11_0`
+(see below) — but **Staging auto-migrates by default**, so it may have already applied some or all of
+the original 22 individually, under their own IDs, before they were squashed. Run this on Staging and
+Production before deploying to see exactly where each stands:
+
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+```
+If the last row is `20260415075935_RemovePreFix` or earlier, that environment is fully behind — the
+squashed migration/script builds everything from scratch. If it's one of the 22 original IDs (e.g.
+`20260726085937_AddUnitAndPriceToItemDescription`), that environment already has the schema — the
+squashed script's per-object guards will detect this and only insert its own history row (a no-op on
+the schema). **Either way, run `Apply_ConsolidatedSchemaCatchup_v1_11_0.sql` once, manually, on Staging
+before its next deploy** — do not let Staging's normal auto-migrate-on-boot be the first thing to try
+applying the new squashed migration ID, since the app's own `Migrate()` call runs the raw (non-guarded)
+`Up()` and will fail with "object already exists" on anything Staging already has. Running the guarded
+SQL script first (safe on any starting state, per above) marks the new migration ID as applied, so the
+next boot's `Migrate()` sees it as already done and skips it.
+
+This was rehearsed for this release in all three states — a full restore of the 2026-07-26 production
+backup, a copy of the same backup with all 22 original migrations pre-applied under their own IDs
+(simulating an already-caught-up Staging), and re-running the script a second time against each — with
+`dotnet ef database update` and the `Apply_*.sql` script producing identical, correct end states and
+zero errors in every case, including confirming `SystemLogs` (111k+ existing rows) is never dropped.
+
+**Default: automatic.** `appsettings.json` ships with `DatabaseSettings:AutoMigrateOnStartup = true`
+(inherited by Staging, which has no override), so on the first start of a new version the app applies
+any pending EF migrations itself. `appsettings.Production.json` overrides this to **`false`** — Production
+always requires the manual step below as a matter of policy, run in a controlled window. The migrations
+in this release are **additive** (new tables/columns/indexes — no `Up()` drops data), so existing data is
+preserved regardless of which path you use. Before the first start on a version bump you MUST:
 
 1. **Take a full DB backup** (your rollback).
-2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`).
+2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`) — or use a
+   separate migration login for the manual path (see §7 exception).
 3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
    affected tables) and keep the app pool at a **single worker process**.
 
-### Manual alternative (optional)
+### Manual alternative (Production's default — required, not optional)
 
-If you prefer to control schema changes yourself, set `AutoMigrateOnStartup = false` and run the
-idempotent `Apply_*.sql` scripts below in order (staging first, then production) with a migration login
-(`db_ddladmin`). Each guards on `__EFMigrationsHistory` / `COL_LENGTH` / `OBJECT_ID` and is safe to re-run.
+With `AutoMigrateOnStartup = false`, run the idempotent `Apply_*.sql` scripts below **in order** (staging
+first, then production) with a migration login (`db_ddladmin`). Each guards on `__EFMigrationsHistory` /
+`COL_LENGTH` / `OBJECT_ID` and is safe to re-run — running the full list against an already-migrated
+database is a no-op.
 
 ```bat
 set DB=-S <sql-host> -d <database> -E -b
-sqlcmd %DB% -i "Migrations\Apply_SyncModelAfterNet10Upgrade.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSyncJobTable.sql"
-sqlcmd %DB% -i "Migrations\Apply_DecoupleSystemLogsFromEf.sql"
-sqlcmd %DB% -i "Migrations\Apply_FixInvoiceDecimalPrecision.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHotPathIndexes.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceSubmissionClaim.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSyncJobDurability.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSubmissionRecords.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddAuditLog.sql"
-sqlcmd %DB% -i "Migrations\Apply_EncryptPiiFields.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddWebhookSubscriptions.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddInvoiceHeaderRowVersion.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddGrossTonUnitType.sql"
-sqlcmd %DB% -i "Migrations\Apply_AddSvdpFlagToInvoiceHeader.sql"
+sqlcmd %DB% -i "Migrations\Apply_ConsolidatedSchemaCatchup_v1_11_0.sql"
 ```
 
-> v1.8.2 note: `Apply_AddInvoiceHeaderRowVersion.sql` adds a `rowversion` column to `InvoiceHeaders`
-> (optimistic concurrency). It takes a brief schema lock on that table — run it (or first-boot
-> auto-migrate) in a quiet window on large databases.
+> **v1.11.0 note — this one script replaces 22 individually-numbered migrations.** The originals
+> (`AddLhdnIntermediaryRejectedFlag` through `AddUnitAndPriceToItemDescription`, spanning 2026-04-23 to
+> 2026-07-26) were squashed into `20260726135229_ConsolidatedSchemaCatchup_v1_11_0` because Production had
+> never applied any of them and was 3.5 months behind — see the pre-flight note above for why Staging
+> needs the script run manually once before its next deploy, even though it normally auto-migrates.
 
-Verify the expected migrations are recorded:
+> v1.8.2 note: the squashed migration adds a `rowversion` column to `InvoiceHeaders` (optimistic
+> concurrency, originally `AddInvoiceHeaderRowVersion`). It takes a brief schema lock on that table — run
+> it (or first-boot auto-migrate) in a quiet window on large databases.
+
+> **v1.11.0 note — PII encryption is two steps, not one.** The column-widening in this migration only
+> **widens** the bank-account/address columns (`nvarchar(150)` → `nvarchar(max)`) so they can hold
+> ciphertext — it does **not** encrypt any existing rows. After this migration lands (and the app is
+> confirmed running with a valid `DataProtection:KeyRingPath`), go to **Admin → System Health → Encrypt
+> PII** and run the backfill once per environment. It's idempotent (`PiiEncryptionBackfillService`) — safe
+> to click again if unsure whether it already ran. Until it's run, existing bank/address data stays in
+> plaintext (still readable — no functional break) but isn't yet protected at rest.
+
+> **v1.11.0 note — new `CompanyRoles` seed data.** The migration seeds 4 fixed rows (`CompanyRoleId` 1–4:
+> Owner/Admin/Editor/Viewer) only if the table is empty. This is a brand-new table so there's no collision
+> risk, but don't manually insert rows with `CompanyRoleId` 1–4 into that table before running this script.
+
+Verify the expected migration is recorded:
 ```sql
 SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260726135229_ConsolidatedSchemaCatchup_v1_11_0
 ```
 
 > The durable job worker, idempotency guard, and audit service all **degrade gracefully** (log a
 > warning, pause/skip) if their table is missing — a slightly-late migration won't crash the app, but
 > the corresponding feature won't work until applied.
+
+### v1.13.0 migrations — Role Management + company-scoped custom roles
+
+Two new migrations, both purely additive (new table / nullable column — no drops, no data loss):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddRoleModulePermissions.sql"
+sqlcmd %DB% -i "Migrations\Apply_AddCompanyRolePartyInfoScope.sql"
+```
+
+> **`AddRoleModulePermissions`** — creates `RoleModulePermissions` (empty on a fresh apply). A missing
+> row for a role/module means "allowed" (see `ModuleAccessPageFilter`), so this migration alone changes
+> no existing behavior — it only creates the table Admin → Role Management writes to.
+
+> **`AddCompanyRolePartyInfoScope`** — adds nullable `CompanyRole.PartyInfoId` (existing system rows
+> stay `NULL` = visible to every company). The FK to `PartyInfos` is `NO ACTION`, not cascade — deleting
+> a company that has custom roles requires the app to delete those roles first (already handled in
+> `Pages/Suppliers/Index.cshtml.cs`'s delete handler), since SQL Server rejects a second cascade path to
+> the same table (`PartyInfo` already cascades to `UserCompany`, which also references `CompanyRole`).
+
+Verify both are recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260729092236_AddCompanyRolePartyInfoScope
+```
+
+### Post-v1.13.0 migration — new-invoice-received email tracking
+
+One new migration, purely additive (3 new nullable/defaulted columns — no drops, no data loss):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader.sql"
+```
+
+> **`AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`** — adds `InvoiceHeader.IsNewInvoiceReceivedEmailSent`
+> (`bit NOT NULL DEFAULT 1`), `NewInvoiceReceivedEmailSentAt`, `NewInvoiceReceivedEmailSentTo`. The
+> `DEFAULT 1` backfills every existing row as "not applicable" — this migration cannot retroactively
+> email anyone about invoices already in the database; only new buyer-side invoices synced in from LHDN
+> after this deploy start out eligible (`false`) and get emailed by the existing background finalizer
+> loop.
+
+Verify it's recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260802130000_AddNewInvoiceReceivedEmailTrackingToInvoiceHeader
+```
+
+### Post-v1.14.0 migration — rejection/cancellation email tracking
+
+One new migration, purely additive (6 new nullable/defaulted columns + 1 nullable text column — no
+drops, no data loss). **Run this before deploying the new app code** — the app's EF model expects
+these columns to exist, so running the new code against an un-migrated database will fail every query
+touching `InvoiceHeaders`:
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddRejectionCancellationEmailTrackingToInvoiceHeader.sql"
+```
+
+> **`AddRejectionCancellationEmailTrackingToInvoiceHeader`** — adds `InvoiceHeader.IsRejectionEmailSent`/
+> `RejectionEmailSentAt`/`RejectionEmailSentTo` and `IsCancellationEmailSent`/`CancellationEmailSentAt`/
+> `CancellationEmailSentTo` (all `DEFAULT 1`/`NULL`, same "not applicable until actually rejected/
+> cancelled" pattern as the new-invoice-received columns above), plus `CancellationReason`. Backfills
+> every existing row as "not applicable" — cannot retroactively email anyone about invoices already in
+> the database; only a document rejected/cancelled after this deploy becomes eligible for the
+> background retry pass if its immediate send attempt fails.
+
+Verify it's recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260803200000_AddRejectionCancellationEmailTrackingToInvoiceHeader
+```
+
+### Post-v1.17.0 migration — Smart Capture (Stage 1)
+
+One new migration, purely additive (new `SmartCaptureDocuments` table only):
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureDocument.sql"
+```
+
+> **`AddSmartCaptureDocument`** — creates `SmartCaptureDocuments` (uploaded-document tracking, extraction
+> result, retention). No existing table touched. `SmartCapture:Enabled` stays `false` until you've
+> completed `IIS-DEPLOYMENT-GUIDE.md` PART 17d and `POST-DEPLOY-CHECKLIST.md`'s Smart Capture section.
+
+### Post-v1.18.0 migration — Smart Capture Stage 2 (learned hints)
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureCompanyHint.sql"
+```
+
+> **`AddSmartCaptureCompanyHint`** — creates `SmartCaptureCompanyHints` (one row per company, learned
+> advisory-only doc-type/currency/tax hints). Purely additive; the feature is entirely automatic once
+> Smart Capture itself is enabled — no separate config flag.
+
+### Post-v1.20.0 migration — Smart Capture Stage 4 (conditional auto-submission)
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSmartCaptureAutoSubmit.sql"
+```
+
+> **`AddSmartCaptureAutoSubmit`** — creates `SmartCaptureAutoSubmitSettings` (per-company opt-in, set only
+> from `/Admin/SmartCaptureAutoSubmit`) and adds nullable `SmartCaptureDocuments.PendingAutoSubmitJobId`.
+> Purely additive. `SmartCapture:AutoSubmitEnabled` (config, global kill switch) stays `false` — no
+> company can auto-submit until you explicitly opt one in AND set that flag `true`.
+
+Verify all three are recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260809023129_AddSmartCaptureAutoSubmit
+```
 
 ## 2. Secrets & configuration (never commit these)
 
@@ -134,7 +307,8 @@ setting is blank/wrong (connection string, key ring, signing cert, localhost URL
   - `Documents\`, `Logs\`, `Temp\`, `Keys\` Modify
   - `Cert\` Read
 - Confirm `web.config` is present at the app root (without it, IIS can serve `.deps.json` etc.).
-- Set `ASPNETCORE_ENVIRONMENT=Production`.
+- Set `ASPNETCORE_ENVIRONMENT=Production` (or `Staging` on the staging box — see
+  `IIS-DEPLOYMENT-GUIDE.md` Part 2 for what that changes).
 
 ## 4. Health monitoring
 
@@ -148,9 +322,10 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 
 ## 5. Security
 
-- **Admin 2FA is enforced** (`Security:EnforceAdminMfa = true`): an admin without 2FA is redirected to
-  the authenticator-setup page until they enrol (no hard lockout). Emergency escape hatch: set it
-  `false` and recycle.
+- **Admin 2FA is optional by default** (`Security:EnforceAdminMfa = false` in `appsettings.json`) —
+  Admins can self-enrol voluntarily from Profile & Settings, but are not forced. **Recommended: set
+  `Security__EnforceAdminMfa = true` on Production** so an admin without 2FA is redirected to the
+  authenticator-setup page until they enrol (no hard lockout either way — recovery codes always work).
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 
@@ -186,7 +361,7 @@ only loaded for the `DinkToPdf` engine.
 
 ## 8. Log retention (`SystemLogs` table)
 
-`LogCleanupService` prunes `SystemLogs` rows older than `LogCleanupSettings:RetentionDays` (default 30)
+`LogCleanupService` prunes `SystemLogs` rows older than `LogCleanupSettings:RetentionDays` (default 365)
 every 4 hours. It deletes in **batches** of `LogCleanupSettings:BatchSize` (default 5000) so it never
 holds a table lock or hits the command timeout on a large table.
 

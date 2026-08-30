@@ -28,6 +28,9 @@ namespace EINVWORLD.Pages.Invoices
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILHDNApiService _lhdnApiService;
         private readonly EINVWORLD.Services.Audit.IAuditService _audit;
+        private readonly IConfiguration _configuration;
+        private readonly IEInvoiceNotificationService _eInvoiceEmailService;
+        private readonly IInvoiceFinalizer _invoiceFinalizer;
 
         public InvoiceHeader? InvoiceDetail { get; set; }
         public List<InvoiceLine> InvoiceLines { get; set; } = new();
@@ -48,7 +51,10 @@ namespace EINVWORLD.Pages.Invoices
             IPdfGeneratorService pdfGeneratorService,
             UserManager<ApplicationUser> userManager,
             ILHDNApiService lhdnApiService,
-            EINVWORLD.Services.Audit.IAuditService audit
+            EINVWORLD.Services.Audit.IAuditService audit,
+            IConfiguration configuration,
+            IEInvoiceNotificationService eInvoiceEmailService,
+            IInvoiceFinalizer invoiceFinalizer
         )
         {
             _context = context;
@@ -59,6 +65,9 @@ namespace EINVWORLD.Pages.Invoices
             _userManager = userManager;
             _lhdnApiService = lhdnApiService;
             _audit = audit;
+            _configuration = configuration;
+            _eInvoiceEmailService = eInvoiceEmailService;
+            _invoiceFinalizer = invoiceFinalizer;
         }
 
         public async Task<IActionResult> OnGetAsync(string uuid, bool fromEmail = false)
@@ -85,8 +94,6 @@ namespace EINVWORLD.Pages.Invoices
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer
-                    .ThenInclude(p => p!.State)
-                    .Include(i => i.PublicCustomer)
                             .ThenInclude(p => p!.Country)
                     .Include(i => i.InvoiceLines)
                         .ThenInclude(il => il.InvoiceTaxes)
@@ -107,8 +114,6 @@ namespace EINVWORLD.Pages.Invoices
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer
-                            .ThenInclude(p => p!.State)
-                    .Include(i => i.PublicCustomer)
                             .ThenInclude(p => p!.Country)
                     .Include(i => i.InvoiceLines)
                         .ThenInclude(il => il.InvoiceTaxes)
@@ -345,6 +350,25 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 _logger.LogInformation("✅ Document {documentId} successfully rejected in LHDN API", documentId);
+
+                var invoice = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer).Include(i => i.PublicCustomer)
+                    .FirstOrDefaultAsync(i => i.UUID == documentId);
+
+                var rejectedTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+                if (invoice != null)
+                {
+                    invoice.InternalStatusId = "RequestReject";
+                    invoice.RejectedBy = user.UserName ?? "";
+                    invoice.RejectedReason = rejectionReason;
+                    invoice.RejectedTimestamp = rejectedTime;
+                    invoice.LastUpdated = rejectedTime;
+                    // Opts this row into the atomic-claim/retry pass (see InvoiceFinalizer.SendRejectionEmailAsync).
+                    invoice.IsRejectionEmailSent = false;
+                    _context.InvoiceHeaders.Update(invoice);
+                }
+
                 var history = new InvoiceHistory
                 {
                     InvoiceNo = documentId, // Or the appropriate InvoiceNo field
@@ -354,7 +378,45 @@ namespace EINVWORLD.Pages.Invoices
                     Timestamp = DateTime.UtcNow
                 };
                 _context.InvoiceHistories.Add(history);
-                await _context.SaveChangesAsync();
+
+                // Must succeed regardless of the email outcome below — LHDN already accepted the
+                // rejection, so this save is not allowed to be skipped or rolled back by an email
+                // failure (see the matching fix in InvoiceListsModel.UpdateLocalDatabaseForRejection).
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogWarning(
+                        "Concurrency conflict recording rejection for {DocumentId}; retrying with fresh row version.",
+                        EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
+                    foreach (var entry in ex.Entries)
+                    {
+                        var databaseValues = await entry.GetDatabaseValuesAsync();
+                        if (databaseValues == null)
+                        {
+                            throw; // row deleted concurrently — surface it, don't invent state
+                        }
+                        entry.OriginalValues.SetValues(databaseValues);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                // Email notification — best-effort, sent after the status update above is already
+                // durably saved. A failure here is retried by the background finalizer pass.
+                if (invoice != null && _configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableRejectionEmails"))
+                {
+                    try
+                    {
+                        await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                        await _invoiceFinalizer.SendRejectionEmailAsync(invoice.InvoiceNo);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send rejection email for document {DocumentId}", documentId);
+                    }
+                }
 
                 return new JsonResult(new { message = "Document rejection successfully processed." });
             }
@@ -409,6 +471,25 @@ namespace EINVWORLD.Pages.Invoices
                 _logger.LogInformation($"📡 Calling LHDN CancelDocument API for document {documentId} with user TIN {userTin}...");
                 string response = await _lhdnApiService.CancelDocumentAsync(documentId, cancellationReason, userTin);
                 _logger.LogInformation($"✅ LHDN API cancellation successful for document {documentId}");
+
+                var invoice = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer).Include(i => i.PublicCustomer)
+                    .FirstOrDefaultAsync(i => i.UUID == documentId);
+
+                var cancelTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+                if (invoice != null)
+                {
+                    invoice.InternalStatusId = "Cancelled";
+                    invoice.LHDNStatusId = "Cancelled";
+                    invoice.CancelDateTime = cancelTime;
+                    invoice.LastUpdated = cancelTime;
+                    invoice.CancellationReason = cancellationReason;
+                    // Opts this row into the atomic-claim/retry pass (see InvoiceFinalizer.SendCancellationEmailAsync).
+                    invoice.IsCancellationEmailSent = false;
+                    _context.InvoiceHeaders.Update(invoice);
+                }
+
                 var history = new InvoiceHistory
                 {
                     InvoiceNo = documentId,
@@ -418,7 +499,45 @@ namespace EINVWORLD.Pages.Invoices
                     Timestamp = DateTime.UtcNow
                 };
                 _context.InvoiceHistories.Add(history);
-                await _context.SaveChangesAsync();
+
+                // Must succeed regardless of the email outcome below — see the matching fix in the
+                // reject handler above.
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    _logger.LogWarning(
+                        "Concurrency conflict recording cancellation for {DocumentId}; retrying with fresh row version.",
+                        EINVWORLD.Helpers.LogSanitizer.ForLog(documentId));
+                    foreach (var entry in ex.Entries)
+                    {
+                        var databaseValues = await entry.GetDatabaseValuesAsync();
+                        if (databaseValues == null)
+                        {
+                            throw; // row deleted concurrently — surface it, don't invent state
+                        }
+                        entry.OriginalValues.SetValues(databaseValues);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+
+                // Email notification — best-effort, sent after the status update above is already
+                // durably saved. A failure here is retried by the background finalizer pass.
+                if (invoice != null && _configuration.GetValue<bool>("EmailConfiguration:Notifications:EnableCancellationEmails"))
+                {
+                    try
+                    {
+                        await _pdfGeneratorService.GeneratePdfAsync(invoice.InvoiceNo);
+                        await _invoiceFinalizer.SendCancellationEmailAsync(invoice.InvoiceNo);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send cancellation email for document {DocumentId}", documentId);
+                    }
+                }
+
                 return new JsonResult(new { message = "Document cancellation successfully processed.", response });
             }
             catch (Exception ex)

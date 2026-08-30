@@ -30,9 +30,10 @@ ASP.NET Core configuration precedence means these sources **override** the blank
 
 | Config key | Env-var name | Notes |
 |---|---|---|
-| `DataProtection:KeyRingPath` | `DataProtection__KeyRingPath` | Folder for the encryption key ring. **Required in Production — the app will not start if blank.** Point it OUTSIDE `App\` (preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`) so a redeploy doesn't wipe the keys (which would log everyone out / break 2FA). Create the folder and grant the app-pool **Modify**. |
+| `DataProtection:KeyRingPath` | `DataProtection__KeyRingPath` | Folder for the encryption key ring. **Required in Production — the app will not start if blank.** `appsettings.Production.json` ships this **deliberately blank** (not preset) so every server must supply its own value rather than silently inheriting one meant for a different machine — set it via this env var, e.g. `E:\EINVWORLD\Keys`, OUTSIDE `App\` so a redeploy doesn't wipe the keys (which would log everyone out / break 2FA). Create the folder and grant the app-pool **Modify**. |
 | `DatabaseSettings:AutoMigrateOnStartup` | `DatabaseSettings__AutoMigrateOnStartup` | `true` in `appsettings.Production.json`: applies additive migrations on boot (data preserved). **Back up the DB first** and ensure the SQL login has DDL rights. Set `false` to apply `Apply_*.sql` manually. |
-| `Security:EnforceAdminMfa` | `Security__EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`). Set `false` only as an emergency escape hatch. Not a secret. |
+| `LHDNApiConfig:BaseUrl` / `ValidationBaseUrl` / `ClientId` | *(not via env var — see note)* | LHDN MyInvois host + Client ID. **Not secrets** (only `ClientSecret`/`ClientSecret2` are). Real production values are committed directly in `appsettings.Production.json` (previously hand-edited per-server with no git record — that gap caused a production `invalid_client` login incident). Preprod/sandbox values live in the base `appsettings.json`. |
+| `Security:EnforceAdminMfa` | `Security__EnforceAdminMfa` | Require Admins to enrol 2FA. **Ships `false` (optional/off)** in `appsettings.json` — Admins can self-enrol voluntarily but are never forced. **Recommended: set `true` on Production** for mandatory block-until-enrolled 2FA. Not a secret. |
 | `AI:Enabled` etc. | `AI__Enabled` | Optional provider-agnostic AI (local Ollama by default). Not a secret. Config section is `AI` (the old `AIAssistant__…` vars are retired — rename them to `AI__…`). See deployment guide PART O. |
 | `AI:ApiKey` | `AI__ApiKey` | **Secret** — only for future cloud providers (OpenAI/Azure/Claude/Gemini); unused by the local Ollama provider. Set via env var / user-secrets, never a settings file. |
 | `DocumentCapture:Enabled` | `DocumentCapture__Enabled` | Optional AI Document Capture (needs `AI:Enabled`). Not a secret. |
@@ -105,8 +106,8 @@ Example (PowerShell, machine-level — adjust scope to your policy):
 [Environment]::SetEnvironmentVariable("Api__Key", "a-long-random-key", "Machine")
 ```
 
-> `DataProtection__KeyRingPath` is preset in `appsettings.Production.json` (`E:\EINVWORLD\Keys`); set the
-> env var only if your server uses a different path.
+> `DataProtection__KeyRingPath` is **deliberately blank** in `appsettings.Production.json` — you must set
+> this env var on every server (e.g. `E:\EINVWORLD\Keys`); there is no working default.
 
 Then **restart IIS** (`iisreset`) so the new values are picked up.
 

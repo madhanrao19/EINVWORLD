@@ -1,6 +1,8 @@
-﻿using eInvWorld.Models;
+﻿using eInvWorld.Data;
+using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.JsonModels;
+using eInvWorld.Services;
 using iTextSharp.text;
 using Newtonsoft.Json;
 using Serilog;
@@ -15,6 +17,23 @@ namespace eInvWorld.Services.Mappers
 {
     public class InvoiceMapper
     {
+        private readonly ApplicationDbContext? _context;
+        private readonly IDocumentSigningService? _signingService;
+
+        /// <param name="context">Optional. When supplied, each line's <c>UnitOfMeasure</c> is validated
+        /// against the official LHDN unit-code list (<see cref="eInvWorld.Models.UnitType"/>) before the
+        /// UBL JSON is built. Omit only in contexts with no DB access (e.g. unit tests) — validation is
+        /// then skipped, matching the previous behavior.</param>
+        /// <param name="signingService">Optional. When supplied and <see cref="IDocumentSigningService.Enabled"/>
+        /// is true, documents are built as the signed version (1.1 normally, 1.3 for SVDP) instead of the
+        /// unsigned default (1.0 / 1.2) — see the <c>InvoiceTypeCode.listVersionID</c> assignment below.
+        /// Omit to always build the unsigned version, matching the previous behavior.</param>
+        public InvoiceMapper(ApplicationDbContext? context = null, IDocumentSigningService? signingService = null)
+        {
+            _context = context;
+            _signingService = signingService;
+        }
+
         public string MapToJsonModel(InputModel.InvoiceHeader header)
         {
             if (header == null)
@@ -32,6 +51,29 @@ namespace eInvWorld.Services.Mappers
                 throw new InvalidOperationException($"Validation failed for Invoice: {currencyError}");
             }
 
+            // LHDN SDK: unit-of-measure codes must match the official code list. Validate here (once,
+            // for every submission path) rather than trusting whatever a line was saved with — the
+            // manual Create Invoice UI already only offers valid codes via a dropdown, but CSV import,
+            // templates, and recurring invoices don't go through that UI.
+            if (_context != null)
+            {
+                var validUnitCodes = new HashSet<string>(
+                    _context.UnitTypes.Where(u => u.IsActive).Select(u => u.Code),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var invalidUnits = header.InvoiceLines
+                    .Where(l => string.IsNullOrEmpty(l.UnitOfMeasure) || !validUnitCodes.Contains(l.UnitOfMeasure))
+                    .Select(l => $"line {l.LineNumber}: \"{l.UnitOfMeasure}\"")
+                    .ToList();
+
+                if (invalidUnits.Count > 0)
+                {
+                    var unitError = $"Invalid or missing unit of measure ({string.Join(", ", invalidUnits)}). Must match an active LHDN unit code.";
+                    Log.Warning("InvoiceMapper validation: {ErrorMessage}", unitError);
+                    throw new InvalidOperationException($"Validation failed for Invoice: {unitError}");
+                }
+            }
+
             Log.Debug("InvoiceMapper: RefUUID={RefUUID}, LineCount={LineCount}", header.RefUUID, header.InvoiceLines.Count);
 
             var isSelfBilledInvoice = header.DocTypeCode == "11" || header.DocTypeCode == "12" || header.DocTypeCode == "13" || header.DocTypeCode == "14";
@@ -40,6 +82,17 @@ namespace eInvWorld.Services.Mappers
             var customer = header.Customer;
 
             Log.Debug("InvoiceMapper: IsSelfBilled={IsSelfBilled}, SupplierTIN={SupplierTIN}, CustomerTIN={CustomerTIN}", isSelfBilledInvoice, EINVWORLD.Helpers.LogSanitizer.MaskTin(supplier?.TIN), EINVWORLD.Helpers.LogSanitizer.MaskTin(customer?.TIN));
+
+            // Document version: 1.0/1.2 (unsigned) unless v1.1 signing is enabled, in which case the
+            // signed variant is used — 1.1 normally, 1.3 for SVDP (LHDN SDK: SVDP 1.3 requires a digital
+            // signature). The signature itself is injected later, at submission time
+            // (IDocumentSigningService.PrepareDocumentForSubmission) — this only selects the version
+            // string the document must declare to match what will actually be sent.
+            bool signingEnabled = _signingService?.Enabled ?? false;
+            string signedVersion = string.IsNullOrWhiteSpace(_signingService?.DocVersion) ? "1.1" : _signingService!.DocVersion;
+            string listVersionId = header.IsSvdp
+                ? (signingEnabled ? "1.3" : "1.2")
+                : (signingEnabled ? signedVersion : "1.0");
 
             var root = new JsonModels.Root
             {
@@ -55,11 +108,11 @@ namespace eInvWorld.Services.Mappers
                         IssueTime = new List<JsonModels.IssueTime> { new JsonModels.IssueTime { _ = header.IssueDate?.ToUniversalTime().ToString("HH:mm:ssZ") ?? string.Empty } },
                         InvoiceTypeCode = new List<JsonModels.InvoiceTypeCode>
                         {
-                            // "1.2" = e-Invoice Special Voluntary Disclosure Programme, unsigned (LHDN SDK
-                            // 8 Jul 2026, valid to 31 Dec 2027) — same UBL payload as 1.0, different version.
-                            // SVDP 1.3 (signed) is not emitted here; it additionally requires the signing
-                            // pipeline (LHDNApiConfig:SigningEnabled) which is off until a cert is bought.
-                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = header.IsSvdp ? "1.2" : "1.0" }
+                            // 1.0/1.1 = standard e-Invoice (unsigned/signed). 1.2/1.3 = e-Invoice Special
+                            // Voluntary Disclosure Programme (LHDN SDK 8 Jul 2026, valid to 31 Dec 2027),
+                            // unsigned/signed — same UBL payload as 1.0/1.1, different version. See
+                            // listVersionId computation above.
+                            new JsonModels.InvoiceTypeCode { _ = header.DocTypeCode, listVersionID = listVersionId }
                         },
                         DocumentCurrencyCode = new List<JsonModels.DocumentCurrencyCode> { new JsonModels.DocumentCurrencyCode { _ = header.Currency } },
                     InvoicePeriod = (header.StartDate == null && header.EndDate == null && header.InvoicePeriod == null)
@@ -172,16 +225,29 @@ namespace eInvWorld.Services.Mappers
                && string.Equals(countryCode, "MYS", StringComparison.OrdinalIgnoreCase)
                && !EINVWORLD.Helpers.GeneralTINHelper.IsGeneralTIN(tin);
 
+        /// <summary>
+        /// LHDN SDK rule (06 Aug 2026, effective Production 23 Oct 2026): Passport ID type is limited to
+        /// 12 characters. Scoped to RegTypeCode "PASSPORT" only — no other SDK rule caps NRIC/BRN/ARMY.
+        /// </summary>
+        private static bool IsPassportTooLong(string? regTypeCode, string? regNo)
+            => regTypeCode == "PASSPORT" && (regNo?.Length ?? 0) > 12;
+
         private void ValidatePartyInfo(PartyInfo party, string role)
         {
             if (party == null)
                 throw new ArgumentNullException(nameof(party), $"{role} information is missing.");
 
+            // Business Description and Postal Code are optional for the Buyer ("Customer" role) —
+            // MyInvois does not mandate them for the buyer party, and requiring them here blocked
+            // otherwise-valid invoices whose buyer record simply doesn't carry that data. Supplier
+            // requirements are unchanged.
+            bool isBuyer = role == "Customer";
+
             var errors = new List<string>();
 
             if (string.IsNullOrEmpty(party.IndustryClassificationCode))
                 errors.Add($"{role} IndustryClassificationCode is required.");
-            if (string.IsNullOrEmpty(party.BizDescription))
+            if (!isBuyer && string.IsNullOrEmpty(party.BizDescription))
                 errors.Add($"{role} Business Description is required.");
             if (string.IsNullOrEmpty(party.CompanyName))
                 errors.Add($"{role} Company Name is required.");
@@ -193,7 +259,7 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} Address Line 1 is required.");
             if (string.IsNullOrEmpty(party.CityName))
                 errors.Add($"{role} City Name is required.");
-            if (string.IsNullOrEmpty(party.PostalCode))
+            if (!isBuyer && string.IsNullOrEmpty(party.PostalCode))
                 errors.Add($"{role} Postal Code is required.");
             if (string.IsNullOrEmpty(party.CountryCode))
                 errors.Add($"{role} Country Code is required.");
@@ -201,6 +267,8 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} Phone Number is required.");
             if (IsRestrictedState17(party.StateCode, party.CountryCode, party.TIN))
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
+            if (IsPassportTooLong(party.RegTypeCode, party.RegNo))
+                errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
             // 👇 This line replaces the previous email validation
             party.Email ??= ""; // ✅ Ensures empty string if no email
 
@@ -1136,19 +1204,22 @@ namespace eInvWorld.Services.Mappers
 
             var errors = new List<string>();
 
+            // Business Description and Postal Code are optional for Buyers — this method only ever
+            // validates the buyer/public-customer party, never a Supplier. See ValidatePartyInfo for
+            // the equivalent Buyer-vs-Supplier branch when the buyer is a full registered company.
             if (string.IsNullOrEmpty(customer.IndustryClassificationCode)) errors.Add($"{role} IndustryClassificationCode is required.");
-            if (string.IsNullOrEmpty(customer.BizDescription)) errors.Add($"{role} Business Description is required.");
             if (string.IsNullOrEmpty(customer.CompanyName)) errors.Add($"{role} Company Name is required.");
             if (string.IsNullOrEmpty(customer.TIN)) errors.Add($"{role} TIN is required.");
             if (string.IsNullOrEmpty(customer.RegNo)) errors.Add($"{role} Registration Number is required.");
             if (string.IsNullOrEmpty(customer.Addr1)) errors.Add($"{role} Address Line 1 is required.");
             if (string.IsNullOrEmpty(customer.CityName)) errors.Add($"{role} City Name is required.");
-            if (string.IsNullOrEmpty(customer.PostalCode)) errors.Add($"{role} Postal Code is required.");
             if (string.IsNullOrEmpty(customer.StateCode)) errors.Add($"{role} State Code is required.");
             if (string.IsNullOrEmpty(customer.CountryCode)) errors.Add($"{role} Country Code is required.");
             if (string.IsNullOrEmpty(customer.PhoneNo)) errors.Add($"{role} Phone Number is required.");
             if (IsRestrictedState17(customer.StateCode, customer.CountryCode, customer.TIN))
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
+            if (IsPassportTooLong(customer.RegTypeCode, customer.RegNo))
+                errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
 
             // Ensure email is not null (matching original side-effect logic)
             customer.Email ??= "";

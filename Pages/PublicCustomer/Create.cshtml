@@ -1,4 +1,4 @@
-﻿@page
+@page
 @model eInvWorld.Pages.PublicCustomer.CreateModel
 
 @{
@@ -6,227 +6,297 @@
     Layout = "_LayoutTabler";
     var isAdmin = User.IsInRole("Admin");
 }
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
-        <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
-            <h4 class="mb-sm-0">Create New Buyer</h4>
-
-            <div class="page-title-right">
-                <ol class="breadcrumb m-0">
-                    <li class="breadcrumb-item"><a href="javascript: void(0);">Buyer Management</a></li>
-                    <li class="breadcrumb-item active">Create New Buyer</li>
-                </ol>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Add Buyer</h1>
+                <p class="text-muted mb-0">Register a new buyer to issue e-Invoices to.</p>
             </div>
+            <a asp-page="./List" class="btn btn-outline-secondary">
+                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Directory
+            </a>
         </div>
     </div>
 </div>
 
 <form method="post" enctype="multipart/form-data" onsubmit="return checkValidationBeforeSubmit();">
     @Html.AntiForgeryToken()
-    <div asp-validation-summary="All" class="text-danger"></div>
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="PublicCustomer.CreatedBy" value="@User.Identity?.Name ?? \" System\"" />
     <input type="hidden" name="from" value="@Model.From" />
 
     <ul class="nav nav-pills custom-nav nav-justified mb-4" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active" id="step1-tab" data-bs-toggle="pill" data-bs-target="#step1" type="button">Step 1: Buyer Info & Logo</button>
+            <button class="nav-link active" id="step1-tab" data-bs-toggle="pill" data-bs-target="#step1" type="button">
+                <i class="ri-building-line align-bottom me-1"></i> Step 1: Company &amp; Tax Details
+            </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" id="step2-tab" data-bs-toggle="pill" data-bs-target="#step2" type="button">Step 2: Address</button>
+            <button class="nav-link" id="step2-tab" data-bs-toggle="pill" data-bs-target="#step2" type="button">
+                <i class="ri-map-pin-line align-bottom me-1"></i> Step 2: Address &amp; Contact
+            </button>
         </li>
     </ul>
 
     <div class="tab-content">
         <div class="tab-pane fade show active" id="step1" role="tabpanel">
-            <div class="col-md-6 mb-3 text-center">
-                <div class="position-relative d-inline-block mx-auto">
-                    <div class="position-absolute bottom-0 end-0">
-                        <label for="company-logo-input" class="mb-0" data-bs-toggle="tooltip" data-bs-placement="right" title="Select Image">
-                            <div class="avatar-xs cursor-pointer">
-                                <div class="avatar-title bg-light border rounded-circle text-muted">
-                                    <i class="ri-image-fill"></i>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body text-center">
+                    <div class="position-relative d-inline-block mx-auto">
+                        <div class="position-absolute bottom-0 end-0">
+                            <label for="company-logo-input" class="mb-0" data-bs-toggle="tooltip" data-bs-placement="right" title="Select Image">
+                                <div class="avatar-xs cursor-pointer">
+                                    <div class="avatar-title bg-light border rounded-circle text-muted">
+                                        <i class="ri-image-fill"></i>
+                                    </div>
                                 </div>
+                            </label>
+                            <input class="form-control d-none" name="LogoUpload" id="company-logo-input" type="file" accept="image/png, image/gif, image/jpeg">
+                        </div>
+                        <div class="avatar-lg p-1">
+                            <div class="avatar-title bg-light rounded-circle">
+                                <img id="companylogo-img"
+                                     class="avatar-md rounded-circle object-fit-cover"
+                                     src="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? Url.Content("~/assets/images/users/multi-user.jpg") : Url.Content(Model.PublicCustomer.LogoPath))"
+                                     data-saved="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? "" : Url.Content(Model.PublicCustomer.LogoPath))" />
                             </div>
-                        </label>
-                        <input class="form-control d-none" name="LogoUpload" id="company-logo-input" type="file" accept="image/png, image/gif, image/jpeg">
-                    </div>
-                    <div class="avatar-lg p-1">
-                        <div class="avatar-title bg-light rounded-circle">
-                            <img id="companylogo-img"
-                                 class="avatar-md rounded-circle object-fit-cover"
-                                 src="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? Url.Content("~/assets/images/users/multi-user.jpg") : Url.Content(Model.PublicCustomer.LogoPath))"
-                                 data-saved="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? "" : Url.Content(Model.PublicCustomer.LogoPath))" />
                         </div>
                     </div>
-                </div>
-                <h5 class="fs-13 mt-3">Company Logo</h5>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.CompanyName" class="form-label"></label>
-                    <input asp-for="PublicCustomer.CompanyName" class="form-control" required />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.TIN" class="form-label"></label>
-                    <input asp-for="PublicCustomer.TIN" class="form-control" placeholder="eg: C123456789" list="tinOptions" required />
-                    <datalist id="tinOptions">
-                        <option value="EI00000000010">General Public</option>
-                        <option value="EI00000000020">Foreign Buyer</option>
-                        <option value="EI00000000030">Foreign Supplier</option>
-                        <option value="EI00000000040">Government</option>
-                    </datalist>
-                    <span asp-validation-for="PublicCustomer.TIN" class="text-danger"></span>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.RegNo" class="form-label"></label>
-                    <input asp-for="PublicCustomer.RegNo" class="form-control" required />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.RegTypeCode" class="form-label"></label>
-                    <select asp-for="PublicCustomer.RegTypeCode" class="form-select select2" asp-items="Model.IdTypesOptions" required>
-                        <option value="">-- Select ID Type --</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.SST" class="form-label"></label>
-                    <input asp-for="PublicCustomer.SST" class="form-control" placeholder="e.g. W10-1808-99999999 or NA" required />
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.TTX" class="form-label"></label>
-                    <input asp-for="PublicCustomer.TTX" class="form-control" placeholder="e.g. TTX-XXXXXXX or NA" required />
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.IndustryClassificationCode" class="form-label">MSIC Code</label>
-                    <select asp-for="PublicCustomer.IndustryClassificationCode" class="form-select select2" id="msicSelect" required>
-                        <option value="">-- Select MSIC Code --</option>
-                        @foreach (var msic in Model.MSICOptions)
-                        {
-                            <option value="@msic.Value" data-description="@msic.Text">@msic.Text</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6 mb-3" id="bizDescriptionContainer">
-                    <label class="control-label">Business Description (Auto-filled from MSIC)</label>
-                    <div class="form-control-plaintext border bg-light p-2" style="white-space: pre-wrap; min-height: 40px;" id="bizDescPreview">
-                    </div>
-                    <input type="hidden" asp-for="PublicCustomer.BizDescription" id="PartyInfo_BizDescription" />
-                    <span asp-validation-for="PublicCustomer.BizDescription" class="text-danger"></span>
+                    <h5 class="fs-13 mt-3 mb-0">Company Logo</h5>
+                    <p class="text-muted small mb-0">Optional — shown on invoices and the buyer directory.</p>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.OldRegNo" class="form-label">Old Registration Number</label>
-                    <input asp-for="PublicCustomer.OldRegNo" class="form-control" placeholder="Previous business registration number" />
-                    <span asp-validation-for="PublicCustomer.OldRegNo" class="text-danger"></span>
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-building-line align-bottom me-1"></i> Legal Identity
+                    </h6>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.BankAccountNo" class="form-label">Bank Account Number</label>
-                    <input asp-for="PublicCustomer.BankAccountNo" class="form-control" placeholder="Bank account number for payments" />
-                    <span asp-validation-for="PublicCustomer.BankAccountNo" class="text-danger"></span>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.CompanyName" class="form-label">Buyer Name (Legal Entity)</label>
+                            <input asp-for="PublicCustomer.CompanyName" class="form-control" placeholder="e.g. Acme Sdn Bhd" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.TIN" class="form-label">Tax Identification Number (TIN)</label>
+                            <input asp-for="PublicCustomer.TIN" class="form-control" placeholder="eg: C123456789" list="tinOptions" required />
+                            <datalist id="tinOptions">
+                                <option value="EI00000000010">General Public</option>
+                                <option value="EI00000000020">Foreign Buyer</option>
+                                <option value="EI00000000030">Foreign Supplier</option>
+                                <option value="EI00000000040">Government</option>
+                            </datalist>
+                            <span asp-validation-for="PublicCustomer.TIN" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.RegTypeCode" class="form-label">Registration Type</label>
+                            <select asp-for="PublicCustomer.RegTypeCode" class="form-select select2" asp-items="Model.IdTypesOptions" required>
+                                <option value="">-- Select ID Type --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.RegNo" class="form-label">Registration Number</label>
+                            <input asp-for="PublicCustomer.RegNo" class="form-control" placeholder="e.g. 202301012345" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.OldRegNo" class="form-label">Old Registration Number</label>
+                            <input asp-for="PublicCustomer.OldRegNo" class="form-control" placeholder="Previous business registration number" />
+                            <span asp-validation-for="PublicCustomer.OldRegNo" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.BankName" class="form-label">Bank Name</label>
-                    <input asp-for="PublicCustomer.BankName" class="form-control" placeholder="Name of the bank" />
-                    <span asp-validation-for="PublicCustomer.BankName" class="text-danger"></span>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-file-list-3-line align-bottom me-1"></i> Tax &amp; Industry
+                    </h6>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.PaymentTerms" class="form-label">Default Payment Terms</label>
-                    <input asp-for="PublicCustomer.PaymentTerms" class="form-control" placeholder="e.g. 30 days, Immediate, COD" maxlength="100" />
-                    <span asp-validation-for="PublicCustomer.PaymentTerms" class="text-danger"></span>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.SST" class="form-label">Sales &amp; Service Tax (SST) No.</label>
+                            <input asp-for="PublicCustomer.SST" class="form-control" placeholder="e.g. W10-1808-99999999 or NA" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.TTX" class="form-label">Tourism Tax (TTx) No.</label>
+                            <input asp-for="PublicCustomer.TTX" class="form-control" placeholder="e.g. TTX-XXXXXXX or NA" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.IndustryClassificationCode" class="form-label">Industry (MSIC Code)</label>
+                            <select asp-for="PublicCustomer.IndustryClassificationCode" class="form-select select2" id="msicSelect" required>
+                                <option value="">-- Select MSIC Code --</option>
+                                @foreach (var msic in Model.MSICOptions)
+                                {
+                                    <option value="@msic.Value" data-description="@msic.Text">@msic.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="bizDescriptionContainer">
+                            <label class="control-label">Business Description (auto-filled from Industry)</label>
+                            <div class="form-control-plaintext border bg-light p-2" style="white-space: pre-wrap; min-height: 40px;" id="bizDescPreview">
+                            </div>
+                            <input type="hidden" asp-for="PublicCustomer.BizDescription" id="PartyInfo_BizDescription" />
+                            <span asp-validation-for="PublicCustomer.BizDescription" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.Attention" class="form-label">Attention To</label>
-                    <input asp-for="PublicCustomer.Attention" class="form-control" placeholder="Person to whom invoices should be addressed" />
-                    <span asp-validation-for="PublicCustomer.Attention" class="text-danger"></span>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-bank-line align-bottom me-1"></i> Banking &amp; Payment Terms
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.BankAccountNo" class="form-label">Bank Account Number</label>
+                            <input asp-for="PublicCustomer.BankAccountNo" class="form-control" placeholder="Bank account number for payments" />
+                            <span asp-validation-for="PublicCustomer.BankAccountNo" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.BankName" class="form-label">Bank Name</label>
+                            <input asp-for="PublicCustomer.BankName" class="form-control" placeholder="Name of the bank" />
+                            <span asp-validation-for="PublicCustomer.BankName" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.PaymentTerms" class="form-label">Default Payment Terms</label>
+                            <input asp-for="PublicCustomer.PaymentTerms" class="form-control" placeholder="e.g. 30 days, Immediate, COD" maxlength="100" />
+                            <span asp-validation-for="PublicCustomer.PaymentTerms" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.Attention" class="form-label">Attention To</label>
+                            <input asp-for="PublicCustomer.Attention" class="form-control" placeholder="Person to whom invoices should be addressed" />
+                            <span asp-validation-for="PublicCustomer.Attention" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="d-flex justify-content-end mt-4">
-                <button class="btn btn-info me-2 btn-validate" type="button" onclick="validateLHDN()">Validate LHDN</button>
-                <button class="btn btn-primary" type="button" onclick="nextTab('step2-tab')">Next</button>
+                <button class="btn btn-info me-2 btn-validate" type="button" onclick="validateLHDN()">Validate with LHDN</button>
+                <button class="btn btn-primary" type="button" onclick="nextTab('step2-tab')">Next: Address &amp; Contact</button>
             </div>
 
         </div>
 
         <div class="tab-pane fade" id="step2" role="tabpanel">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.Email" class="form-label"></label>
-                    <input asp-for="PublicCustomer.Email"
-                           class="form-control"
-                           type="email"
-                           placeholder="e.g. yourname@example.com"
-                           required />
-                    <span asp-validation-for="PublicCustomer.Email" class="text-danger"></span>
-                </div>
 
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.PhoneNo" class="form-label"></label>
-                    <input asp-for="PublicCustomer.PhoneNo" class="form-control"
-                           placeholder="e.g. +60376602222"
-                           pattern="^\+[0-9]{8,14}$"
-                           title="Enter a valid phone number starting with '+' and numbers only (e.g. +60376602222)"
-                           required />
-                    <span asp-validation-for="PublicCustomer.PhoneNo" class="text-danger"></span>
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-mail-line align-bottom me-1"></i> Contact Details
+                    </h6>
                 </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.Email" class="form-label">Primary Email</label>
+                            <input asp-for="PublicCustomer.Email"
+                                   class="form-control"
+                                   type="email"
+                                   placeholder="e.g. billing@buyer.com" />
+                            <span asp-validation-for="PublicCustomer.Email" class="text-danger"></span>
+                        </div>
 
-                <div class="col-md-3 mb-3">
-                    <label asp-for="PublicCustomer.FaxNo" class="form-label"></label>
-                    <input asp-for="PublicCustomer.FaxNo" class="form-control"
-                           maxlength="20"
-                           placeholder="e.g. (603) 7660-2323" />
-                    <span asp-validation-for="PublicCustomer.FaxNo" class="text-danger"></span>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.PhoneNo" class="form-label">Phone Number</label>
+                            <input asp-for="PublicCustomer.PhoneNo" class="form-control"
+                                   placeholder="e.g. +60376602222"
+                                   pattern="^\+[0-9]{8,14}$"
+                                   title="Enter a valid phone number starting with '+' and numbers only (e.g. +60376602222)"
+                                   required />
+                            <span asp-validation-for="PublicCustomer.PhoneNo" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.FaxNo" class="form-label">Fax Number</label>
+                            <input asp-for="PublicCustomer.FaxNo" class="form-control"
+                                   maxlength="20"
+                                   placeholder="e.g. (603) 7660-2323" />
+                            <span asp-validation-for="PublicCustomer.FaxNo" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label asp-for="PublicCustomer.Addr1" class="form-label">Full Address</label>
-                <textarea asp-for="PublicCustomer.Addr1" class="form-control" rows="5" placeholder="Enter full address..."></textarea>
-                <span asp-validation-for="PublicCustomer.Addr1" class="text-danger"></span>
             </div>
 
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label asp-for="PublicCustomer.PostalCode" class="form-label"></label>
-                    <input asp-for="PublicCustomer.PostalCode" class="form-control" required />
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-map-pin-line align-bottom me-1"></i> Address
+                    </h6>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label asp-for="PublicCustomer.CityName" class="form-label"></label>
-                    <input asp-for="PublicCustomer.CityName" class="form-control" required />
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label asp-for="PublicCustomer.StateCode" class="form-label"></label>
-                    <select asp-for="PublicCustomer.StateCode" class="form-select select2" asp-items="Model.StateOptions" required>
-                        <option value="">-- Select State --</option>
-                    </select>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="PublicCustomer.Addr1" class="form-label">Street Address</label>
+                        <textarea asp-for="PublicCustomer.Addr1" class="form-control" rows="3" placeholder="Enter full street address..."></textarea>
+                        <span asp-validation-for="PublicCustomer.Addr1" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="PublicCustomer.PostalCode" class="form-label">Postal Code</label>
+                            <input asp-for="PublicCustomer.PostalCode" class="form-control" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="PublicCustomer.CityName" class="form-label">City</label>
+                            <input asp-for="PublicCustomer.CityName" class="form-control" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="PublicCustomer.StateCode" class="form-label">State / Province</label>
+                            <select asp-for="PublicCustomer.StateCode" id="PublicCustomer_StateCode" class="form-select select2" asp-items="Model.StateOptions">
+                                <option value="">-- Select State --</option>
+                            </select>
+                            <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode"
+                                   value="@Model.PublicCustomer.StateCode"
+                                   class="form-control d-none" disabled maxlength="100"
+                                   placeholder="Enter state / province" />
+                            <span asp-validation-for="PublicCustomer.StateCode" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PublicCustomer.CountryCode" class="form-label">Country</label>
+                            <select asp-for="PublicCustomer.CountryCode" id="PublicCustomer_CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required onchange="toggleStateFieldForCountry()">
+                                <option value="">-- Select Country --</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label asp-for="PublicCustomer.CountryCode" class="form-label"></label>
-                    <select asp-for="PublicCustomer.CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required>
-                        <option value="">-- Select Country --</option>
-                    </select>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="text-uppercase text-muted fw-semibold mb-0" style="font-size:.72rem; letter-spacing:.04em;">
+                        <i class="ri-sticky-note-line align-bottom me-1"></i> Internal Notes
+                    </h6>
                 </div>
-            </div>
-            <div class="mb-3">
-                <label asp-for="PublicCustomer.Remarks" class="form-label"></label>
-                <textarea asp-for="PublicCustomer.Remarks" class="form-control"></textarea>
+                <div class="card-body">
+                    <label asp-for="PublicCustomer.Remarks" class="form-label">Notes (visible to your team only)</label>
+                    <textarea asp-for="PublicCustomer.Remarks" class="form-control" rows="3" placeholder="Restricted account, priority handling..."></textarea>
+                </div>
             </div>
 
             <div class="d-flex justify-content-between mt-4">
                 <button class="btn btn-light" type="button" onclick="prevTab('step1-tab')">Back</button>
                 <div class="d-flex">
-                    <button class="btn btn-info me-2 btn-validate" type="button" onclick="validateLHDN()">Validate LHDN</button>
-                    <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> Save New Buyer</button>
+                    <button class="btn btn-info me-2 btn-validate" type="button" onclick="validateLHDN()">Validate with LHDN</button>
+                    <button type="submit" class="btn btn-success"><i class="ri-save-line align-bottom me-1"></i> Save New Buyer</button>
                 </div>
             </div>
         </div>
@@ -239,6 +309,40 @@
 
 @section Scripts {
     <script>
+        // Malaysia keeps the fixed State dropdown (LHDN's own MyInvois Portal requires it); any
+        // other country switches to a free-text State input, matching LHDN's own portal behavior for
+        // foreign parties. Treat "no country chosen yet" like Malaysia so the dropdown is the default
+        // on a fresh Create form.
+        function toggleStateFieldForCountry() {
+            const countrySelect = document.getElementById('PublicCustomer_CountryCode');
+            const stateSelect = document.getElementById('PublicCustomer_StateCode');
+            const stateText = document.getElementById('PublicCustomer_StateCode_Text');
+            if (!countrySelect || !stateSelect || !stateText) return;
+
+            const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
+            const stateSelect2Container = $(stateSelect).next('.select2-container');
+
+            if (isMalaysia) {
+                stateSelect2Container.removeClass('d-none');
+                stateSelect.disabled = false;
+                stateSelect.required = true;
+                stateText.classList.add('d-none');
+                stateText.disabled = true;
+                stateText.required = false;
+            } else {
+                stateSelect2Container.addClass('d-none');
+                stateSelect.disabled = true;
+                stateSelect.required = false;
+                stateText.classList.remove('d-none');
+                stateText.disabled = false;
+                stateText.required = true;
+            }
+        }
+
+        $(function () {
+            toggleStateFieldForCountry();
+        });
+
         let isLhdnValidated = false;
 
         // Reset validation state if user edits TIN, RegNo, or ID Type
@@ -248,7 +352,7 @@
                 // Remove success or danger states
                 btn.classList.remove('btn-success', 'btn-danger');
                 btn.classList.add('btn-info');
-                btn.innerHTML = 'Validate LHDN';
+                btn.innerHTML = 'Validate with LHDN';
             });
         }
 
@@ -306,7 +410,7 @@
             document.querySelectorAll('.btn-validate').forEach(btn => {
                 btn.classList.remove('btn-info', 'btn-danger');
                 btn.classList.add('btn-success');
-                btn.innerHTML = '<i class="fas fa-check"></i> Validated';
+                btn.innerHTML = '<i class="ri-check-line align-bottom"></i> Validated';
             });
         }
 
@@ -314,7 +418,7 @@
             document.querySelectorAll('.btn-validate').forEach(btn => {
                 btn.classList.remove('btn-info', 'btn-success');
                 btn.classList.add('btn-danger'); // Makes the button red
-                btn.innerHTML = `<i class="fas fa-times"></i> ${text}`;
+                btn.innerHTML = `<i class="ri-close-line align-bottom"></i> ${text}`;
             });
         }
 

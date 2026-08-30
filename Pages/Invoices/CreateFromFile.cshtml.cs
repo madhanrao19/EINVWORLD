@@ -50,6 +50,7 @@ namespace eInvWorld.Pages.Invoices
         /// <summary>Capture needs both its own switch and the AI assistant (which does the extraction → suggestion).</summary>
         public bool Enabled => _options.Enabled && _assistant.IsEnabled;
         public int MaxFileSizeMb => _options.MaxFileSizeMb;
+        public bool OcrAvailable => _ocr.IsAvailable;
 
         [BindProperty]
         public IFormFile? Upload { get; set; }
@@ -127,7 +128,7 @@ namespace eInvWorld.Pages.Invoices
             // Ground the suggestion on the user's real customers, exactly like the AI Assistant does.
             var knownBuyers = await LoadKnownBuyersAsync(ct);
 
-            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, ct);
+            var result = await _assistant.SuggestInvoiceAsync(text, knownBuyers, ct: ct);
             if (!result.Ok)
             {
                 ErrorText = result.Error;

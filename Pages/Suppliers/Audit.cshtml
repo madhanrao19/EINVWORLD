@@ -1,0 +1,133 @@
+@page
+@model eInvWorld.Pages.Suppliers.AuditModel
+
+@{
+    ViewData["Title"] = "Audit";
+}
+
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle">Company Management</div>
+            <h2 class="page-title">Audit</h2>
+            <p class="text-muted mt-1 mb-0">A tamper-evident history of changes to this company's workspace.</p>
+        </div>
+        @if (Model.IsAdmin)
+        {
+            <div class="col-auto">
+                <a asp-page="/Admin/AuditLog" class="btn btn-outline-secondary btn-sm">
+                    <i class="ri-shield-check-line me-1"></i> Verify Full Chain Integrity
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@{
+    var workspaceTabsModel = new CompanyWorkspaceTabsModel { PartyInfoId = Model.PartyInfo.PartyInfoId, Active = "audit", From = Model.From };
+}
+<partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
+
+@if (!Model.CanViewAudit)
+{
+    <div class="alert alert-warning">
+        <i class="ri-lock-line align-bottom me-1"></i> You do not have permission to view this company's audit history.
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <input type="hidden" name="id" value="@Model.PartyInfo.PartyInfoId" />
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <select name="ActionFilter" class="form-select" onchange="this.form.submit()">
+                            <option value="">All actions</option>
+                            @foreach (var action in Model.AvailableActions)
+                            {
+                                <option value="@action" selected="@(Model.ActionFilter == action)">@action</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            @if (Model.Entries.Any())
+            {
+                <div class="table-responsive einv-table-scroll-x">
+                    <table class="table align-middle mb-0 einv-mobile-stack" id="companyAuditTable">
+                        <thead class="einv-table-head">
+                            <tr>
+                                <th scope="col">When</th>
+                                <th scope="col">Action</th>
+                                <th scope="col">By</th>
+                                <th scope="col">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Model.Entries)
+                            {
+                                <tr>
+                                    <td data-label="When">@entry.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    <td data-label="Action"><span class="einv-badge einv-badge-neutral">@entry.Action</span></td>
+                                    <td data-label="By">@(entry.UserName ?? "System")</td>
+                                    <td data-label="Details">
+                                        @if (!string.IsNullOrEmpty(entry.NewValueJson))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-link p-0" data-bs-toggle="collapse" data-bs-target="#detail-@entry.Id">
+                                                View
+                                            </button>
+                                            <div class="collapse" id="detail-@entry.Id">
+                                                <pre class="small text-dark bg-light border p-2 rounded mt-1 mb-0 einv-audit-detail">@entry.NewValueJson</pre>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="row mt-3 align-items-center">
+                        <div class="col-sm">
+                            <div class="text-muted">Page @Model.CurrentPage of @Model.TotalPages (@Model.TotalRecords entries)</div>
+                        </div>
+                        <div class="col-sm-auto">
+                            <ul class="pagination pagination-sm justify-content-center justify-content-sm-start mb-0">
+                                <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                    <a class="page-link" href="@Url.Page("./Audit", new { id = Model.PartyInfo.PartyInfoId, CurrentPage = Model.CurrentPage - 1, ActionFilter = Model.ActionFilter })">Previous</a>
+                                </li>
+                                <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="@Url.Page("./Audit", new { id = Model.PartyInfo.PartyInfoId, CurrentPage = Model.CurrentPage + 1, ActionFilter = Model.ActionFilter })">Next</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted text-center py-4 mb-0">No audit entries recorded for this company yet.</p>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Audit "Details" blobs are stored as compact JSON; pretty-print for readability.
+        // Falls back to the raw text unchanged if it isn't valid JSON.
+        document.querySelectorAll('.einv-audit-detail').forEach(function (el) {
+            try {
+                el.textContent = JSON.stringify(JSON.parse(el.textContent), null, 2);
+            } catch { /* not JSON — leave as-is */ }
+        });
+    </script>
+}
