@@ -23,6 +23,10 @@ namespace EINVWORLD.Tests
             {
                 ["ConnectionStrings:DefaultConnection"] = "Server=.;Database=x;Trusted_Connection=True;",
                 ["LHDNApiConfig:BaseUrl"] = "https://preprod-api.myinvois.hasil.gov.my",
+                // ClientId/ClientSecret are required in Production by the validator; supply them so these
+                // tests isolate the key-ring containment behaviour rather than tripping the LHDN checks.
+                ["LHDNApiConfig:ClientId"] = "test-client-id",
+                ["LHDNApiConfig:ClientSecret"] = "test-secret",
                 ["DataProtection:KeyRingPath"] = keyRingPath,
             };
             return new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
