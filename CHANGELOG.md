@@ -1,7 +1,28 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.21.10`** (`AppInfo:Version` in `appsettings.json`). v1.21.10 is a **patch**
-> release: Business Description, Primary Email, Fax Number, and Postal Code are no longer mandatory
+> **Current version: `v1.22.0`** (`AppInfo:Version` in `appsettings.json`). v1.22.0 is a **minor**
+> release: the Invoice Items redesign, in five stacked PRs (#221–#225). Fixes a real LHDN-submission
+> bug found while investigating a client-preview-vs-payload discrepancy — a line's discount now
+> correctly nets out of the taxable base and reaches the submitted UBL `AllowanceCharge` (previously
+> the app's own `InvoiceMapper.AllowanceCharge` synthesis read a field that was never populated or
+> persisted anywhere, so every line discount silently submitted as `Amount=0`). Adds new, additive
+> schema: `InvoiceLine.ProductTariffCode`/`CountryOfOrigin`/`DiscountReason`/`FeeChargeAmount`/
+> `FeeChargeReason`, and `InvoiceHeader` Shipping Recipient + Customs/Import-Export columns. Restructures
+> each invoice line (Create Invoice and, closing a long-standing "Phase 2F" gap, Invoice Edit too — which
+> turned out to have its own fully independent copy of the item-row JS, not the shared file) into the
+> required order — Select Saved Item → Item Code → Description → Classification → Unit → Quantity &
+> Pricing — followed by four collapsed-by-default optional sections: Discount, Fee/Charge, Taxes
+> (unchanged, just relocated), and line-level Additional Information (Product Tariff Code, Country of
+> Origin — both now wired into the submitted payload). Adds a matching invoice-level Additional
+> Information section (Payment & Prepayment/Incoterms — surfaced in the UI for the first time, though the
+> mapping already existed; Shipping Recipient; Customs/Import-Export — captured and persisted but not yet
+> mapped into the LHDN payload, a deliberate scoped follow-up). Also fixes two bugs found during live
+> testing: `create-invoice.js` lacked cache-busting (`asp-append-version`), so a browser with the old JS
+> cached kept building item rows without the new Discount/Fee/Additional-Info sections after this exact
+> deploy; and the Review & Submit step's per-line Tax figure and item-summary HTML needed the same
+> discount/fee-aware and XSS-escaped fixes. See the dated entry below for details. v1.21.10 was a
+> **patch** release: Business Description, Primary Email, Fax Number, and Postal Code are no longer
+> mandatory
 > for Buyers — MyInvois doesn't require them for the buyer party, but the app force-required them in
 > three places (the Buyer Create form's HTML `required` attributes, and two LHDN-submission-time
 > validators in `InvoiceMapper` that threw before a UBL payload could even be built). Supplier
@@ -131,6 +152,62 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.22.0 (Invoice Items redesign)
+
+> Five stacked PRs (#221–#225), merged in order.
+
+### Fixed
+- **Line-level discount never reduced the submitted LHDN tax base or `AllowanceCharge`
+  (`InvoiceMapper`, PR #221).** `MapLineTaxTotals` computed `TaxableAmount`/`TaxAmount` from the raw,
+  pre-discount `Quantity × UnitPrice`, contradicting the tested-correct client-preview formula
+  (`InvoiceLine.CalculateAmounts()`). `MapLineAllowanceCharges` read `InvoiceLine.AllowanceCharge` — a
+  field that turned out to be completely dead: not EF-mapped to any table, never populated anywhere in
+  the app — so every line discount submitted to LHDN as `Amount=0` regardless of what the user entered.
+  Both now derive from `InvoiceLine.DiscountAmount`, the one real, persisted per-line discount value.
+
+### Added
+- **New, additive schema** (PR #222): `InvoiceLine.ProductTariffCode`, `CountryOfOrigin` (FK →
+  `CountryCodes`), `DiscountReason`, `FeeChargeAmount`, `FeeChargeReason`; `InvoiceHeader` Shipping
+  Recipient (name/address/postcode/city/state/country/ID type/ID number/TIN) and Customs/Import-Export
+  columns (Customs Form No.1/No.2 references, FTA info, Certified Exporter Authorization Number, Other
+  Charges amount/description). Every column nullable — zero risk to existing rows.
+  `InvoiceLine.CalculateAmounts()`/`InvoiceLineView.CalculateAmounts()` extended to fold in
+  `FeeChargeAmount` (`AmountExclTax = Subtotal - Discount + Fee/Charge`).
+- **Invoice Items line-item redesign** (Create Invoice, PR #223; Invoice Edit, PR #224 — which turned
+  out to have its own fully independent inline copy of every item-row JS function, not the shared
+  `create-invoice.js`, so this was a full hand-port, not just a markup change). Each line's Item/Service
+  section is now ordered Select Saved Item → Item Code → Item Description → Classification → Unit,
+  followed by an always-visible Quantity & Pricing block, then four optional, collapsed-by-default
+  sections behind small pill toggles (reusing the existing "Additional Party Information" collapse
+  pattern): **Discount** and **Fee/Charge** (a Rate% convenience input + the real, bound Amount +
+  Description/Reason), **Taxes** (the existing multi-entry Tax Type/Rate/Amount UI, just relocated), and
+  **Additional Information** (Product Tariff Code, Country of Origin — line-level only). Product Tariff
+  Code and Country of Origin are wired into the submitted UBL payload (a second `CommodityClassification`
+  with `listID "PTC"`; `OriginCountry` now reads the line's value, falling back to `"MYS"`).
+- **Invoice-level Additional Information section** (PR #225): new collapsed-by-default Payment &
+  Prepayment (surfaces the pre-existing but never-UI'd `Incoterms`/`PrepaymentReferenceNumber` — already
+  correctly mapped into the LHDN payload), Shipping Recipient, and Customs/Import-Export sections on both
+  Create Invoice and Invoice Edit. Shipping Recipient/Customs fields are captured and persisted but
+  **not yet mapped into the submitted LHDN payload** — a deliberate, explicitly scoped follow-up rather
+  than guessing at the UBL shape unverified.
+
+### Fixed (found during live testing, PR #223/#224)
+- `create-invoice.js`/`invoice-debug-helpers.js` were loaded with no cache-busting (`asp-append-version`),
+  unlike every other script/stylesheet in the app — a browser with either file cached from before this
+  redesign kept building Add Item/Duplicate Item rows without the new Discount/Fee/Additional-Info
+  sections after a deploy, even though the server-rendered first row (and the JS file on disk) were
+  already current. Now matches the rest of the codebase's convention.
+- The Review & Submit step's per-line Tax figure was `Row Total − raw Subtotal`; once a line can carry a
+  discount/fee, that silently absorbs the discount/fee delta into the displayed Tax amount. Now
+  `Row Total − Total Excl Tax`. The Item Summary table also now shows a compact Discount/Fee/Tariff/
+  Country note under a line's description when present, and item description/tariff/country text is now
+  HTML-escaped before being inserted into that table (a pre-existing XSS gap in that exact code path,
+  closed while it was already being touched).
+
+### Database
+- New migration `AddLineTariffOriginAndHeaderShippingCustoms` — see `DEPLOY-NOTES.md` for the apply
+  command. Purely additive; the two new lookup FKs use `ON DELETE NO ACTION`/`Restrict`.
 
 ## 📅 2026-08-28 — Buyer optional fields: Business Description, Email, Fax, Postal Code
 
