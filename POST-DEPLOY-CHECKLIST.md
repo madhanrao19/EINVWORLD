@@ -71,6 +71,12 @@ bottom; stop and investigate on the first ❌.
       Description full-width, Classification+Unit and Qty+Price paired 2-up, a highlighted Subtotal/Total
       footer, and larger Duplicate/Remove tap targets — not the old cramped fixed-width wrapping. Desktop
       (≥992px) is unchanged (CSS-only change, no JS/schema touched).
+- [ ] **v1.25.0 — Items step Summary + Validation rail:** open Create Invoice, go to Step 2 (Items).
+      ✅ a sticky right rail (Invoice Summary + Validation Checklist) is visible, matching Step 1/Step 3.
+      Add a line, leave Classification/Unit/Qty/Price blank. ✅ checklist shows red/not-ready. Fill them
+      in. ✅ checklist flips green live without navigating away. Remove the only item row. ✅ "Line items
+      required" flips back to red. Repeat on Invoice Edit against an existing multi-line invoice. ✅ the
+      checklist reflects the loaded data's real state and updates live on edit.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
