@@ -105,6 +105,9 @@ namespace EINVWORLD.Pages.Invoices
         // Country of Origin, per line-item "Additional Information" - reuses the same lookup table
         // and helper as every other Country dropdown in the app (Suppliers/PublicCustomer/Lead).
         public List<SelectListItem> CountryOptions { get; set; } = new();
+        // ID Type for the invoice-level Shipping Recipient section - reuses the same RegistrationTypes
+        // lookup used for Supplier/Buyer registration type elsewhere.
+        public List<SelectListItem> IdTypeOptions { get; set; } = new();
 
         [BindProperty]
         public string? SelectedBuyerId { get; set; }
@@ -126,6 +129,7 @@ namespace EINVWORLD.Pages.Invoices
             UnitOptions = _dropdownHelper.GetUnitOptions();
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();
+            IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
 
             _logger.LogDebug("Dropdown counts: ClassificationCodes={ClassificationCodes}, Units={Units}, TaxCategories={TaxCategories}",
                 ClassificationCodes?.Count ?? 0, UnitOptions?.Count ?? 0, TaxCategoryOptions?.Count ?? 0);
@@ -424,6 +428,7 @@ namespace EINVWORLD.Pages.Invoices
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();
+            IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
 
             // --- Populate Suppliers and Customers ---
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -999,6 +1004,25 @@ namespace EINVWORLD.Pages.Invoices
                     draftInvoice.BankName = Invoice.BankName;
                     draftInvoice.Attention = Invoice.Attention;
                     draftInvoice.PaymentTerms = Invoice.PaymentTerms ?? "";
+                    draftInvoice.Incoterms = Invoice.Incoterms;
+                    draftInvoice.PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber;
+                    draftInvoice.ShippingRecipientName = Invoice.ShippingRecipientName;
+                    draftInvoice.ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1;
+                    draftInvoice.ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2;
+                    draftInvoice.ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3;
+                    draftInvoice.ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode;
+                    draftInvoice.ShippingRecipientCity = Invoice.ShippingRecipientCity;
+                    draftInvoice.ShippingRecipientState = Invoice.ShippingRecipientState;
+                    draftInvoice.ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode;
+                    draftInvoice.ShippingRecipientIdType = Invoice.ShippingRecipientIdType;
+                    draftInvoice.ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber;
+                    draftInvoice.ShippingRecipientTIN = Invoice.ShippingRecipientTIN;
+                    draftInvoice.CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference;
+                    draftInvoice.FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo;
+                    draftInvoice.CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber;
+                    draftInvoice.CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference;
+                    draftInvoice.OtherChargesAmount = Invoice.OtherChargesAmount;
+                    draftInvoice.OtherChargesDescription = Invoice.OtherChargesDescription;
                 }
                 else
                 {
@@ -1037,7 +1061,26 @@ namespace EINVWORLD.Pages.Invoices
                         BankAccountNo = Invoice.BankAccountNo,
                         BankName = Invoice.BankName,
                         Attention = Invoice.Attention,
-                        PaymentTerms = Invoice.PaymentTerms ?? ""
+                        PaymentTerms = Invoice.PaymentTerms ?? "",
+                        Incoterms = Invoice.Incoterms,
+                        PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber,
+                        ShippingRecipientName = Invoice.ShippingRecipientName,
+                        ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1,
+                        ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2,
+                        ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3,
+                        ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode,
+                        ShippingRecipientCity = Invoice.ShippingRecipientCity,
+                        ShippingRecipientState = Invoice.ShippingRecipientState,
+                        ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode,
+                        ShippingRecipientIdType = Invoice.ShippingRecipientIdType,
+                        ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber,
+                        ShippingRecipientTIN = Invoice.ShippingRecipientTIN,
+                        CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference,
+                        FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo,
+                        CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber,
+                        CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference,
+                        OtherChargesAmount = Invoice.OtherChargesAmount,
+                        OtherChargesDescription = Invoice.OtherChargesDescription
                     };
                 }
 
@@ -1489,7 +1532,26 @@ namespace EINVWORLD.Pages.Invoices
                 Attention = Invoice.Attention,
                 BankName = Invoice.BankName,
                 BankAccountNo = Invoice.BankAccountNo,
-                PaymentTerms = Invoice.PaymentTerms ?? ""
+                PaymentTerms = Invoice.PaymentTerms ?? "",
+                Incoterms = Invoice.Incoterms,
+                PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber,
+                ShippingRecipientName = Invoice.ShippingRecipientName,
+                ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1,
+                ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2,
+                ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3,
+                ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode,
+                ShippingRecipientCity = Invoice.ShippingRecipientCity,
+                ShippingRecipientState = Invoice.ShippingRecipientState,
+                ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode,
+                ShippingRecipientIdType = Invoice.ShippingRecipientIdType,
+                ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber,
+                ShippingRecipientTIN = Invoice.ShippingRecipientTIN,
+                CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference,
+                FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo,
+                CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber,
+                CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference,
+                OtherChargesAmount = Invoice.OtherChargesAmount,
+                OtherChargesDescription = Invoice.OtherChargesDescription
             };
 
             _logger.LogDebug("CreateInvoiceHeader: Mapped UUID={UUID}", invoiceHeader.UUID);
