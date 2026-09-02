@@ -2322,11 +2322,45 @@
             const step2Subtotal = document.getElementById('step2SummarySubtotal');
             const step2TaxAmount = document.getElementById('step2SummaryTaxAmount');
             const step2TotalAmount = document.getElementById('step2SummaryTotalAmount');
-            const step2AmountPayable = document.getElementById('step2AmountPayable');
             if (step2Subtotal) step2Subtotal.textContent = subtotal.toFixed(2);
             if (step2TaxAmount) step2TaxAmount.textContent = taxAmount.toFixed(2);
             if (step2TotalAmount) step2TotalAmount.textContent = totalAmount.toFixed(2);
-            if (step2AmountPayable) step2AmountPayable.textContent = totalAmount.toFixed(2);
+
+            // Step 2 Validation Checklist — mirrors the icon/text swap pattern used by Step 1's
+            // chkBuyer/chkCurrency/chkPo and Step 3's chkItems/chkParties/chkTotals/chkDraft checks.
+            const hasLineItems = itemRows.length > 0;
+            const chkLineItemsIcon = document.getElementById('chkLineItemsIcon');
+            const chkLineItemsText = document.getElementById('chkLineItemsText');
+            if (chkLineItemsText) {
+                chkLineItemsText.textContent = hasLineItems ? `Line Items Added (${itemRows.length})` : 'No Items';
+                chkLineItemsIcon.className = hasLineItems ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+            }
+
+            let lineFieldsComplete = hasLineItems;
+            let qtyPriceComplete = hasLineItems;
+            itemRows.forEach(row => {
+                const classificationSelect = row.querySelector('.irow-classification select');
+                const unitSelect = row.querySelector('.irow-unit select');
+                if (!classificationSelect?.value || !unitSelect?.value) lineFieldsComplete = false;
+
+                const qty = parseFloat(row.querySelector('.quantity-input')?.value) || 0;
+                const price = parseFloat(row.querySelector('.price-input')?.value) || 0;
+                if (qty <= 0 || price <= 0) qtyPriceComplete = false;
+            });
+
+            const chkLineFieldsIcon = document.getElementById('chkLineFieldsIcon');
+            const chkLineFieldsText = document.getElementById('chkLineFieldsText');
+            if (chkLineFieldsText) {
+                chkLineFieldsText.textContent = lineFieldsComplete ? 'Classification / Unit Set' : 'Classification / Unit Incomplete';
+                chkLineFieldsIcon.className = lineFieldsComplete ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+            }
+
+            const chkQtyPriceIcon = document.getElementById('chkQtyPriceIcon');
+            const chkQtyPriceText = document.getElementById('chkQtyPriceText');
+            if (chkQtyPriceText) {
+                chkQtyPriceText.textContent = qtyPriceComplete ? 'Quantity / Price Set' : 'Quantity / Price Incomplete';
+                chkQtyPriceIcon.className = qtyPriceComplete ? 'ri-checkbox-circle-fill text-success' : 'ri-error-warning-fill text-danger';
+            }
 
             // Step 1 "Running Total" KPI tile — the only summary display calculateTotals() didn't
             // already update, so it stayed frozen at its initial "RM 0.00" no matter how many items

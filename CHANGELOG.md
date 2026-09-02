@@ -1,6 +1,18 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.24.0`** (`AppInfo:Version` in `appsettings.json`). v1.24.0 is a **minor**
+> **Current version: `v1.25.0`** (`AppInfo:Version` in `appsettings.json`). v1.25.0 is a **minor**
+> release: Create Invoice's Step 2 (Items) now has the same persistent sticky right-rail — a live
+> "Invoice Summary" totals card plus a "Validation Checklist" — that Step 1 (Basic Information) and
+> Step 3 (Review & Submit) already had. Previously Step 2 only had a plain, non-sticky summary card
+> stuck below however many item rows existed (real scrolling with multiple items) and no validation
+> checklist at all — the one inconsistency in an otherwise-consistent 3-step wizard, surfaced while
+> reviewing a Stitch AI design mockup for best-practice UI/UX improvements. The new checklist tracks
+> three item-specific facts live as the user types: at least one line item exists, every line has a
+> Classification and Unit, and every line has a Quantity and Unit Price greater than 0. Also adds a
+> small always-visible "Item Code" label (previously placeholder-only, with no label at any width).
+> Applied identically to Invoice Edit's own copy of the Items step. CSS/markup + a `calculateTotals()`
+> extension only — no schema changes, no change to what's actually submitted to LHDN. See the dated
+> entry below for details. v1.24.0 was a **minor**
 > release: Phase 4 of the Invoice Items redesign — a purpose-built mobile layout for item rows on
 > Create Invoice and Invoice Edit. Below the 992px breakpoint, item rows previously fell back to each
 > field wrapping at its own fixed desktop pixel width (e.g. a 100px Unit field on a phone screen),
@@ -184,6 +196,34 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.25.0 (Create Invoice Items step gets the sticky Summary + Validation rail)
+
+> Prompted by reviewing a Stitch AI design mockup (`stitch_einvworld_finance_ux_redesign/`) for
+> best-practice UI/UX improvements to Create Invoice. Most of what the mockup showed was already
+> implemented (progressive-disclosure Discount/Fee/Taxes, Trading Parties TIN/BRN/SST on Review); this
+> was the one genuine, concrete gap found.
+
+### Changed
+- **`Pages/Invoices/_CreateInvoice_Step2Items.cshtml` and `Pages/Invoices/InvoiceEdit.cshtml`'s
+  matching Items step** now use the same two-column, sticky-right-rail layout Step 1 (Basic
+  Information) and Step 3 (Review & Submit) already use, instead of a plain full-width "Invoice
+  Summary" card stuck below the item list. The right rail carries:
+  - **Invoice Summary** — the same live Subtotal/Tax Amount/Total Payable figures as before, just
+    restyled into the primary-color sticky card (same ids, no calculation change).
+  - **Validation Checklist** (new) — three live checks: "Line items required" (at least one row),
+    "Classification / Unit Set" (every row has both), "Quantity / Price Set" (every row's qty and
+    price are > 0). Updates immediately on every item add/remove/edit — no need to reach Step 3 to
+    discover a missing field.
+- Added an always-visible "Item Code" label above the item-code input (previously placeholder-only
+  with no label at any screen width — unlike Classification/Unit/Qty/Price, which already had labels
+  via the existing `.irow-mlabel` mobile-label mechanism).
+- `wwwroot/js/invoices/create-invoice.js`'s `calculateTotals()` (and InvoiceEdit's own inline copy of
+  the same function) now also compute and update the new checklist, using the same null-safe
+  icon/text-swap pattern already used for Step 1's and Step 3's checklists. No new event listeners
+  needed — `calculateTotals()` already runs on every relevant item-field change.
+- Removed the now-redundant separate "Amount Payable" box (Total Payable is already the prominent
+  figure in the new sticky Summary card, matching Step 1/Step 3's single-total treatment).
 
 ## 📅 2026-09-02 — v1.24.0 (Invoice item rows: purpose-built mobile layout — Phase 4)
 
