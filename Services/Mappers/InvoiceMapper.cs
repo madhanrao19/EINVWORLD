@@ -150,12 +150,13 @@ namespace eInvWorld.Services.Mappers
                         //    }
                         //},
 
+                        AdditionalDocumentReference = MapCustomsAdditionalDocumentReferences(header),
                         BillingReference = MapBillingReference(header),
                         AccountingSupplierParty = MapSupplier(supplier!, header),
                         AccountingCustomerParty = customer != null
                             ? MapCustomer(customer, header)
                             : MapPublicCustomer(header.PublicCustomer!, header),
-                        Delivery = MapDelivery(header.DeliveryParty, header),
+                        Delivery = MapDelivery(header),
                         PaymentMeans = new List<JsonModels.PaymentMeans>
                         {
                             new JsonModels.PaymentMeans
@@ -377,16 +378,20 @@ namespace eInvWorld.Services.Mappers
     {
         new JsonModels.AccountingSupplierParty
         {
-            // Removed the empty AdditionalAccountID block to avoid validation noise
-            //AdditionalAccountID = new List<JsonModels.AdditionalAccountID>
-            //        {
-            //            new JsonModels.AdditionalAccountID
-            //            {
-            //                _ = "",
-            //                schemeAgencyName = ""
-            //            }
-            //        },
-            AdditionalAccountID = null,
+            // Certified Exporter Authorization Number (Customs/Import-Export, invoice-level Additional
+            // Information) - verified against a real LHDN sample invoice: AccountingSupplierParty.
+            // AdditionalAccountID with schemeAgencyName "CertEX". Omitted (not an empty placeholder -
+            // see the removed block this replaced) when the header doesn't have one, same as before.
+            AdditionalAccountID = !string.IsNullOrWhiteSpace(header.CertifiedExporterAuthorizationNumber)
+                ? new List<JsonModels.AdditionalAccountID>
+                {
+                    new JsonModels.AdditionalAccountID
+                    {
+                        _ = header.CertifiedExporterAuthorizationNumber,
+                        schemeAgencyName = "CertEX"
+                    }
+                }
+                : null,
 
             Party = new List<JsonModels.Party>
             {
@@ -1087,89 +1092,81 @@ namespace eInvWorld.Services.Mappers
         }
 
 
-        private List<JsonModels.Delivery> MapDelivery(DeliveryParty delivery, InputModel.InvoiceHeader header)
+        // Populated from the real, persisted InvoiceHeader.ShippingRecipient*/OtherCharges* fields
+        // (Phase E). DeliveryParty is only emitted when a real Shipping Recipient name was entered -
+        // this used to unconditionally submit a DeliveryParty with every field blank on every single
+        // invoice; verified against a real LHDN sample invoice (Delivery/DeliveryParty/PartyLegalEntity/
+        // PostalAddress/PartyIdentification structure) before wiring in real data. Shipment.ID keeps
+        // using header.Incoterms exactly as before - that placement predates this change and is left
+        // untouched here; a real sample invoice suggests Incoterms actually belongs in the top-level
+        // AdditionalDocumentReference instead, which is a separate, already-live behavior this change
+        // does not touch.
+        private List<JsonModels.Delivery> MapDelivery(InputModel.InvoiceHeader header)
         {
+            var hasShippingRecipient = !string.IsNullOrWhiteSpace(header.ShippingRecipientName);
+
+            var deliveryParty = hasShippingRecipient
+                ? new List<JsonModels.DeliveryParty>
+                {
+                    new JsonModels.DeliveryParty
+                    {
+                        PartyLegalEntity = new List<JsonModels.PartyLegalEntity>
+                        {
+                            new JsonModels.PartyLegalEntity
+                            {
+                                RegistrationName = new List<JsonModels.RegistrationName>
+                                {
+                                    new JsonModels.RegistrationName { _ = header.ShippingRecipientName ?? "" }
+                                }
+                            }
+                        },
+                        PostalAddress = new List<JsonModels.PostalAddress>
+                        {
+                            new JsonModels.PostalAddress
+                            {
+                                CityName = new List<JsonModels.CityName> { new JsonModels.CityName { _ = header.ShippingRecipientCity ?? "" } },
+                                PostalZone = new List<JsonModels.PostalZone> { new JsonModels.PostalZone { _ = header.ShippingRecipientPostcode ?? "" } },
+                                CountrySubentityCode = new List<JsonModels.CountrySubentityCode>
+                                {
+                                    new JsonModels.CountrySubentityCode { _ = header.ShippingRecipientState ?? "" }
+                                },
+                                AddressLine = new List<JsonModels.AddressLine>
+                                {
+                                    new JsonModels.AddressLine { Line = new List<JsonModels.Line> { new JsonModels.Line { _ = header.ShippingRecipientAddrLine1 ?? "" } } },
+                                    new JsonModels.AddressLine { Line = new List<JsonModels.Line> { new JsonModels.Line { _ = header.ShippingRecipientAddrLine2 ?? "" } } },
+                                    new JsonModels.AddressLine { Line = new List<JsonModels.Line> { new JsonModels.Line { _ = header.ShippingRecipientAddrLine3 ?? "" } } }
+                                },
+                                Country = new List<JsonModels.Country>
+                                {
+                                    new JsonModels.Country
+                                    {
+                                        IdentificationCode = new List<JsonModels.IdentificationCode>
+                                        {
+                                            new JsonModels.IdentificationCode
+                                            {
+                                                // Same listID/listAgencyID convention already used for
+                                                // Supplier/Customer Country (MapSupplier/MapCustomer) -
+                                                // kept consistent rather than following a differently-
+                                                // valued community sample.
+                                                _ = string.IsNullOrWhiteSpace(header.ShippingRecipientCountryCode) ? "MYS" : header.ShippingRecipientCountryCode!,
+                                                listID = "3166-1",
+                                                listAgencyID = "ISO"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        PartyIdentification = BuildShippingRecipientIdentifications(header)
+                    }
+                }
+                : new List<JsonModels.DeliveryParty>();
+
             return new List<JsonModels.Delivery>
             {
                 new JsonModels.Delivery
                 {
-                    DeliveryParty = new List<JsonModels.DeliveryParty>
-                    {
-                        new JsonModels.DeliveryParty
-                        {
-                            PartyLegalEntity = new List<JsonModels.PartyLegalEntity>
-                            {
-                                new JsonModels.PartyLegalEntity
-                                {
-                                    RegistrationName = new List<JsonModels.RegistrationName>
-                                    {
-                                        new JsonModels.RegistrationName { _ = "" }
-                                    }
-                                }
-                            },
-                            PostalAddress = new List<JsonModels.PostalAddress>
-                            {
-                                new JsonModels.PostalAddress
-                                {
-                                    CityName = new List<JsonModels.CityName> { new JsonModels.CityName { _ = "" } },
-                                    PostalZone = new List<JsonModels.PostalZone> { new JsonModels.PostalZone { _ = "" } },
-                                    CountrySubentityCode = new List<JsonModels.CountrySubentityCode>
-                                    {
-                                        new JsonModels.CountrySubentityCode { _ = "" }
-                                    },
-                                    AddressLine = new List<JsonModels.AddressLine>
-                                    {
-                                        new JsonModels.AddressLine
-                                        {
-                                            Line = new List<JsonModels.Line>
-                                            {
-                                                new JsonModels.Line { _ = "" }
-                                            }
-                                        },
-                                        new JsonModels.AddressLine
-                                        {
-                                            Line = new List<JsonModels.Line>
-                                            {
-                                                new JsonModels.Line { _ = "" }
-                                            }
-                                        },
-                                        new JsonModels.AddressLine
-                                        {
-                                            Line = new List<JsonModels.Line>
-                                            {
-                                                new JsonModels.Line { _ = "" }
-                                            }
-                                        }
-                                    },
-                                    Country = new List<JsonModels.Country>
-                                    {
-                                        new JsonModels.Country
-                                        {
-                                            IdentificationCode = new List<JsonModels.IdentificationCode>
-                                            {
-                                                new JsonModels.IdentificationCode
-                                                {
-                                                    _ = "",
-                                                    listID = "",
-                                                    listAgencyID = ""
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            PartyIdentification = new List<JsonModels.PartyIdentification>
-                            {
-                                new JsonModels.PartyIdentification
-                                {
-                                    ID = new List<JsonModels.ID>
-                                    {
-                                        new JsonModels.ID { _ = "", schemeID = "" }
-                                    }
-                                }
-                            }
-                        }
-                    },
+                    DeliveryParty = deliveryParty,
                     Shipment = new List<JsonModels.Shipment>
                     {
                         new JsonModels.Shipment
@@ -1178,33 +1175,96 @@ namespace eInvWorld.Services.Mappers
                             {
                                 new JsonModels.ID { _ = header.Incoterms ?? "" }
                             },
-                        FreightAllowanceCharge = new List<JsonModels.FreightAllowanceCharge>
-                        {
-                            new JsonModels.FreightAllowanceCharge
+                            FreightAllowanceCharge = new List<JsonModels.FreightAllowanceCharge>
                             {
-                                ChargeIndicator = new List<JsonModels.ChargeIndicator>
+                                new JsonModels.FreightAllowanceCharge
                                 {
-                                    new JsonModels.ChargeIndicator { _ = true }
-                                },
-                                AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
-                                {
-                                    new JsonModels.AllowanceChargeReason { _ = "" }
-                                },
-                                Amount = new List<JsonModels.Amount>
-                                {
-                                    new JsonModels.Amount
+                                    ChargeIndicator = new List<JsonModels.ChargeIndicator>
                                     {
-                                        _ =  0,
-                                        currencyID = header.Currency ?? "MYR"
+                                        new JsonModels.ChargeIndicator { _ = true }
+                                    },
+                                    AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
+                                    {
+                                        new JsonModels.AllowanceChargeReason { _ = header.OtherChargesDescription ?? "" }
+                                    },
+                                    Amount = new List<JsonModels.Amount>
+                                    {
+                                        new JsonModels.Amount
+                                        {
+                                            _ = header.OtherChargesAmount ?? 0,
+                                            currencyID = header.Currency ?? "MYR"
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-
-                }
             };
+        }
+
+        private List<JsonModels.PartyIdentification> BuildShippingRecipientIdentifications(InputModel.InvoiceHeader header)
+        {
+            var ids = new List<JsonModels.PartyIdentification>();
+
+            if (!string.IsNullOrWhiteSpace(header.ShippingRecipientTIN))
+            {
+                ids.Add(new JsonModels.PartyIdentification
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.ShippingRecipientTIN, schemeID = "TIN" } }
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(header.ShippingRecipientIdNumber) && !string.IsNullOrWhiteSpace(header.ShippingRecipientIdType))
+            {
+                ids.Add(new JsonModels.PartyIdentification
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.ShippingRecipientIdNumber, schemeID = header.ShippingRecipientIdType } }
+                });
+            }
+
+            return ids;
+        }
+
+        // Customs/Import-Export invoice-level Additional Information fields, wired into the top-level
+        // Invoice.AdditionalDocumentReference list - never previously assigned at all (always defaulted
+        // to an empty list, omitted entirely by SkipEmptyCollectionsContractResolver), so these fields
+        // have never been submitted for any invoice regardless of what was entered. Structure and
+        // DocumentType constants ("CustomsImportForm", "FreeTradeAgreement" + literal ID "FTA", "K2")
+        // verified against a real LHDN sample invoice, not guessed.
+        private List<JsonModels.AdditionalDocumentReference> MapCustomsAdditionalDocumentReferences(InputModel.InvoiceHeader header)
+        {
+            var refs = new List<JsonModels.AdditionalDocumentReference>();
+
+            if (!string.IsNullOrWhiteSpace(header.CustomsFormNo1Reference))
+            {
+                refs.Add(new JsonModels.AdditionalDocumentReference
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.CustomsFormNo1Reference } },
+                    DocumentType = new List<JsonModels.DocumentType> { new JsonModels.DocumentType { _ = "CustomsImportForm" } }
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(header.FreeTradeAgreementInfo))
+            {
+                refs.Add(new JsonModels.AdditionalDocumentReference
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = "FTA" } },
+                    DocumentType = new List<JsonModels.DocumentType> { new JsonModels.DocumentType { _ = "FreeTradeAgreement" } },
+                    DocumentDescription = new List<JsonModels.DocumentDescription> { new JsonModels.DocumentDescription { _ = header.FreeTradeAgreementInfo } }
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(header.CustomsFormNo2Reference))
+            {
+                refs.Add(new JsonModels.AdditionalDocumentReference
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.CustomsFormNo2Reference } },
+                    DocumentType = new List<JsonModels.DocumentType> { new JsonModels.DocumentType { _ = "K2" } }
+                });
+            }
+
+            return refs;
         }
 
         private List<JsonModels.PaymentTerms> MapPaymentTerms(InputModel.InvoiceHeader header)
