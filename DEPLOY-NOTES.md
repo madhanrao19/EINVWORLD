@@ -19,6 +19,12 @@ changes are additive and AI/features stay off unless already enabled.
 3. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
    key-ring folder intact — never overwrite server secrets). Get the build from the green **CI run on
    `main`** → **Artifacts → `einvworld-app`** (a ready `dotnet publish` output; carries no secrets).
+   For Staging specifically, `scripts\Deploy-Staging.ps1` automates publish + backup + copy and
+   **always excludes `web.config`/`appsettings.Production.json`** from the copy — safer than a manual
+   `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
+   `<environmentVariables>` secrets live) and crash the app on next start
+   (`ArgumentNullException: connectionString` from the Serilog SQL sink) until it's restored from a
+   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview.
 4. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
