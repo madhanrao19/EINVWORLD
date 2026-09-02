@@ -102,6 +102,9 @@ namespace EINVWORLD.Pages.Invoices
         public List<SelectListItem> UnitOptions { get; set; } = new();
         public List<SelectListItem> TaxCategoryOptions { get; set; } = new();
         public List<SelectListItem> SavedItems { get; set; } = new List<SelectListItem>();
+        // Country of Origin, per line-item "Additional Information" - reuses the same lookup table
+        // and helper as every other Country dropdown in the app (Suppliers/PublicCustomer/Lead).
+        public List<SelectListItem> CountryOptions { get; set; } = new();
 
         [BindProperty]
         public string? SelectedBuyerId { get; set; }
@@ -122,6 +125,7 @@ namespace EINVWORLD.Pages.Invoices
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             UnitOptions = _dropdownHelper.GetUnitOptions();
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
+            CountryOptions = _dropdownHelper.GetCountryOptions();
 
             _logger.LogDebug("Dropdown counts: ClassificationCodes={ClassificationCodes}, Units={Units}, TaxCategories={TaxCategories}",
                 ClassificationCodes?.Count ?? 0, UnitOptions?.Count ?? 0, TaxCategoryOptions?.Count ?? 0);
@@ -419,6 +423,7 @@ namespace EINVWORLD.Pages.Invoices
             UnitOptions = _dropdownHelper.GetUnitOptions();
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+            CountryOptions = _dropdownHelper.GetCountryOptions();
 
             // --- Populate Suppliers and Customers ---
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -1048,6 +1053,11 @@ namespace EINVWORLD.Pages.Invoices
                         UnitOfMeasure = lineView.UnitOfMeasure,
                         UnitPrice = lineView.UnitPrice,
                         DiscountAmount = lineView.DiscountAmount,
+                        DiscountReason = lineView.DiscountReason,
+                        FeeChargeAmount = lineView.FeeChargeAmount,
+                        FeeChargeReason = lineView.FeeChargeReason,
+                        ProductTariffCode = lineView.ProductTariffCode,
+                        CountryOfOrigin = lineView.CountryOfOrigin,
                         ClassificationCode = lineView.ClassificationCode,
                         InvoiceHeader = draftInvoice,
                         InvoiceTaxes = lineView.Taxes?.Select(tax => new InvoiceTax
@@ -1524,6 +1534,11 @@ namespace EINVWORLD.Pages.Invoices
                     UnitOfMeasure = viewLine.UnitOfMeasure,
                     UnitPrice = viewLine.UnitPrice,
                     DiscountAmount = viewLine.DiscountAmount,
+                    DiscountReason = viewLine.DiscountReason,
+                    FeeChargeAmount = viewLine.FeeChargeAmount,
+                    FeeChargeReason = viewLine.FeeChargeReason,
+                    ProductTariffCode = viewLine.ProductTariffCode,
+                    CountryOfOrigin = viewLine.CountryOfOrigin,
                     ClassificationCode = viewLine.ClassificationCode,
                     InvoiceHeader = invoiceHeader,
                     InvoiceTaxes = viewLine.Taxes.Select(tax => new InputModels.InvoiceTax
