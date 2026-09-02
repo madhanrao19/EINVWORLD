@@ -1092,15 +1092,13 @@ namespace eInvWorld.Services.Mappers
         }
 
 
-        // Populated from the real, persisted InvoiceHeader.ShippingRecipient*/OtherCharges* fields
-        // (Phase E). DeliveryParty is only emitted when a real Shipping Recipient name was entered -
-        // this used to unconditionally submit a DeliveryParty with every field blank on every single
-        // invoice; verified against a real LHDN sample invoice (Delivery/DeliveryParty/PartyLegalEntity/
-        // PostalAddress/PartyIdentification structure) before wiring in real data. Shipment.ID keeps
-        // using header.Incoterms exactly as before - that placement predates this change and is left
-        // untouched here; a real sample invoice suggests Incoterms actually belongs in the top-level
-        // AdditionalDocumentReference instead, which is a separate, already-live behavior this change
-        // does not touch.
+        // Populated from the real, persisted InvoiceHeader.ShippingRecipient*/OtherCharges* fields.
+        // DeliveryParty is only emitted when a real Shipping Recipient name was entered - this used to
+        // unconditionally submit a DeliveryParty with every field blank on every single invoice;
+        // verified against a real LHDN sample invoice (Delivery/DeliveryParty/PartyLegalEntity/
+        // PostalAddress/PartyIdentification structure) before wiring in real data. Incoterms moved out
+        // of Shipment.ID (see MapCustomsAdditionalDocumentReferences) once the same sample showed it
+        // belongs in the top-level AdditionalDocumentReference list instead.
         private List<JsonModels.Delivery> MapDelivery(InputModel.InvoiceHeader header)
         {
             var hasShippingRecipient = !string.IsNullOrWhiteSpace(header.ShippingRecipientName);
@@ -1171,9 +1169,15 @@ namespace eInvWorld.Services.Mappers
                     {
                         new JsonModels.Shipment
                         {
+                            // Not a real shipment/tracking ID - this codebase has no such field. Used to
+                            // hold header.Incoterms, which a real LHDN sample invoice shows submitted
+                            // elsewhere instead (a bare top-level AdditionalDocumentReference entry, no
+                            // DocumentType - see MapCustomsAdditionalDocumentReferences). Left blank
+                            // rather than removing the element entirely, since Shipment/
+                            // FreightAllowanceCharge (Other Charges) still needs to be emitted.
                             ID = new List<JsonModels.ID>
                             {
-                                new JsonModels.ID { _ = header.Incoterms ?? "" }
+                                new JsonModels.ID { _ = "" }
                             },
                             FreightAllowanceCharge = new List<JsonModels.FreightAllowanceCharge>
                             {
@@ -1261,6 +1265,17 @@ namespace eInvWorld.Services.Mappers
                 {
                     ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.CustomsFormNo2Reference } },
                     DocumentType = new List<JsonModels.DocumentType> { new JsonModels.DocumentType { _ = "K2" } }
+                });
+            }
+
+            // Incoterms - a bare ID entry with no DocumentType, matching the real sample exactly.
+            // Moved here from Delivery.Shipment.ID (see MapDelivery), which was the wrong location -
+            // see that method's comment for the full explanation.
+            if (!string.IsNullOrWhiteSpace(header.Incoterms))
+            {
+                refs.Add(new JsonModels.AdditionalDocumentReference
+                {
+                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.Incoterms } }
                 });
             }
 

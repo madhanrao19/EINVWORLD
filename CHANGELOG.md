@@ -1,6 +1,12 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.23.0`** (`AppInfo:Version` in `appsettings.json`). v1.23.0 is a **minor**
+> **Current version: `v1.23.1`** (`AppInfo:Version` in `appsettings.json`). v1.23.1 is a **patch**
+> release: closes the one finding v1.23.0 explicitly deferred — `Incoterms` was submitted in
+> `Delivery.Shipment.ID`, a field this codebase has no real shipment-tracking data for; a real LHDN
+> sample invoice shows Incoterms actually belongs in the top-level `AdditionalDocumentReference` as a
+> bare entry (`ID` only, no `DocumentType`). Moved there; `Shipment.ID` now stays blank (this codebase
+> has no shipment-tracking-number field to put there). See the dated entry below for details. v1.23.0
+> was a **minor**
 > release: the deliberately-deferred follow-up from v1.22.0 — Shipping Recipient and Customs/
 > Import-Export fields are now actually wired into the submitted LHDN payload, verified against a real
 > LHDN sample invoice (not guessed) before implementing. `InvoiceMapper.MapDelivery` used to
@@ -169,6 +175,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.23.1 (Incoterms placement fix)
+
+> Closes the "Explicitly not touched" finding flagged in v1.23.0.
+
+### Fixed
+- **`Incoterms` moved from `Delivery.Shipment.ID` to the top-level `Invoice.AdditionalDocumentReference`
+  list**, matching the real LHDN sample invoice exactly (a bare entry — `ID` only, no `DocumentType`).
+  `Shipment.ID` has no real data to hold in this codebase (no shipment-tracking-number field exists) and
+  now stays blank rather than misusing it for Incoterms.
 
 ## 📅 2026-09-02 — v1.23.0 (Shipping Recipient & Customs now reach the LHDN payload)
 
