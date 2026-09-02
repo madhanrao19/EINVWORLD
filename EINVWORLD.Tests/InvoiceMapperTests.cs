@@ -859,5 +859,48 @@ namespace EINVWORLD.Tests
             Assert.Equal("CPT-CCN-W-211111-KL-000002", accountId.GetProperty("_").GetString());
             Assert.Equal("CertEX", accountId.GetProperty("schemeAgencyName").GetString());
         }
+
+        // ── Incoterms relocation (moved from Delivery.Shipment.ID to the top-level
+        // AdditionalDocumentReference list, matching a real LHDN sample invoice) ────────────────────
+
+        [Fact]
+        public void Map_Incoterms_EmitsBareAdditionalDocumentReferenceEntry()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.Incoterms = "CIF";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var refs = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AdditionalDocumentReference");
+            var incotermsEntry = refs[refs.GetArrayLength() - 1];
+
+            Assert.Equal("CIF", incotermsEntry.GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.False(incotermsEntry.TryGetProperty("DocumentType", out _));
+        }
+
+        [Fact]
+        public void Map_Incoterms_ShipmentIdIsBlank_NotIncoterms()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.Incoterms = "CIF";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var shipmentId = doc.RootElement.GetProperty("Invoice")[0]
+                .GetProperty("Delivery")[0].GetProperty("Shipment")[0].GetProperty("ID")[0].GetProperty("_").GetString();
+
+            Assert.Equal("", shipmentId);
+        }
+
+        [Fact]
+        public void Map_NoIncoterms_AdditionalDocumentReferenceOmitted()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var invoice = doc.RootElement.GetProperty("Invoice")[0];
+
+            // No Incoterms and no Customs fields set anywhere in this test -> the whole list is empty.
+            Assert.False(invoice.TryGetProperty("AdditionalDocumentReference", out _));
+        }
     }
 }
