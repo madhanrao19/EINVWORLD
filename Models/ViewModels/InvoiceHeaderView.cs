@@ -62,6 +62,28 @@ namespace eInvWorld.Models.ViewModels
 
         [StringLength(150, ErrorMessage = "Prepayment Reference Number cannot exceed 150 characters.")]
         public string? PrepaymentReferenceNumber { get; set; }
+
+        // Shipping Recipient (invoice-level Additional Information, progressive disclosure)
+        public string? ShippingRecipientName { get; set; }
+        public string? ShippingRecipientAddrLine1 { get; set; }
+        public string? ShippingRecipientAddrLine2 { get; set; }
+        public string? ShippingRecipientAddrLine3 { get; set; }
+        public string? ShippingRecipientPostcode { get; set; }
+        public string? ShippingRecipientCity { get; set; }
+        public string? ShippingRecipientState { get; set; }
+        public string? ShippingRecipientCountryCode { get; set; }
+        public string? ShippingRecipientIdType { get; set; }
+        public string? ShippingRecipientIdNumber { get; set; }
+        public string? ShippingRecipientTIN { get; set; }
+
+        // Customs / Import-Export (invoice-level Additional Information, progressive disclosure)
+        public string? CustomsFormNo1Reference { get; set; }
+        public string? FreeTradeAgreementInfo { get; set; }
+        public string? CertifiedExporterAuthorizationNumber { get; set; }
+        public string? CustomsFormNo2Reference { get; set; }
+        public decimal? OtherChargesAmount { get; set; }
+        public string? OtherChargesDescription { get; set; }
+
         public DateTime? OriginalInvoiceDate { get; set; } // Date Invoice (original date)
         public string? PoDoNo { get; set; } // PO/DO No
 
