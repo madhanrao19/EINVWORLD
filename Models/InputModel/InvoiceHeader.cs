@@ -208,6 +208,75 @@ namespace eInvWorld.Models.InputModel
         [StringLength(150, ErrorMessage = "Prepayment Reference Number cannot exceed 150 characters.")] // NEW
         public string? PrepaymentReferenceNumber { get; set; }
 
+        // Shipping Recipient — applicable only when goods ship to a different recipient/address than
+        // the Buyer's own. All optional; a redesigned invoice-level "Additional Information" section
+        // surfaces these behind progressive disclosure.
+        [Display(Name = "Shipping Recipient's Name")]
+        [StringLength(200, ErrorMessage = "Shipping Recipient's Name cannot exceed 200 characters.")]
+        public string? ShippingRecipientName { get; set; }
+
+        [StringLength(200, ErrorMessage = "Address Line 1 cannot exceed 200 characters.")]
+        public string? ShippingRecipientAddrLine1 { get; set; }
+
+        [StringLength(200, ErrorMessage = "Address Line 2 cannot exceed 200 characters.")]
+        public string? ShippingRecipientAddrLine2 { get; set; }
+
+        [StringLength(200, ErrorMessage = "Address Line 3 cannot exceed 200 characters.")]
+        public string? ShippingRecipientAddrLine3 { get; set; }
+
+        [StringLength(20, ErrorMessage = "Postcode cannot exceed 20 characters.")]
+        public string? ShippingRecipientPostcode { get; set; }
+
+        [StringLength(100, ErrorMessage = "City cannot exceed 100 characters.")]
+        public string? ShippingRecipientCity { get; set; }
+
+        // Free text, not a StateCodes FK — matches the existing precedent for a foreign party's
+        // State/Province (self-imposed FK removed in v1.21.7; a shipping recipient can be anywhere).
+        [StringLength(100, ErrorMessage = "State cannot exceed 100 characters.")]
+        public string? ShippingRecipientState { get; set; }
+
+        [StringLength(3, ErrorMessage = "Country must be a 3-letter ISO code.")]
+        public string? ShippingRecipientCountryCode { get; set; }
+
+        [ForeignKey("ShippingRecipientCountryCode")]
+        public virtual CountryCode? ShippingRecipientCountry { get; set; }
+
+        [StringLength(10, ErrorMessage = "ID Type cannot exceed 10 characters.")]
+        public string? ShippingRecipientIdType { get; set; }
+
+        [ForeignKey("ShippingRecipientIdType")]
+        public virtual RegistrationType? ShippingRecipientIdTypeRef { get; set; }
+
+        [StringLength(150, ErrorMessage = "Registration/Identification/Passport Number cannot exceed 150 characters.")]
+        public string? ShippingRecipientIdNumber { get; set; }
+
+        [Display(Name = "Shipping Recipient's TIN")]
+        [StringLength(20, ErrorMessage = "TIN cannot exceed 20 characters.")]
+        public string? ShippingRecipientTIN { get; set; }
+
+        // Import/Export (Customs) information — applicable only to import/export of goods.
+        [Display(Name = "Reference Number of Customs Form No.1, 9 etc.")]
+        [StringLength(500, ErrorMessage = "Customs Form No.1 reference cannot exceed 500 characters.")]
+        public string? CustomsFormNo1Reference { get; set; }
+
+        [Display(Name = "Free Trade Agreement (FTA) Information")]
+        [StringLength(200, ErrorMessage = "Free Trade Agreement information cannot exceed 200 characters.")]
+        public string? FreeTradeAgreementInfo { get; set; }
+
+        [Display(Name = "Authorization Number for Certified Exporter")]
+        [StringLength(100, ErrorMessage = "Authorization Number cannot exceed 100 characters.")]
+        public string? CertifiedExporterAuthorizationNumber { get; set; }
+
+        [Display(Name = "Reference Number of Custom Form No.2")]
+        [StringLength(500, ErrorMessage = "Customs Form No.2 reference cannot exceed 500 characters.")]
+        public string? CustomsFormNo2Reference { get; set; }
+
+        [Display(Name = "Details of Other Charges")]
+        public decimal? OtherChargesAmount { get; set; }
+
+        [StringLength(500, ErrorMessage = "Details of Other Charges Description cannot exceed 500 characters.")]
+        public string? OtherChargesDescription { get; set; }
+
         /// <summary>
         /// SQL Server rowversion concurrency token. Guards against lost updates when the background
         /// status sync and a user action (cancel/edit) write the same invoice concurrently: the later
