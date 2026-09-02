@@ -20,7 +20,11 @@ namespace EINVWORLD.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "CountryOfOrigin",
                 table: "InvoiceLines",
-                type: "nvarchar(3)",
+                // nvarchar(450), not (3): SQL Server requires an FK's two sides to share the exact
+                // same column length, and CountryCodes.Code (the referenced PK) has no explicit
+                // MaxLength, so EF's convention gives it nvarchar(450). Every real value is still a
+                // 3-char ISO code - enforced by [StringLength(3)] at the application layer.
+                type: "nvarchar(450)",
                 maxLength: 3,
                 nullable: true);
 
@@ -96,7 +100,9 @@ namespace EINVWORLD.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "ShippingRecipientCountryCode",
                 table: "InvoiceHeaders",
-                type: "nvarchar(3)",
+                // nvarchar(450), not (3) - see the CountryOfOrigin comment above; same FK-length
+                // requirement against CountryCodes.Code.
+                type: "nvarchar(450)",
                 maxLength: 3,
                 nullable: true);
 

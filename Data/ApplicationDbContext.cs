@@ -289,6 +289,19 @@ namespace eInvWorld.Data
 
             // Shipping Recipient / line Country of Origin lookups: a referenced CountryCodes/
             // RegistrationTypes row can't be deleted out from under an invoice that uses it.
+            // CountryCodes.Code has no explicit MaxLength, so EF's convention gives it
+            // nvarchar(450); SQL Server requires an FK's two sides to share the exact same
+            // column length, so the referencing columns must match nvarchar(450) too even
+            // though every real value is a 3-char ISO code ([StringLength(3)] still enforces
+            // that at the application/validation layer).
+            modelBuilder.Entity<InvoiceHeader>()
+                .Property(i => i.ShippingRecipientCountryCode)
+                .HasColumnType("nvarchar(450)");
+
+            modelBuilder.Entity<eInvWorld.Models.InputModel.InvoiceLine>()
+                .Property(l => l.CountryOfOrigin)
+                .HasColumnType("nvarchar(450)");
+
             modelBuilder.Entity<InvoiceHeader>()
                 .HasOne(i => i.ShippingRecipientCountry)
                 .WithMany()

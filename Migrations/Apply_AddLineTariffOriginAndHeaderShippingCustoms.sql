@@ -29,7 +29,10 @@ END
 
 IF COL_LENGTH('InvoiceLines', 'CountryOfOrigin') IS NULL
 BEGIN
-    ALTER TABLE [InvoiceLines] ADD [CountryOfOrigin] nvarchar(3) NULL;
+    -- nvarchar(450), not (3): SQL Server requires an FK's two sides to share the exact same
+    -- column length, and CountryCodes.Code (the referenced PK) is nvarchar(450). Every real
+    -- value is still a 3-char ISO code, enforced at the application layer.
+    ALTER TABLE [InvoiceLines] ADD [CountryOfOrigin] nvarchar(450) NULL;
 END
 
 IF COL_LENGTH('InvoiceLines', 'DiscountReason') IS NULL
@@ -96,7 +99,9 @@ END
 
 IF COL_LENGTH('InvoiceHeaders', 'ShippingRecipientCountryCode') IS NULL
 BEGIN
-    ALTER TABLE [InvoiceHeaders] ADD [ShippingRecipientCountryCode] nvarchar(3) NULL;
+    -- nvarchar(450), not (3) - see the CountryOfOrigin comment above; same FK-length
+    -- requirement against CountryCodes.Code.
+    ALTER TABLE [InvoiceHeaders] ADD [ShippingRecipientCountryCode] nvarchar(450) NULL;
 END
 
 IF COL_LENGTH('InvoiceHeaders', 'ShippingRecipientIdType') IS NULL
