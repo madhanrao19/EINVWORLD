@@ -1048,6 +1048,11 @@ namespace EINVWORLD.Pages.Invoices
                         UnitOfMeasure = lineView.UnitOfMeasure,
                         UnitPrice = lineView.UnitPrice,
                         DiscountAmount = lineView.DiscountAmount,
+                        DiscountReason = lineView.DiscountReason,
+                        FeeChargeAmount = lineView.FeeChargeAmount,
+                        FeeChargeReason = lineView.FeeChargeReason,
+                        ProductTariffCode = lineView.ProductTariffCode,
+                        CountryOfOrigin = lineView.CountryOfOrigin,
                         ClassificationCode = lineView.ClassificationCode,
                         InvoiceHeader = draftInvoice,
                         InvoiceTaxes = lineView.Taxes?.Select(tax => new InvoiceTax
@@ -1524,6 +1529,11 @@ namespace EINVWORLD.Pages.Invoices
                     UnitOfMeasure = viewLine.UnitOfMeasure,
                     UnitPrice = viewLine.UnitPrice,
                     DiscountAmount = viewLine.DiscountAmount,
+                    DiscountReason = viewLine.DiscountReason,
+                    FeeChargeAmount = viewLine.FeeChargeAmount,
+                    FeeChargeReason = viewLine.FeeChargeReason,
+                    ProductTariffCode = viewLine.ProductTariffCode,
+                    CountryOfOrigin = viewLine.CountryOfOrigin,
                     ClassificationCode = viewLine.ClassificationCode,
                     InvoiceHeader = invoiceHeader,
                     InvoiceTaxes = viewLine.Taxes.Select(tax => new InputModels.InvoiceTax
