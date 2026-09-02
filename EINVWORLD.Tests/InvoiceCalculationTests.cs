@@ -67,6 +67,31 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void Line_WithFeeCharge_IncreasesExclTaxBase()
+        {
+            // Total Excl Tax = Subtotal - Discount + Fee/Charge.
+            var line = MakeLine(qty: 1, price: 100, discount: 10, 8m);
+            line.FeeChargeAmount = 5;
+
+            line.CalculateAmounts();
+
+            Assert.Equal(95m, line.AmountExclTax);       // 100 - 10 + 5
+            Assert.Equal(7.6m, line.Taxes[0].TaxAmount);  // 8% of 95
+            Assert.Equal(102.6m, line.AmountInclTax);
+        }
+
+        [Fact]
+        public void Line_NullFeeCharge_NormalisedToZero()
+        {
+            var line = MakeLine(qty: 1, price: 100, discount: null, 10m);
+
+            line.CalculateAmounts();
+
+            Assert.Equal(0m, line.FeeChargeAmount);
+            Assert.Equal(100m, line.AmountExclTax);
+        }
+
+        [Fact]
         public void Line_ZeroQuantity_AllZero()
         {
             var line = MakeLine(qty: 0, price: 100, discount: null, 10m);

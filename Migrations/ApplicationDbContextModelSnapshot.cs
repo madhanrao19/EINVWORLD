@@ -1384,6 +1384,17 @@ namespace eInvWorld.Migrations
                     b.Property<decimal?>("DiscountAmount")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<string>("DiscountReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("FeeChargeAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("FeeChargeReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int>("InvoiceHeaderId")
                         .HasColumnType("int");
 

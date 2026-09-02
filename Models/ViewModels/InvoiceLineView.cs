@@ -18,6 +18,12 @@ namespace eInvWorld.Models.ViewModels
         public decimal? AmountExclTax { get; set; }
         [MaxDecimalPlaces(2, ErrorMessage = "Discount allows at most 2 decimal places.")]
         public decimal? DiscountAmount { get; set; }
+        public string? DiscountReason { get; set; }
+        [MaxDecimalPlaces(2, ErrorMessage = "Fee/Charge allows at most 2 decimal places.")]
+        public decimal? FeeChargeAmount { get; set; }
+        public string? FeeChargeReason { get; set; }
+        public string? ProductTariffCode { get; set; }
+        public string? CountryOfOrigin { get; set; }
         public string ClassificationCode { get; set; } = null!; // MSIC Code
 
         // List of taxes applied to this line
@@ -32,7 +38,8 @@ namespace eInvWorld.Models.ViewModels
 
             Subtotal = Quantity.Value * UnitPrice.Value;
             DiscountAmount ??= 0;
-            AmountExclTax = Subtotal - DiscountAmount;
+            FeeChargeAmount ??= 0;
+            AmountExclTax = Subtotal - DiscountAmount + FeeChargeAmount;
 
             // ✅ Calculate Tax Amounts for each tax category
             decimal totalTax = 0;
