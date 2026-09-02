@@ -66,6 +66,11 @@ bottom; stop and investigate on the first ❌.
       invoice and check the generated JSON. ✅ a bare entry (`ID` only, no `DocumentType`) appears in the
       top-level `AdditionalDocumentReference` list with the Incoterms code, and
       `Delivery.Shipment.ID._` is blank (`""`).
+- [ ] **v1.24.0 — Item rows mobile layout (Phase 4):** open Create Invoice (or Invoice Edit) on a phone or
+      a narrow (<992px) browser window. ✅ each item row shows a 2-column layout — Item/Service and
+      Description full-width, Classification+Unit and Qty+Price paired 2-up, a highlighted Subtotal/Total
+      footer, and larger Duplicate/Remove tap targets — not the old cramped fixed-width wrapping. Desktop
+      (≥992px) is unchanged (CSS-only change, no JS/schema touched).
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.

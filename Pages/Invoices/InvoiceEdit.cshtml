@@ -84,6 +84,51 @@
         background: #fff;
     }
 
+    /* Phase 4: purpose-built mobile layout for item rows (<992px), matching CreateInvoice.cshtml. */
+    @@media (max-width: 991.98px) {
+        .irow {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .6rem .75rem;
+            padding: .85rem .75rem;
+        }
+        .irow-num {
+            grid-column: 1 / -1;
+            font-weight: 600;
+            font-size: .75rem;
+            color: var(--einv-primary, #006948);
+            padding-top: 0;
+        }
+        .irow-num::before { content: "Item #"; }
+        .irow-desc {
+            grid-column: 1 / -1;
+        }
+        .irow-total {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: .25rem .75rem;
+            background: var(--einv-page-bg, #f8f9fa);
+            border-radius: .375rem;
+            padding: .5rem .65rem;
+        }
+        .irow-total .irow-mlabel { margin-bottom: 0; }
+        .irow-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1.25rem;
+            padding-top: .35rem;
+            border-top: 1px dashed var(--einv-border, #e9ecef);
+        }
+        .irow-actions .btn {
+            padding: .35rem .5rem;
+            font-size: 1.05rem;
+        }
+    }
+
     /* Optional, progressive line-level sections (Discount / Fee-Charge / Taxes / Additional
        Information) - collapsed by default, toggled by a small pill button row below the dense grid. */
     .irow-extras {
