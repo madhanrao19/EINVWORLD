@@ -1,6 +1,23 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.22.0`** (`AppInfo:Version` in `appsettings.json`). v1.22.0 is a **minor**
+> **Current version: `v1.23.0`** (`AppInfo:Version` in `appsettings.json`). v1.23.0 is a **minor**
+> release: the deliberately-deferred follow-up from v1.22.0 — Shipping Recipient and Customs/
+> Import-Export fields are now actually wired into the submitted LHDN payload, verified against a real
+> LHDN sample invoice (not guessed) before implementing. `InvoiceMapper.MapDelivery` used to
+> unconditionally submit a `Delivery.DeliveryParty` with every field blank on **every single invoice**
+> regardless of whether a Shipping Recipient was ever entered (there was no UI for it before v1.22.0,
+> so this was silent, always-blank noise on every submission) — it's now only emitted when a real
+> Shipping Recipient name is present, and populated from the real, persisted fields when it is. Also
+> fixes the Country `listID`/`listAgencyID` on that element, which were hardcoded empty strings.
+> Customs Form No.1/No.2 references and Free Trade Agreement information are now submitted as entries
+> in the invoice's top-level `AdditionalDocumentReference` list (never previously assigned at all — the
+> property existed on the JSON model but nothing ever populated it, so it was omitted from every
+> submission regardless of what a user might enter). The Certified Exporter Authorization Number is now
+> submitted via `AccountingSupplierParty.AdditionalAccountID` (an empty placeholder for this had been
+> deliberately removed in the past "to avoid validation noise" — this replaces it with real data,
+> conditionally). Other Charges amount/description now populate the existing `Shipment.
+> FreightAllowanceCharge` (previously hardcoded to a zero-amount placeholder). See the dated entry
+> below for details. v1.22.0 was a **minor**
 > release: the Invoice Items redesign, in five stacked PRs (#221–#225). Fixes a real LHDN-submission
 > bug found while investigating a client-preview-vs-payload discrepancy — a line's discount now
 > correctly nets out of the taxable base and reaches the submitted UBL `AllowanceCharge` (previously
@@ -152,6 +169,43 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.23.0 (Shipping Recipient & Customs now reach the LHDN payload)
+
+> The deliberately-scoped follow-up flagged in v1.22.0. Every field/element name and structure below was
+> verified against a real LHDN sample invoice (`1.0-Invoice-Sample.json`, official SDK sample set)
+> before being implemented, rather than guessed.
+
+### Fixed
+- **`InvoiceMapper.MapDelivery` submitted a blank `Delivery.DeliveryParty` on every single invoice.**
+  Before v1.22.0 there was no UI to set a Shipping Recipient at all, so this was silent, always-blank
+  noise on every submission regardless of what the invoice actually needed. Now only emitted when a
+  real Shipping Recipient name is present. Also fixes `Country.IdentificationCode`'s `listID`/
+  `listAgencyID`, previously hardcoded to empty strings (now `"3166-1"`/`"ISO"`, matching the same
+  convention already used for Supplier/Customer Country elsewhere in this file).
+
+### Added
+- **Shipping Recipient** now populates the real `Delivery.DeliveryParty` (name, address, postal
+  code/city/state/country, TIN, and Registration/Identification/Passport Number with the correct
+  `schemeID`) instead of the old blank placeholder.
+- **Customs Form No.1 / No.2 references and Free Trade Agreement information** are now submitted as
+  entries in the invoice's top-level `AdditionalDocumentReference` list — a property that existed on
+  the JSON model but was **never assigned at all**, so these fields have never been submitted for any
+  invoice regardless of what was entered. Adds `DocumentType`/`DocumentDescription` to the
+  `AdditionalDocumentReference` JSON model to carry the `"CustomsImportForm"`/`"FreeTradeAgreement"`
+  (with literal ID `"FTA"`)/`"K2"` markers.
+- **Certified Exporter Authorization Number** now submits via
+  `AccountingSupplierParty.AdditionalAccountID` (`schemeAgencyName: "CertEX"`) — a past commit had
+  deliberately removed an always-empty placeholder for this "to avoid validation noise"; this replaces
+  it with real, conditionally-emitted data instead of restoring the placeholder.
+- **Details of Other Charges** (amount/description) now populate the existing
+  `Delivery.Shipment.FreightAllowanceCharge` instead of a hardcoded zero-amount placeholder.
+
+### Not changed (explicitly out of scope here)
+- `Delivery.Shipment.ID` still submits `header.Incoterms`, exactly as before. The real sample invoice
+  suggests Incoterms actually belongs in the top-level `AdditionalDocumentReference` instead (as a bare
+  ID with no `DocumentType`) — but that's pre-existing, already-live behavior this change doesn't touch;
+  flagged as a separate finding for a dedicated, scoped fix later.
 
 ## 📅 2026-09-02 — v1.22.0 (Invoice Items redesign)
 

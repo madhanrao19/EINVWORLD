@@ -53,10 +53,15 @@ bottom; stop and investigate on the first ❌.
       reload confirms it round-trips.
 - [ ] **v1.22.0 Additional Information sections:** on Create Invoice (or Edit), fill in the new
       **Payment & Prepayment**, **Shipping Recipient**, and **Customs / Import-Export** collapsed
-      sections, save a draft, reload it. ✅ all values round-trip. Note: only Incoterms/Prepayment
-      Reference Number are currently mapped into the submitted LHDN payload — Shipping Recipient/Customs
-      fields are stored only (by design, see CHANGELOG v1.22.0), so don't expect them in the submitted
-      JSON yet.
+      sections, save a draft, reload it. ✅ all values round-trip.
+- [ ] **v1.23.0 — Shipping Recipient/Customs now reach the LHDN payload:** submit (or view the generated
+      JSON for) an invoice with a Shipping Recipient filled in. ✅ `Delivery.DeliveryParty` shows the
+      real name/address/TIN/ID instead of being blank. Fill in Customs Form No.1/No.2, FTA info, and
+      Certified Exporter Authorization Number on another test invoice. ✅ the top-level
+      `AdditionalDocumentReference` list shows entries with `DocumentType` `CustomsImportForm`/
+      `FreeTradeAgreement`(with `ID: "FTA"`)/`K2`, and `AccountingSupplierParty.AdditionalAccountID`
+      shows the authorization number. An invoice with **none** of these filled in should look unchanged
+      from before v1.23.0 (no blank `DeliveryParty`, no empty `AdditionalDocumentReference`).
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
