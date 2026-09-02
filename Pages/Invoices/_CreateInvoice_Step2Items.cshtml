@@ -21,12 +21,11 @@
                     <div id="lineItemsTable">
                         <div class="irow-head">
                             <div class="irow-head-num">#</div>
-                            <div class="irow-head-desc">Item / Service Description <span class="text-danger">*</span></div>
+                            <div class="irow-head-desc">Item / Service <span class="text-danger">*</span></div>
                             <div class="irow-head-classification">Classification <span class="text-danger">*</span></div>
-                            <div class="irow-head-qty text-center">Qty <span class="text-danger">*</span></div>
                             <div class="irow-head-unit">Unit <span class="text-danger">*</span></div>
+                            <div class="irow-head-qty text-center">Qty <span class="text-danger">*</span></div>
                             <div class="irow-head-price text-end">Price <span class="text-danger">*</span></div>
-                            <div class="irow-head-tax">Tax</div>
                             <div class="irow-head-total text-end">Subtotal / Total</div>
                             <div class="irow-head-actions"></div>
                         </div>
@@ -47,8 +46,8 @@
                                                     }
                                                 }
                                             </select>
+                                            <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
                                             <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                                            <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
                                         </div>
                                         <div class="irow-classification">
                                             <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
@@ -56,51 +55,19 @@
                                                 <option value="">Select Classification</option>
                                             </select>
                                         </div>
-                                        <div class="irow-qty">
-                                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
-                                        </div>
                                         <div class="irow-unit">
                                             <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
                                             <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
                                                 <option value="">Unit</option>
                                             </select>
                                         </div>
+                                        <div class="irow-qty">
+                                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                        </div>
                                         <div class="irow-price">
                                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
                                             <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
-                                        </div>
-                                        <div class="irow-tax">
-                                            <div class="irow-mlabel">Tax</div>
-                                            <div class="tax-section" id="taxes-@i">
-                                                @if (Model.Invoice?.InvoiceLines[i].Taxes != null)
-                                                {
-                                                    for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
-                                                    {
-                                                        <div class="tax-row mb-2 p-2 border rounded">
-                                                            <div class="d-flex flex-wrap gap-2 align-items-center">
-                                                                <div class="flex-fill tax-category-wrapper" style="min-width: 100px;">
-                                                                    <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
-                                                                        <option value="">Tax Category</option>
-                                                                    </select>
-                                                                </div>
-                                                                <div class="tax-percentage-wrapper" style="flex: 0 0 90px;">
-                                                                    <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Taxes?[j].TaxPercentage)" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
-                                                                </div>
-                                                                <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                                                                    <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
-                                                                </div>
-                                                            </div>
-                                                            <div class="mt-2 tax-exemption-reason" style="display: none;">
-                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxExemptionReason" class="form-control form-control-sm" placeholder="Exemption Reason (Required)" />
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                }
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(@i)">
-                                                <i class="ri-add-line me-1"></i>Tax
-                                            </button>
                                         </div>
                                         <div class="irow-total">
                                             <div class="irow-mlabel">Subtotal</div>
@@ -115,6 +82,118 @@
                                             <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
                                                 <i class="ri-delete-bin-line"></i>
                                             </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Optional, progressive line-level sections: collapsed by default -->
+                                    <div class="irow-extras">
+                                        <div class="irow-extras-toggles">
+                                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#discount-@i">
+                                                <i class="ri-price-tag-3-line"></i>Discount
+                                            </button>
+                                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#fee-@i">
+                                                <i class="ri-add-circle-line"></i>Fee / Charge
+                                            </button>
+                                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#taxesCollapse-@i">
+                                                <i class="ri-percent-line"></i>Taxes
+                                            </button>
+                                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#lineinfo-@i">
+                                                <i class="ri-information-line"></i>Additional Information
+                                            </button>
+                                        </div>
+
+                                        <!-- Discount -->
+                                        <div class="collapse irow-extras-panel" id="discount-@i">
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-6 col-md-2">
+                                                    <label class="irow-mlabel">Rate</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" class="form-control discount-rate" step="0.01" placeholder="0" data-discount-target="#discount-amount-@i" data-item-index="@i" />
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="irow-mlabel">Amount</label>
+                                                    <input asp-for="Invoice.InvoiceLines[i].DiscountAmount" id="discount-amount-@i" type="number" class="form-control form-control-sm discount-amount-input" step="0.01" placeholder="0.00" />
+                                                </div>
+                                                <div class="col-12 col-md-7">
+                                                    <label class="irow-mlabel">Description / Reason</label>
+                                                    <input asp-for="Invoice.InvoiceLines[i].DiscountReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this discount" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Fee / Charge -->
+                                        <div class="collapse irow-extras-panel" id="fee-@i">
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-6 col-md-2">
+                                                    <label class="irow-mlabel">Rate</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" class="form-control fee-rate" step="0.01" placeholder="0" data-fee-target="#fee-amount-@i" data-item-index="@i" />
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6 col-md-3">
+                                                    <label class="irow-mlabel">Amount</label>
+                                                    <input asp-for="Invoice.InvoiceLines[i].FeeChargeAmount" id="fee-amount-@i" type="number" class="form-control form-control-sm fee-amount-input" step="0.01" placeholder="0.00" />
+                                                </div>
+                                                <div class="col-12 col-md-7">
+                                                    <label class="irow-mlabel">Description / Reason</label>
+                                                    <input asp-for="Invoice.InvoiceLines[i].FeeChargeReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this fee/charge" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Taxes -->
+                                        <div class="collapse irow-extras-panel" id="taxesCollapse-@i">
+                                            <div class="tax-section" id="taxes-@i">
+                                                @if (Model.Invoice?.InvoiceLines[i].Taxes != null)
+                                                {
+                                                    for (int j = 0; j < (Model.Invoice?.InvoiceLines[i].Taxes?.Count ?? 0); j++)
+                                                    {
+                                                        <div class="tax-row mb-2 p-2 border rounded">
+                                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                                <div class="flex-fill tax-category-wrapper" style="min-width: 160px;">
+                                                                    <label class="irow-mlabel">Tax Type</label>
+                                                                    <select asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxCategory" asp-items="Model.TaxCategoryOptions" class="form-select form-select-sm tax-category">
+                                                                        <option value="">Tax Category</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="tax-percentage-wrapper" style="flex: 0 0 100px;">
+                                                                    <label class="irow-mlabel">Tax Rate</label>
+                                                                    <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Taxes?[j].TaxPercentage)" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
+                                                                </div>
+                                                                <div class="tax-action-wrapper" style="flex: 0 0 auto;">
+                                                                    <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                                                                </div>
+                                                            </div>
+                                                            <div class="mt-2 tax-exemption-reason" style="display: none;">
+                                                                <label class="irow-mlabel">Tax Exemption Reason</label>
+                                                                <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxExemptionReason" class="form-control form-control-sm" placeholder="Exemption Reason (Required)" />
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(@i)">
+                                                <i class="ri-add-line me-1"></i>Tax
+                                            </button>
+                                        </div>
+
+                                        <!-- Additional Information (line-level: only fields that genuinely belong to this line) -->
+                                        <div class="collapse irow-extras-panel" id="lineinfo-@i">
+                                            <div class="row g-2">
+                                                <div class="col-6 col-md-4">
+                                                    <label class="irow-mlabel">Product Tariff Code</label>
+                                                    <input asp-for="Invoice.InvoiceLines[i].ProductTariffCode" class="form-control form-control-sm" maxlength="50" placeholder="Primarily for goods" />
+                                                </div>
+                                                <div class="col-6 col-md-4">
+                                                    <label class="irow-mlabel">Country of Origin</label>
+                                                    <select asp-for="Invoice.InvoiceLines[i].CountryOfOrigin" asp-items="Model.CountryOptions" class="form-select form-select-sm">
+                                                        <option value="">-- Select --</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
