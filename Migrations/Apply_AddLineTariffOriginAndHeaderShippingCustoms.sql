@@ -2,7 +2,8 @@
 --
 -- Adds the new schema for Phase B of the Invoice Items UX redesign:
 --   - InvoiceLines: ProductTariffCode, CountryOfOrigin (FK to CountryCodes) — line-level
---     "Additional Information" fields, primarily for goods.
+--     "Additional Information" fields, primarily for goods — plus DiscountReason, FeeChargeAmount,
+--     FeeChargeReason, the new line-level Discount/Fee-Charge fields (DiscountAmount already existed).
 --   - InvoiceHeaders: Shipping Recipient (name/address/postcode/city/state/country FK/ID type FK/
 --     ID number/TIN) and Customs/Import-Export fields (Customs Form No.1/No.2 references, FTA info,
 --     Certified Exporter Authorization Number, Other Charges amount/description) — invoice-level
@@ -29,6 +30,21 @@ END
 IF COL_LENGTH('InvoiceLines', 'CountryOfOrigin') IS NULL
 BEGIN
     ALTER TABLE [InvoiceLines] ADD [CountryOfOrigin] nvarchar(3) NULL;
+END
+
+IF COL_LENGTH('InvoiceLines', 'DiscountReason') IS NULL
+BEGIN
+    ALTER TABLE [InvoiceLines] ADD [DiscountReason] nvarchar(200) NULL;
+END
+
+IF COL_LENGTH('InvoiceLines', 'FeeChargeAmount') IS NULL
+BEGIN
+    ALTER TABLE [InvoiceLines] ADD [FeeChargeAmount] decimal(18,2) NULL;
+END
+
+IF COL_LENGTH('InvoiceLines', 'FeeChargeReason') IS NULL
+BEGIN
+    ALTER TABLE [InvoiceLines] ADD [FeeChargeReason] nvarchar(200) NULL;
 END
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceLines_CountryOfOrigin' AND object_id = OBJECT_ID('InvoiceLines'))

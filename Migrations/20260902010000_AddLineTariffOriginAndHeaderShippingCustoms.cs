@@ -25,6 +25,26 @@ namespace EINVWORLD.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
+                name: "DiscountReason",
+                table: "InvoiceLines",
+                type: "nvarchar(200)",
+                maxLength: 200,
+                nullable: true);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "FeeChargeAmount",
+                table: "InvoiceLines",
+                type: "decimal(18,2)",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "FeeChargeReason",
+                table: "InvoiceLines",
+                type: "nvarchar(200)",
+                maxLength: 200,
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
                 name: "ShippingRecipientName",
                 table: "InvoiceHeaders",
                 type: "nvarchar(200)",
@@ -211,6 +231,9 @@ namespace EINVWORLD.Migrations
 
             migrationBuilder.DropColumn(name: "ProductTariffCode", table: "InvoiceLines");
             migrationBuilder.DropColumn(name: "CountryOfOrigin", table: "InvoiceLines");
+            migrationBuilder.DropColumn(name: "DiscountReason", table: "InvoiceLines");
+            migrationBuilder.DropColumn(name: "FeeChargeAmount", table: "InvoiceLines");
+            migrationBuilder.DropColumn(name: "FeeChargeReason", table: "InvoiceLines");
 
             migrationBuilder.DropColumn(name: "ShippingRecipientName", table: "InvoiceHeaders");
             migrationBuilder.DropColumn(name: "ShippingRecipientAddrLine1", table: "InvoiceHeaders");
