@@ -161,6 +161,9 @@ namespace eInvWorld.Pages.Invoices
         // Country of Origin, per line-item "Additional Information" - same lookup/helper as every
         // other Country dropdown in the app.
         public List<SelectListItem> CountryOptions { get; set; } = new List<SelectListItem>();
+        // ID Type for the invoice-level Shipping Recipient section - reuses the same RegistrationTypes
+        // lookup used for Supplier/Buyer registration type elsewhere.
+        public List<SelectListItem> IdTypeOptions { get; set; } = new List<SelectListItem>();
 
         public string? GeneratedJson { get; set; }
         public string? Message { get; set; }
@@ -243,6 +246,7 @@ namespace eInvWorld.Pages.Invoices
                 UnitOptions = _dropdownHelper.GetUnitOptions();
                 TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
                 CountryOptions = _dropdownHelper.GetCountryOptions();
+                IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
 
                 _logger.LogInformation("Successfully loaded invoice {InvoiceId} for editing", id);
 
@@ -328,6 +332,25 @@ namespace eInvWorld.Pages.Invoices
                 BankName = existingInvoice.BankName,
                 BankAccountNo = existingInvoice.BankAccountNo,
                 PaymentTerms = existingInvoice.PaymentTerms,
+                Incoterms = existingInvoice.Incoterms,
+                PrepaymentReferenceNumber = existingInvoice.PrepaymentReferenceNumber,
+                ShippingRecipientName = existingInvoice.ShippingRecipientName,
+                ShippingRecipientAddrLine1 = existingInvoice.ShippingRecipientAddrLine1,
+                ShippingRecipientAddrLine2 = existingInvoice.ShippingRecipientAddrLine2,
+                ShippingRecipientAddrLine3 = existingInvoice.ShippingRecipientAddrLine3,
+                ShippingRecipientPostcode = existingInvoice.ShippingRecipientPostcode,
+                ShippingRecipientCity = existingInvoice.ShippingRecipientCity,
+                ShippingRecipientState = existingInvoice.ShippingRecipientState,
+                ShippingRecipientCountryCode = existingInvoice.ShippingRecipientCountryCode,
+                ShippingRecipientIdType = existingInvoice.ShippingRecipientIdType,
+                ShippingRecipientIdNumber = existingInvoice.ShippingRecipientIdNumber,
+                ShippingRecipientTIN = existingInvoice.ShippingRecipientTIN,
+                CustomsFormNo1Reference = existingInvoice.CustomsFormNo1Reference,
+                FreeTradeAgreementInfo = existingInvoice.FreeTradeAgreementInfo,
+                CertifiedExporterAuthorizationNumber = existingInvoice.CertifiedExporterAuthorizationNumber,
+                CustomsFormNo2Reference = existingInvoice.CustomsFormNo2Reference,
+                OtherChargesAmount = existingInvoice.OtherChargesAmount,
+                OtherChargesDescription = existingInvoice.OtherChargesDescription,
                 StartDate = existingInvoice.StartDate,
                 EndDate = existingInvoice.EndDate,
                 InvoicePeriod = existingInvoice.InvoicePeriod,
@@ -407,6 +430,7 @@ namespace eInvWorld.Pages.Invoices
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();
+            IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
 
             // --- Populate Suppliers and Customers ---
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -885,6 +909,25 @@ namespace eInvWorld.Pages.Invoices
                     draftInvoice.BankName = Invoice.BankName;
                     draftInvoice.Attention = Invoice.Attention;
                     draftInvoice.PaymentTerms = Invoice.PaymentTerms ?? "";
+                    draftInvoice.Incoterms = Invoice.Incoterms;
+                    draftInvoice.PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber;
+                    draftInvoice.ShippingRecipientName = Invoice.ShippingRecipientName;
+                    draftInvoice.ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1;
+                    draftInvoice.ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2;
+                    draftInvoice.ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3;
+                    draftInvoice.ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode;
+                    draftInvoice.ShippingRecipientCity = Invoice.ShippingRecipientCity;
+                    draftInvoice.ShippingRecipientState = Invoice.ShippingRecipientState;
+                    draftInvoice.ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode;
+                    draftInvoice.ShippingRecipientIdType = Invoice.ShippingRecipientIdType;
+                    draftInvoice.ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber;
+                    draftInvoice.ShippingRecipientTIN = Invoice.ShippingRecipientTIN;
+                    draftInvoice.CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference;
+                    draftInvoice.FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo;
+                    draftInvoice.CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber;
+                    draftInvoice.CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference;
+                    draftInvoice.OtherChargesAmount = Invoice.OtherChargesAmount;
+                    draftInvoice.OtherChargesDescription = Invoice.OtherChargesDescription;
                     draftInvoice.IsSvdp = Invoice.IsSvdp;
 
                     // ✅ Correct buyer relationship handling
@@ -941,7 +984,26 @@ namespace eInvWorld.Pages.Invoices
                         BankAccountNo = Invoice.BankAccountNo,
                         BankName = Invoice.BankName,
                         Attention = Invoice.Attention,
-                        PaymentTerms = Invoice.PaymentTerms ?? ""
+                        PaymentTerms = Invoice.PaymentTerms ?? "",
+                        Incoterms = Invoice.Incoterms,
+                        PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber,
+                        ShippingRecipientName = Invoice.ShippingRecipientName,
+                        ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1,
+                        ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2,
+                        ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3,
+                        ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode,
+                        ShippingRecipientCity = Invoice.ShippingRecipientCity,
+                        ShippingRecipientState = Invoice.ShippingRecipientState,
+                        ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode,
+                        ShippingRecipientIdType = Invoice.ShippingRecipientIdType,
+                        ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber,
+                        ShippingRecipientTIN = Invoice.ShippingRecipientTIN,
+                        CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference,
+                        FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo,
+                        CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber,
+                        CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference,
+                        OtherChargesAmount = Invoice.OtherChargesAmount,
+                        OtherChargesDescription = Invoice.OtherChargesDescription
                     };
                 }
 
@@ -1261,7 +1323,26 @@ namespace eInvWorld.Pages.Invoices
                 Attention = Invoice.Attention,
                 BankName = Invoice.BankName,
                 BankAccountNo = Invoice.BankAccountNo,
-                PaymentTerms = Invoice.PaymentTerms ?? ""
+                PaymentTerms = Invoice.PaymentTerms ?? "",
+                Incoterms = Invoice.Incoterms,
+                PrepaymentReferenceNumber = Invoice.PrepaymentReferenceNumber,
+                ShippingRecipientName = Invoice.ShippingRecipientName,
+                ShippingRecipientAddrLine1 = Invoice.ShippingRecipientAddrLine1,
+                ShippingRecipientAddrLine2 = Invoice.ShippingRecipientAddrLine2,
+                ShippingRecipientAddrLine3 = Invoice.ShippingRecipientAddrLine3,
+                ShippingRecipientPostcode = Invoice.ShippingRecipientPostcode,
+                ShippingRecipientCity = Invoice.ShippingRecipientCity,
+                ShippingRecipientState = Invoice.ShippingRecipientState,
+                ShippingRecipientCountryCode = Invoice.ShippingRecipientCountryCode,
+                ShippingRecipientIdType = Invoice.ShippingRecipientIdType,
+                ShippingRecipientIdNumber = Invoice.ShippingRecipientIdNumber,
+                ShippingRecipientTIN = Invoice.ShippingRecipientTIN,
+                CustomsFormNo1Reference = Invoice.CustomsFormNo1Reference,
+                FreeTradeAgreementInfo = Invoice.FreeTradeAgreementInfo,
+                CertifiedExporterAuthorizationNumber = Invoice.CertifiedExporterAuthorizationNumber,
+                CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference,
+                OtherChargesAmount = Invoice.OtherChargesAmount,
+                OtherChargesDescription = Invoice.OtherChargesDescription
             };
 
             _logger.LogDebug("CreateInvoiceHeader: Mapped UUID={UUID}", invoiceHeader.UUID);
