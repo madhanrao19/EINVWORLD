@@ -4,7 +4,7 @@ Complete technical documentation for **EINVWORLD (eInvWorld)** — an e-invoicin
 **Malaysia's LHDN MyInvois** system, self-hosted on a single in-house **Windows / IIS + SQL Server**
 server.
 
-> This document describes the system as of **v1.22.0**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
+> This document describes the system as of **v1.23.0**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
 > for deployment see [`IIS-DEPLOYMENT-GUIDE.md`](IIS-DEPLOYMENT-GUIDE.md) and [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md);
 > for secrets see [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
@@ -387,11 +387,13 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
   is ordered Select Saved Item → Item Code → Description → Classification → Unit, followed by Quantity &
   Pricing, then four optional, collapsed-by-default sections — Discount, Fee/Charge, Taxes (multi-entry,
   unchanged), and line-level Additional Information (Product Tariff Code, Country of Origin — both
-  mapped into the submitted UBL payload). A new invoice-level **Additional Information** section
-  (Payment & Prepayment/Incoterms, Shipping Recipient, Customs/Import-Export) is captured and persisted
-  the same way but not yet mapped into the LHDN payload (see `DEPLOY-NOTES.md` for the migration note).
-  Line-level discount/fee now correctly nets the LHDN tax base and reaches the UBL `AllowanceCharge`
-  (previously silently dropped/miscalculated).
+  mapped into the submitted UBL payload). An invoice-level **Additional Information** section covers
+  Payment & Prepayment/Incoterms, Shipping Recipient, and Customs/Import-Export — all now mapped into
+  the submitted LHDN payload as of v1.23.0 (`Delivery.DeliveryParty`, top-level
+  `AdditionalDocumentReference`, `AccountingSupplierParty.AdditionalAccountID`,
+  `Shipment.FreightAllowanceCharge`; only Incoterms' placement — `Shipment.ID`, pre-existing — hasn't
+  been re-verified against the LHDN sample structure). Line-level discount/fee now correctly nets the
+  LHDN tax base and reaches the UBL `AllowanceCharge` (previously silently dropped/miscalculated).
 - Submit to MyInvois (UBL 2.1 JSON), poll status, capture LongId/QR, **cancel/reject** within the 72h
   window, view validation errors with a human-readable rejection helper.
 - **Manual sync / import / refresh** run as durable background jobs (visible on **Sync Jobs**).
