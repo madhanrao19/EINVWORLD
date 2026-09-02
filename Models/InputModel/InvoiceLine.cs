@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using eInvWorld.Models.JsonModels;
 using Newtonsoft.Json;
 
@@ -24,6 +25,28 @@ namespace eInvWorld.Models.InputModel
         public decimal? DiscountAmount { get; set; }  // Discount applied to the line
         public string ClassificationCode { get; set; } = null!;  // Classification Code (MSIC Code)
 
+        [Display(Name = "Discount Reason")]
+        [StringLength(200, ErrorMessage = "Discount Reason cannot exceed 200 characters.")]
+        public string? DiscountReason { get; set; }
+
+        [Display(Name = "Fee / Charge Amount")]
+        public decimal? FeeChargeAmount { get; set; }  // Line-level fee/charge, added to the taxable base
+
+        [Display(Name = "Fee / Charge Reason")]
+        [StringLength(200, ErrorMessage = "Fee/Charge Reason cannot exceed 200 characters.")]
+        public string? FeeChargeReason { get; set; }
+
+        [Display(Name = "Product Tariff Code")]
+        [StringLength(50, ErrorMessage = "Product Tariff Code cannot exceed 50 characters.")]
+        public string? ProductTariffCode { get; set; }  // Customs tariff code, primarily for goods
+
+        [Display(Name = "Country of Origin")]
+        [StringLength(3, ErrorMessage = "Country of Origin must be a 3-letter ISO code.")]
+        public string? CountryOfOrigin { get; set; }  // ISO 3166-1 alpha-3; falls back to "MYS" if unset
+
+        [ForeignKey("CountryOfOrigin")]
+        public virtual CountryCode? CountryOfOriginRef { get; set; }
+
         // Navigation Properties
         [JsonIgnore] // Prevent circular reference during serialization
         public virtual InvoiceHeader InvoiceHeader { get; set; } = null!;  // Parent invoice header
@@ -44,7 +67,8 @@ namespace eInvWorld.Models.InputModel
 
             Subtotal = Quantity.Value * UnitPrice.Value;
             DiscountAmount ??= 0;
-            AmountExclTax = Subtotal - DiscountAmount;
+            FeeChargeAmount ??= 0;
+            AmountExclTax = Subtotal - DiscountAmount + FeeChargeAmount;
 
             // ✅ Calculate Total Tax Amount from Associated Taxes
             decimal totalTax = 0;
