@@ -698,5 +698,166 @@ namespace EINVWORLD.Tests
 
             Assert.Equal("MYS", originCode);
         }
+
+        // ── Delivery / Shipping Recipient, Other Charges (added when wiring these fields into the
+        // LHDN payload) ──────────────────────────────────────────────────────────────────────────
+
+        [Fact]
+        public void Map_NoShippingRecipient_DeliveryPartyOmitted()
+        {
+            // Regression: previously every invoice submitted a DeliveryParty with every field blank.
+            // SkipEmptyCollectionsContractResolver omits an empty list entirely rather than emitting [].
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var delivery = doc.RootElement.GetProperty("Invoice")[0].GetProperty("Delivery")[0];
+
+            Assert.False(delivery.TryGetProperty("DeliveryParty", out _));
+        }
+
+        [Fact]
+        public void Map_WithShippingRecipient_DeliveryPartyPopulated()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.ShippingRecipientName = "Jane Recipient";
+            header.ShippingRecipientAddrLine1 = "Lot 1";
+            header.ShippingRecipientCity = "Kuala Lumpur";
+            header.ShippingRecipientPostcode = "50480";
+            header.ShippingRecipientState = "10";
+            header.ShippingRecipientCountryCode = "MYS";
+            header.ShippingRecipientTIN = "IG1234567890";
+            header.ShippingRecipientIdType = "BRN";
+            header.ShippingRecipientIdNumber = "201901234567";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var party = doc.RootElement.GetProperty("Invoice")[0]
+                .GetProperty("Delivery")[0].GetProperty("DeliveryParty")[0];
+
+            Assert.Equal("Jane Recipient",
+                party.GetProperty("PartyLegalEntity")[0].GetProperty("RegistrationName")[0].GetProperty("_").GetString());
+
+            var address = party.GetProperty("PostalAddress")[0];
+            Assert.Equal("Kuala Lumpur", address.GetProperty("CityName")[0].GetProperty("_").GetString());
+            Assert.Equal("50480", address.GetProperty("PostalZone")[0].GetProperty("_").GetString());
+            Assert.Equal("Lot 1", address.GetProperty("AddressLine")[0].GetProperty("Line")[0].GetProperty("_").GetString());
+            Assert.Equal("MYS", address.GetProperty("Country")[0].GetProperty("IdentificationCode")[0].GetProperty("_").GetString());
+
+            var ids = party.GetProperty("PartyIdentification");
+            Assert.Equal(2, ids.GetArrayLength());
+            Assert.Equal("IG1234567890", ids[0].GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.Equal("TIN", ids[0].GetProperty("ID")[0].GetProperty("schemeID").GetString());
+            Assert.Equal("201901234567", ids[1].GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.Equal("BRN", ids[1].GetProperty("ID")[0].GetProperty("schemeID").GetString());
+        }
+
+        [Fact]
+        public void Map_OtherCharges_PopulateShipmentFreightAllowanceCharge()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.OtherChargesAmount = 25.50m;
+            header.OtherChargesDescription = "Handling fee";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var freight = doc.RootElement.GetProperty("Invoice")[0]
+                .GetProperty("Delivery")[0].GetProperty("Shipment")[0].GetProperty("FreightAllowanceCharge")[0];
+
+            Assert.Equal(25.50m, freight.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+            Assert.Equal("Handling fee", freight.GetProperty("AllowanceChargeReason")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_NoOtherCharges_FreightAllowanceChargeDefaultsToZero()
+        {
+            // Regression: unchanged behavior when the field is unset.
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var freight = doc.RootElement.GetProperty("Invoice")[0]
+                .GetProperty("Delivery")[0].GetProperty("Shipment")[0].GetProperty("FreightAllowanceCharge")[0];
+
+            Assert.Equal(0m, freight.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+        }
+
+        // ── Customs / Import-Export (top-level AdditionalDocumentReference + Certified Exporter
+        // AdditionalAccountID), added when wiring these fields into the LHDN payload ────────────────
+
+        [Fact]
+        public void Map_NoCustomsFields_AdditionalDocumentReferenceOmitted()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var invoice = doc.RootElement.GetProperty("Invoice")[0];
+
+            Assert.False(invoice.TryGetProperty("AdditionalDocumentReference", out _));
+        }
+
+        [Fact]
+        public void Map_CustomsFormNo1_EmitsCustomsImportFormReference()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.CustomsFormNo1Reference = "E23456789123,E98765432123";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var entry = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AdditionalDocumentReference")[0];
+
+            Assert.Equal("E23456789123,E98765432123", entry.GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.Equal("CustomsImportForm", entry.GetProperty("DocumentType")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_FreeTradeAgreementInfo_EmitsFtaReferenceWithDescription()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.FreeTradeAgreementInfo = "ASEAN-Australia-New Zealand FTA (AANZFTA)";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var entry = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AdditionalDocumentReference")[0];
+
+            Assert.Equal("FTA", entry.GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.Equal("FreeTradeAgreement", entry.GetProperty("DocumentType")[0].GetProperty("_").GetString());
+            Assert.Equal("ASEAN-Australia-New Zealand FTA (AANZFTA)",
+                entry.GetProperty("DocumentDescription")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_CustomsFormNo2_EmitsK2Reference()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.CustomsFormNo2Reference = "E12345678912,E23456789123";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var entry = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AdditionalDocumentReference")[0];
+
+            Assert.Equal("E12345678912,E23456789123", entry.GetProperty("ID")[0].GetProperty("_").GetString());
+            Assert.Equal("K2", entry.GetProperty("DocumentType")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_NoCertifiedExporterAuthNumber_AdditionalAccountIDOmitted()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var supplier = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AccountingSupplierParty")[0];
+
+            Assert.False(supplier.TryGetProperty("AdditionalAccountID", out _));
+        }
+
+        [Fact]
+        public void Map_CertifiedExporterAuthNumber_EmitsAdditionalAccountID()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.CertifiedExporterAuthorizationNumber = "CPT-CCN-W-211111-KL-000002";
+
+            var json = new InvoiceMapper().MapToJsonModel(header);
+            using var doc = JsonDocument.Parse(json);
+            var accountId = doc.RootElement.GetProperty("Invoice")[0]
+                .GetProperty("AccountingSupplierParty")[0].GetProperty("AdditionalAccountID")[0];
+
+            Assert.Equal("CPT-CCN-W-211111-KL-000002", accountId.GetProperty("_").GetString());
+            Assert.Equal("CertEX", accountId.GetProperty("schemeAgencyName").GetString());
+        }
     }
 }
