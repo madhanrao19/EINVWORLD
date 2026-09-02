@@ -70,7 +70,9 @@ namespace EINVWORLD.Helpers
                 return (false, "Unable to determine taxpayer TIN.");
 
             string accessToken = await _tokenService.GetAccessTokenForTIN(tin);
-            var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents);
+            // tin must be passed here: this helper runs from a background job with no HTTP session,
+            // and SubmitDocumentsAsync falls back to a session-based token lookup when tin is omitted.
+            var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, tin);
             _logger.LogInformation("📨 API response: {Response}", apiResponseJson);
 
             var apiResponse = JsonSerializer.Deserialize<SuccessSubmit>(apiResponseJson);

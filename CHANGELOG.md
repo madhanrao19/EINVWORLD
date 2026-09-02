@@ -1,6 +1,19 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.0`** (`AppInfo:Version` in `appsettings.json`). v1.25.0 is a **minor**
+> **Current version: `v1.25.1`** (`AppInfo:Version` in `appsettings.json`). v1.25.1 is a **patch**
+> release: fixes a background-submission bug found live on Staging — a manual LHDN submission that
+> failed and got automatically retried by the durable job queue always failed the retry too, with
+> `TIN not found in session. Ensure it's stored at login.` `InvoiceSubmissionHelper.SubmitInvoiceAsync`
+> (the shared helper behind both the background retry job and Smart Capture Stage 4's conditional
+> auto-submit) already resolved the invoice's TIN and even pre-fetched a token with it, but then
+> called `LHDNApiService.SubmitDocumentsAsync(documents)` without passing that TIN through — dropping
+> into a session-based token-lookup fallback that has no HTTP session to read from a background job,
+> throwing every time. Every other caller in the codebase already passed `tin` correctly; this was the
+> one that didn't. Fix: pass `tin` through (one line). This also means Smart Capture Stage 4
+> auto-submission (`SmartCapture:AutoSubmitEnabled`, off by default everywhere) would have failed
+> 100% of the time it ever actually tried to submit, on any environment that had it turned on — no
+> known environment has enabled it yet, so no live impact beyond Staging's manual-retry case just
+> found. See the dated entry below for details. v1.25.0 was a **minor**
 > release: Create Invoice's Step 2 (Items) now has the same persistent sticky right-rail — a live
 > "Invoice Summary" totals card plus a "Validation Checklist" — that Step 1 (Basic Information) and
 > Step 3 (Review & Submit) already had. Previously Step 2 only had a plain, non-sticky summary card
@@ -196,6 +209,25 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.25.1 (Fix background-submission retry: missing TIN broke session-less token lookup)
+
+> Found live on Staging: a submission failed with an LHDN-side `SystemError` ("technical
+> difficulties"), the app correctly queued an automatic retry, and that retry failed too — every
+> time — with a completely different, app-side error.
+
+### Fixed
+- **`Helpers/InvoiceSubmissionHelper.cs` (`SubmitInvoiceAsync`)** — the shared helper behind the
+  durable background retry job (`SyncJobHandlers`) and Smart Capture Stage 4's conditional
+  auto-submit. It already resolved the invoice's TIN (`TinHelper.ResolveSubmitterTin`) and fetched
+  an access token with it (`ITokenService.GetAccessTokenForTIN`), but then called
+  `ILHDNApiService.SubmitDocumentsAsync(documents)` — without passing that TIN through. With `tin`
+  omitted, `SubmitDocumentsAsync` falls back to `ITokenService.GetAccessToken()`, which reads the TIN
+  from `HttpContext.Session` — nonexistent in a background job, throwing
+  `TIN not found in session. Ensure it's stored at login.` on every attempt. Every other call site in
+  the codebase already passed `tin` explicitly; this was the one that didn't. Fix: pass `tin` through.
+- No schema change, no change to what's submitted to LHDN when a submission actually reaches the API
+  — this only affects whether a background-initiated submission could authenticate at all.
 
 ## 📅 2026-09-02 — v1.25.0 (Create Invoice Items step gets the sticky Summary + Validation rail)
 
