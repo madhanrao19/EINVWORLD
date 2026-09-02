@@ -3,12 +3,21 @@
         // Track the last selected buyer
         let lastSelectedBuyerId = null;
 
+        // Escapes user-entered text before it's interpolated into innerHTML (Review step item
+        // summary etc.) - an item description/tariff code/country is free text a user controls.
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
         // Classification/unit/tax-category/saved-item dropdown HTML for dynamic item creation.
         // Built server-side in CreateInvoice.cshtml (Razor loops over Model data) and exposed
         // via window.* because this file cannot contain Razor syntax.
         const classificationOptionsHtml = window.classificationOptionsHtml;
         const unitOptionsHtml = window.unitOptionsHtml;
         const taxCategoryOptionsHtml = window.taxCategoryOptionsHtml;
+        const countryOptionsHtml = window.countryOptionsHtml;
 
         // Debug: Log dropdown data immediately
         console.log('🔍 Dropdown HTML generated:', {
@@ -578,7 +587,16 @@
                         allowClear: true,
                         minimumResultsForSearch: 0 // Always show search box
                     });
-                    
+
+                    // Country of Origin dropdowns (line-level Additional Information) - Make searchable
+                    $('select[name*=".CountryOfOrigin"]').select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Select Country',
+                        allowClear: true,
+                        minimumResultsForSearch: 0 // Always show search box
+                    });
+
                     console.log('✅ Select2 initialization completed after delay');
                     
                     // Re-bind document type change handler after Select2 initialization
@@ -1333,6 +1351,10 @@
                     select.addEventListener('change', () => toggleExemptionReason(select));
                 });
 
+                // Wire the Discount/Fee "Rate %" convenience inputs and Amount inputs for every
+                // server-rendered row (dynamically-added rows wire this themselves in addItemRow).
+                bindDiscountFeeRateInputs(document);
+
                 // Set default values for existing inputs to trigger calculations
                 document.querySelectorAll('.quantity-input').forEach(input => {
                     if (!input.value || input.value === '') {
@@ -1411,16 +1433,36 @@
                 if (reviewBody) {
                     reviewBody.innerHTML = '';
                     itemRows.forEach(row => {
-                        const desc = row.querySelector('.item-description')?.value || '(no description)';
+                        const desc = escapeHtml(row.querySelector('.item-description')?.value || '(no description)');
                         const qty = row.querySelector('.quantity-input')?.value || '0';
                         const price = row.querySelector('.price-input')?.value || '0';
                         const subtotalEl = row.querySelector('[id^="subtotal-"]');
                         const rowTotalEl = row.querySelector('[id^="rowtotal-"]');
                         const subtotal = parseFloat(subtotalEl?.textContent) || 0;
                         const rowTotal = parseFloat(rowTotalEl?.textContent) || 0;
-                        const tax = (rowTotal - subtotal).toFixed(2);
+                        // Tax = Row Total - Total Excl Tax (post discount/fee), not - raw Subtotal,
+                        // so a discounted/fee'd line's Tax column stays accurate.
+                        const exclTax = getLineExclTaxAmount(row, subtotal);
+                        const tax = (rowTotal - exclTax).toFixed(2);
+
+                        // Show discount/fee/tariff/country only when the line actually has one -
+                        // a compact note under the description, not permanent extra columns.
+                        const discount = parseFloat(row.querySelector('.discount-amount-input')?.value) || 0;
+                        const fee = parseFloat(row.querySelector('.fee-amount-input')?.value) || 0;
+                        const tariff = escapeHtml(row.querySelector('input[name*=".ProductTariffCode"]')?.value || '');
+                        const countrySelect = row.querySelector('select[name*=".CountryOfOrigin"]');
+                        const country = escapeHtml(countrySelect?.selectedOptions?.[0]?.text || '');
+                        const notes = [];
+                        if (discount) notes.push(`Discount: ${discount.toFixed(2)}`);
+                        if (fee) notes.push(`Fee/Charge: ${fee.toFixed(2)}`);
+                        if (tariff) notes.push(`Tariff Code: ${tariff}`);
+                        if (country) notes.push(`Origin: ${country}`);
+                        const notesHtml = notes.length
+                            ? `<div class="text-muted" style="font-size:.72rem;">${notes.join(' &middot; ')}</div>`
+                            : '';
+
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${desc}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
+                        tr.innerHTML = `<td>${desc}${notesHtml}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
                         reviewBody.appendChild(tr);
                     });
                 }
@@ -2157,8 +2199,47 @@
             calculateTotals();
         }
 
+        // Total Excl Tax = Subtotal - Discount + Fee/Charge (matches InvoiceLine.CalculateAmounts()
+        // and InvoiceMapper's LHDN submission math), then tax is computed on that net base.
+        function getLineExclTaxAmount(row, itemSubtotal) {
+            const discountInput = row.querySelector('.discount-amount-input');
+            const feeInput = row.querySelector('.fee-amount-input');
+            const discount = parseFloat(discountInput?.value) || 0;
+            const fee = parseFloat(feeInput?.value) || 0;
+            return itemSubtotal - discount + fee;
+        }
+
+        // Wires the optional "Rate %" convenience inputs next to Discount/Fee Amount: typing a rate
+        // computes Amount = Subtotal * Rate / 100 and fills the real (bound, persisted) Amount field.
+        // Rate itself is never submitted - no DiscountRate/FeeChargeRate column exists, matching the
+        // LHDN payload's line-level AllowanceCharge, which carries an amount, not a rate. Also wires
+        // the Amount inputs themselves so typing directly into them recalculates totals immediately.
+        function bindDiscountFeeRateInputs(scope) {
+            const wireRateInput = (rateInput, targetSelectorAttr) => {
+                rateInput.addEventListener('input', () => {
+                    const row = rateInput.closest('.item-row');
+                    const amountInput = row?.querySelector(rateInput.getAttribute(targetSelectorAttr));
+                    const quantityInput = row?.querySelector('.quantity-input');
+                    const priceInput = row?.querySelector('.price-input');
+                    if (!amountInput || !quantityInput || !priceInput) return;
+
+                    const subtotal = (parseFloat(quantityInput.value) || 0) * (parseFloat(priceInput.value) || 0);
+                    const rate = parseFloat(rateInput.value) || 0;
+                    amountInput.value = (subtotal * rate / 100).toFixed(2);
+                    amountInput.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+            };
+
+            scope.querySelectorAll('.discount-rate').forEach(input => wireRateInput(input, 'data-discount-target'));
+            scope.querySelectorAll('.fee-rate').forEach(input => wireRateInput(input, 'data-fee-target'));
+            scope.querySelectorAll('.discount-amount-input, .fee-amount-input').forEach(amountInput => {
+                amountInput.addEventListener('input', () => calculateTotals());
+            });
+        }
+
         function calculateTotals() {
-            let subtotal = 0;
+            let subtotal = 0;      // gross Sum(Qty*UnitPrice) - shown as "Subtotal" (pre-discount/fee)
+            let exclTaxTotal = 0;  // Sum(Subtotal - Discount + Fee/Charge) - the true taxable-base total
             let taxAmount = 0;
 
             // Debug: Log the number of item rows found
@@ -2177,9 +2258,12 @@
                     itemSubtotal = quantity * price;
                     subtotal += itemSubtotal;
 
-                    console.log(`📊 Item ${index + 1}: Qty=${quantity}, Price=${price}, Subtotal=${itemSubtotal.toFixed(2)}`);
+                    const itemExclTax = getLineExclTaxAmount(row, itemSubtotal);
+                    exclTaxTotal += itemExclTax;
 
-                    // Calculate tax for this item
+                    console.log(`📊 Item ${index + 1}: Qty=${quantity}, Price=${price}, Subtotal=${itemSubtotal.toFixed(2)}, ExclTax=${itemExclTax.toFixed(2)}`);
+
+                    // Calculate tax for this item (on the discount/fee-netted base, not raw subtotal)
                     const taxSection = row.querySelector('.tax-section');
                     if (taxSection) {
                         let itemTaxAmount = 0;
@@ -2188,7 +2272,7 @@
                             const taxAmountInput = taxRow.querySelector('input[name*="TaxAmount"]');
                             if (taxPercentInput) {
                                 const percent = parseFloat(taxPercentInput.value) || 0;
-                                const taxValue = Math.round((itemSubtotal * percent / 100) * 100) / 100;
+                                const taxValue = Math.round((itemExclTax * percent / 100) * 100) / 100;
                                 itemTaxAmount += taxValue;
                                 if (taxAmountInput) {
                                     taxAmountInput.value = taxValue.toFixed(2);
@@ -2199,14 +2283,14 @@
 
                         const rowTotalElement = row.querySelector('[id^="rowtotal-"]');
                         if (rowTotalElement) {
-                            rowTotalElement.textContent = (itemSubtotal + itemTaxAmount).toFixed(2);
+                            rowTotalElement.textContent = (itemExclTax + itemTaxAmount).toFixed(2);
                         }
                     }
                 }
             });
 
-            const totalAmount = Math.round((subtotal + taxAmount) * 100) / 100;
-            console.log(`💰 Totals: Subtotal=${subtotal.toFixed(2)}, Tax=${taxAmount.toFixed(2)}, Total=${totalAmount.toFixed(2)}`);
+            const totalAmount = Math.round((exclTaxTotal + taxAmount) * 100) / 100;
+            console.log(`💰 Totals: Subtotal=${subtotal.toFixed(2)}, ExclTax=${exclTaxTotal.toFixed(2)}, Tax=${taxAmount.toFixed(2)}, Total=${totalAmount.toFixed(2)}`);
 
             // Update summary if elements exist
             const summarySubtotal = document.getElementById('summarySubtotal');
@@ -2264,7 +2348,7 @@
             const totalAmountExclTax = document.getElementById('totalAmountExclTax');
             const totalTaxAmount = document.getElementById('totalTaxAmount');
             const totalAmountIncTax = document.getElementById('totalAmountIncTax');
-            if (totalAmountExclTax) totalAmountExclTax.value = subtotal.toFixed(2);
+            if (totalAmountExclTax) totalAmountExclTax.value = exclTaxTotal.toFixed(2);
             if (totalTaxAmount) totalTaxAmount.value = taxAmount.toFixed(2);
             if (totalAmountIncTax) totalAmountIncTax.value = totalAmount.toFixed(2);
         }
@@ -2498,7 +2582,9 @@
                 newRow.style.borderBottom = '1px solid var(--einv-border, #e9ecef)';
                 newRow.setAttribute('data-item-index', itemCount);
 
-                // Phase 2D dense-grid row (mirrors _CreateInvoice_Step2Items.cshtml's server-rendered markup)
+                // Mirrors _CreateInvoice_Step2Items.cshtml's server-rendered markup: Item/Service
+                // (Select Saved Item -> Item Code -> Item Description -> Classification -> Unit),
+                // Quantity & Pricing, then collapsed-by-default Discount/Fee-Charge/Taxes/Additional-Info.
                 newRow.innerHTML = `
                     <div class="irow">
                         <div class="irow-num">${itemCount + 1}</div>
@@ -2507,8 +2593,8 @@
                                 <option value="">-- Select Saved Item --</option>
                                 ${savedItemsOptionsHtml}
                             </select>
+                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
                             <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
                         </div>
                         <div class="irow-classification">
                             <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
@@ -2517,10 +2603,6 @@
                                 ${classificationOptionsHtml}
                             </select>
                         </div>
-                        <div class="irow-qty">
-                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
-                        </div>
                         <div class="irow-unit">
                             <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
                             <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
@@ -2528,16 +2610,13 @@
                                 ${unitOptionsHtml}
                             </select>
                         </div>
+                        <div class="irow-qty">
+                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                        </div>
                         <div class="irow-price">
                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
                             <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
-                        </div>
-                        <div class="irow-tax">
-                            <div class="irow-mlabel">Tax</div>
-                            <div class="tax-section" id="taxes-${itemCount}"></div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
-                                <i class="ri-add-line me-1"></i>Tax
-                            </button>
                         </div>
                         <div class="irow-total">
                             <div class="irow-mlabel">Subtotal</div>
@@ -2552,6 +2631,81 @@
                             <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
                                 <i class="ri-delete-bin-line"></i>
                             </button>
+                        </div>
+                    </div>
+                    <div class="irow-extras">
+                        <div class="irow-extras-toggles">
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#discount-${itemCount}">
+                                <i class="ri-price-tag-3-line"></i>Discount
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#fee-${itemCount}">
+                                <i class="ri-add-circle-line"></i>Fee / Charge
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#taxesCollapse-${itemCount}">
+                                <i class="ri-percent-line"></i>Taxes
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#lineinfo-${itemCount}">
+                                <i class="ri-information-line"></i>Additional Information
+                            </button>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="discount-${itemCount}">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="irow-mlabel">Rate</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control discount-rate" step="0.01" placeholder="0" data-discount-target="#discount-amount-${itemCount}" data-item-index="${itemCount}" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="irow-mlabel">Amount</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].DiscountAmount" id="discount-amount-${itemCount}" type="number" class="form-control form-control-sm discount-amount-input" step="0.01" placeholder="0.00" />
+                                </div>
+                                <div class="col-12 col-md-7">
+                                    <label class="irow-mlabel">Description / Reason</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].DiscountReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this discount" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="fee-${itemCount}">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="irow-mlabel">Rate</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control fee-rate" step="0.01" placeholder="0" data-fee-target="#fee-amount-${itemCount}" data-item-index="${itemCount}" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="irow-mlabel">Amount</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].FeeChargeAmount" id="fee-amount-${itemCount}" type="number" class="form-control form-control-sm fee-amount-input" step="0.01" placeholder="0.00" />
+                                </div>
+                                <div class="col-12 col-md-7">
+                                    <label class="irow-mlabel">Description / Reason</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].FeeChargeReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this fee/charge" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="taxesCollapse-${itemCount}">
+                            <div class="tax-section" id="taxes-${itemCount}"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                <i class="ri-add-line me-1"></i>Tax
+                            </button>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="lineinfo-${itemCount}">
+                            <div class="row g-2">
+                                <div class="col-6 col-md-4">
+                                    <label class="irow-mlabel">Product Tariff Code</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].ProductTariffCode" class="form-control form-control-sm" maxlength="50" placeholder="Primarily for goods" />
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="irow-mlabel">Country of Origin</label>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].CountryOfOrigin" class="form-select form-select-sm">
+                                        <option value="">-- Select --</option>
+                                        ${countryOptionsHtml}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2601,6 +2755,23 @@
                     });
                     console.log('✅ Select2 initialized for new classification dropdown');
                 }
+
+                // Initialize Select2 for the new Country of Origin dropdown (line-level Additional Info)
+                const newCountrySelect = newRow.querySelector('select[name^="Invoice.InvoiceLines"][name$=".CountryOfOrigin"]');
+                if (newCountrySelect && typeof $ !== 'undefined' && $.fn.select2) {
+                    $(newCountrySelect).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Select Country',
+                        allowClear: true,
+                        minimumResultsForSearch: 0
+                    });
+                }
+
+                // Wire the Discount/Fee "Rate %" convenience inputs (JS-only, not persisted - the
+                // bound Amount field is the actual source of truth, same as every other calculated
+                // total in this form)
+                bindDiscountFeeRateInputs(newRow);
 
                 // Get references to form elements for event listeners
                 const quantityInput = newRow.querySelector('.quantity-input');
@@ -2742,7 +2913,13 @@
                     itemDescription: sourceRow.querySelector('.item-description')?.value || '',
                     quantity: sourceRow.querySelector('.quantity-input')?.value || '0',
                     unitOfMeasure: sourceRow.querySelector('select[name*=".UnitOfMeasure"]')?.value || '',
-                    unitPrice: sourceRow.querySelector('.price-input')?.value || '0'
+                    unitPrice: sourceRow.querySelector('.price-input')?.value || '0',
+                    discountAmount: sourceRow.querySelector('.discount-amount-input')?.value || '',
+                    discountReason: sourceRow.querySelector('input[name*=".DiscountReason"]')?.value || '',
+                    feeChargeAmount: sourceRow.querySelector('.fee-amount-input')?.value || '',
+                    feeChargeReason: sourceRow.querySelector('input[name*=".FeeChargeReason"]')?.value || '',
+                    productTariffCode: sourceRow.querySelector('input[name*=".ProductTariffCode"]')?.value || '',
+                    countryOfOrigin: sourceRow.querySelector('select[name*=".CountryOfOrigin"]')?.value || ''
                 };
 
                 // Get tax data from source row
@@ -2762,7 +2939,7 @@
                 });
 
                 // 🚨 CRITICAL FIX: Create BLANK HTML for new row (NO INJECTED TEXT VALUES)
-                // Phase 2D dense-grid row (mirrors _CreateInvoice_Step2Items.cshtml / addItemRow's markup)
+                // Mirrors _CreateInvoice_Step2Items.cshtml / addItemRow's markup
                 newRow.innerHTML = `
                     <div class="irow">
                         <div class="irow-num">${itemCount + 1}</div>
@@ -2771,8 +2948,8 @@
                                 <option value="">-- Select Saved Item --</option>
                                 ${savedItemsOptionsHtml}
                             </select>
+                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
                             <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                            <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code" placeholder="Item Code" />
                         </div>
                         <div class="irow-classification">
                             <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
@@ -2781,10 +2958,6 @@
                                 ${classificationOptionsHtml}
                             </select>
                         </div>
-                        <div class="irow-qty">
-                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
-                        </div>
                         <div class="irow-unit">
                             <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
                             <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
@@ -2792,16 +2965,13 @@
                                 ${unitOptionsHtml}
                             </select>
                         </div>
+                        <div class="irow-qty">
+                            <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                        </div>
                         <div class="irow-price">
                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
                             <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
-                        </div>
-                        <div class="irow-tax">
-                            <div class="irow-mlabel">Tax</div>
-                            <div class="tax-section" id="taxes-${itemCount}"></div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
-                                <i class="ri-add-line me-1"></i>Tax
-                            </button>
                         </div>
                         <div class="irow-total">
                             <div class="irow-mlabel">Subtotal</div>
@@ -2816,6 +2986,81 @@
                             <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
                                 <i class="ri-delete-bin-line"></i>
                             </button>
+                        </div>
+                    </div>
+                    <div class="irow-extras">
+                        <div class="irow-extras-toggles">
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#discount-${itemCount}">
+                                <i class="ri-price-tag-3-line"></i>Discount
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#fee-${itemCount}">
+                                <i class="ri-add-circle-line"></i>Fee / Charge
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#taxesCollapse-${itemCount}">
+                                <i class="ri-percent-line"></i>Taxes
+                            </button>
+                            <button type="button" class="irow-extras-toggle" data-bs-toggle="collapse" data-bs-target="#lineinfo-${itemCount}">
+                                <i class="ri-information-line"></i>Additional Information
+                            </button>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="discount-${itemCount}">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="irow-mlabel">Rate</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control discount-rate" step="0.01" placeholder="0" data-discount-target="#discount-amount-${itemCount}" data-item-index="${itemCount}" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="irow-mlabel">Amount</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].DiscountAmount" id="discount-amount-${itemCount}" type="number" class="form-control form-control-sm discount-amount-input" step="0.01" placeholder="0.00" />
+                                </div>
+                                <div class="col-12 col-md-7">
+                                    <label class="irow-mlabel">Description / Reason</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].DiscountReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this discount" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="fee-${itemCount}">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="irow-mlabel">Rate</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control fee-rate" step="0.01" placeholder="0" data-fee-target="#fee-amount-${itemCount}" data-item-index="${itemCount}" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="irow-mlabel">Amount</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].FeeChargeAmount" id="fee-amount-${itemCount}" type="number" class="form-control form-control-sm fee-amount-input" step="0.01" placeholder="0.00" />
+                                </div>
+                                <div class="col-12 col-md-7">
+                                    <label class="irow-mlabel">Description / Reason</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].FeeChargeReason" class="form-control form-control-sm" maxlength="200" placeholder="Reason for this fee/charge" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="taxesCollapse-${itemCount}">
+                            <div class="tax-section" id="taxes-${itemCount}"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                                <i class="ri-add-line me-1"></i>Tax
+                            </button>
+                        </div>
+                        <div class="collapse irow-extras-panel" id="lineinfo-${itemCount}">
+                            <div class="row g-2">
+                                <div class="col-6 col-md-4">
+                                    <label class="irow-mlabel">Product Tariff Code</label>
+                                    <input name="Invoice.InvoiceLines[${itemCount}].ProductTariffCode" class="form-control form-control-sm" maxlength="50" placeholder="Primarily for goods" />
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <label class="irow-mlabel">Country of Origin</label>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].CountryOfOrigin" class="form-select form-select-sm">
+                                        <option value="">-- Select --</option>
+                                        ${countryOptionsHtml}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2836,6 +3081,29 @@
                 if (newDescInput) newDescInput.value = sourceData.itemDescription;
                 if (newQtyInput) newQtyInput.value = sourceData.quantity;
                 if (newPriceInput) newPriceInput.value = sourceData.unitPrice;
+
+                const newDiscountAmountInput = newRow.querySelector('.discount-amount-input');
+                const newDiscountReasonInput = newRow.querySelector('input[name*=".DiscountReason"]');
+                const newFeeAmountInput = newRow.querySelector('.fee-amount-input');
+                const newFeeReasonInput = newRow.querySelector('input[name*=".FeeChargeReason"]');
+                const newTariffInput = newRow.querySelector('input[name*=".ProductTariffCode"]');
+                const newCountrySelect = newRow.querySelector('select[name*=".CountryOfOrigin"]');
+                if (newDiscountAmountInput) newDiscountAmountInput.value = sourceData.discountAmount;
+                if (newDiscountReasonInput) newDiscountReasonInput.value = sourceData.discountReason;
+                if (newFeeAmountInput) newFeeAmountInput.value = sourceData.feeChargeAmount;
+                if (newFeeReasonInput) newFeeReasonInput.value = sourceData.feeChargeReason;
+                if (newTariffInput) newTariffInput.value = sourceData.productTariffCode;
+                if (newCountrySelect && sourceData.countryOfOrigin) newCountrySelect.value = sourceData.countryOfOrigin;
+                bindDiscountFeeRateInputs(newRow);
+                if (typeof $ !== 'undefined' && $.fn.select2 && newCountrySelect) {
+                    $(newCountrySelect).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: 'Select Country',
+                        allowClear: true,
+                        minimumResultsForSearch: 0
+                    });
+                }
 
                 // Set the selected values for dropdowns
                 if (classificationSelect && sourceData.classificationCode) {
@@ -3034,6 +3302,40 @@
                 const addTaxBtn = row.querySelector('button[onclick^="addTaxRow"]');
                 if (addTaxBtn) {
                     addTaxBtn.setAttribute('onclick', `addTaxRow(${index})`);
+                }
+
+                // Update the progressive Discount/Fee/Taxes/Additional-Info collapse ids and their
+                // toggle buttons' data-bs-target, plus the Discount/Fee Amount input ids and the Rate
+                // inputs' data-*-target attributes that point at them.
+                const discountPanel = row.querySelector('[id^="discount-"]');
+                if (discountPanel) discountPanel.id = `discount-${index}`;
+                const feePanel = row.querySelector('[id^="fee-"]');
+                if (feePanel) feePanel.id = `fee-${index}`;
+                const taxesPanel = row.querySelector('[id^="taxesCollapse-"]');
+                if (taxesPanel) taxesPanel.id = `taxesCollapse-${index}`;
+                const lineInfoPanel = row.querySelector('[id^="lineinfo-"]');
+                if (lineInfoPanel) lineInfoPanel.id = `lineinfo-${index}`;
+
+                const discountAmountEl = row.querySelector('[id^="discount-amount-"]');
+                if (discountAmountEl) discountAmountEl.id = `discount-amount-${index}`;
+                const feeAmountEl = row.querySelector('[id^="fee-amount-"]');
+                if (feeAmountEl) feeAmountEl.id = `fee-amount-${index}`;
+
+                row.querySelectorAll('.irow-extras-toggle').forEach(btn => {
+                    const target = btn.getAttribute('data-bs-target');
+                    if (target) {
+                        btn.setAttribute('data-bs-target', target.replace(/-\d+$/, `-${index}`));
+                    }
+                });
+                const discountRate = row.querySelector('.discount-rate');
+                if (discountRate) {
+                    discountRate.setAttribute('data-discount-target', `#discount-amount-${index}`);
+                    discountRate.setAttribute('data-item-index', index);
+                }
+                const feeRate = row.querySelector('.fee-rate');
+                if (feeRate) {
+                    feeRate.setAttribute('data-fee-target', `#fee-amount-${index}`);
+                    feeRate.setAttribute('data-item-index', index);
                 }
             });
 

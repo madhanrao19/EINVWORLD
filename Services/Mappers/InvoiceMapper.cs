@@ -720,31 +720,62 @@ namespace eInvWorld.Services.Mappers
                 {
                     new JsonModels.Item
                     {
-                        CommodityClassification = new List<JsonModels.CommodityClassification>
-                        {
-                            new JsonModels.CommodityClassification
+                        // A second CommodityClassification (listID "PTC") carries the optional Product
+                        // Tariff Code alongside the required "CLASS" classification, per the LHDN SDK -
+                        // only emitted when the line actually has one (mainly applicable to goods).
+                        CommodityClassification = string.IsNullOrWhiteSpace(line.ProductTariffCode)
+                            ? new List<JsonModels.CommodityClassification>
                             {
-                                ItemClassificationCode = new List<JsonModels.ItemClassificationCode>
+                                new JsonModels.CommodityClassification
                                 {
-                                    new JsonModels.ItemClassificationCode
+                                    ItemClassificationCode = new List<JsonModels.ItemClassificationCode>
                                     {
-                                        _ = line.ClassificationCode ?? "00000",
-                                        listID = "CLASS"
+                                        new JsonModels.ItemClassificationCode
+                                        {
+                                            _ = line.ClassificationCode ?? "00000",
+                                            listID = "CLASS"
+                                        }
                                     }
                                 }
                             }
-                        },
+                            : new List<JsonModels.CommodityClassification>
+                            {
+                                new JsonModels.CommodityClassification
+                                {
+                                    ItemClassificationCode = new List<JsonModels.ItemClassificationCode>
+                                    {
+                                        new JsonModels.ItemClassificationCode
+                                        {
+                                            _ = line.ClassificationCode ?? "00000",
+                                            listID = "CLASS"
+                                        }
+                                    }
+                                },
+                                new JsonModels.CommodityClassification
+                                {
+                                    ItemClassificationCode = new List<JsonModels.ItemClassificationCode>
+                                    {
+                                        new JsonModels.ItemClassificationCode
+                                        {
+                                            _ = line.ProductTariffCode!,
+                                            listID = "PTC"
+                                        }
+                                    }
+                                }
+                            },
                         Description = new List<JsonModels.Description>
                         {
                             new JsonModels.Description { _ = line.ItemDescription ?? "No Description" }
                         },
+                        // Falls back to "MYS" when the line has no explicit Country of Origin - matches
+                        // the previous hardcoded behavior for every line that doesn't set one.
                         OriginCountry = new List<JsonModels.OriginCountry>
                         {
                             new JsonModels.OriginCountry
                             {
                                 IdentificationCode = new List<JsonModels.IdentificationCode>
                                 {
-                                    new JsonModels.IdentificationCode { _ = "MYS" }
+                                    new JsonModels.IdentificationCode { _ = string.IsNullOrWhiteSpace(line.CountryOfOrigin) ? "MYS" : line.CountryOfOrigin }
                                 }
                             }
                         }
@@ -768,12 +799,13 @@ namespace eInvWorld.Services.Mappers
                 return new List<JsonModels.TaxTotal>();
             }
 
-            // Taxable base must net out the line discount, matching the tested-correct client-side
-            // formula in InvoiceLine.CalculateAmounts()/InvoiceLineView.CalculateAmounts()
-            // (AmountExclTax = Subtotal - DiscountAmount). Previously this used the raw, pre-discount
-            // subtotal, so a discounted+taxed line was over-taxed in the actual LHDN submission versus
-            // what the on-screen preview showed.
-            decimal taxableAmount = (line.Quantity ?? 0) * (line.UnitPrice ?? 0) - (line.DiscountAmount ?? 0);
+            // Taxable base must net out the line discount and add the line fee/charge, matching the
+            // tested-correct client-side formula in InvoiceLine.CalculateAmounts()/
+            // InvoiceLineView.CalculateAmounts() (AmountExclTax = Subtotal - DiscountAmount +
+            // FeeChargeAmount). Previously this used the raw, pre-discount subtotal, so a discounted+
+            // taxed line was over-taxed in the actual LHDN submission versus what the on-screen preview
+            // showed.
+            decimal taxableAmount = (line.Quantity ?? 0) * (line.UnitPrice ?? 0) - (line.DiscountAmount ?? 0) + (line.FeeChargeAmount ?? 0);
 
             decimal totalTaxAmount = 0; // Initialize total tax amount
 
@@ -875,14 +907,16 @@ namespace eInvWorld.Services.Mappers
         {
             // InvoiceLine.AllowanceCharge (the per-line list field) is never populated anywhere in the
             // app and isn't even EF-mapped to a table (only the header-level AllowanceCharges collection
-            // is persisted) - it was dead scaffolding. The one real, persisted line-level discount/charge
-            // value is DiscountAmount (positive = discount, negative = acts as a charge - see
-            // InvoiceLine.CalculateAmounts() and its NegativeDiscount_ActsAsCharge test), so synthesize
-            // the UBL AllowanceCharge element from that instead of the always-empty field.
+            // is persisted) - it was dead scaffolding. The two real, persisted line-level values are
+            // DiscountAmount (positive = discount, negative = acts as a charge - see
+            // InvoiceLine.CalculateAmounts() and its NegativeDiscount_ActsAsCharge test) and
+            // FeeChargeAmount (always a charge, added to the taxable base), so synthesize the UBL
+            // AllowanceCharge element(s) from those instead of the always-empty field.
             decimal discount = line.DiscountAmount ?? 0;
+            decimal feeCharge = line.FeeChargeAmount ?? 0;
             var currencyId = line.InvoiceHeader?.Currency ?? "MYR";
 
-            return new List<JsonModels.AllowanceCharge>
+            var charges = new List<JsonModels.AllowanceCharge>
             {
                 new JsonModels.AllowanceCharge
                 {
@@ -892,7 +926,12 @@ namespace eInvWorld.Services.Mappers
                     },
                     AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
                     {
-                        new JsonModels.AllowanceChargeReason { _ = discount != 0 ? (discount < 0 ? "Charge" : "Discount") : "" }
+                        new JsonModels.AllowanceChargeReason
+                        {
+                            _ = !string.IsNullOrWhiteSpace(line.DiscountReason)
+                                ? line.DiscountReason!
+                                : (discount != 0 ? (discount < 0 ? "Charge" : "Discount") : "")
+                        }
                     },
                     // No rate concept exists in the current UBL line-AllowanceCharge output (deliberate -
                     // DiscountAmount only stores an amount, not a rate), so this stays 0.0.
@@ -906,6 +945,31 @@ namespace eInvWorld.Services.Mappers
                     }
                 }
             };
+
+            if (feeCharge != 0)
+            {
+                charges.Add(new JsonModels.AllowanceCharge
+                {
+                    ChargeIndicator = new List<JsonModels.ChargeIndicator>
+                    {
+                        new JsonModels.ChargeIndicator { _ = feeCharge > 0 }
+                    },
+                    AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
+                    {
+                        new JsonModels.AllowanceChargeReason { _ = line.FeeChargeReason ?? "Fee/Charge" }
+                    },
+                    MultiplierFactorNumeric = new List<JsonModels.MultiplierFactorNumeric>
+                    {
+                        new JsonModels.MultiplierFactorNumeric { _ = 0.0m }
+                    },
+                    Amount = new List<JsonModels.Amount>
+                    {
+                        new JsonModels.Amount { _ = Math.Round(Math.Abs(feeCharge), 2), currencyID = currencyId }
+                    }
+                });
+            }
+
+            return charges;
         }
 
 
@@ -975,11 +1039,13 @@ namespace eInvWorld.Services.Mappers
                 .SelectMany(line => line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>())
                 .Sum(tax => tax.TaxAmount ?? 0);
 
-            // Sourced from the same real, persisted DiscountAmount field MapLineAllowanceCharges now
-            // synthesizes the per-line UBL AllowanceCharge from (line.AllowanceCharge, the old source
-            // here, is dead - never populated or persisted - so this total was always 0 before).
+            // Sourced from the same real, persisted DiscountAmount/FeeChargeAmount fields
+            // MapLineAllowanceCharges now synthesizes the per-line UBL AllowanceCharge from
+            // (line.AllowanceCharge, the old source here, is dead - never populated or persisted - so
+            // this total was always 0 before). A fee/charge is the inverse of a discount here - it must
+            // increase the payable amount, so it's subtracted out of the net allowance total.
             decimal totalAllowanceCharge = Math.Round(
-                 header.InvoiceLines.Sum(line => line.DiscountAmount ?? 0), 2);
+                 header.InvoiceLines.Sum(line => (line.DiscountAmount ?? 0) - (line.FeeChargeAmount ?? 0)), 2);
 
             decimal taxInclusiveAmount = Math.Round(totalLineExtensionAmount + totalTaxAmount, 2);
             decimal totalPayableAmount = Math.Round(taxInclusiveAmount - totalAllowanceCharge, 2);
