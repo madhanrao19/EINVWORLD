@@ -770,8 +770,6 @@
     .irow-head-unit { flex: 0 0 100px; }
     .irow-price,
     .irow-head-price { flex: 0 0 100px; }
-    .irow-tax,
-    .irow-head-tax { flex: 0 0 150px; }
     .irow-total,
     .irow-head-total { flex: 0 0 110px; }
     .irow-actions,
@@ -793,6 +791,44 @@
         padding: .25rem 0;
     }
     .irow-num-val.irow-total-val { color: var(--einv-primary, #006948); }
+
+    /* Phase C: optional, progressive line-level sections (Discount / Fee-Charge / Taxes /
+       Additional Information) — collapsed by default, toggled by a small pill button row below
+       the dense grid. Not permanently expanded, per the redesign spec. */
+    .irow-extras {
+        padding: 0 .75rem .5rem;
+        border-top: 1px dashed var(--einv-border, #e9ecef);
+        margin-top: .25rem;
+    }
+    .irow-extras-toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        padding-top: .5rem;
+    }
+    .irow-extras-toggle {
+        border: 1px solid var(--einv-border, #e9ecef);
+        background: var(--einv-page-bg, #f8f9fa);
+        color: var(--einv-muted, #6c757d);
+        border-radius: 999px;
+        font-size: .72rem;
+        padding: .2rem .65rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+    }
+    .irow-extras-toggle i { font-size: .85rem; }
+    .irow-extras-toggle:not(.collapsed) {
+        border-color: var(--einv-primary, #006948);
+        color: var(--einv-primary, #006948);
+        background: rgba(0, 105, 72, .06);
+    }
+    .irow-extras-panel {
+        padding: .6rem 0 .1rem;
+    }
+    .irow-extras-panel .tax-row {
+        max-width: 480px;
+    }
 
     /* Progress bar card styling */
     .progress {
@@ -1137,6 +1173,14 @@
             @foreach (var tax in Model.TaxCategoryOptions)
             {
                     <option value="@tax.Value">@tax.Text</option>
+            }
+        `;
+
+        // Country of Origin options HTML for dynamic item creation (line-level Additional Information)
+        window.countryOptionsHtml = `
+            @foreach (var c in Model.CountryOptions)
+            {
+                    <option value="@c.Value">@c.Text</option>
             }
         `;
 
