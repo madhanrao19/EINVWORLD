@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using eInvWorld.Models.JsonModels;
 using Newtonsoft.Json;
 
@@ -23,6 +24,17 @@ namespace eInvWorld.Models.InputModel
         public decimal? AmountExclTax { get; set; }  // Amount excluding tax
         public decimal? DiscountAmount { get; set; }  // Discount applied to the line
         public string ClassificationCode { get; set; } = null!;  // Classification Code (MSIC Code)
+
+        [Display(Name = "Product Tariff Code")]
+        [StringLength(50, ErrorMessage = "Product Tariff Code cannot exceed 50 characters.")]
+        public string? ProductTariffCode { get; set; }  // Customs tariff code, primarily for goods
+
+        [Display(Name = "Country of Origin")]
+        [StringLength(3, ErrorMessage = "Country of Origin must be a 3-letter ISO code.")]
+        public string? CountryOfOrigin { get; set; }  // ISO 3166-1 alpha-3; falls back to "MYS" if unset
+
+        [ForeignKey("CountryOfOrigin")]
+        public virtual CountryCode? CountryOfOriginRef { get; set; }
 
         // Navigation Properties
         [JsonIgnore] // Prevent circular reference during serialization
