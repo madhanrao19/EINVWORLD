@@ -158,6 +158,9 @@ namespace eInvWorld.Pages.Invoices
         public List<SelectListItem> ClassificationCodes { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> UnitOptions { get; set; } = new List<SelectListItem>();
         public List<SelectListItem> TaxCategoryOptions { get; set; } = new List<SelectListItem>();
+        // Country of Origin, per line-item "Additional Information" - same lookup/helper as every
+        // other Country dropdown in the app.
+        public List<SelectListItem> CountryOptions { get; set; } = new List<SelectListItem>();
 
         public string? GeneratedJson { get; set; }
         public string? Message { get; set; }
@@ -239,6 +242,7 @@ namespace eInvWorld.Pages.Invoices
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
                 UnitOptions = _dropdownHelper.GetUnitOptions();
                 TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
+                CountryOptions = _dropdownHelper.GetCountryOptions();
 
                 _logger.LogInformation("Successfully loaded invoice {InvoiceId} for editing", id);
 
@@ -343,6 +347,11 @@ namespace eInvWorld.Pages.Invoices
                     UnitOfMeasure = line.UnitOfMeasure,
                     UnitPrice = line.UnitPrice,
                     DiscountAmount = line.DiscountAmount,
+                    DiscountReason = line.DiscountReason,
+                    FeeChargeAmount = line.FeeChargeAmount,
+                    FeeChargeReason = line.FeeChargeReason,
+                    ProductTariffCode = line.ProductTariffCode,
+                    CountryOfOrigin = line.CountryOfOrigin,
                     Subtotal = line.Subtotal,
                     AmountExclTax = line.AmountExclTax,
                     AmountInclTax = line.AmountInclTax,
@@ -397,6 +406,7 @@ namespace eInvWorld.Pages.Invoices
             UnitOptions = _dropdownHelper.GetUnitOptions();
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
+            CountryOptions = _dropdownHelper.GetCountryOptions();
 
             // --- Populate Suppliers and Customers ---
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -947,6 +957,11 @@ namespace eInvWorld.Pages.Invoices
                         UnitOfMeasure = lineView.UnitOfMeasure,
                         UnitPrice = lineView.UnitPrice,
                         DiscountAmount = lineView.DiscountAmount,
+                        DiscountReason = lineView.DiscountReason,
+                        FeeChargeAmount = lineView.FeeChargeAmount,
+                        FeeChargeReason = lineView.FeeChargeReason,
+                        ProductTariffCode = lineView.ProductTariffCode,
+                        CountryOfOrigin = lineView.CountryOfOrigin,
                         ClassificationCode = lineView.ClassificationCode,
                         InvoiceHeader = draftInvoice,
                         InvoiceTaxes = (lineView.Taxes?.Select(tax => new InvoiceTax
@@ -1321,6 +1336,11 @@ namespace eInvWorld.Pages.Invoices
                     UnitOfMeasure = viewLine.UnitOfMeasure,
                     UnitPrice = viewLine.UnitPrice,
                     DiscountAmount = viewLine.DiscountAmount,
+                    DiscountReason = viewLine.DiscountReason,
+                    FeeChargeAmount = viewLine.FeeChargeAmount,
+                    FeeChargeReason = viewLine.FeeChargeReason,
+                    ProductTariffCode = viewLine.ProductTariffCode,
+                    CountryOfOrigin = viewLine.CountryOfOrigin,
                     ClassificationCode = viewLine.ClassificationCode,
                     InvoiceHeader = invoiceHeader,
                     InvoiceTaxes = viewLine.Taxes.Select(tax => new InputModels.InvoiceTax
