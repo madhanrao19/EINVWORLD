@@ -1066,6 +1066,10 @@ namespace eInvWorld.Migrations
                     b.Property<string>("CancellationReason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CertifiedExporterAuthorizationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1081,6 +1085,14 @@ namespace eInvWorld.Migrations
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("CustomsFormNo1Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CustomsFormNo2Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("DateTimeReceived")
                         .HasColumnType("datetime2");
@@ -1100,6 +1112,10 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("ForeignCurrency")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FreeTradeAgreementInfo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Incoterms")
                         .HasMaxLength(3)
@@ -1163,6 +1179,13 @@ namespace eInvWorld.Migrations
                     b.Property<DateTime?>("OriginalInvoiceDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("OtherChargesAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("OtherChargesDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("PaymentTerms")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -1214,6 +1237,50 @@ namespace eInvWorld.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("ShippingRecipientAddrLine1")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientAddrLine2")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientAddrLine3")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShippingRecipientCountryCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("ShippingRecipientIdNumber")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ShippingRecipientIdType")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ShippingRecipientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientPostcode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ShippingRecipientState")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShippingRecipientTIN")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
@@ -1279,6 +1346,10 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("RefDocumentNo");
 
+                    b.HasIndex("ShippingRecipientCountryCode");
+
+                    b.HasIndex("ShippingRecipientIdType");
+
                     b.HasIndex("SupplierId");
 
                     b.HasIndex("UUID");
@@ -1306,6 +1377,10 @@ namespace eInvWorld.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CountryOfOrigin")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<decimal?>("DiscountAmount")
                         .HasColumnType("decimal(18, 2)");
 
@@ -1326,6 +1401,10 @@ namespace eInvWorld.Migrations
                     b.Property<int>("LineNumber")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProductTariffCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<decimal?>("Quantity")
                         .HasColumnType("decimal(18, 6)");
 
@@ -1340,6 +1419,8 @@ namespace eInvWorld.Migrations
                         .HasColumnType("decimal(18, 4)");
 
                     b.HasKey("InvoiceLineId");
+
+                    b.HasIndex("CountryOfOrigin");
 
                     b.HasIndex("InvoiceHeaderInvoiceNo");
 
@@ -3335,6 +3416,16 @@ namespace eInvWorld.Migrations
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("eInvWorld.Models.CountryCode", "ShippingRecipientCountry")
+                        .WithMany()
+                        .HasForeignKey("ShippingRecipientCountryCode")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("eInvWorld.Models.InputModel.RegistrationType", "ShippingRecipientIdTypeRef")
+                        .WithMany()
+                        .HasForeignKey("ShippingRecipientIdType")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Customer");
 
                     b.Navigation("InternalStatus");
@@ -3343,16 +3434,27 @@ namespace eInvWorld.Migrations
 
                     b.Navigation("PublicCustomer");
 
+                    b.Navigation("ShippingRecipientCountry");
+
+                    b.Navigation("ShippingRecipientIdTypeRef");
+
                     b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceLine", b =>
                 {
+                    b.HasOne("eInvWorld.Models.CountryCode", "CountryOfOriginRef")
+                        .WithMany()
+                        .HasForeignKey("CountryOfOrigin")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("eInvWorld.Models.InputModel.InvoiceHeader", "InvoiceHeader")
                         .WithMany("InvoiceLines")
                         .HasForeignKey("InvoiceHeaderInvoiceNo")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CountryOfOriginRef");
 
                     b.Navigation("InvoiceHeader");
                 });
