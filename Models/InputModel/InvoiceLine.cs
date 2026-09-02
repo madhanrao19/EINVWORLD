@@ -25,6 +25,17 @@ namespace eInvWorld.Models.InputModel
         public decimal? DiscountAmount { get; set; }  // Discount applied to the line
         public string ClassificationCode { get; set; } = null!;  // Classification Code (MSIC Code)
 
+        [Display(Name = "Discount Reason")]
+        [StringLength(200, ErrorMessage = "Discount Reason cannot exceed 200 characters.")]
+        public string? DiscountReason { get; set; }
+
+        [Display(Name = "Fee / Charge Amount")]
+        public decimal? FeeChargeAmount { get; set; }  // Line-level fee/charge, added to the taxable base
+
+        [Display(Name = "Fee / Charge Reason")]
+        [StringLength(200, ErrorMessage = "Fee/Charge Reason cannot exceed 200 characters.")]
+        public string? FeeChargeReason { get; set; }
+
         [Display(Name = "Product Tariff Code")]
         [StringLength(50, ErrorMessage = "Product Tariff Code cannot exceed 50 characters.")]
         public string? ProductTariffCode { get; set; }  // Customs tariff code, primarily for goods
@@ -56,7 +67,8 @@ namespace eInvWorld.Models.InputModel
 
             Subtotal = Quantity.Value * UnitPrice.Value;
             DiscountAmount ??= 0;
-            AmountExclTax = Subtotal - DiscountAmount;
+            FeeChargeAmount ??= 0;
+            AmountExclTax = Subtotal - DiscountAmount + FeeChargeAmount;
 
             // ✅ Calculate Total Tax Amount from Associated Taxes
             decimal totalTax = 0;
