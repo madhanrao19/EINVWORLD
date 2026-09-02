@@ -4,7 +4,7 @@ Complete technical documentation for **EINVWORLD (eInvWorld)** — an e-invoicin
 **Malaysia's LHDN MyInvois** system, self-hosted on a single in-house **Windows / IIS + SQL Server**
 server.
 
-> This document describes the system as of **v1.21.4**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
+> This document describes the system as of **v1.22.0**. For release history see [`CHANGELOG.md`](CHANGELOG.md);
 > for deployment see [`IIS-DEPLOYMENT-GUIDE.md`](IIS-DEPLOYMENT-GUIDE.md) and [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md);
 > for secrets see [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 
@@ -383,6 +383,15 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 **Invoicing**
 - Create/edit/submit all 8 document types; self-billed variants; credit/debit/refund notes referencing
   the original UUID.
+- **Invoice line items** (Create Invoice + Invoice Edit, matching UI): each line's Item/Service section
+  is ordered Select Saved Item → Item Code → Description → Classification → Unit, followed by Quantity &
+  Pricing, then four optional, collapsed-by-default sections — Discount, Fee/Charge, Taxes (multi-entry,
+  unchanged), and line-level Additional Information (Product Tariff Code, Country of Origin — both
+  mapped into the submitted UBL payload). A new invoice-level **Additional Information** section
+  (Payment & Prepayment/Incoterms, Shipping Recipient, Customs/Import-Export) is captured and persisted
+  the same way but not yet mapped into the LHDN payload (see `DEPLOY-NOTES.md` for the migration note).
+  Line-level discount/fee now correctly nets the LHDN tax base and reaches the UBL `AllowanceCharge`
+  (previously silently dropped/miscalculated).
 - Submit to MyInvois (UBL 2.1 JSON), poll status, capture LongId/QR, **cancel/reject** within the 72h
   window, view validation errors with a human-readable rejection helper.
 - **Manual sync / import / refresh** run as durable background jobs (visible on **Sync Jobs**).
@@ -523,7 +532,7 @@ blank in files and supplied via env vars / user-secrets.
 
 - **EF Core 10 / SQL Server**, two databases: `EINVWORLD` (main, `ApplicationDbContext`) and
   `EINVWORLDWEBSITE` (`WebsiteDbContext`).
-- **83 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
+- **87 migrations** under `Migrations/` (across both contexts; 22 pre-v1.11.0 migrations were squashed
   into one, `ConsolidatedSchemaCatchup_v1_11_0`). Two new additive migrations in v1.13.0:
   `AddRoleModulePermissions` (new `RoleModulePermissions` table) and `AddCompanyRolePartyInfoScope`
   (nullable `CompanyRole.PartyInfoId`). One more in v1.14.0: `AddNewInvoiceReceivedEmailTrackingToInvoiceHeader`
@@ -532,7 +541,10 @@ blank in files and supplied via env vars / user-secrets.
   backing retry-safe rejection/cancellation emails, same section). Three more for Smart Capture (§10):
   `AddSmartCaptureDocument` (v1.17.0, the core `SmartCaptureDocuments` table), `AddSmartCaptureCompanyHint`
   (v1.18.0, Stage 2's learned-hints table), and `AddSmartCaptureAutoSubmit` (v1.20.0, Stage 4's
-  `SmartCaptureAutoSubmitSettings` table + `SmartCaptureDocuments.PendingAutoSubmitJobId`) — see
+  `SmartCaptureAutoSubmitSettings` table + `SmartCaptureDocuments.PendingAutoSubmitJobId`). One more in
+  v1.22.0: `AddLineTariffOriginAndHeaderShippingCustoms` (`InvoiceLines.ProductTariffCode`/
+  `CountryOfOrigin`/`DiscountReason`/`FeeChargeAmount`/`FeeChargeReason`, plus `InvoiceHeaders` Shipping
+  Recipient + Customs/Import-Export columns, backing the Invoice Items redesign, §10) — see
   `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
   (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
   tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to

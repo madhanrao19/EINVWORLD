@@ -26,6 +26,11 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   `04` Refund Note, `11` Self-billed Invoice, `12` Self-billed Credit Note, `13` Self-billed Debit Note,
   `14` Self-billed Refund Note.
 - Submit to MyInvois (UBL 2.1 JSON), poll validation status, capture **LongId** (QR code), cancel/reject.
+- **Invoice line items** — Select Saved Item / Item Code / Description / Classification / Unit, then
+  Quantity & Pricing, then optional collapsed-by-default Discount, Fee/Charge, multi-entry Taxes, and
+  line-level Additional Information (Product Tariff Code, Country of Origin — both submitted to LHDN).
+  A matching invoice-level Additional Information section covers Payment & Prepayment/Incoterms,
+  Shipping Recipient, and Customs/Import-Export.
 - **Centralised LHDN rate limiting** (`LhdnRateLimitHandler`) — evenly paced per endpoint so the system
   stays under MyInvois limits and avoids `429` storms. Per-minute ceilings are configurable per
   environment (`LHDNApiConfig:RateLimits:*`) so production and sandbox tiers can differ without a code

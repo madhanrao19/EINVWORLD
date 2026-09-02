@@ -35,6 +35,28 @@ bottom; stop and investigate on the first ❌.
       window where Cancel could show "Cancelled" on a job the durable worker had already completed (a real
       LHDN submission may have already gone through) — no action needed beyond confirming the version, this
       is a correctness fix with no schema/config change.
+- [ ] **v1.22.0:** confirm `__EFMigrationsHistory` includes `AddLineTariffOriginAndHeaderShippingCustoms`
+      (last row). ✅ additive only — new nullable columns on `InvoiceLines`/`InvoiceHeaders`, no existing
+      row touched.
+- [ ] **v1.22.0 Invoice Items redesign — Create Invoice:** open Create Invoice, add a line item. ✅ the
+      Item/Service block shows Select Saved Item → Item Code → Description → Classification → Unit, and
+      the Discount/Fee/Charge/Taxes/Additional Information pill toggles below Quantity & Pricing all
+      expand/collapse and stay filled in correctly. Click **Add Item** and **Duplicate** on an existing
+      row. ✅ the new row has the same structure (not the old always-visible-tax layout) — if it doesn't,
+      hard-refresh the browser first (this exact symptom was cache-related, see CHANGELOG v1.22.0).
+      Enter a Discount and a Fee/Charge on a taxed line, check Review & Submit. ✅ the Tax figure and Item
+      Summary note line reflect the discount/fee correctly, and the submitted invoice's UBL JSON shows a
+      non-zero line `AllowanceCharge` and the discount-netted `TaxableAmount`/`TaxAmount`.
+- [ ] **v1.22.0 Invoice Items redesign — Invoice Edit:** open an existing multi-line invoice with tax
+      data in Edit mode. ✅ item rows render with the same new structure as Create Invoice and all
+      existing data (including any Discount/Fee/Tariff/Country of Origin) loads correctly; Save and
+      reload confirms it round-trips.
+- [ ] **v1.22.0 Additional Information sections:** on Create Invoice (or Edit), fill in the new
+      **Payment & Prepayment**, **Shipping Recipient**, and **Customs / Import-Export** collapsed
+      sections, save a draft, reload it. ✅ all values round-trip. Note: only Incoterms/Prepayment
+      Reference Number are currently mapped into the submitted LHDN payload — Shipping Recipient/Customs
+      fields are stored only (by design, see CHANGELOG v1.22.0), so don't expect them in the submitted
+      JSON yet.
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.

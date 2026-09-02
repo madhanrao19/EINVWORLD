@@ -279,6 +279,35 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260809023129_AddSmartCaptureAutoSubmit
 ```
 
+### Post-v1.21.10 migration — v1.22.0 Invoice Items redesign (line Discount/Fee-Charge/Tariff/Origin, header Shipping Recipient/Customs)
+
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddLineTariffOriginAndHeaderShippingCustoms.sql"
+```
+
+> **`AddLineTariffOriginAndHeaderShippingCustoms`** — adds `InvoiceLines.ProductTariffCode`,
+> `CountryOfOrigin` (FK → `CountryCodes`, `nvarchar(450)` to match the referenced PK width — not `(3)`,
+> even though every real value is a 3-char ISO code), `DiscountReason`, `FeeChargeAmount`,
+> `FeeChargeReason`; and `InvoiceHeaders` Shipping Recipient columns (name, 3 address lines, postcode,
+> city, free-text state, country FK, ID type FK → `RegistrationTypes`, ID number, TIN) plus Customs/
+> Import-Export columns (Customs Form No.1/No.2 references, FTA info, Certified Exporter Authorization
+> Number, Other Charges amount/description). Purely additive, every column nullable — no data loss, no
+> backfill. The two new lookup FKs use `ON DELETE NO ACTION` (`Restrict`) so a referenced `CountryCodes`/
+> `RegistrationTypes` row can't be deleted while an invoice references it.
+>
+> Shipping Recipient and Customs fields are captured and persisted by the new UI but **not yet mapped
+> into the submitted LHDN UBL payload** (deliberate — avoids guessing at the exact UBL shape without
+> verifying it against the spec first); `Incoterms`/`PrepaymentReferenceNumber` (pre-existing columns,
+> newly surfaced in the UI this release) were already correctly mapped. `ProductTariffCode` and
+> `CountryOfOrigin` **are** wired into the submitted payload as of this release.
+
+Verify it's recorded:
+```sql
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20260902010000_AddLineTariffOriginAndHeaderShippingCustoms
+```
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:
