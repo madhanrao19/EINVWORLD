@@ -576,5 +576,127 @@ namespace EINVWORLD.Tests
             view.CalculateInvoiceTotals();
             Assert.Equal(88m, view.TotalPayableAmount);
         }
+
+        // ── Line fee/charge, product tariff code, country of origin (added with the line-level
+        // Discount/Fee-Charge/Additional-Information UI) ───────────────────────────────────────
+
+        [Fact]
+        public void Map_LineWithFeeCharge_TaxBaseIncludesFeeCharge_AndAllowanceChargeCarriesIt()
+        {
+            // Qty 1 x 100 = 100 subtotal, fee/charge 5 -> taxable base 105, 10% tax = 10.5.
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = 1,
+                UnitPrice = 100,
+                FeeChargeAmount = 5,
+                FeeChargeReason = "Handling fee",
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = 10 });
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var invoiceLine = FirstLine(doc.RootElement.GetProperty("Invoice")[0]);
+
+            var taxSubtotal = invoiceLine.GetProperty("TaxTotal")[0].GetProperty("TaxSubtotal")[0];
+            Assert.Equal(105m, taxSubtotal.GetProperty("TaxableAmount")[0].GetProperty("_").GetDecimal());
+            Assert.Equal(10.5m, taxSubtotal.GetProperty("TaxAmount")[0].GetProperty("_").GetDecimal());
+
+            // Discount slot (Amount 0, since no discount) + a second entry for the fee/charge.
+            var allowanceCharges = invoiceLine.GetProperty("AllowanceCharge");
+            Assert.Equal(2, allowanceCharges.GetArrayLength());
+            var feeEntry = allowanceCharges[1];
+            Assert.True(feeEntry.GetProperty("ChargeIndicator")[0].GetProperty("_").GetBoolean());
+            Assert.Equal(5m, feeEntry.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+            Assert.Equal("Handling fee", feeEntry.GetProperty("AllowanceChargeReason")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_LineWithDiscountAndFeeCharge_HeaderPayableReflectsBoth()
+        {
+            // Qty 1 x 100 = 100 subtotal, discount 20, fee 5 -> taxable base 85, 10% tax = 8.5.
+            // TaxInclusive = 100 + 8.5 = 108.5; AllowanceTotalAmount = 20 - 5 = 15;
+            // Payable = 108.5 - 15 = 93.5.
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = 1,
+                UnitPrice = 100,
+                DiscountAmount = 20,
+                FeeChargeAmount = 5,
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = 10 });
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
+
+            Assert.Equal(108.5m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(15m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(93.5m, Amount(lmt, "PayableAmount"));
+        }
+
+        [Fact]
+        public void Map_LineWithProductTariffCode_EmitsSecondCommodityClassification()
+        {
+            var line = LineWithTax(1, 100, 0);
+            line.ProductTariffCode = "8471.30";
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var classifications = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("Item")[0].GetProperty("CommodityClassification");
+
+            Assert.Equal(2, classifications.GetArrayLength());
+            Assert.Equal("CLASS", classifications[0].GetProperty("ItemClassificationCode")[0].GetProperty("listID").GetString());
+            Assert.Equal("PTC", classifications[1].GetProperty("ItemClassificationCode")[0].GetProperty("listID").GetString());
+            Assert.Equal("8471.30", classifications[1].GetProperty("ItemClassificationCode")[0].GetProperty("_").GetString());
+        }
+
+        [Fact]
+        public void Map_LineWithoutProductTariffCode_OnlyClassCommodityClassification()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var classifications = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("Item")[0].GetProperty("CommodityClassification");
+
+            Assert.Equal(1, classifications.GetArrayLength());
+        }
+
+        [Fact]
+        public void Map_LineWithCountryOfOrigin_OverridesDefaultMYS()
+        {
+            var line = LineWithTax(1, 100, 0);
+            line.CountryOfOrigin = "USA";
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var originCode = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("Item")[0].GetProperty("OriginCountry")[0]
+                .GetProperty("IdentificationCode")[0].GetProperty("_").GetString();
+
+            Assert.Equal("USA", originCode);
+        }
+
+        [Fact]
+        public void Map_LineWithoutCountryOfOrigin_DefaultsToMYS()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 0)));
+            using var doc = JsonDocument.Parse(json);
+            var originCode = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("Item")[0].GetProperty("OriginCountry")[0]
+                .GetProperty("IdentificationCode")[0].GetProperty("_").GetString();
+
+            Assert.Equal("MYS", originCode);
+        }
     }
 }
