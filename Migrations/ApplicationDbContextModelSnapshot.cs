@@ -17,7 +17,7 @@ namespace eInvWorld.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.10")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -34,7 +34,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SuppliersId");
 
-                    b.ToTable("BuyerSupplier");
+                    b.ToTable("BuyerSupplier", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -341,7 +341,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("CreatedAtUtc");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Audit.InvoiceHistory", b =>
@@ -378,7 +378,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceNo");
 
-                    b.ToTable("InvoiceHistories");
+                    b.ToTable("InvoiceHistories", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Audit.LHDNTokenLog", b =>
@@ -481,7 +481,7 @@ namespace eInvWorld.Migrations
                     b.HasIndex("TIN")
                         .IsUnique();
 
-                    b.ToTable("LHDNTokens");
+                    b.ToTable("LHDNTokens", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Background.SubmissionRecord", b =>
@@ -514,7 +514,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("PayloadHash", "SubmittedAtUtc");
 
-                    b.ToTable("SubmissionRecords");
+                    b.ToTable("SubmissionRecords", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Background.SyncJob", b =>
@@ -584,7 +584,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SyncJobs");
+                    b.ToTable("SyncJobs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ClassificationCode", b =>
@@ -608,7 +608,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("ClassificationCodes");
+                    b.ToTable("ClassificationCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CompanyInvitation", b =>
@@ -659,7 +659,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("TokenHash");
 
-                    b.ToTable("CompanyInvitations");
+                    b.ToTable("CompanyInvitations", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CompanyRole", b =>
@@ -697,7 +697,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("PartyInfoId");
 
-                    b.ToTable("CompanyRoles");
+                    b.ToTable("CompanyRoles", (string)null);
 
                     b.HasData(
                         new
@@ -775,7 +775,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ContactUs");
+                    b.ToTable("ContactUs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CountryCode", b =>
@@ -799,7 +799,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("CountryCodes");
+                    b.ToTable("CountryCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.CurrencyCode", b =>
@@ -823,7 +823,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("CurrencyCodes");
+                    b.ToTable("CurrencyCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.EInvoiceType", b =>
@@ -847,7 +847,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("EInvoiceTypes");
+                    b.ToTable("EInvoiceTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.EmailNotification", b =>
@@ -887,7 +887,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.AllowanceCharge", b =>
@@ -918,7 +918,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceHeaderInvoiceNo");
 
-                    b.ToTable("AllowanceCharge");
+                    b.ToTable("AllowanceCharge", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.Buyer", b =>
@@ -1033,7 +1033,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Buyers");
+                    b.ToTable("Buyers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceHeader", b =>
@@ -1066,6 +1066,10 @@ namespace eInvWorld.Migrations
                     b.Property<string>("CancellationReason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CertifiedExporterAuthorizationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1081,6 +1085,14 @@ namespace eInvWorld.Migrations
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("CustomsFormNo1Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CustomsFormNo2Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("DateTimeReceived")
                         .HasColumnType("datetime2");
@@ -1100,6 +1112,10 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("ForeignCurrency")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FreeTradeAgreementInfo")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Incoterms")
                         .HasMaxLength(3)
@@ -1163,6 +1179,13 @@ namespace eInvWorld.Migrations
                     b.Property<DateTime?>("OriginalInvoiceDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("OtherChargesAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("OtherChargesDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("PaymentTerms")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -1214,6 +1237,50 @@ namespace eInvWorld.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<string>("ShippingRecipientAddrLine1")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientAddrLine2")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientAddrLine3")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShippingRecipientCountryCode")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ShippingRecipientIdNumber")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ShippingRecipientIdType")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ShippingRecipientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ShippingRecipientPostcode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ShippingRecipientState")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShippingRecipientTIN")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
@@ -1279,13 +1346,17 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("RefDocumentNo");
 
+                    b.HasIndex("ShippingRecipientCountryCode");
+
+                    b.HasIndex("ShippingRecipientIdType");
+
                     b.HasIndex("SupplierId");
 
                     b.HasIndex("UUID");
 
                     b.HasIndex("LHDNStatusId", "LastUpdated");
 
-                    b.ToTable("InvoiceHeaders");
+                    b.ToTable("InvoiceHeaders", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceLine", b =>
@@ -1306,8 +1377,23 @@ namespace eInvWorld.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CountryOfOrigin")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<decimal?>("DiscountAmount")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("DiscountReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("FeeChargeAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("FeeChargeReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("InvoiceHeaderId")
                         .HasColumnType("int");
@@ -1326,6 +1412,10 @@ namespace eInvWorld.Migrations
                     b.Property<int>("LineNumber")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProductTariffCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<decimal?>("Quantity")
                         .HasColumnType("decimal(18, 6)");
 
@@ -1341,9 +1431,11 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("InvoiceLineId");
 
+                    b.HasIndex("CountryOfOrigin");
+
                     b.HasIndex("InvoiceHeaderInvoiceNo");
 
-                    b.ToTable("InvoiceLines");
+                    b.ToTable("InvoiceLines", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceTax", b =>
@@ -1374,7 +1466,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceLineId");
 
-                    b.ToTable("InvoiceTaxes");
+                    b.ToTable("InvoiceTaxes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.ItemDescription", b =>
@@ -1417,7 +1509,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ItemDescriptions");
+                    b.ToTable("ItemDescriptions", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.PartyInfo", b =>
@@ -1589,7 +1681,7 @@ namespace eInvWorld.Migrations
                         .IsUnique()
                         .HasFilter("[TIN] <> 'EI00000000010' AND [TIN] <> 'EI00000000020' AND [TIN] <> 'EI00000000030' AND [TIN] <> 'EI00000000040'");
 
-                    b.ToTable("PartyInfos");
+                    b.ToTable("PartyInfos", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.PublicCustomer", b =>
@@ -1743,7 +1835,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("RegTypeCode");
 
-                    b.ToTable("PublicCustomers");
+                    b.ToTable("PublicCustomers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.RegistrationType", b =>
@@ -1759,7 +1851,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("RegistrationTypes");
+                    b.ToTable("RegistrationTypes", (string)null);
 
                     b.HasData(
                         new
@@ -1899,7 +1991,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers");
+                    b.ToTable("Suppliers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBuyer", b =>
@@ -1927,7 +2019,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("SupplierBuyers");
+                    b.ToTable("SupplierBuyers", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.TaxSummary", b =>
@@ -1952,7 +2044,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("TaxSummaryId");
 
-                    b.ToTable("TaxSummaries");
+                    b.ToTable("TaxSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.UserCompany", b =>
@@ -1995,7 +2087,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserCompanies");
+                    b.ToTable("UserCompanies", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceForm", b =>
@@ -2046,7 +2138,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InvoiceForms");
+                    b.ToTable("InvoiceForms", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceSubmission", b =>
@@ -2096,7 +2188,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("LHDNStatusId");
 
-                    b.ToTable("InvoiceSubmissions");
+                    b.ToTable("InvoiceSubmissions", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InvoiceTest", b =>
@@ -2125,7 +2217,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("InvoiceTests");
+                    b.ToTable("InvoiceTests", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Logs.ActivityLog", b =>
@@ -2159,7 +2251,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("LogId");
 
-                    b.ToTable("ActivityLogs");
+                    b.ToTable("ActivityLogs", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.MSICSubCategoryCode", b =>
@@ -2186,7 +2278,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("MSICSubCategoryCodes");
+                    b.ToTable("MSICSubCategoryCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.PaymentMode", b =>
@@ -2209,7 +2301,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("PaymentMethods");
+                    b.ToTable("PaymentMethods", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Recurring.RecurringProfile", b =>
@@ -2262,7 +2354,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateId");
 
-                    b.ToTable("RecurringProfiles");
+                    b.ToTable("RecurringProfiles", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Recurring.RecurringRunHistory", b =>
@@ -2297,7 +2389,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RecurringRunHistories");
+                    b.ToTable("RecurringRunHistories", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.RoleModulePermission", b =>
@@ -2326,7 +2418,7 @@ namespace eInvWorld.Migrations
                     b.HasIndex("RoleName", "ModuleKey")
                         .IsUnique();
 
-                    b.ToTable("RoleModulePermissions");
+                    b.ToTable("RoleModulePermissions", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SavedInvoiceView", b =>
@@ -2362,7 +2454,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SavedInvoiceViews");
+                    b.ToTable("SavedInvoiceViews", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Settings.GlobalThemeSettings", b =>
@@ -2437,7 +2529,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GlobalThemeSettings");
+                    b.ToTable("GlobalThemeSettings", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureAutoSubmitSettings", b =>
@@ -2483,7 +2575,7 @@ namespace eInvWorld.Migrations
                     b.HasIndex("CompanyPartyInfoId")
                         .IsUnique();
 
-                    b.ToTable("SmartCaptureAutoSubmitSettings");
+                    b.ToTable("SmartCaptureAutoSubmitSettings", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureCompanyHint", b =>
@@ -2540,7 +2632,7 @@ namespace eInvWorld.Migrations
                     b.HasIndex("CompanyPartyInfoId")
                         .IsUnique();
 
-                    b.ToTable("SmartCaptureCompanyHints");
+                    b.ToTable("SmartCaptureCompanyHints", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.SmartCapture.SmartCaptureDocument", b =>
@@ -2639,7 +2731,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("FileHash");
 
-                    b.ToTable("SmartCaptureDocuments");
+                    b.ToTable("SmartCaptureDocuments", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.StateCode", b =>
@@ -2662,7 +2754,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("StateCodes");
+                    b.ToTable("StateCodes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Status", b =>
@@ -2687,7 +2779,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("StatusCode");
 
-                    b.ToTable("Statuses");
+                    b.ToTable("Statuses", (string)null);
 
                     b.HasData(
                         new
@@ -2761,7 +2853,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("TaxTypes");
+                    b.ToTable("TaxTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplate", b =>
@@ -2871,7 +2963,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.ToTable("InvoiceTemplates");
+                    b.ToTable("InvoiceTemplates", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplateLine", b =>
@@ -2922,7 +3014,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateId");
 
-                    b.ToTable("InvoiceTemplateLines");
+                    b.ToTable("InvoiceTemplateLines", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Templates.InvoiceTemplateTax", b =>
@@ -2953,7 +3045,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("InvoiceTemplateLineId");
 
-                    b.ToTable("InvoiceTemplateTaxes");
+                    b.ToTable("InvoiceTemplateTaxes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.UnitType", b =>
@@ -2976,7 +3068,7 @@ namespace eInvWorld.Migrations
 
                     b.HasKey("Code");
 
-                    b.ToTable("UnitTypes");
+                    b.ToTable("UnitTypes", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceByCustomerSummary", b =>
@@ -2999,7 +3091,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceByCustomerSummaries");
+                    b.ToTable("InvoiceByCustomerSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceKpiSummary", b =>
@@ -3034,7 +3126,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceKpiSummaries");
+                    b.ToTable("InvoiceKpiSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceMonthlySummary", b =>
@@ -3057,7 +3149,7 @@ namespace eInvWorld.Migrations
                     b.Property<decimal?>("TotalAmount")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.ToTable("InvoiceMonthlySummaries");
+                    b.ToTable("InvoiceMonthlySummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceRejectedReason", b =>
@@ -3080,7 +3172,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceRejectedReasons");
+                    b.ToTable("InvoiceRejectedReasons", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTaxSummary", b =>
@@ -3109,7 +3201,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTaxSummaries");
+                    b.ToTable("InvoiceTaxSummaries", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTopProduct", b =>
@@ -3132,7 +3224,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTopProducts");
+                    b.ToTable("InvoiceTopProducts", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.ViewModels.InvoiceTypeBreakdown", b =>
@@ -3155,7 +3247,7 @@ namespace eInvWorld.Migrations
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
-                    b.ToTable("InvoiceTypeBreakdowns");
+                    b.ToTable("InvoiceTypeBreakdowns", (string)null);
                 });
 
             modelBuilder.Entity("eInvWorld.Models.Webhooks.WebhookSubscription", b =>
@@ -3205,7 +3297,7 @@ namespace eInvWorld.Migrations
 
                     b.HasIndex("Tin");
 
-                    b.ToTable("WebhookSubscriptions");
+                    b.ToTable("WebhookSubscriptions", (string)null);
                 });
 
             modelBuilder.Entity("BuyerSupplier", b =>
@@ -3330,6 +3422,16 @@ namespace eInvWorld.Migrations
                         .WithMany()
                         .HasForeignKey("PublicCustomerId");
 
+                    b.HasOne("eInvWorld.Models.CountryCode", "ShippingRecipientCountry")
+                        .WithMany()
+                        .HasForeignKey("ShippingRecipientCountryCode")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("eInvWorld.Models.InputModel.RegistrationType", "ShippingRecipientIdTypeRef")
+                        .WithMany()
+                        .HasForeignKey("ShippingRecipientIdType")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
@@ -3343,16 +3445,27 @@ namespace eInvWorld.Migrations
 
                     b.Navigation("PublicCustomer");
 
+                    b.Navigation("ShippingRecipientCountry");
+
+                    b.Navigation("ShippingRecipientIdTypeRef");
+
                     b.Navigation("Supplier");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.InvoiceLine", b =>
                 {
+                    b.HasOne("eInvWorld.Models.CountryCode", "CountryOfOriginRef")
+                        .WithMany()
+                        .HasForeignKey("CountryOfOrigin")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("eInvWorld.Models.InputModel.InvoiceHeader", "InvoiceHeader")
                         .WithMany("InvoiceLines")
                         .HasForeignKey("InvoiceHeaderInvoiceNo")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CountryOfOriginRef");
 
                     b.Navigation("InvoiceHeader");
                 });
