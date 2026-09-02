@@ -782,6 +782,15 @@
     @@media (min-width: 992px) {
         .irow .irow-mlabel { display: none; }
     }
+    /* Item Code has no desktop column header of its own (nested inside .irow-desc) - unlike
+       Classification/Unit/Qty/Price, its label must stay visible at every width. */
+    .irow-desc .irow-mlabel-always {
+        font-size: .65rem;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--einv-muted, #6c757d);
+        margin-bottom: .15rem;
+    }
     .irow-desc .item-code { margin-top: .25rem; }
     .irow-num-val {
         text-align: right;
