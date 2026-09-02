@@ -62,6 +62,10 @@ bottom; stop and investigate on the first ❌.
       `FreeTradeAgreement`(with `ID: "FTA"`)/`K2`, and `AccountingSupplierParty.AdditionalAccountID`
       shows the authorization number. An invoice with **none** of these filled in should look unchanged
       from before v1.23.0 (no blank `DeliveryParty`, no empty `AdditionalDocumentReference`).
+- [ ] **v1.23.1 — Incoterms placement fix:** set Incoterms (Payment & Prepayment section) on a test
+      invoice and check the generated JSON. ✅ a bare entry (`ID` only, no `DocumentType`) appears in the
+      top-level `AdditionalDocumentReference` list with the Incoterms code, and
+      `Delivery.Shipment.ID._` is blank (`""`).
 
 ## 2. Authentication & authorization
 - [ ] Admin login. ✅ succeeds; 2FA prompt if `Security:EnforceAdminMfa=true`.
