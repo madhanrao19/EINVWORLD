@@ -287,6 +287,26 @@ namespace eInvWorld.Data
                 .HasForeignKey(i => i.CustomerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Shipping Recipient / line Country of Origin lookups: a referenced CountryCodes/
+            // RegistrationTypes row can't be deleted out from under an invoice that uses it.
+            modelBuilder.Entity<InvoiceHeader>()
+                .HasOne(i => i.ShippingRecipientCountry)
+                .WithMany()
+                .HasForeignKey(i => i.ShippingRecipientCountryCode)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InvoiceHeader>()
+                .HasOne(i => i.ShippingRecipientIdTypeRef)
+                .WithMany()
+                .HasForeignKey(i => i.ShippingRecipientIdType)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<eInvWorld.Models.InputModel.InvoiceLine>()
+                .HasOne(l => l.CountryOfOriginRef)
+                .WithMany()
+                .HasForeignKey(l => l.CountryOfOrigin)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Indexes for hot lookup/filter columns (status sync, search, detail pages).
             // RefDocumentNo and InvoiceDirection are nvarchar(max) today, which SQL Server cannot
             // index, so they are given a bounded length first (generous vs the actual value formats).
