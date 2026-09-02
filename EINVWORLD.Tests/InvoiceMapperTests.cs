@@ -422,5 +422,159 @@ namespace EINVWORLD.Tests
             var json = new InvoiceMapper().MapToJsonModel(header);
             Assert.Contains("A123456789", json);
         }
+
+        // ── Line discount / AllowanceCharge (regression coverage for the tax-base and
+        // AllowanceCharge-amount bugs found 2026-09-02) ─────────────────────────────────────
+
+        private static JsonElement FirstLine(JsonElement invoice) =>
+            invoice.GetProperty("InvoiceLine")[0];
+
+        [Fact]
+        public void Map_DiscountedTaxedLine_TaxBaseNetsOutDiscount_WhenTaxAmountNotPrecomputed()
+        {
+            // Qty 1 x 100 = 100 subtotal, discount 20 -> taxable base should be 80, not 100.
+            // TaxAmount deliberately left null (not pre-computed via CalculateAmounts()) so the
+            // mapper's own fallback computation is exercised.
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = 1,
+                UnitPrice = 100,
+                DiscountAmount = 20,
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = 10 });
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var taxSubtotal = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("TaxTotal")[0].GetProperty("TaxSubtotal")[0];
+
+            Assert.Equal(80m, taxSubtotal.GetProperty("TaxableAmount")[0].GetProperty("_").GetDecimal());
+            Assert.Equal(8m, taxSubtotal.GetProperty("TaxAmount")[0].GetProperty("_").GetDecimal()); // 10% of 80
+        }
+
+        [Fact]
+        public void Map_DiscountedTaxedLine_TaxableAmountNetsOutDiscount_EvenWhenTaxAmountPrecomputed()
+        {
+            // Production submission paths call InvoiceLine.CalculateAmounts() before mapping, which
+            // already computes a correct (discount-netted) TaxAmount - but the mapper used to compute
+            // TaxableAmount separately from the raw, pre-discount subtotal regardless. Assert both
+            // fields agree once mapped.
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = 2,
+                UnitPrice = 50,
+                DiscountAmount = 10,
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = 8 });
+            line.CalculateAmounts(); // AmountExclTax = 100 - 10 = 90; TaxAmount = 8% of 90 = 7.2
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var taxSubtotal = FirstLine(doc.RootElement.GetProperty("Invoice")[0])
+                .GetProperty("TaxTotal")[0].GetProperty("TaxSubtotal")[0];
+
+            Assert.Equal(90m, taxSubtotal.GetProperty("TaxableAmount")[0].GetProperty("_").GetDecimal());
+            Assert.Equal(7.2m, taxSubtotal.GetProperty("TaxAmount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_LineWithDiscount_AllowanceChargeCarriesRealAmount()
+        {
+            var line = LineWithTax(1, 100, 0);
+            line.DiscountAmount = 15;
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var ac = FirstLine(doc.RootElement.GetProperty("Invoice")[0]).GetProperty("AllowanceCharge")[0];
+
+            Assert.False(ac.GetProperty("ChargeIndicator")[0].GetProperty("_").GetBoolean());
+            Assert.Equal(15m, ac.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_LineWithNegativeDiscount_AllowanceChargeActsAsCharge()
+        {
+            var line = LineWithTax(1, 100, 0);
+            line.DiscountAmount = -10; // negative discount acts as a charge, per CalculateAmounts()
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var ac = FirstLine(doc.RootElement.GetProperty("Invoice")[0]).GetProperty("AllowanceCharge")[0];
+
+            Assert.True(ac.GetProperty("ChargeIndicator")[0].GetProperty("_").GetBoolean());
+            Assert.Equal(10m, ac.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_LineWithNoDiscount_AllowanceChargeAmountIsZero()
+        {
+            // Regression: a line with no discount must still emit the existing zero-amount placeholder.
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 10)));
+            using var doc = JsonDocument.Parse(json);
+            var ac = FirstLine(doc.RootElement.GetProperty("Invoice")[0]).GetProperty("AllowanceCharge")[0];
+
+            Assert.False(ac.GetProperty("ChargeIndicator")[0].GetProperty("_").GetBoolean());
+            Assert.Equal(0m, ac.GetProperty("Amount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_HeaderTotals_ReflectLineDiscount()
+        {
+            // Qty 1 x 100 = 100 subtotal, discount 20 -> taxable base 80, 10% tax = 8.
+            // LineExtensionAmount stays gross (100, UBL convention); AllowanceTotalAmount = 20;
+            // TaxInclusiveAmount = 100 + 8 = 108; PayableAmount = 108 - 20 = 88.
+            var line = new InvoiceLine
+            {
+                InvoiceHeaderInvoiceNo = "INV-1",
+                LineNumber = 1,
+                ItemDescription = "Consulting",
+                UnitOfMeasure = "C62",
+                ClassificationCode = "022",
+                Quantity = 1,
+                UnitPrice = 100,
+                DiscountAmount = 20,
+            };
+            line.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = "01", TaxPercentage = 10 });
+            line.CalculateAmounts();
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
+
+            Assert.Equal(100m, Amount(lmt, "LineExtensionAmount"));
+            Assert.Equal(20m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(108m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(88m, Amount(lmt, "PayableAmount"));
+
+            // Cross-check against the client-preview formula's own totals for the same input.
+            var view = new eInvWorld.Models.ViewModels.InvoiceHeaderView
+            {
+                InvoiceLines = new System.Collections.Generic.List<eInvWorld.Models.ViewModels.InvoiceLineView>
+                {
+                    new()
+                    {
+                        Quantity = 1,
+                        UnitPrice = 100,
+                        DiscountAmount = 20,
+                        Taxes = new System.Collections.Generic.List<eInvWorld.Models.ViewModels.InvoiceTaxView>
+                        {
+                            new() { TaxCategory = "01", TaxPercentage = 10 }
+                        }
+                    }
+                }
+            };
+            view.CalculateInvoiceTotals();
+            Assert.Equal(88m, view.TotalPayableAmount);
+        }
     }
 }
