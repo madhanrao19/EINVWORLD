@@ -1379,6 +1379,14 @@
         // Track the last selected buyer
         let lastSelectedBuyerId = null;
 
+        // Escapes user-entered text before it's interpolated into innerHTML (Review step item
+        // summary etc.) - an item description/tariff code/country is free text a user controls.
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value;
+            return div.innerHTML;
+        }
+
         // Classification options HTML for dynamic item creation
         const classificationOptionsHtml = `
             @if (Model.ClassificationCodes != null)
@@ -3741,16 +3749,36 @@
             if (reviewBody) {
                 reviewBody.innerHTML = '';
                 itemRows.forEach(row => {
-                    const desc = row.querySelector('.item-description')?.value || '(no description)';
+                    const desc = escapeHtml(row.querySelector('.item-description')?.value || '(no description)');
                     const qty = row.querySelector('.quantity-input')?.value || '0';
                     const price = row.querySelector('.price-input')?.value || '0';
                     const subtotalEl = row.querySelector('[id^="subtotal-"]');
                     const rowTotalEl = row.querySelector('[id^="rowtotal-"]');
                     const rowSubtotal = parseFloat(subtotalEl?.textContent) || 0;
                     const rowTotal = parseFloat(rowTotalEl?.textContent) || 0;
-                    const tax = (rowTotal - rowSubtotal).toFixed(2);
+                    // Tax = Row Total - Total Excl Tax (post discount/fee), not - raw Subtotal,
+                    // so a discounted/fee'd line's Tax column stays accurate.
+                    const exclTax = getLineExclTaxAmount(row, rowSubtotal);
+                    const tax = (rowTotal - exclTax).toFixed(2);
+
+                    // Show discount/fee/tariff/country only when the line actually has one - a
+                    // compact note under the description, not permanent extra columns.
+                    const discount = parseFloat(row.querySelector('.discount-amount-input')?.value) || 0;
+                    const fee = parseFloat(row.querySelector('.fee-amount-input')?.value) || 0;
+                    const tariff = escapeHtml(row.querySelector('input[name*=".ProductTariffCode"]')?.value || '');
+                    const countrySelect = row.querySelector('select[name*=".CountryOfOrigin"]');
+                    const country = escapeHtml(countrySelect?.selectedOptions?.[0]?.text || '');
+                    const notes = [];
+                    if (discount) notes.push(`Discount: ${discount.toFixed(2)}`);
+                    if (fee) notes.push(`Fee/Charge: ${fee.toFixed(2)}`);
+                    if (tariff) notes.push(`Tariff Code: ${tariff}`);
+                    if (country) notes.push(`Origin: ${country}`);
+                    const notesHtml = notes.length
+                        ? `<div class="text-muted" style="font-size:.72rem;">${notes.join(' &middot; ')}</div>`
+                        : '';
+
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${desc}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
+                    tr.innerHTML = `<td>${desc}${notesHtml}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
                     reviewBody.appendChild(tr);
                 });
             }
