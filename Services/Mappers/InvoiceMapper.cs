@@ -768,7 +768,12 @@ namespace eInvWorld.Services.Mappers
                 return new List<JsonModels.TaxTotal>();
             }
 
-            decimal taxableAmount = (line.Quantity ?? 0) * (line.UnitPrice ?? 0);
+            // Taxable base must net out the line discount, matching the tested-correct client-side
+            // formula in InvoiceLine.CalculateAmounts()/InvoiceLineView.CalculateAmounts()
+            // (AmountExclTax = Subtotal - DiscountAmount). Previously this used the raw, pre-discount
+            // subtotal, so a discounted+taxed line was over-taxed in the actual LHDN submission versus
+            // what the on-screen preview showed.
+            decimal taxableAmount = (line.Quantity ?? 0) * (line.UnitPrice ?? 0) - (line.DiscountAmount ?? 0);
 
             decimal totalTaxAmount = 0; // Initialize total tax amount
 
@@ -868,54 +873,40 @@ namespace eInvWorld.Services.Mappers
 
         private List<JsonModels.AllowanceCharge> MapLineAllowanceCharges(InputModel.InvoiceLine line)
         {
-            if (line.AllowanceCharge == null || !line.AllowanceCharge.Any())
-            {
-                // Always return a properly structured empty AllowanceCharge if data is missing
-                return new List<JsonModels.AllowanceCharge>
-            {
-            new JsonModels.AllowanceCharge
-            {
-                ChargeIndicator = new List<JsonModels.ChargeIndicator>
-                {
-                    new JsonModels.ChargeIndicator { _ = false }
-                },
-                AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
-                {
-                    new JsonModels.AllowanceChargeReason { _ = "" }
-                },
-                MultiplierFactorNumeric = new List<JsonModels.MultiplierFactorNumeric>
-                {
-                    new JsonModels.MultiplierFactorNumeric { _ = 0.0m }
-                },
-                Amount = new List<JsonModels.Amount>
-                {
-                    new JsonModels.Amount { _ = 0.0m, currencyID = line.InvoiceHeader?.Currency ?? "MYR" }
-                }
-            }
-            };
-            }
+            // InvoiceLine.AllowanceCharge (the per-line list field) is never populated anywhere in the
+            // app and isn't even EF-mapped to a table (only the header-level AllowanceCharges collection
+            // is persisted) - it was dead scaffolding. The one real, persisted line-level discount/charge
+            // value is DiscountAmount (positive = discount, negative = acts as a charge - see
+            // InvoiceLine.CalculateAmounts() and its NegativeDiscount_ActsAsCharge test), so synthesize
+            // the UBL AllowanceCharge element from that instead of the always-empty field.
+            decimal discount = line.DiscountAmount ?? 0;
+            var currencyId = line.InvoiceHeader?.Currency ?? "MYR";
 
-            // Map provided AllowanceCharge data
-            return line.AllowanceCharge.Select(ac => new JsonModels.AllowanceCharge
+            return new List<JsonModels.AllowanceCharge>
             {
-                ChargeIndicator = new List<JsonModels.ChargeIndicator>
-            {
-                new JsonModels.ChargeIndicator { _ = ac.IsCharge }
-            },
+                new JsonModels.AllowanceCharge
+                {
+                    ChargeIndicator = new List<JsonModels.ChargeIndicator>
+                    {
+                        new JsonModels.ChargeIndicator { _ = discount < 0 }
+                    },
                     AllowanceChargeReason = new List<JsonModels.AllowanceChargeReason>
-            {
-                new JsonModels.AllowanceChargeReason { _ = ac.Reason ?? "" }
-            },
+                    {
+                        new JsonModels.AllowanceChargeReason { _ = discount != 0 ? (discount < 0 ? "Charge" : "Discount") : "" }
+                    },
+                    // No rate concept exists in the current UBL line-AllowanceCharge output (deliberate -
+                    // DiscountAmount only stores an amount, not a rate), so this stays 0.0.
                     MultiplierFactorNumeric = new List<JsonModels.MultiplierFactorNumeric>
-            {
-                new JsonModels.MultiplierFactorNumeric { _ = 0.0m }
-            },
+                    {
+                        new JsonModels.MultiplierFactorNumeric { _ = 0.0m }
+                    },
                     Amount = new List<JsonModels.Amount>
-            {
-                new JsonModels.Amount { _ = 0.0m, currencyID = line.InvoiceHeader.Currency ?? "MYR" }
-            }
-                }).ToList();
-            }
+                    {
+                        new JsonModels.Amount { _ = Math.Round(Math.Abs(discount), 2), currencyID = currencyId }
+                    }
+                }
+            };
+        }
 
 
 
@@ -984,10 +975,11 @@ namespace eInvWorld.Services.Mappers
                 .SelectMany(line => line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>())
                 .Sum(tax => tax.TaxAmount ?? 0);
 
+            // Sourced from the same real, persisted DiscountAmount field MapLineAllowanceCharges now
+            // synthesizes the per-line UBL AllowanceCharge from (line.AllowanceCharge, the old source
+            // here, is dead - never populated or persisted - so this total was always 0 before).
             decimal totalAllowanceCharge = Math.Round(
-                 header.InvoiceLines
-                     .SelectMany(line => line.AllowanceCharge ?? new List<InputModel.AllowanceCharge>())
-                     .Sum(ac => ac.Amount), 2);  // ✅ Rounded to 2 decimal places
+                 header.InvoiceLines.Sum(line => line.DiscountAmount ?? 0), 2);
 
             decimal taxInclusiveAmount = Math.Round(totalLineExtensionAmount + totalTaxAmount, 2);
             decimal totalPayableAmount = Math.Round(taxInclusiveAmount - totalAllowanceCharge, 2);
