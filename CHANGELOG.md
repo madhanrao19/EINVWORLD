@@ -1,6 +1,15 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.23.1`** (`AppInfo:Version` in `appsettings.json`). v1.23.1 is a **patch**
+> **Current version: `v1.24.0`** (`AppInfo:Version` in `appsettings.json`). v1.24.0 is a **minor**
+> release: Phase 4 of the Invoice Items redesign — a purpose-built mobile layout for item rows on
+> Create Invoice and Invoice Edit. Below the 992px breakpoint, item rows previously fell back to each
+> field wrapping at its own fixed desktop pixel width (e.g. a 100px Unit field on a phone screen),
+> producing an uneven, cramped grid — this was the "Phase 4" mobile-specific redesign explicitly
+> deferred since Phase 2D/2F. Replaced with a 2-column CSS grid: Item/Service select and Description
+> stay full-width, Classification/Unit and Qty/Price pair up two-per-row, Subtotal/Total render as a
+> highlighted full-width footer, and the Duplicate/Remove actions get larger tap targets behind a
+> divider. CSS-only change — same markup/classes shared with the desktop dense-grid layout, no
+> JS/schema changes. See the dated entry below for details. v1.23.1 was a **patch**
 > release: closes the one finding v1.23.0 explicitly deferred — `Incoterms` was submitted in
 > `Delivery.Shipment.ID`, a field this codebase has no real shipment-tracking data for; a real LHDN
 > sample invoice shows Incoterms actually belongs in the top-level `AdditionalDocumentReference` as a
@@ -175,6 +184,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-02 — v1.24.0 (Invoice item rows: purpose-built mobile layout — Phase 4)
+
+> Closes the "Phase 4" mobile-specific redesign explicitly deferred since Phase 2D/2F.
+
+### Changed
+- **Item rows on Create Invoice and Invoice Edit now use a dedicated mobile layout below 992px**,
+  instead of the dense desktop grid's fields wrapping at their own fixed pixel widths. The row is now a
+  2-column CSS grid: `#`/Item label, the Select Saved Item dropdown, and the Description textarea stay
+  full-width; Classification pairs with Unit, and Quantity pairs with Unit Price, two fields per row;
+  Subtotal/Total render as a highlighted full-width footer instead of two cramped inline figures; and
+  the Duplicate/Remove icons get larger tap targets behind a dashed divider.
+- CSS-only change in `Pages/Invoices/CreateInvoice.cshtml` and `Pages/Invoices/InvoiceEdit.cshtml` — same
+  markup/classes shared with the desktop layout (`.irow`/`.irow-num`/`.irow-desc`/etc.), no JS or schema
+  changes. Verified in a live browser session against the local dev instance.
 
 ## 📅 2026-09-02 — v1.23.1 (Incoterms placement fix)
 
