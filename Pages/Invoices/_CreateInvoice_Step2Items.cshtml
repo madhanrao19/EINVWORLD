@@ -11,6 +11,8 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <div class="d-flex flex-column flex-lg-row gap-4">
+                    <div class="flex-grow-1" style="min-width:0;">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div class="text-muted small">Add products or services to your invoice</div>
                         <button type="button" class="btn btn-outline-primary" id="addItemBtn">
@@ -46,6 +48,7 @@
                                                     }
                                                 }
                                             </select>
+                                            <div class="irow-mlabel-always">Item Code</div>
                                             <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
                                             <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
                                         </div>
@@ -203,26 +206,57 @@
                         <!-- 🔧 Required for model binding -->
                         <input type="hidden" id="itemCount" name="Invoice.InvoiceLines.Count" value="@(Model.Invoice?.InvoiceLines.Count ?? 0)" />
                     </div>
-                </div>
+                    </div>
+                    <!-- /main column -->
 
-                <!-- Invoice Summary (Step 2) -->
-                <div class="card border-0 border-start border-4 border-start-success mt-3">
-                    <div class="card-body">
-                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Summary</h6>
-                        <div class="row g-4 align-items-center">
-                            <div class="col-md-7">
-                                <div class="ci-summary-row"><span>Subtotal:</span><strong id="step2SummarySubtotal">0.00</strong></div>
-                                <div class="ci-summary-row"><span>Tax Amount:</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
-                                <div class="ci-summary-row ci-summary-total"><span>Total Inclusive:</span><strong id="step2SummaryTotalAmount">0.00</strong></div>
-                            </div>
-                            <div class="col-md-5">
-                                <div class="p-3 rounded" style="background:rgba(0,105,72,.08);">
-                                    <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Amount Payable</div>
-                                    <div class="fs-3 fw-bold text-primary" id="step2AmountPayable">0.00</div>
+                    <!-- Sticky right panel: Invoice Summary + Validation Checklist (matches Step 1/Step 3) -->
+                    <div class="flex-shrink-0" style="width:100%; max-width:320px;">
+                    <div style="position:sticky; top:1rem;">
+                        <div class="card bg-primary text-white mb-3">
+                            <div class="card-body">
+                                <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Invoice Summary</h6>
+                                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="step2SummarySubtotal">0.00</strong></div>
+                                <div class="d-flex justify-content-between mb-2"><span>Tax Amount</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
+                                <hr class="border-white opacity-25" />
+                                <div class="d-flex justify-content-between align-items-end">
+                                    <span class="text-uppercase opacity-75" style="font-size:.7rem;">Total Payable</span>
+                                    <span class="fs-3 fw-bold" id="step2SummaryTotalAmount">0.00</span>
                                 </div>
                             </div>
                         </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Validation Checklist</h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="d-flex align-items-start gap-2 mb-3">
+                                        <i class="ri-error-warning-fill text-danger" id="chkLineItemsIcon"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkLineItemsText">No Items</div>
+                                            <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                        </div>
+                                    </li>
+                                    <li class="d-flex align-items-start gap-2 mb-3">
+                                        <i class="ri-error-warning-fill text-danger" id="chkLineFieldsIcon"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkLineFieldsText">Classification / Unit Incomplete</div>
+                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Classification and Unit.</div>
+                                        </div>
+                                    </li>
+                                    <li class="d-flex align-items-start gap-2">
+                                        <i class="ri-error-warning-fill text-danger" id="chkQtyPriceIcon"></i>
+                                        <div>
+                                            <div class="fw-bold" id="chkQtyPriceText">Quantity / Price Incomplete</div>
+                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Quantity and Unit Price greater than 0.</div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
+                    </div>
+                    <!-- /sticky right panel -->
+                    </div>
+                    <!-- /two-column layout -->
                 </div>
 
                 <!-- Tax Management Section -->
