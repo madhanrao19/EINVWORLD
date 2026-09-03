@@ -270,8 +270,7 @@ namespace eInvWorld.Pages.PublicCustomer
 
         public async Task<JsonResult> OnGetValidateTINAsync(string tin, string idType, string idNo)
         {
-            var generalTins = new[] { "EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040" };
-            if (generalTins.Contains(tin))
+            if (GeneralTINHelper.IsGeneralTIN(tin))
             {
                 return new JsonResult(new { success = true, message = "General TIN skipped validation." });
             }
