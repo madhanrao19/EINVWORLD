@@ -1,6 +1,20 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.2`** (`AppInfo:Version` in `appsettings.json`). v1.25.2 is a **patch**
+> **Current version: `v1.25.3`** (`AppInfo:Version` in `appsettings.json`). v1.25.3 is a **patch**
+> release: a batch of UI fixes found during live Staging testing of Create Invoice/Invoice Edit. (1)
+> **Bill To (Buyer) missing BRN/SST** — the printed invoice (both the on-screen `InvoiceDetails2` view
+> and the actual PDF template, `Views/Invoices/PdfTemplate_v2.cshtml`) showed the Supplier's BRN/SST
+> but never the Buyer's, even though `Customer`/`PublicCustomer` carry the same `RegNo`/`OldRegNo`/`SST`
+> fields — now shown next to the Buyer name and in a new SST line, exactly mirroring the Supplier
+> block. (2) **Shipping Recipient State was always a Malaysia-only dropdown** (introduced in v1.25.2) —
+> for any other Shipping Recipient country it now switches to a free-text input, matching the same
+> country-conditional pattern already used for Buyer/PublicCustomer address entry. (3) **Customs Form
+> No.1/No.2 Reference fields were `<textarea>`s** while every other field on the same section is a
+> single-line floating-label input — now consistent. (4) **Step 2 (Items) Previous/Next buttons lost
+> their card padding** in the v1.25.0 sticky-rail restructuring (the two-column layout's closing
+> `</div>` accidentally closed `card-body` one block too early) — they now sit correctly padded inside
+> the card again, matching Step 1/Step 3. All UI-only; no schema or `InvoiceMapper` changes. See the
+> dated entry below for details. v1.25.2 was a **patch**
 > release: fixes another live-Staging submission failure — LHDN rejected a Shipping Recipient with
 > `CF405 Postcode maximum length is 5 characters` and `CF416 State maximum length is 2 characters`.
 > Both `ShippingRecipientPostcode` and `ShippingRecipientState` (Create Invoice/Invoice Edit's
@@ -219,6 +233,31 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-03 — v1.25.3 (Live-testing UI fixes: Bill To, Shipping Recipient State, Customs fields, Step 2 nav)
+
+> Found while a user tested Create Invoice/Invoice Edit live on Staging right after v1.25.2.
+
+### Fixed
+- **Bill To (Buyer) block missing BRN/SST** — `InvoiceDetails2.cshtml` (on-screen view) and
+  `PdfTemplate_v2.cshtml` (the actual downloaded/emailed PDF) now show the Buyer's `RegNo`
+  (+`OldRegNo` if set) next to the name and an `SST:` line, matching exactly how the Supplier block
+  already displays theirs. Data was already on `Customer`/`PublicCustomer` — this was a rendering gap
+  only.
+- **Shipping Recipient State forced a Malaysia-only dropdown for every country** — a gap in v1.25.2's
+  own fix. Now conditional on `ShippingRecipientCountryCode`: Malaysia (or unset) keeps the 2-char
+  LHDN state-code `<select>`; any other country swaps to a free-text input — the same
+  `toggleStateFieldForCountry()`-style pattern already used on `PublicCustomer/Create`. New JS:
+  `toggleShippingRecipientStateField()` in `create-invoice.js` (Create Invoice) and inline in
+  `InvoiceEdit.cshtml` (its own separate script block).
+- **Customs Form No.1/No.2 Reference fields were multi-line `<textarea>`s** while every sibling field
+  in the same "Customs / Import-Export Information" section is a single-line floating-label `<input>`
+  — visually inconsistent (wrapped/top-aligned text next to normal inputs). Converted to match.
+- **Step 2 (Items) Previous/Next buttons rendered flush against the card border, unpadded** — a
+  regression from v1.25.0's sticky-rail two-column restructuring: the closing `</div>` for the
+  two-column layout accidentally also closed `.card-body` one block early, leaving the (dead,
+  commented-out) Tax Management section and the real Step Navigation block outside the padded
+  card body. Fixed in both `_CreateInvoice_Step2Items.cshtml` and `InvoiceEdit.cshtml`.
 
 ## 📅 2026-09-03 — v1.25.2 (Fix Shipping Recipient Postcode/State validation gap)
 
