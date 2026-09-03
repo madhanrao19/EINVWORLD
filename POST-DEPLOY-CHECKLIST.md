@@ -156,6 +156,22 @@ bottom; stop and investigate on the first ❌.
       Classification and Unit selects appear below the Item Description textarea, 2-up, not as
       separate columns in the row. Click **Add Item** ✅ new row matches. Click **Duplicate** on a
       filled row ✅ the copy's Classification/Unit values carry over correctly in the new layout.
+- [ ] **v1.25.6 — Shipping Recipient TIN general-TIN parity:** on Create Invoice (or Edit), expand
+      Shipping Recipient, pick a general TIN from the TIN field's dropdown (e.g. `EI00000000010` /
+      General Public), click **Validate with LHDN**. ✅ button shows Validated (green) immediately, no
+      call to the real LHDN API. Same check on Add Buyer's TIN field. ✅ both behave identically.
+- [ ] **v1.25.6 — Add Buyer Validate with LHDN button placement:** open Add Buyer, Step 1. ✅ the
+      **Validate with LHDN** button sits inside the TIN field's box (input-group), not as a separate
+      button below the form. Step 2 still has its own Validate button.
+- [ ] **v1.25.6 — LHDN import job general-TIN log noise:** after the next scheduled LHDN import cycle
+      (every 10 polling cycles), check the log. ✅ if a company's TIN is a general/placeholder TIN, a
+      single `⚠️ [LHDN Import] Skipping ... general/placeholder TIN(s)` WARN appears — no repeating
+      `❌ [LHDN Import] Failed to import ... Token request blocked` ERROR for that company.
+- [ ] **v1.25.6 — Sidebar highlight on Invoice List:** click **Invoice Management → View All
+      e-Invoices**. ✅ "View All e-Invoices" is highlighted, not "Credit / Debit / Refund Note". Then
+      click **Create → Credit / Debit / Refund Note**. ✅ that item highlights itself instead. Also
+      check **Create → Invoice** vs **Create → Self-Billed Invoice** highlight correctly for their
+      respective pages.
       Leave Classification/Unit blank on any row ✅ the "Classification / Unit Set" validation
       checklist item correctly shows red/incomplete; fill them in ✅ it flips green live.
 - [ ] **v1.25.3 — Shipping Recipient State by country:** set a Shipping Recipient's Country to Malaysia
