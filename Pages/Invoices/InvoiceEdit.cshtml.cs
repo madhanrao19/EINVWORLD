@@ -164,6 +164,10 @@ namespace eInvWorld.Pages.Invoices
         // ID Type for the invoice-level Shipping Recipient section - reuses the same RegistrationTypes
         // lookup used for Supplier/Buyer registration type elsewhere.
         public List<SelectListItem> IdTypeOptions { get; set; } = new List<SelectListItem>();
+        // State for the invoice-level Shipping Recipient section - reuses the same StateCodes lookup
+        // used for Supplier/PublicCustomer state elsewhere. LHDN rejects any value over 2 characters
+        // (error CF416), so this must be a constrained dropdown, not free text.
+        public List<SelectListItem> StateOptions { get; set; } = new List<SelectListItem>();
 
         public string? GeneratedJson { get; set; }
         public string? Message { get; set; }
@@ -247,6 +251,7 @@ namespace eInvWorld.Pages.Invoices
                 TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
                 CountryOptions = _dropdownHelper.GetCountryOptions();
                 IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
+                StateOptions = _dropdownHelper.GetStateOptions();
 
                 _logger.LogInformation("Successfully loaded invoice {InvoiceId} for editing", id);
 
@@ -431,6 +436,7 @@ namespace eInvWorld.Pages.Invoices
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();
             IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
+            StateOptions = _dropdownHelper.GetStateOptions();
 
             // --- Populate Suppliers and Customers ---
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
