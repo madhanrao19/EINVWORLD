@@ -140,6 +140,10 @@ bottom; stop and investigate on the first ❌.
 - [ ] **v1.9.7 one-time reconciliation** (first deploy of v1.9.7+ only). ✅ run `scripts/Reconcile-OrphanedSubmissions.sql` **per environment**: SECTION 1 lists invoices claimed-but-UUID-less; verify each at LHDN; fill in the verified UUID/SubmissionUid rows; run SECTION 2. Known staging orphans: EINV100360, EINV100361. Do **not** run it verbatim (it refuses to run with no rows filled in).
 - [ ] **Failed-submission retry:** force a submission failure (e.g. temporarily wrong LHDN BaseUrl on staging). ✅ error message says a retry was queued; a `SubmitDocument` job appears in Admin → Sync Jobs and retries/dead-letters per the backoff schedule.
 - [ ] **v1.25.1 — background retry actually succeeds:** let a queued `SubmitDocument` retry run (Admin → Sync Jobs). ✅ its `Message` never shows `TIN not found in session` — that was `InvoiceSubmissionHelper` dropping the TIN before calling `SubmitDocumentsAsync`, breaking every background-initiated submission (retries and Smart Capture Stage 4 auto-submit alike). The retry should now authenticate and either succeed or fail with a real LHDN-side error, never this one.
+- [ ] **v1.25.2 — Shipping Recipient Postcode/State validation:** on Create Invoice (or Edit), open the
+      invoice-level Additional Information → Shipping Recipient section. ✅ Postcode is capped at 5
+      characters (`maxlength`); State is a dropdown of 2-character LHDN state codes, not a free-text
+      box. Submit an invoice with both filled in. ✅ no `CF405`/`CF416` validation error from LHDN.
 - [ ] **Duplicate submit** of the same payload within the dedup window. ✅ replays the prior response — no second LHDN call.
 - [ ] **Manual status sync** (Admin → Invoice Sync). ✅ job queued; Sync Jobs page shows it run/complete.
 - [ ] **Background sync** runs on its own cadence. ✅ statuses update; no worker crash after an app-pool recycle (orphan recovery).
