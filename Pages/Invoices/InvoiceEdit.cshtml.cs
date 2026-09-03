@@ -1785,6 +1785,28 @@ namespace eInvWorld.Pages.Invoices
             }
         }
 
+        // Shipping Recipient "Validate with LHDN" - same underlying ILHDNApiService.ValidateTaxpayerAsync
+        // used by Suppliers/PublicCustomer's own Validate button, so a fake TIN/ID-type combo (LHDN
+        // Error05 "Invalid Taxpayer Profile Validator") is caught here instead of only at submission time.
+        public async Task<JsonResult> OnGetValidateShippingRecipientTinAsync(string tin, string idType, string idNo)
+        {
+            if (string.IsNullOrWhiteSpace(tin) || string.IsNullOrWhiteSpace(idType) || string.IsNullOrWhiteSpace(idNo))
+            {
+                return new JsonResult(new { success = false, message = "TIN, ID Type, and Registration/Identification Number are required for validation." });
+            }
+
+            try
+            {
+                await _lhdnApiService.ValidateTaxpayerAsync(tin, idType, idNo);
+                return new JsonResult(new { success = true, message = "Validated successfully with LHDN." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Shipping Recipient TIN validation failed for TIN {Tin}", LogSanitizer.MaskTin(tin));
+                return new JsonResult(new { success = false, message = "LHDN Validation Failed. Please check TIN, ID Type, and Registration/Identification Number." });
+            }
+        }
+
         private bool InvoiceHeaderExists(string id)
         {
             return _context.InvoiceHeaders.Any(e => e.InvoiceNo == id);

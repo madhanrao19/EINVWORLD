@@ -23,9 +23,7 @@
                     <div id="lineItemsTable">
                         <div class="irow-head">
                             <div class="irow-head-num">#</div>
-                            <div class="irow-head-desc">Item / Service <span class="text-danger">*</span></div>
-                            <div class="irow-head-classification">Classification <span class="text-danger">*</span></div>
-                            <div class="irow-head-unit">Unit <span class="text-danger">*</span></div>
+                            <div class="irow-head-desc">Item / Service / Classification / Unit <span class="text-danger">*</span></div>
                             <div class="irow-head-qty text-center">Qty <span class="text-danger">*</span></div>
                             <div class="irow-head-price text-end">Price <span class="text-danger">*</span></div>
                             <div class="irow-head-total text-end">Subtotal / Total</div>
@@ -50,19 +48,21 @@
                                             </select>
                                             <div class="irow-mlabel-always">Item Code</div>
                                             <input asp-for="Invoice.InvoiceLines[i].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
-                                            <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                                        </div>
-                                        <div class="irow-classification">
-                                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
-                                            <select asp-for="Invoice.InvoiceLines[i].ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select form-select-sm item-classification" required>
-                                                <option value="">Select Classification</option>
-                                            </select>
-                                        </div>
-                                        <div class="irow-unit">
-                                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
-                                            <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm" required>
-                                                <option value="">Unit</option>
-                                            </select>
+                                            <textarea asp-for="Invoice.InvoiceLines[i].ItemDescription" class="form-control form-control-sm item-description mb-2" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <div class="irow-mlabel-always">Classification <span class="text-danger">*</span></div>
+                                                    <select asp-for="Invoice.InvoiceLines[i].ClassificationCode" asp-items="Model.ClassificationCodes" class="form-select form-select-sm item-classification" required>
+                                                        <option value="">Select Classification</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
+                                                    <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm item-unit" required>
+                                                        <option value="">Unit</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="irow-qty">
                                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>

@@ -147,6 +147,17 @@ bottom; stop and investigate on the first ❌.
 - [ ] **v1.25.4 — Bill To BRN/SST reverted:** open Invoice Details (or download the PDF) for an invoice
       with a registered Buyer. ✅ Bill To shows only Name/Address/Attention — no BRN or SST line
       (v1.25.3's Bill To fix was reverted per user request; the check above is obsolete).
+- [ ] **v1.25.5 — Shipping Recipient Validate with LHDN:** on Create Invoice (or Edit), expand Shipping
+      Recipient, fill TIN + ID Type + ID Number with a real registered taxpayer, click **Validate with
+      LHDN** (inside the TIN field). ✅ button shows Validating... then Validated (green). Edit the TIN
+      afterward ✅ button resets to "Validate with LHDN". Try an invalid/fake TIN ✅ button shows
+      Failed - Retry (red).
+- [ ] **v1.25.5 — Item row layout (Classification/Unit under Description):** open Step 2 (Items). ✅
+      Classification and Unit selects appear below the Item Description textarea, 2-up, not as
+      separate columns in the row. Click **Add Item** ✅ new row matches. Click **Duplicate** on a
+      filled row ✅ the copy's Classification/Unit values carry over correctly in the new layout.
+      Leave Classification/Unit blank on any row ✅ the "Classification / Unit Set" validation
+      checklist item correctly shows red/incomplete; fill them in ✅ it flips green live.
 - [ ] **v1.25.3 — Shipping Recipient State by country:** set a Shipping Recipient's Country to Malaysia
       ✅ State is a dropdown; change Country to anything else ✅ State becomes a free-text box (no page
       reload needed). Change back to Malaysia ✅ dropdown returns.

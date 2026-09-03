@@ -446,9 +446,10 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-floating">
-                                            <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="TIN" />
-                                            <label for="shippingRecipientTIN">Shipping Recipient's TIN</label>
+                                        <label class="form-label" for="shippingRecipientTIN">Shipping Recipient's TIN</label>
+                                        <div class="input-group">
+                                            <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="TIN" oninput="resetShippingRecipientValidation()" />
+                                            <button class="btn btn-info btn-validate-shipping" type="button" onclick="validateShippingRecipientLHDN()">Validate with LHDN</button>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -505,7 +506,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-floating">
-                                            <select asp-for="Invoice.ShippingRecipientIdType" asp-items="Model.IdTypeOptions" class="form-select" id="shippingRecipientIdType">
+                                            <select asp-for="Invoice.ShippingRecipientIdType" asp-items="Model.IdTypeOptions" class="form-select" id="shippingRecipientIdType" onchange="resetShippingRecipientValidation()">
                                                 <option value="">-- Select --</option>
                                             </select>
                                             <label for="shippingRecipientIdType">ID Type</label>
@@ -513,7 +514,7 @@
                                     </div>
                                     <div class="col-md-8">
                                         <div class="form-floating">
-                                            <input asp-for="Invoice.ShippingRecipientIdNumber" class="form-control" id="shippingRecipientIdNumber" placeholder="Registration / Identification / Passport Number" />
+                                            <input asp-for="Invoice.ShippingRecipientIdNumber" class="form-control" id="shippingRecipientIdNumber" placeholder="Registration / Identification / Passport Number" oninput="resetShippingRecipientValidation()" />
                                             <label for="shippingRecipientIdNumber">Registration / Identification / Passport Number</label>
                                         </div>
                                     </div>

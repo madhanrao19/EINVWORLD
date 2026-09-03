@@ -1,6 +1,19 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.4`** (`AppInfo:Version` in `appsettings.json`). v1.25.4 is a **patch**
+> **Current version: `v1.25.5`** (`AppInfo:Version` in `appsettings.json`). v1.25.5 is a **minor**
+> release: two feature additions found live-testing Create Invoice/Invoice Edit. (1) **"Validate with
+> LHDN" for Shipping Recipient** — a new button inside the TIN field (matching Add Buyer's own
+> Validate button placement) that calls the existing `ILHDNApiService.ValidateTaxpayerAsync` used
+> everywhere else in the app, catching a fake/unregistered TIN+ID-type combo (LHDN Error05 "Invalid
+> Taxpayer Profile Validator") before submission instead of only after. New handler
+> `OnGetValidateShippingRecipientTinAsync` on both `CreateInvoiceModel` and `InvoiceEditModel`. (2)
+> **Item row layout: Classification and Unit moved under the Item Description**, inside the same
+> "Item/Service" column instead of two separate dense-grid columns — applied consistently to the
+> static server-rendered rows, `addItemRow()`, and `duplicateItem()` on both Create Invoice and
+> Invoice Edit (each page has its own independent copy of the row-building JS). The item-level
+> "Classification / Unit Set" validation-checklist check (added in v1.25.0) is updated to match — it
+> now selects by `.item-classification`/`.item-unit` instead of the removed `.irow-classification`/
+> `.irow-unit` wrapper divs. See the dated entry below for details. v1.25.4 was a **patch**
 > release: reverts the "Bill To (Buyer) missing BRN/SST" fix shipped in v1.25.3 — user request, keeping
 > `InvoiceDetails2.cshtml` and `Views/Invoices/PdfTemplate_v2.cshtml`'s Bill To block back to showing
 > only Name/Address/Attention (no BRN/SST line) for a normal registered Buyer, exactly as before
@@ -239,6 +252,33 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-03 — v1.25.5 (Shipping Recipient TIN validation + item-row layout reflow)
+
+> Two feature requests from the same live-testing session as v1.25.3/v1.25.4.
+
+### Added
+- **"Validate with LHDN" button for Shipping Recipient TIN** (Create Invoice + Invoice Edit) — sits
+  inside the TIN field's input-group, matching Add Buyer's own placement request. Calls the existing
+  `ILHDNApiService.ValidateTaxpayerAsync(tin, idType, idNo)` via a new
+  `OnGetValidateShippingRecipientTinAsync` page handler; shows Validating.../Validated/Failed states
+  exactly like Suppliers/PublicCustomer's own Validate button. Editing TIN, ID Type, or ID Number
+  resets the button back to its default state.
+
+### Changed
+- **Item row layout: Classification/Unit moved under Item Description** — previously two separate
+  130px/100px columns in the dense desktop grid; now nested inside the "Item/Service" column below
+  the description textarea, in a 2-up Bootstrap row (`col-6`/`col-6`). Applied to:
+  - `_CreateInvoice_Step2Items.cshtml` and `InvoiceEdit.cshtml`'s static server-rendered rows (and
+    their `.irow-head` header row, now reading "Item / Service / Classification / Unit").
+  - `addItemRow()` and `duplicateItem()` in `create-invoice.js` (Create Invoice).
+  - `InvoiceEdit.cshtml`'s own separate inline copies of `addItemRow()`/`duplicateItem()`.
+  - The Unit `<select>` gained an `item-unit` class (matching the existing `item-classification`
+    class) so the v1.25.0 "Classification / Unit Set" checklist check — previously selecting via the
+    now-removed `.irow-classification select`/`.irow-unit select` wrapper divs — continues to work
+    correctly against the new nested markup.
+  - CSS: removed the now-unused `.irow-classification`/`.irow-unit` (and `.irow-head-*` counterparts)
+    flex-basis rules; widened `.irow-desc` to absorb the freed row width.
 
 ## 📅 2026-09-03 — v1.25.4 (Revert: Bill To BRN/SST)
 
