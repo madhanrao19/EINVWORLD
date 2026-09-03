@@ -4158,6 +4158,15 @@
                 return;
             }
 
+            // Skip validation for general TINs - same list as PublicCustomer/Create.cshtml validateLHDN()
+            const generalTins = ["EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040"];
+            if (generalTins.includes(tin)) {
+                btn.classList.remove('btn-info', 'btn-danger');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<i class="ri-check-line align-bottom"></i> Validated';
+                return;
+            }
+
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validating...';
             btn.disabled = true;
             btn.classList.remove('btn-danger', 'btn-success');
