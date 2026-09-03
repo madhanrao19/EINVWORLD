@@ -1,6 +1,16 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.1`** (`AppInfo:Version` in `appsettings.json`). v1.25.1 is a **patch**
+> **Current version: `v1.25.2`** (`AppInfo:Version` in `appsettings.json`). v1.25.2 is a **patch**
+> release: fixes another live-Staging submission failure — LHDN rejected a Shipping Recipient with
+> `CF405 Postcode maximum length is 5 characters` and `CF416 State maximum length is 2 characters`.
+> Both `ShippingRecipientPostcode` and `ShippingRecipientState` (Create Invoice/Invoice Edit's
+> invoice-level Additional Information section, added when Shipping Recipient/Customs fields were
+> first built) were unconstrained free-text inputs — unlike every other party-address State field in
+> the app, which is a dropdown bound to the `StateCodes` lookup (2-character LHDN codes). Postcode now
+> has `maxlength="5"`; State is now the same `asp-items="Model.StateOptions"` dropdown pattern already
+> used for Supplier/PublicCustomer/Lead forms. UI-only — no schema change (the underlying column was
+> already wide enough for a 2-character code). See the dated entry below for details. v1.25.1 was a
+> **patch**
 > release: fixes a background-submission bug found live on Staging — a manual LHDN submission that
 > failed and got automatically retried by the durable job queue always failed the retry too, with
 > `TIN not found in session. Ensure it's stored at login.` `InvoiceSubmissionHelper.SubmitInvoiceAsync`
@@ -209,6 +219,24 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-03 — v1.25.2 (Fix Shipping Recipient Postcode/State validation gap)
+
+> Found live on Staging: submitting an invoice with a Shipping Recipient failed LHDN validation with
+> `CF405 Postcode maximum length is 5 characters` and `CF416 State maximum length is 2 characters`.
+
+### Fixed
+- **`ShippingRecipientPostcode`** (Create Invoice / Invoice Edit) now has `maxlength="5"`.
+- **`ShippingRecipientState`** is now a `<select>` bound to `Model.StateOptions`
+  (`DropdownHelper.GetStateOptions()`, the `StateCodes` lookup table — `Value = Code` (2-char LHDN
+  code), `Text = State` name), matching the exact pattern already used for Supplier/PublicCustomer/
+  Lead party-address State fields. It was a plain free-text `<input>` with no constraint, letting a
+  user type an arbitrary state name (or anything else) that LHDN's `CF416` validation always rejects.
+- `CreateInvoiceModel`/`InvoiceEditModel` gained a `StateOptions` property, populated via
+  `_dropdownHelper.GetStateOptions()` alongside the existing `CountryOptions`/`IdTypeOptions` in both
+  their `OnGet` and POST-redisplay paths.
+- UI-only change — no schema/migration (the `ShippingRecipientState` column was already wide enough
+  for a 2-character code), no change to `InvoiceMapper`'s submission mapping.
 
 ## 📅 2026-09-02 — v1.25.1 (Fix background-submission retry: missing TIN broke session-less token lookup)
 
