@@ -1,6 +1,12 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.3`** (`AppInfo:Version` in `appsettings.json`). v1.25.3 is a **patch**
+> **Current version: `v1.25.4`** (`AppInfo:Version` in `appsettings.json`). v1.25.4 is a **patch**
+> release: reverts the "Bill To (Buyer) missing BRN/SST" fix shipped in v1.25.3 — user request, keeping
+> `InvoiceDetails2.cshtml` and `Views/Invoices/PdfTemplate_v2.cshtml`'s Bill To block back to showing
+> only Name/Address/Attention (no BRN/SST line) for a normal registered Buyer, exactly as before
+> v1.25.3. The other three v1.25.3 fixes (Shipping Recipient State by country, Customs field
+> consistency, Step 2 nav padding) are untouched. See the dated entry below for details. v1.25.3 was a
+> **patch**
 > release: a batch of UI fixes found during live Staging testing of Create Invoice/Invoice Edit. (1)
 > **Bill To (Buyer) missing BRN/SST** — the printed invoice (both the on-screen `InvoiceDetails2` view
 > and the actual PDF template, `Views/Invoices/PdfTemplate_v2.cshtml`) showed the Supplier's BRN/SST
@@ -233,6 +239,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-03 — v1.25.4 (Revert: Bill To BRN/SST)
+
+> User-requested revert of one of v1.25.3's four fixes.
+
+### Reverted
+- **Bill To (Buyer) BRN/SST** — `InvoiceDetails2.cshtml` and `Views/Invoices/PdfTemplate_v2.cshtml`'s
+  Bill To block goes back to showing only Name/Address/Attention for a normal registered Buyer, with
+  no BRN or SST line — the exact markup from before v1.25.3. The other three v1.25.3 fixes are
+  unaffected.
 
 ## 📅 2026-09-03 — v1.25.3 (Live-testing UI fixes: Bill To, Shipping Recipient State, Customs fields, Step 2 nav)
 
