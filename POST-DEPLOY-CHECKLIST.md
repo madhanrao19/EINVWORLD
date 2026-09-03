@@ -144,9 +144,9 @@ bottom; stop and investigate on the first ❌.
       invoice-level Additional Information → Shipping Recipient section. ✅ Postcode is capped at 5
       characters (`maxlength`); State is a dropdown of 2-character LHDN state codes, not a free-text
       box. Submit an invoice with both filled in. ✅ no `CF405`/`CF416` validation error from LHDN.
-- [ ] **v1.25.3 — Bill To BRN/SST:** open Invoice Details (or download the PDF) for an invoice with a
-      registered Buyer (not General Public/Foreign/Government). ✅ Buyer's BRN shows next to the name
-      and an SST line appears, matching the Supplier block's layout.
+- [ ] **v1.25.4 — Bill To BRN/SST reverted:** open Invoice Details (or download the PDF) for an invoice
+      with a registered Buyer. ✅ Bill To shows only Name/Address/Attention — no BRN or SST line
+      (v1.25.3's Bill To fix was reverted per user request; the check above is obsolete).
 - [ ] **v1.25.3 — Shipping Recipient State by country:** set a Shipping Recipient's Country to Malaysia
       ✅ State is a dropdown; change Country to anything else ✅ State becomes a free-text box (no page
       reload needed). Change back to Malaysia ✅ dropdown returns.
