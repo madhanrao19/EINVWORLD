@@ -417,12 +417,21 @@
                             var buyerPostalCode = invoice.Customer != null ? invoice.Customer.PostalCode : invoice.PublicCustomer?.PostalCode;
                             var buyerCity = invoice.Customer != null ? invoice.Customer.CityName : invoice.PublicCustomer?.CityName;
                             var buyerTIN = invoice.Customer != null ? invoice.Customer.TIN : invoice.PublicCustomer?.TIN;
+                            var buyerRegNo = invoice.Customer != null ? invoice.Customer.RegNo : invoice.PublicCustomer?.RegNo;
+                            var buyerOldRegNo = invoice.Customer != null ? invoice.Customer.OldRegNo : invoice.PublicCustomer?.OldRegNo;
+                            var buyerSST = invoice.Customer != null ? invoice.Customer.SST : invoice.PublicCustomer?.SST;
                             var buyerAttention = invoice.Customer != null ? invoice.Customer.Attention : invoice.PublicCustomer?.Attention;
                             var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer != null ? DropdownHelper.GetStateName(invoice.PublicCustomer.StateCode) : null;
                             var buyerCountry = invoice.Customer != null ? invoice.Customer.Country?.Country : invoice.PublicCustomer?.Country?.Country;
                             var buyerCountryTitle = string.IsNullOrEmpty(buyerCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(buyerCountry.ToLower());
                         }
-                        <p>@buyerName</p>
+                        <p>
+                            @buyerName
+                            @if (buyerName != "General Public" && buyerName != "Foreign Buyer / Shipping Recipient" && buyerName != "Government and Related Entities" && !string.IsNullOrWhiteSpace(buyerRegNo))
+                            {
+                                <text>&nbsp;&nbsp;@buyerRegNo@(!string.IsNullOrWhiteSpace(buyerOldRegNo) ? $" ({buyerOldRegNo})" : "")</text>
+                            }
+                        </p>
                         @if (buyerName != "General Public" && buyerName != "Foreign Buyer / Shipping Recipient" && buyerName != "Government and Related Entities")
                         {
                             <p>@Html.Raw(buyerAddr1?.Replace("\n", "<br/>")?.Replace("\r", ""))</p>
@@ -430,6 +439,10 @@
                             @if (!string.IsNullOrEmpty(buyerState) || !string.IsNullOrEmpty(buyerCountryTitle))
                             {
                                 <p>@buyerState@(!string.IsNullOrEmpty(buyerState) && !string.IsNullOrEmpty(buyerCountryTitle) ? ", " : "")@buyerCountryTitle.</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(buyerSST))
+                            {
+                                <p style="padding-top:4px">SST: @buyerSST</p>
                             }
                         }
                         else
