@@ -310,12 +310,22 @@ public class InvoiceStatusUpdater : BackgroundService
         {
             _logger.LogInformation("🔄 [LHDN Import] Starting scheduled LHDN API import...");
 
-            var userCompanyTINs = await dbContext.UserCompanies
+            var allCompanyTINs = await dbContext.UserCompanies
                 .Include(uc => uc.PartyInfo)
                 .Where(uc => uc.PartyInfo != null && !string.IsNullOrWhiteSpace(uc.PartyInfo.TIN))
                 .Select(uc => uc.PartyInfo.TIN)
                 .Distinct()
                 .ToListAsync();
+
+            // General/placeholder TINs (EI00000000010 etc.) can never get an LHDN access token
+            // (see TokenService.GetAccessTokenForTIN) - skip them here instead of letting every
+            // scheduled cycle log an ERROR for a company that can never succeed.
+            var userCompanyTINs = allCompanyTINs.Where(t => !GeneralTINHelper.IsGeneralTIN(t)).ToList();
+            var skippedGeneralTINs = allCompanyTINs.Except(userCompanyTINs).ToList();
+            if (skippedGeneralTINs.Any())
+            {
+                _logger.LogWarning("⚠️ [LHDN Import] Skipping {Count} company TIN(s) that are general/placeholder TINs (cannot request an LHDN token): {TINs}", skippedGeneralTINs.Count, string.Join(", ", skippedGeneralTINs));
+            }
 
             _logger.LogInformation("🏢 [LHDN Import] Found {Count} user company TINs to import for", userCompanyTINs.Count);
 
