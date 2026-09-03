@@ -929,7 +929,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-floating">
-                                            <input asp-for="Invoice.ShippingRecipientPostcode" class="form-control" id="shippingRecipientPostcode" placeholder="Postcode" />
+                                            <input asp-for="Invoice.ShippingRecipientPostcode" class="form-control" id="shippingRecipientPostcode" placeholder="Postcode" maxlength="5" />
                                             <label for="shippingRecipientPostcode">Postcode</label>
                                         </div>
                                     </div>
@@ -941,7 +941,9 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-floating">
-                                            <input asp-for="Invoice.ShippingRecipientState" class="form-control" id="shippingRecipientState" placeholder="State" />
+                                            <select asp-for="Invoice.ShippingRecipientState" asp-items="Model.StateOptions" class="form-select" id="shippingRecipientState">
+                                                <option value="">-- Select --</option>
+                                            </select>
                                             <label for="shippingRecipientState">State</label>
                                         </div>
                                     </div>
