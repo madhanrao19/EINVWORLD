@@ -144,6 +144,14 @@ bottom; stop and investigate on the first ❌.
       invoice-level Additional Information → Shipping Recipient section. ✅ Postcode is capped at 5
       characters (`maxlength`); State is a dropdown of 2-character LHDN state codes, not a free-text
       box. Submit an invoice with both filled in. ✅ no `CF405`/`CF416` validation error from LHDN.
+- [ ] **v1.25.3 — Bill To BRN/SST:** open Invoice Details (or download the PDF) for an invoice with a
+      registered Buyer (not General Public/Foreign/Government). ✅ Buyer's BRN shows next to the name
+      and an SST line appears, matching the Supplier block's layout.
+- [ ] **v1.25.3 — Shipping Recipient State by country:** set a Shipping Recipient's Country to Malaysia
+      ✅ State is a dropdown; change Country to anything else ✅ State becomes a free-text box (no page
+      reload needed). Change back to Malaysia ✅ dropdown returns.
+- [ ] **v1.25.3 — Step 2 nav padding:** open Create Invoice (or Edit) Step 2 (Items). ✅ the
+      Previous/Next buttons sit with normal card padding, not flush against the card's outer border.
 - [ ] **Duplicate submit** of the same payload within the dedup window. ✅ replays the prior response — no second LHDN call.
 - [ ] **Manual status sync** (Admin → Invoice Sync). ✅ job queued; Sync Jobs page shows it run/complete.
 - [ ] **Background sync** runs on its own cadence. ✅ statuses update; no worker crash after an app-pool recycle (orphan recovery).

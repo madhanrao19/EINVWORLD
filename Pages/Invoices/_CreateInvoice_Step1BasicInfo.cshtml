@@ -482,16 +482,22 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="form-floating">
+                                        <div class="form-floating" id="shippingRecipientStateSelectWrap">
                                             <select asp-for="Invoice.ShippingRecipientState" asp-items="Model.StateOptions" class="form-select" id="shippingRecipientState">
                                                 <option value="">-- Select --</option>
                                             </select>
                                             <label for="shippingRecipientState">State</label>
                                         </div>
+                                        <div class="form-floating d-none" id="shippingRecipientStateTextWrap">
+                                            <input type="text" id="shippingRecipientStateText" name="Invoice.ShippingRecipientState"
+                                                   value="@Model.Invoice?.ShippingRecipientState" class="form-control" disabled
+                                                   maxlength="100" placeholder="State" />
+                                            <label for="shippingRecipientStateText">State</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-floating">
-                                            <select asp-for="Invoice.ShippingRecipientCountryCode" asp-items="Model.CountryOptions" class="form-select" id="shippingRecipientCountryCode">
+                                            <select asp-for="Invoice.ShippingRecipientCountryCode" asp-items="Model.CountryOptions" class="form-select" id="shippingRecipientCountryCode" onchange="toggleShippingRecipientStateField()">
                                                 <option value="">-- Select --</option>
                                             </select>
                                             <label for="shippingRecipientCountryCode">Country</label>
@@ -528,12 +534,16 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label" for="customsFormNo1Reference">Reference Number of Customs Form No.1, 9 etc.</label>
-                                        <textarea asp-for="Invoice.CustomsFormNo1Reference" class="form-control" id="customsFormNo1Reference" rows="2" placeholder="Customs Form No.1 reference"></textarea>
+                                        <div class="form-floating">
+                                            <input asp-for="Invoice.CustomsFormNo1Reference" class="form-control" id="customsFormNo1Reference" placeholder="Reference Number of Customs Form No.1, 9 etc." />
+                                            <label for="customsFormNo1Reference">Reference Number of Customs Form No.1, 9 etc.</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label" for="customsFormNo2Reference">Reference Number of Custom Form No.2</label>
-                                        <textarea asp-for="Invoice.CustomsFormNo2Reference" class="form-control" id="customsFormNo2Reference" rows="2" placeholder="Customs Form No.2 reference"></textarea>
+                                        <div class="form-floating">
+                                            <input asp-for="Invoice.CustomsFormNo2Reference" class="form-control" id="customsFormNo2Reference" placeholder="Reference Number of Custom Form No.2" />
+                                            <label for="customsFormNo2Reference">Reference Number of Custom Form No.2</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating">

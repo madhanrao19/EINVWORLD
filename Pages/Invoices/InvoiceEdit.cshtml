@@ -940,16 +940,22 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="form-floating">
+                                        <div class="form-floating" id="shippingRecipientStateSelectWrap">
                                             <select asp-for="Invoice.ShippingRecipientState" asp-items="Model.StateOptions" class="form-select" id="shippingRecipientState">
                                                 <option value="">-- Select --</option>
                                             </select>
                                             <label for="shippingRecipientState">State</label>
                                         </div>
+                                        <div class="form-floating d-none" id="shippingRecipientStateTextWrap">
+                                            <input type="text" id="shippingRecipientStateText" name="Invoice.ShippingRecipientState"
+                                                   value="@Model.Invoice?.ShippingRecipientState" class="form-control" disabled
+                                                   maxlength="100" placeholder="State" />
+                                            <label for="shippingRecipientStateText">State</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-floating">
-                                            <select asp-for="Invoice.ShippingRecipientCountryCode" asp-items="Model.CountryOptions" class="form-select" id="shippingRecipientCountryCode">
+                                            <select asp-for="Invoice.ShippingRecipientCountryCode" asp-items="Model.CountryOptions" class="form-select" id="shippingRecipientCountryCode" onchange="toggleShippingRecipientStateField()">
                                                 <option value="">-- Select --</option>
                                             </select>
                                             <label for="shippingRecipientCountryCode">Country</label>
@@ -986,12 +992,16 @@
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label" for="customsFormNo1Reference">Reference Number of Customs Form No.1, 9 etc.</label>
-                                        <textarea asp-for="Invoice.CustomsFormNo1Reference" class="form-control" id="customsFormNo1Reference" rows="2" placeholder="Customs Form No.1 reference"></textarea>
+                                        <div class="form-floating">
+                                            <input asp-for="Invoice.CustomsFormNo1Reference" class="form-control" id="customsFormNo1Reference" placeholder="Reference Number of Customs Form No.1, 9 etc." />
+                                            <label for="customsFormNo1Reference">Reference Number of Customs Form No.1, 9 etc.</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label" for="customsFormNo2Reference">Reference Number of Custom Form No.2</label>
-                                        <textarea asp-for="Invoice.CustomsFormNo2Reference" class="form-control" id="customsFormNo2Reference" rows="2" placeholder="Customs Form No.2 reference"></textarea>
+                                        <div class="form-floating">
+                                            <input asp-for="Invoice.CustomsFormNo2Reference" class="form-control" id="customsFormNo2Reference" placeholder="Reference Number of Custom Form No.2" />
+                                            <label for="customsFormNo2Reference">Reference Number of Custom Form No.2</label>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-floating">
@@ -1345,7 +1355,6 @@
                     <!-- /sticky right panel -->
                     </div>
                     <!-- /two-column layout -->
-                </div>
 
                 <!-- Tax Management Section -->
                 @* <div class="card border-warning mt-3">
@@ -1373,6 +1382,7 @@
                     <button type="button" class="btn btn-primary waves-effect waves-light" onclick="nextStep()">
                         Next: Review & Submit <i class="ri-arrow-right-line align-middle ms-2"></i>
                     </button>
+                </div>
                 </div>
             </div>
         </form>
@@ -5484,6 +5494,33 @@
                         console.error("Error parsing saved item data:", e);
                     }
                 };
+
+                // Shipping Recipient State: Malaysia keeps the fixed 2-char LHDN state-code dropdown
+                // (required for LHDN submission); any other country switches to a free-text State input,
+                // matching the same country-conditional pattern already used for PublicCustomer/Buyer
+                // address entry. Treat "no country chosen yet" like Malaysia.
+                function toggleShippingRecipientStateField() {
+                    const countrySelect = document.getElementById('shippingRecipientCountryCode');
+                    const stateSelectWrap = document.getElementById('shippingRecipientStateSelectWrap');
+                    const stateTextWrap = document.getElementById('shippingRecipientStateTextWrap');
+                    const stateSelect = document.getElementById('shippingRecipientState');
+                    const stateText = document.getElementById('shippingRecipientStateText');
+                    if (!countrySelect || !stateSelectWrap || !stateTextWrap || !stateSelect || !stateText) return;
+
+                    const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
+                    if (isMalaysia) {
+                        stateSelectWrap.classList.remove('d-none');
+                        stateSelect.disabled = false;
+                        stateTextWrap.classList.add('d-none');
+                        stateText.disabled = true;
+                    } else {
+                        stateSelectWrap.classList.add('d-none');
+                        stateSelect.disabled = true;
+                        stateTextWrap.classList.remove('d-none');
+                        stateText.disabled = false;
+                    }
+                }
+                document.addEventListener('DOMContentLoaded', toggleShippingRecipientStateField);
     </script>
 
 
