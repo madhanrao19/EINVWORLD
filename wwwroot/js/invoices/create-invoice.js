@@ -2339,8 +2339,8 @@
             let lineFieldsComplete = hasLineItems;
             let qtyPriceComplete = hasLineItems;
             itemRows.forEach(row => {
-                const classificationSelect = row.querySelector('.irow-classification select');
-                const unitSelect = row.querySelector('.irow-unit select');
+                const classificationSelect = row.querySelector('.item-classification');
+                const unitSelect = row.querySelector('.item-unit');
                 if (!classificationSelect?.value || !unitSelect?.value) lineFieldsComplete = false;
 
                 const qty = parseFloat(row.querySelector('.quantity-input')?.value) || 0;
@@ -2628,21 +2628,23 @@
                                 ${savedItemsOptionsHtml}
                             </select>
                             <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
-                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                        </div>
-                        <div class="irow-classification">
-                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
-                            <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                <option value="">Select Classification</option>
-                                ${classificationOptionsHtml}
-                            </select>
-                        </div>
-                        <div class="irow-unit">
-                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
-                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                                <option value="">Unit</option>
-                                ${unitOptionsHtml}
-                            </select>
+                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description mb-2" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="irow-mlabel-always">Classification <span class="text-danger">*</span></div>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                        <option value="">Select Classification</option>
+                                        ${classificationOptionsHtml}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                        <option value="">Unit</option>
+                                        ${unitOptionsHtml}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="irow-qty">
                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
@@ -2983,21 +2985,23 @@
                                 ${savedItemsOptionsHtml}
                             </select>
                             <input name="Invoice.InvoiceLines[${itemCount}].ItemCode" class="form-control form-control-sm item-code mb-2" placeholder="Item Code" />
-                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
-                        </div>
-                        <div class="irow-classification">
-                            <div class="irow-mlabel">Classification <span class="text-danger">*</span></div>
-                            <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
-                                <option value="">Select Classification</option>
-                                ${classificationOptionsHtml}
-                            </select>
-                        </div>
-                        <div class="irow-unit">
-                            <div class="irow-mlabel">Unit <span class="text-danger">*</span></div>
-                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm" required>
-                                <option value="">Unit</option>
-                                ${unitOptionsHtml}
-                            </select>
+                            <textarea name="Invoice.InvoiceLines[${itemCount}].ItemDescription" class="form-control form-control-sm item-description mb-2" rows="1" placeholder="Enter comprehensive item description..." required></textarea>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="irow-mlabel-always">Classification <span class="text-danger">*</span></div>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].ClassificationCode" class="form-select form-select-sm item-classification" required>
+                                        <option value="">Select Classification</option>
+                                        ${classificationOptionsHtml}
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                        <option value="">Unit</option>
+                                        ${unitOptionsHtml}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                         <div class="irow-qty">
                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
@@ -4127,3 +4131,57 @@
             }
         }
         document.addEventListener('DOMContentLoaded', toggleShippingRecipientStateField);
+
+        // Shipping Recipient "Validate with LHDN" - same behavior/pattern as Suppliers/PublicCustomer's
+        // own Validate button (see PublicCustomer/Create.cshtml validateLHDN()), catching a fake/
+        // unregistered TIN+ID-type combo (LHDN Error05 "Invalid Taxpayer Profile Validator") before
+        // submission instead of only after.
+        function resetShippingRecipientValidation() {
+            document.querySelectorAll('.btn-validate-shipping').forEach(btn => {
+                btn.classList.remove('btn-success', 'btn-danger');
+                btn.classList.add('btn-info');
+                btn.innerHTML = 'Validate with LHDN';
+            });
+        }
+
+        async function validateShippingRecipientLHDN() {
+            const tin = document.getElementById('shippingRecipientTIN')?.value;
+            const idType = document.getElementById('shippingRecipientIdType')?.value;
+            const idNo = document.getElementById('shippingRecipientIdNumber')?.value;
+            const btn = document.querySelector('.btn-validate-shipping');
+            if (!btn) return;
+
+            if (!tin || !idType || !idNo) {
+                btn.classList.remove('btn-info', 'btn-success');
+                btn.classList.add('btn-danger');
+                btn.innerHTML = 'Missing Info - Retry';
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validating...';
+            btn.disabled = true;
+            btn.classList.remove('btn-danger', 'btn-success');
+            btn.classList.add('btn-info');
+
+            try {
+                const response = await fetch(`?handler=ValidateShippingRecipientTin&tin=${encodeURIComponent(tin)}&idType=${encodeURIComponent(idType)}&idNo=${encodeURIComponent(idNo)}`);
+                const data = await response.json();
+                if (data.success) {
+                    btn.classList.remove('btn-info', 'btn-danger');
+                    btn.classList.add('btn-success');
+                    btn.innerHTML = '<i class="ri-check-line align-bottom"></i> Validated';
+                } else {
+                    btn.classList.remove('btn-info', 'btn-success');
+                    btn.classList.add('btn-danger');
+                    btn.innerHTML = '<i class="ri-close-line align-bottom"></i> Failed - Retry';
+                    console.warn(data.message);
+                }
+            } catch (error) {
+                console.error('Shipping Recipient LHDN validation error:', error);
+                btn.classList.remove('btn-info', 'btn-success');
+                btn.classList.add('btn-danger');
+                btn.innerHTML = '<i class="ri-close-line align-bottom"></i> Error - Retry';
+            } finally {
+                btn.disabled = false;
+            }
+        }
