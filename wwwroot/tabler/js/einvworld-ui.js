@@ -20,14 +20,31 @@
 
   function highlightCurrentRoute() {
     var current = normalizePath(window.location.pathname);
+    var currentSearch = window.location.search || "";
     var links = document.querySelectorAll('.navbar-vertical a.nav-link[href], .navbar-vertical a.dropdown-item[href]');
     var best = null;
     var bestLen = -1;
+    var bestIsFullMatch = false;
 
     links.forEach(function (a) {
       var href = a.getAttribute("href");
       if (!href || href.charAt(0) === "#") return;
       var linkPath = normalizePath(href);
+      var linkSearch = "";
+      try { linkSearch = new URL(href, window.location.origin).search || ""; } catch (e) { /* relative already */ }
+
+      if (linkSearch) {
+        // A link with its own query string (e.g. "?type=SELF") only stands for that exact
+        // page+query combo - two links can share a bare path (e.g. Credit/Debit/Refund Note and
+        // View All e-Invoices both point at /Invoices/InvoiceLists), so a query-less link must
+        // stay the fallback for everything except this link's own exact query.
+        if (linkPath === current && linkSearch === currentSearch && !bestIsFullMatch) {
+          best = a; bestLen = linkPath.length; bestIsFullMatch = true;
+        }
+        return;
+      }
+
+      if (bestIsFullMatch) return;
       // Exact match, or current path is a child of the link (e.g. /Items -> /Items/Edit).
       var isMatch = current === linkPath ||
         (linkPath !== "/" && current.indexOf(linkPath + "/") === 0);
