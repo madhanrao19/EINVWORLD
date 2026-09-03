@@ -1,6 +1,28 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.5`** (`AppInfo:Version` in `appsettings.json`). v1.25.5 is a **minor**
+> **Current version: `v1.25.6`** (`AppInfo:Version` in `appsettings.json`). v1.25.6 is a **patch**
+> release: four small fixes found live-testing Add Buyer/Invoice Create/the sidebar on Staging. (1)
+> **Shipping Recipient TIN validation now matches Buyer TIN** — the general-TIN quick-pick dropdown
+> (General Public/Foreign Buyer/Foreign Supplier/Government) and the auto-skip-validation behavior for
+> those TINs (client *and* server) were missing from Shipping Recipient, so picking e.g. General Public
+> hit the real LHDN taxpayer-validate API and failed instead of auto-passing; both handlers now share
+> `GeneralTINHelper.IsGeneralTIN` instead of a duplicated inline TIN array. (2) **Add Buyer's "Validate
+> with LHDN" button moved inline with the TIN field** (input-group, matching Shipping Recipient's own
+> layout) — the redundant standalone button under the Step 1 tab footer was removed; Step 2 keeps its
+> own button since it's the only way to validate right before Save without switching back to Step 1. (3)
+> **Scheduled LHDN import job no longer logs an ERROR every cycle for a general/placeholder-TIN
+> company** — `RunLhdnImportAsync` was retrying a company whose TIN is `EI00000000010` on every cycle,
+> permanently failing (`TokenService.GetAccessTokenForTIN` structurally rejects general TINs) and
+> logging at ERROR level all day; general TINs are now filtered out before the loop with a single WARN
+> instead. (4) **Sidebar highlight fix on `/Invoices/InvoiceLists`** — "Credit / Debit / Refund Note"
+> and "View All e-Invoices" share the same URL by design (CN/DN/RN always needs a source invoice, so it
+> routes through the invoice list instead of a blank create page); `highlightCurrentRoute()` in
+> `einvworld-ui.js` stripped query strings before comparing, so the two links always tied and the first
+> one in the DOM won regardless of how the page was actually reached. A link with its own query string
+> now only matches that exact query; the CN/DN/RN link gained a distinguishing `?intent=cndn` marker
+> (harmless — not read by `InvoiceLists.cshtml.cs`). Bonus: the same fix means `/Invoices/CreateInvoice`
+> vs `?type=SELF` now highlight "Invoice"/"Self-Billed Invoice" correctly too. See the dated entry below
+> for details. v1.25.5 was a **minor**
 > release: two feature additions found live-testing Create Invoice/Invoice Edit. (1) **"Validate with
 > LHDN" for Shipping Recipient** — a new button inside the TIN field (matching Add Buyer's own
 > Validate button placement) that calls the existing `ILHDNApiService.ValidateTaxpayerAsync` used
@@ -252,6 +274,39 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-03 — v1.25.6 (Buyer/Shipping Recipient TIN parity + background-log noise + sidebar highlight)
+
+> Four independent small fixes: two from a screenshot-driven follow-up on v1.25.5's Shipping Recipient
+> TIN validation feature, one found reviewing staging logs after that deploy, and one found reviewing a
+> sidebar screenshot. PRs #237–#240.
+
+### Fixed
+- **Shipping Recipient TIN validation now matches Buyer TIN** (`_CreateInvoice_Step1BasicInfo.cshtml`,
+  `create-invoice.js`, `CreateInvoice.cshtml.cs`) — added the same general-TIN datalist dropdown Buyer
+  TIN already has, and both the client-side `validateShippingRecipientLHDN()` and the server-side
+  `OnGetValidateShippingRecipientTinAsync` handler now auto-pass general TINs instead of calling the
+  real LHDN taxpayer-validate API and failing. `PublicCustomer/Create.cshtml.cs` was also switched from
+  a duplicated inline general-TIN array to the shared `GeneralTINHelper.IsGeneralTIN`, now used by both
+  handlers.
+- **Add Buyer's "Validate with LHDN" button moved inline with the TIN field** (`PublicCustomer/
+  Create.cshtml`) — now sits inside the TIN field's input-group like Shipping Recipient's own button,
+  instead of at the bottom of the Step 1 tab. The now-redundant standalone Step 1 button was removed;
+  Step 2 keeps its own copy since it's the only way to validate right before Save.
+- **Scheduled LHDN import job (`InvoiceStatusUpdater.RunLhdnImportAsync`) no longer logs an ERROR every
+  cycle for a company registered under a general/placeholder TIN** (`EI00000000010`) — that TIN can
+  never obtain an LHDN access token by design (`TokenService.GetAccessTokenForTIN`), so the job was
+  permanently failing and logging at ERROR level roughly every 1–2 hours, all day, forever. General TINs
+  are now filtered out of the import candidate list before the loop, with a single WARN instead.
+- **Sidebar always highlighted "Credit / Debit / Refund Note" instead of "View All e-Invoices"** on
+  `/Invoices/InvoiceLists` (`einvworld-ui.js`, `_SupplierNavigation.cshtml`) — both links share that URL
+  by design (CN/DN/RN always needs a source invoice, so it routes through the invoice list rather than a
+  blank create page), but `highlightCurrentRoute()` stripped query strings before comparing paths, so
+  the two links tied and the first one in the DOM always won. A link with its own query string now only
+  matches when the current URL's query matches it exactly; the CN/DN/RN link gained a distinguishing
+  `?intent=cndn` marker (unread by `InvoiceLists.cshtml.cs`, so no functional effect). Same root cause
+  also meant `/Invoices/CreateInvoice` always highlighted "Invoice" even when `?type=SELF` (Self-Billed
+  Invoice) was the actual page — now fixed too.
 
 ## 📅 2026-09-03 — v1.25.5 (Shipping Recipient TIN validation + item-row layout reflow)
 
