@@ -1970,6 +1970,11 @@ namespace EINVWORLD.Pages.Invoices
         // Error05 "Invalid Taxpayer Profile Validator") is caught here instead of only at submission time.
         public async Task<JsonResult> OnGetValidateShippingRecipientTinAsync(string tin, string idType, string idNo)
         {
+            if (GeneralTINHelper.IsGeneralTIN(tin))
+            {
+                return new JsonResult(new { success = true, message = "General TIN skipped validation." });
+            }
+
             if (string.IsNullOrWhiteSpace(tin) || string.IsNullOrWhiteSpace(idType) || string.IsNullOrWhiteSpace(idNo))
             {
                 return new JsonResult(new { success = false, message = "TIN, ID Type, and Registration/Identification Number are required for validation." });

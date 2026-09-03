@@ -448,8 +448,14 @@
                                     <div class="col-md-6">
                                         <label class="form-label" for="shippingRecipientTIN">Shipping Recipient's TIN</label>
                                         <div class="input-group">
-                                            <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="TIN" oninput="resetShippingRecipientValidation()" />
+                                            <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="TIN" list="shippingRecipientTinOptions" oninput="resetShippingRecipientValidation()" />
                                             <button class="btn btn-info btn-validate-shipping" type="button" onclick="validateShippingRecipientLHDN()">Validate with LHDN</button>
+                                            <datalist id="shippingRecipientTinOptions">
+                                                <option value="EI00000000010">General Public</option>
+                                                <option value="EI00000000020">Foreign Buyer</option>
+                                                <option value="EI00000000030">Foreign Supplier</option>
+                                                <option value="EI00000000040">Government</option>
+                                            </datalist>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
