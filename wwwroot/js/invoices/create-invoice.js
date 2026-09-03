@@ -4100,3 +4100,30 @@
                 console.error("Error parsing saved item data:", e);
             }
         };
+
+        // Shipping Recipient State: Malaysia keeps the fixed 2-char LHDN state-code dropdown (required
+        // for LHDN submission); any other country switches to a free-text State input, matching the
+        // same country-conditional pattern already used for PublicCustomer/Buyer address entry. Treat
+        // "no country chosen yet" like Malaysia so the dropdown is the default on a fresh invoice.
+        function toggleShippingRecipientStateField() {
+            const countrySelect = document.getElementById('shippingRecipientCountryCode');
+            const stateSelectWrap = document.getElementById('shippingRecipientStateSelectWrap');
+            const stateTextWrap = document.getElementById('shippingRecipientStateTextWrap');
+            const stateSelect = document.getElementById('shippingRecipientState');
+            const stateText = document.getElementById('shippingRecipientStateText');
+            if (!countrySelect || !stateSelectWrap || !stateTextWrap || !stateSelect || !stateText) return;
+
+            const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
+            if (isMalaysia) {
+                stateSelectWrap.classList.remove('d-none');
+                stateSelect.disabled = false;
+                stateTextWrap.classList.add('d-none');
+                stateText.disabled = true;
+            } else {
+                stateSelectWrap.classList.add('d-none');
+                stateSelect.disabled = true;
+                stateTextWrap.classList.remove('d-none');
+                stateText.disabled = false;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', toggleShippingRecipientStateField);
