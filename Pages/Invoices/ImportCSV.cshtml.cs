@@ -241,6 +241,8 @@ namespace EINVWORLD.Pages.Invoices
             var validClassificationCodes = new HashSet<string>(await _context.ClassificationCodes.Select(x => x.Code).ToListAsync());
             var validUnitOfMeasures = new HashSet<string>(await _context.UnitTypes.Select(x => x.Code).ToListAsync());
             var validTaxCategories = new HashSet<string>(await _context.TaxTypes.Select(x => x.Code).ToListAsync());
+            var validCountryCodes = new HashSet<string>(await _context.CountryCodes.Where(c => c.IsActive).Select(x => x.Code).ToListAsync());
+            var validRegistrationTypes = new HashSet<string>(await _context.RegistrationTypes.Select(x => x.Code).ToListAsync());
 
             var knownParties = await _context.PartyInfos
                 .Where(p => _context.SupplierBuyers.Any(sb => sb.SupplierId == primaryCompanyId && sb.BuyerId == p.PartyInfoId) || p.TIN == "EI00000000010" || p.TIN == "EI00000000030")
@@ -294,6 +296,12 @@ namespace EINVWORLD.Pages.Invoices
                     if (!string.IsNullOrWhiteSpace(firstLine.EndDate) && !DateTime.TryParse(firstLine.EndDate, out _))
                         previewRecord.Errors.Add($"Invalid EndDate format: '{firstLine.EndDate}'. Use yyyy-MM-dd.");
 
+                    if (!string.IsNullOrWhiteSpace(firstLine.ShippingRecipientCountryCode) && !validCountryCodes.Contains(firstLine.ShippingRecipientCountryCode))
+                        previewRecord.Errors.Add($"Invalid ShippingRecipientCountryCode: '{firstLine.ShippingRecipientCountryCode}'.");
+
+                    if (!string.IsNullOrWhiteSpace(firstLine.ShippingRecipientIdType) && !validRegistrationTypes.Contains(firstLine.ShippingRecipientIdType))
+                        previewRecord.Errors.Add($"Invalid ShippingRecipientIdType: '{firstLine.ShippingRecipientIdType}'.");
+
                     var counterparty = knownParties.FirstOrDefault(p => p.TIN == firstLine.CounterpartyTIN);
                     var publicCounterparty = publicCustomers.FirstOrDefault(p => p.TIN == firstLine.CounterpartyTIN);
 
@@ -319,6 +327,9 @@ namespace EINVWORLD.Pages.Invoices
 
                         if (line.TaxCategory == null || !validTaxCategories.Contains(line.TaxCategory))
                             previewRecord.Errors.Add($"Line {lineIndex}: Invalid Tax Category.");
+
+                        if (!string.IsNullOrWhiteSpace(line.CountryOfOrigin) && !validCountryCodes.Contains(line.CountryOfOrigin))
+                            previewRecord.Errors.Add($"Line {lineIndex}: Invalid CountryOfOrigin: '{line.CountryOfOrigin}'.");
 
                         if (isSelfBilled && counterparty != null)
                         {
@@ -431,6 +442,24 @@ namespace EINVWORLD.Pages.Invoices
                     BankName = firstLine.BankName,
                     Attention = firstLine.AttentionTo,
                     PaymentTerms = firstLine.PaymentTerms,
+                    Incoterms = firstLine.Incoterms,
+                    ShippingRecipientName = firstLine.ShippingRecipientName,
+                    ShippingRecipientAddrLine1 = firstLine.ShippingRecipientAddrLine1,
+                    ShippingRecipientAddrLine2 = firstLine.ShippingRecipientAddrLine2,
+                    ShippingRecipientAddrLine3 = firstLine.ShippingRecipientAddrLine3,
+                    ShippingRecipientPostcode = firstLine.ShippingRecipientPostcode,
+                    ShippingRecipientCity = firstLine.ShippingRecipientCity,
+                    ShippingRecipientState = firstLine.ShippingRecipientState,
+                    ShippingRecipientCountryCode = firstLine.ShippingRecipientCountryCode,
+                    ShippingRecipientIdType = firstLine.ShippingRecipientIdType,
+                    ShippingRecipientIdNumber = firstLine.ShippingRecipientIdNumber,
+                    ShippingRecipientTIN = firstLine.ShippingRecipientTIN,
+                    CustomsFormNo1Reference = firstLine.CustomsFormNo1Reference,
+                    FreeTradeAgreementInfo = firstLine.FreeTradeAgreementInfo,
+                    CertifiedExporterAuthorizationNumber = firstLine.CertifiedExporterAuthorizationNumber,
+                    CustomsFormNo2Reference = firstLine.CustomsFormNo2Reference,
+                    OtherChargesAmount = firstLine.OtherChargesAmount,
+                    OtherChargesDescription = firstLine.OtherChargesDescription,
                     Supplier = supplier!,
                     SupplierId = supplier?.PartyInfoId,
                     Customer = customer!,
@@ -456,6 +485,11 @@ namespace EINVWORLD.Pages.Invoices
 
                         UnitOfMeasure = line.UnitOfMeasure ?? "",
                         ClassificationCode = string.IsNullOrWhiteSpace(line.ClassificationCode) ? (isSelfBilled ? "004" : "022") : line.ClassificationCode,
+                        DiscountReason = line.DiscountReason,
+                        FeeChargeAmount = line.FeeChargeAmount,
+                        FeeChargeReason = line.FeeChargeReason,
+                        ProductTariffCode = line.ProductTariffCode,
+                        CountryOfOrigin = line.CountryOfOrigin,
                         InvoiceHeader = invoiceHeader,
                         InvoiceTaxes = new List<InvoiceTax>
                         {
@@ -559,6 +593,39 @@ namespace EINVWORLD.Pages.Invoices
 
             // Converted to nullable to prevent TypeConverterException
             public decimal? TaxPercentage { get; set; }
+
+            // Line-level: Discount/Fee-Charge/Tariff/Origin (added alongside the header Shipping
+            // Recipient/Customs block below — mirrors InvoiceLine, see CreateInvoice.cshtml.cs).
+            public string? DiscountReason { get; set; }
+            public decimal? FeeChargeAmount { get; set; }
+            public string? FeeChargeReason { get; set; }
+            public string? ProductTariffCode { get; set; }
+            public string? CountryOfOrigin { get; set; }
+
+            // Header: Incoterms
+            public string? Incoterms { get; set; }
+
+            // Header: Shipping Recipient — applicable only when goods ship to a different
+            // recipient/address than the Buyer's own. All optional, mirrors InvoiceHeader.
+            public string? ShippingRecipientName { get; set; }
+            public string? ShippingRecipientAddrLine1 { get; set; }
+            public string? ShippingRecipientAddrLine2 { get; set; }
+            public string? ShippingRecipientAddrLine3 { get; set; }
+            public string? ShippingRecipientPostcode { get; set; }
+            public string? ShippingRecipientCity { get; set; }
+            public string? ShippingRecipientState { get; set; }
+            public string? ShippingRecipientCountryCode { get; set; }
+            public string? ShippingRecipientIdType { get; set; }
+            public string? ShippingRecipientIdNumber { get; set; }
+            public string? ShippingRecipientTIN { get; set; }
+
+            // Header: Import/Export (Customs) information
+            public string? CustomsFormNo1Reference { get; set; }
+            public string? FreeTradeAgreementInfo { get; set; }
+            public string? CertifiedExporterAuthorizationNumber { get; set; }
+            public string? CustomsFormNo2Reference { get; set; }
+            public decimal? OtherChargesAmount { get; set; }
+            public string? OtherChargesDescription { get; set; }
         }
     }
 }
