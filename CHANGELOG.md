@@ -1,7 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.6`** (`AppInfo:Version` in `appsettings.json`). v1.25.6 is a **patch**
-> release: four small fixes found live-testing Add Buyer/Invoice Create/the sidebar on Staging. (1)
+> **Current version: `v1.25.7`** (`AppInfo:Version` in `appsettings.json`). v1.25.7 is a **patch**
+> release: Sent Invoices now shows a guidance banner when the sidebar's "Credit / Debit / Refund Note"
+> link is used (`?intent=cndn`), explaining that CN/DN/RN must be issued from an existing Valid invoice's
+> row action rather than a blank create page — see the dated entry below for details. v1.25.6 was a
+> **patch** release: four small fixes found live-testing Add Buyer/Invoice Create/the sidebar on Staging. (1)
 > **Shipping Recipient TIN validation now matches Buyer TIN** — the general-TIN quick-pick dropdown
 > (General Public/Foreign Buyer/Foreign Supplier/Government) and the auto-skip-validation behavior for
 > those TINs (client *and* server) were missing from Shipping Recipient, so picking e.g. General Public
@@ -274,6 +277,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-04 — v1.25.7 (CN/DN/RN nav guidance banner)
+
+> Small UX follow-up after a user question: should "Credit / Debit / Refund Note" in the sidebar
+> deep-link straight to a blank Create e-Invoice page like "Self-Billed Invoice" does? It can't — LHDN
+> requires every CN/DN/RN to reference a specific prior invoice (type + UUID), so there's no valid blank
+> Credit Note. The real gap was that the existing `?intent=cndn` marker (added in v1.25.6, previously a
+> no-op) never told the user what to do once they landed on Sent Invoices.
+
+### Changed
+- **Sent Invoices now shows a guidance banner when arrived at via the sidebar's "Credit / Debit /
+  Refund Note" link** (`InvoiceLists.cshtml`) — `?intent=cndn` now renders a dismissible-by-navigation
+  info banner pointing the user to the existing per-row "Create CN / Create DN / Create RN" action on
+  invoices with LHDN status `Valid`. No backend, model, or LHDN submission logic changed.
 
 ## 📅 2026-09-03 — v1.25.6 (Buyer/Shipping Recipient TIN parity + background-log noise + sidebar highlight)
 
