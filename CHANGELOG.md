@@ -1,6 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.25.7`** (`AppInfo:Version` in `appsettings.json`). v1.25.7 is a **patch**
+> **Current version: `v1.26.0`** (`AppInfo:Version` in `appsettings.json`). v1.26.0 is a **minor**
+> release: Bulk Invoice Import (CSV/Excel) now supports every field the manual Create Invoice flow
+> supports — line-level Tariff Code/Country of Origin/Discount/Fee-Charge and the full header Shipping
+> Recipient/Customs/Incoterms block, previously silently dropped on import — see the dated entry below
+> for details. v1.25.7 was a **patch**
 > release: Sent Invoices now shows a guidance banner when the sidebar's "Credit / Debit / Refund Note"
 > link is used (`?intent=cndn`), explaining that CN/DN/RN must be issued from an existing Valid invoice's
 > row action rather than a blank create page — see the dated entry below for details. v1.25.6 was a
@@ -277,6 +281,32 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-04 — v1.26.0 (Bulk Invoice Import: Shipping Recipient/Customs/Incoterms/Tariff field parity)
+
+> Follow-up after a user question about whether Bulk Invoice Import (CSV/Excel) covers all Create
+> Invoice fields. It didn't: everything added by the `AddLineTariffOriginAndHeaderShippingCustoms`
+> migration (2026-09-02), plus Incoterms, was importable through the manual form only — the CSV/Excel
+> DTO was never updated alongside it, so these values were silently dropped on bulk import.
+
+### Added
+- **`InvoiceCsvDto` (`ImportCSV.cshtml.cs`) gained 21 columns**: line-level `DiscountReason`,
+  `FeeChargeAmount`, `FeeChargeReason`, `ProductTariffCode`, `CountryOfOrigin`; header-level
+  `Incoterms`, the full Shipping Recipient block (name, 3 address lines, postcode/city/state/country,
+  ID type/number, TIN), and the customs/other-charges block (`CustomsFormNo1Reference`,
+  `FreeTradeAgreementInfo`, `CertifiedExporterAuthorizationNumber`, `CustomsFormNo2Reference`,
+  `OtherChargesAmount`, `OtherChargesDescription`). CSV parsing, Excel parsing, and the downloadable
+  `.xlsx` template are all driven reflectively off this one DTO, so all three picked up the new
+  columns automatically — no separate mapping code per format.
+- **Step 1 preview validation** for the two FK-backed optional fields — `ShippingRecipientCountryCode`/
+  line `CountryOfOrigin` against `CountryCodes`, `ShippingRecipientIdType` against
+  `RegistrationTypes` — rejecting an invalid code with a clear preview error instead of a raw SQL FK
+  violation on save, matching the existing precedent for Classification Code/Unit of Measure/Tax
+  Category.
+- **Step 2 (`OnPostConfirmAsync`)** now assigns all new fields onto the created `InvoiceHeader`/
+  `InvoiceLine`, mirroring `CreateInvoice.cshtml.cs`. `InvoiceMapper` (submission JSON) already mapped
+  every one of these fields — unchanged — so bulk-imported drafts now submit to LHDN identically to
+  manually-created invoices carrying the same values.
 
 ## 📅 2026-09-04 — v1.25.7 (CN/DN/RN nav guidance banner)
 
