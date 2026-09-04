@@ -322,6 +322,16 @@
     </div>
 </div>
 
+@{
+    var showCndnIntentBanner = string.Equals(Request.Query["intent"], "cndn", StringComparison.OrdinalIgnoreCase);
+}
+@if (showCndnIntentBanner)
+{
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2" role="alert">
+        <i class="ri-information-line fs-5"></i>
+        <div>To issue a Credit, Debit or Refund Note, find the original invoice below (status <strong>Valid</strong>) and use its <strong>Create CN / Create DN / Create RN</strong> action.</div>
+    </div>
+}
 
 @{
     // Top KPI strip (Stitch): direction-scoped, real counts/totals already computed server-side
