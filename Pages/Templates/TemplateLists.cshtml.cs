@@ -78,6 +78,37 @@ namespace eInvWorld.Pages.Templates
                 .ToDictionaryAsync(g => g.TemplateId, g => g.Count);
         }
 
+        // Exports every template scoped to the current user (same CreatedByUserId filter as
+        // OnGetAsync) — this page has no search/status filter or pagination to replicate.
+        public async Task<IActionResult> OnGetExportCsvAsync()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var templates = await _context.InvoiceTemplates
+                .Where(t => t.CreatedByUserId == userId)
+                .Include(t => t.Supplier)
+                .Include(t => t.Customer)
+                .Include(t => t.PublicCustomer)
+                .OrderBy(t => t.TemplateName)
+                .ToListAsync();
+
+            var headers = new[] { "Template Name", "Doc Type", "Supplier", "Buyer", "Currency", "Payment Terms", "Favorite" };
+            var rows = templates.Select(t => new[]
+            {
+                t.TemplateName,
+                t.DocTypeCode,
+                t.Supplier?.CompanyName,
+                t.Customer != null ? t.Customer.CompanyName : t.PublicCustomer?.CompanyName,
+                t.Currency,
+                t.PaymentTerms,
+                t.IsFavorite ? "Yes" : "No"
+            });
+
+            var csvBytes = CsvExportHelper.BuildCsv(headers, rows);
+            var timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
+            return File(csvBytes, "text/csv", $"InvoiceTemplates_{timestamp}.csv");
+        }
+
         [BindProperty]
         public List<int> SelectedTemplateIds { get; set; } = new();
 

@@ -1321,25 +1321,25 @@ namespace eInvWorld.Pages.Invoices
 
             foreach (var invoice in invoices)
             {
-                var supplierName = EscapeCsv(invoice.Supplier?.CompanyName);
-                var customerName = EscapeCsv(invoice.Customer != null ? invoice.Customer.CompanyName : invoice.PublicCustomer?.CompanyName);
+                var supplierName = CsvExportHelper.EscapeCsv(invoice.Supplier?.CompanyName);
+                var customerName = CsvExportHelper.EscapeCsv(invoice.Customer != null ? invoice.Customer.CompanyName : invoice.PublicCustomer?.CompanyName);
                 var isSelfBilled = new[] { "11", "12", "13", "14" }.Contains(invoice.DocTypeCode);
-                var counterpartyTIN = EscapeCsv(isSelfBilled ? invoice.Supplier?.TIN : (invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN));
+                var counterpartyTIN = CsvExportHelper.EscapeCsv(isSelfBilled ? invoice.Supplier?.TIN : (invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN));
 
                 // ✅ Safely handle nullable DateTimes to ensure formatting never crashes
                 string issueDateStr = invoice.IssueDate?.ToString("yyyy-MM-dd") ?? "";
                 string startDateStr = invoice.StartDate?.ToString("yyyy-MM-dd") ?? "";
                 string endDateStr = invoice.EndDate?.ToString("yyyy-MM-dd") ?? "";
 
-                string commonData = $"{EscapeCsv(invoice.InvoiceNo)},{issueDateStr},{EscapeCsv(invoice.PoDoNo)},{EscapeCsv(invoice.DocTypeCode)},{EscapeCsv(invoice.Currency)},{invoice.ExchangeRate},{EscapeCsv(invoice.InvoicePeriod.ToString())},{startDateStr},{endDateStr},{EscapeCsv(invoice.BankAccountNo)},{EscapeCsv(invoice.BankName)},{EscapeCsv(invoice.Attention)},{EscapeCsv(invoice.PaymentTerms)},{counterpartyTIN}";
-                string extraData = $"{EscapeCsv(invoice.UUID)},{EscapeCsv(invoice.SubmissionID)},{supplierName},{customerName},{EscapeCsv(invoice.InternalStatusId)}";
+                string commonData = $"{CsvExportHelper.EscapeCsv(invoice.InvoiceNo)},{issueDateStr},{CsvExportHelper.EscapeCsv(invoice.PoDoNo)},{CsvExportHelper.EscapeCsv(invoice.DocTypeCode)},{CsvExportHelper.EscapeCsv(invoice.Currency)},{invoice.ExchangeRate},{CsvExportHelper.EscapeCsv(invoice.InvoicePeriod.ToString())},{startDateStr},{endDateStr},{CsvExportHelper.EscapeCsv(invoice.BankAccountNo)},{CsvExportHelper.EscapeCsv(invoice.BankName)},{CsvExportHelper.EscapeCsv(invoice.Attention)},{CsvExportHelper.EscapeCsv(invoice.PaymentTerms)},{counterpartyTIN}";
+                string extraData = $"{CsvExportHelper.EscapeCsv(invoice.UUID)},{CsvExportHelper.EscapeCsv(invoice.SubmissionID)},{supplierName},{customerName},{CsvExportHelper.EscapeCsv(invoice.InternalStatusId)}";
 
                 if (invoice.InvoiceLines != null && invoice.InvoiceLines.Any())
                 {
                     foreach (var line in invoice.InvoiceLines)
                     {
                         var tax = line.InvoiceTaxes?.FirstOrDefault();
-                        string lineData = $"{EscapeCsv(line.ItemDescription)},{line.Quantity},{line.UnitPrice},{line.DiscountAmount},{EscapeCsv(line.UnitOfMeasure)},{EscapeCsv(line.ClassificationCode)},{EscapeCsv(tax?.TaxCategory)},{tax?.TaxPercentage}";
+                        string lineData = $"{CsvExportHelper.EscapeCsv(line.ItemDescription)},{line.Quantity},{line.UnitPrice},{line.DiscountAmount},{CsvExportHelper.EscapeCsv(line.UnitOfMeasure)},{CsvExportHelper.EscapeCsv(line.ClassificationCode)},{CsvExportHelper.EscapeCsv(tax?.TaxCategory)},{tax?.TaxPercentage}";
                         builder.AppendLine($"{commonData},{lineData},{extraData}");
                     }
                 }
@@ -1473,24 +1473,9 @@ namespace eInvWorld.Pages.Invoices
             }
         }
 
-        private string EscapeCsv(string? value)
-        {
-            if (string.IsNullOrEmpty(value)) return "";
-
-            // CSV formula-injection guard: a cell that a spreadsheet would treat as a formula
-            // (starts with = + - @, or a leading tab/CR) is neutralised with a leading apostrophe
-            // so Excel/Sheets render it as literal text instead of executing it.
-            if (value.Length > 0 && "=+-@\t\r".IndexOf(value[0]) >= 0)
-            {
-                value = "'" + value;
-            }
-
-            if (value.Contains(",") || value.Contains("\"") || value.Contains("\n") || value.Contains("\r"))
-            {
-                return $"\"{value.Replace("\"", "\"\"")}\""; // Escapes quotes and wraps the string
-            }
-            return value;
-        }
+        // EscapeCsv moved to the shared CsvExportHelper (Helpers/CsvExportHelper.cs) so the same
+        // formula-injection guard fixed here in v1.9.8 is reused by every list page's export, not
+        // copy-pasted per page.
 
         // Add this handler to InvoiceLists.cshtml.cs
         // Single-row "Submit to LHDN" action. Delegates to the shared guarded core and maps the outcome
