@@ -98,66 +98,9 @@
                     }, 3000); // Give server round-trip time
                 });
             }
-
-            
-
-            // const params = new URLSearchParams(window.location.search);
-            // const reason = params.get("logoutReason");
-
-            // if (reason === "timeout") {
-            //     Swal.fire({
-            //         icon: 'info',
-            //         title: 'Session Ended',
-            //         text: 'You were logged out due to inactivity.',
-            //         confirmButtonText: 'OK'
-            //     });
-            // } else if (reason === "manual") {t
-            //     Swal.fire({
-            //         icon: 'info',
-            //         title: 'Logged Out',
-            //         text: 'You have successfully logged out.',
-            //         confirmButtonText: 'OK'
-            //     });
-            // }
-
-            // if (reason) {
-            //     window.history.replaceState({}, document.title, window.location.pathname);
-            // }
-
         });
     </script>
-
-    @* @if (!string.IsNullOrEmpty(logoutReason))
-    {
-        string message = logoutReason switch
-        {
-            "timeout" => "You were logged out due to inactivity.",
-            "manual" => "You have successfully logged out.",
-            _ => null
-        };
-
-        if (message != null)
-        {
-            <script>
-                window.addEventListener("DOMContentLoaded", function () {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Session Ended',
-                        text: '@message',
-                        confirmButtonText: 'OK'
-                    });
-                });
-            </script>
-        }
-    } *@
-
-    
-
 }
-
-
-
-
 
 
 
