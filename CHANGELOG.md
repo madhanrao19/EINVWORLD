@@ -1,6 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.26.0`** (`AppInfo:Version` in `appsettings.json`). v1.26.0 is a **minor**
+> **Current version: `v1.27.0`** (`AppInfo:Version` in `appsettings.json`). v1.27.0 is a **minor**
+> release: Login, Register, Forgot Password, Resend Confirmation, and their confirmation pages get a
+> fresh split-screen visual identity — a dark green branding panel (ledger-grid texture, stamp/seal
+> mark, compliance headline) alongside the existing light form, replacing the July 2026 centered-card
+> look — see the dated entry below for details. v1.26.0 was a **minor**
 > release: Bulk Invoice Import (CSV/Excel) now supports every field the manual Create Invoice flow
 > supports — line-level Tariff Code/Country of Origin/Discount/Fee-Charge and the full header Shipping
 > Recipient/Customs/Incoterms block, previously silently dropped on import — see the dated entry below
@@ -281,6 +285,35 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.27.0 (Auth pages: split-screen "compliance ledger" redesign)
+
+> User requested a genuinely distinctive visual identity for the sign-in experience, not another
+> refinement of the July 2026 "Stitch" centered-card look. Scoped to Login, Register, Forgot Password,
+> Resend Confirmation, and their two satellite confirmation pages; `LoginWith2fa`,
+> `LoginWithRecoveryCode`, and `ExternalLogin` inherit the new shell automatically (same shared layout)
+> with no page-level changes.
+
+### Changed
+- **New split-screen layout** (`Pages/Shared/_LoginLayoutTabler.cshtml`, new
+  `Pages/Shared/_AuthBrandPanel.cshtml`) — a dark green-black branding panel (deliberately tied to the
+  brand primary, not a neutral near-black) with a faint ledger-grid texture, an inline SVG stamp/seal
+  mark (one-time reveal animation, respects `prefers-reduced-motion`), a headline, and a plain 3-line
+  proof list, alongside the existing light form column. `#006948` stays the core brand color — this is
+  a new composition around it, not a new palette.
+- 5 new CSS custom properties in `wwwroot/tabler/css/einvworld-tokens.css` (`--einv-auth-panel-*`,
+  `--einv-auth-seal`), additive only. `wwwroot/tabler/css/einvworld-auth.css` gained the shell/panel/
+  responsive rules and dropped the old dotted-canvas background.
+- Removed the large centered "logo row" from each of the 6 in-scope pages, replaced with one small
+  top-left logo per page. Follow-up fix same day: the logo was initially shrunk too far (32px) and the
+  form column centered a narrow block inside a much wider column, leaving a large empty gap next to the
+  panel — logo restored to the app's standard 140px width, and the form column now left-aligns with
+  responsive padding (reverting to centered only on the <992px mobile layout where the panel collapses
+  to a top strip).
+- Cleaned up a pre-existing hardcoded `#006948` inline style on `ForgotPasswordConfirmation.cshtml`'s
+  "Back to Login" button, now using the shared `.btn-primary` class.
+- No handler/route/model changes anywhere; Turnstile, validation, and password-toggle behavior
+  untouched.
 
 ## 📅 2026-09-04 — v1.26.0 (Bulk Invoice Import: Shipping Recipient/Customs/Incoterms/Tariff field parity)
 
