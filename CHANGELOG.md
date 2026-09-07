@@ -1,9 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.2`** (`AppInfo:Version` in `appsettings.json`). v1.28.2 is a **patch**
-> release: the static "Download Sample CSV" file on Bulk Invoice Import was 25 columns behind the
-> dynamically-generated Excel template (never updated across the last three field-parity passes) —
-> regenerated to match — see the dated entry below for details. v1.28.1 was a **patch**
+> **Current version: `v1.28.3`** (`AppInfo:Version` in `appsettings.json`). v1.28.3 is a **patch**
+> release: housekeeping — removed dead commented-out legacy scaffolded markup left over from the
+> Velzon→Tabler/Stitch redesign passes on 6 Identity auth pages, plus 4 unused `-old` logo image
+> variants — see the dated entry below for details. v1.28.2 was a **patch**
 > release: Bulk Invoice Import (CSV/Excel) now also carries `PrepaymentReferenceNumber` (submitted to
 > LHDN) and line-level `ItemCode`, closing a gap found auditing field parity against Create Invoice —
 > see the dated entry below for details. v1.28.0 was a **minor**
@@ -295,6 +295,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.28.3 (Cleanup: dead auth-page markup + unused logo variants)
+
+> Scoped cleanup after a general "clean up old and unused code" request — limited to the auth pages
+> touched by the recent split-screen redesign, where several fully-commented-out legacy blocks
+> (pre-Stitch scaffolded forms, duplicate `@page` directives, an old logout-toast script superseded
+> by `_LoginLayoutTabler.cshtml`) were left in place across earlier passes.
+
+### Removed
+- Dead commented-out markup/script blocks from `Login.cshtml`, `Register.cshtml`,
+  `ForgotPassword.cshtml`, `ResendEmailConfirmation.cshtml`, `RegisterConfirmation.cshtml`, and
+  `Lockout.cshtml` — no behavior change, purely deleting code that was never executed (either inside
+  `@* *@` Razor comments or `<!-- -->`/`//` blocks).
+- 4 unused logo image variants (`einvworld-logo-old.png`, `einvworld-logo-light-old.png`,
+  `logo-dark-old.png`, `logo-light-old.png`) — confirmed unreferenced anywhere in the codebase before
+  deletion.
 
 ## 📅 2026-09-07 — v1.28.2 (Bulk Invoice Import: regenerated the stale sample CSV)
 
