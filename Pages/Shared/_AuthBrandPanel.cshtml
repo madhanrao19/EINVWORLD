@@ -1,0 +1,21 @@
+@* Split-screen auth branding panel (2026-09 redesign). Rendered once from _LoginLayoutTabler for
+   every Identity auth page. Purely presentational — no links, no interactive controls, so it is not
+   part of the tab order; content is still readable by assistive tech since it's plain text, and the
+   form column comes first in DOM order so keyboard/skip-link users reach the form immediately. *@
+<div class="einv-auth-brand-panel">
+    <div class="einv-auth-brand-inner">
+        <div class="einv-auth-seal">
+            <svg viewBox="0 0 120 120" width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Verified">
+                <circle cx="60" cy="60" r="54" stroke="currentColor" stroke-width="3" />
+                <circle cx="60" cy="60" r="43" stroke="currentColor" stroke-width="1" stroke-dasharray="2 5" opacity=".7" />
+                <path d="M40 61 L53 74 L82 45" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </div>
+        <h2 class="einv-auth-brand-headline">Every invoice, verified with LHDN before it leaves your desk.</h2>
+        <ul class="einv-auth-brand-proof">
+            <li>Submits directly to MyInvois</li>
+            <li>Validates TIN, tax and totals before you send</li>
+            <li>Every document keeps an audit trail</li>
+        </ul>
+    </div>
+</div>

@@ -44,6 +44,15 @@
   --tblr-danger-rgb: 239, 68, 68;
   --tblr-info: var(--einv-info);
   --tblr-info-rgb: 14, 165, 233;
+
+  /* Auth branding panel — split-screen redesign (2026-09). Deliberately a *green*-black, not a
+   * neutral near-black, so the panel reads as an extension of --einv-primary rather than a generic
+   * dark-mode default. Used only by .einv-auth-brand-panel. */
+  --einv-auth-panel-bg: #0d2018;
+  --einv-auth-panel-grid: rgba(255, 255, 255, .05);
+  --einv-auth-panel-fg: #f3f5f1;
+  --einv-auth-panel-fg-muted: #a9b9ae;
+  --einv-auth-seal: #d4a24e;
 }
 
 /* Dark mode: only the canvas/surface/text/border tokens need to flip — every rule elsewhere in this
