@@ -100,8 +100,13 @@
         </script>
 
         <div class="auth-page-content">
-            <div id="einv-main-content" class="container" tabindex="-1">
-                @RenderBody()
+            <div class="einv-auth-shell">
+                <div class="einv-auth-form-col">
+                    <div id="einv-main-content" class="container" tabindex="-1">
+                        @RenderBody()
+                    </div>
+                </div>
+                @await Html.PartialAsync("_AuthBrandPanel")
             </div>
         </div>
 
