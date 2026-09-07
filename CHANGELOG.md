@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.0`** (`AppInfo:Version` in `appsettings.json`). v1.28.0 is a **minor**
+> **Current version: `v1.28.1`** (`AppInfo:Version` in `appsettings.json`). v1.28.1 is a **patch**
+> release: Bulk Invoice Import (CSV/Excel) now also carries `PrepaymentReferenceNumber` (submitted to
+> LHDN) and line-level `ItemCode`, closing a gap found auditing field parity against Create Invoice —
+> see the dated entry below for details. v1.28.0 was a **minor**
 > release: Buyer Directory, Items, and Invoice Templates each get an "Export CSV" button, built on a
 > new shared `CsvExportHelper` extracted from Invoice Lists' existing export (so the CSV
 > formula-injection guard fixed there in v1.9.8 exists in one place, not copy-pasted per page) — see
@@ -289,6 +292,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.28.1 (Bulk Invoice Import: PrepaymentReferenceNumber + line ItemCode)
+
+> Follow-up after a user question about whether Bulk Invoice Import is fully in sync with Create
+> Invoice. It was, except for two fields missed by the earlier v1.26.0 parity pass.
+
+### Fixed
+- **`PrepaymentReferenceNumber`** — a real Create Invoice field (Step 1 Basic Info) that's submitted to
+  LHDN (`InvoiceMapper.cs`, mapped into the UBL `BillingReference` prepayment ID) — was missing from
+  `InvoiceCsvDto` (`Pages/Invoices/ImportCSV.cshtml.cs`) and silently dropped on import. Added to the
+  DTO, the template (auto-generated reflectively, so no separate change needed), and
+  `OnPostConfirmAsync`'s header construction.
+- **Line-level `ItemCode`** — always imported blank (`OnPostConfirmAsync` hardcoded `ItemCode = ""`).
+  Cosmetic only (`InvoiceMapper` never reads it for LHDN submission), but now carried through from the
+  import file like every other line field.
 
 ## 📅 2026-09-07 — v1.28.0 (Export CSV on Buyer Directory, Items, and Invoice Templates)
 
