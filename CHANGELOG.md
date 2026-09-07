@@ -1,6 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.27.1`** (`AppInfo:Version` in `appsettings.json`). v1.27.1 is a **patch**
+> **Current version: `v1.28.0`** (`AppInfo:Version` in `appsettings.json`). v1.28.0 is a **minor**
+> release: Buyer Directory, Items, and Invoice Templates each get an "Export CSV" button, built on a
+> new shared `CsvExportHelper` extracted from Invoice Lists' existing export (so the CSV
+> formula-injection guard fixed there in v1.9.8 exists in one place, not copy-pasted per page) — see
+> the dated entry below for details. v1.27.1 was a **patch**
 > release: three follow-up fixes to the v1.27.0 auth redesign found live-testing — the logo wasn't
 > actually centering (nested inside the wrong flex box), the mobile branding strip clipped its own
 > headline, and a Tabler/Bootstrap default exposed a white sliver on tall pages — see the dated entry
@@ -285,6 +289,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.28.0 (Export CSV on Buyer Directory, Items, and Invoice Templates)
+
+> User asked whether an "Export to CSV" button could exist system-wide across list pages, using Buyer
+> Directory as the example. Invoice Lists already had one, but it was built entirely as private,
+> page-local methods with no shared helper — including the escaping logic that fixed a real CSV
+> formula-injection vulnerability in v1.9.8. Rather than copy-paste that security-sensitive code into
+> more files, it's now a shared helper reused by all four export sites.
+
+### Added
+- **`Helpers/CsvExportHelper.cs`** — `EscapeCsv` (the exact formula-injection guard from the v1.9.8
+  fix: quotes cells containing a comma/quote/newline, prefixes a leading apostrophe when a cell starts
+  with `= + - @`/tab/CR) and a generic `BuildCsv(headers, rows)` that any page can call.
+- **Export CSV button** on Buyer Directory (`Pages/PublicCustomer/List.cshtml`), Items
+  (`Pages/Items/Index.cshtml`), and Invoice Templates (`Pages/Templates/TemplateLists.cshtml`), each
+  backed by a new `OnGetExportCsvAsync` handler that replicates that page's exact tenant-scoping and
+  search/status filters (never less scoped than what's already on screen — the same class of mistake
+  the v1.9.8 IDOR fix addressed), with pagination removed so the full filtered result set exports.
+
+### Changed
+- **`InvoiceLists.cshtml.cs`** refactored to call the shared `CsvExportHelper.EscapeCsv` instead of its
+  own private copy — pure extraction, CSV/XLSX export output is unchanged.
 
 ## 📅 2026-09-07 — v1.27.1 (Auth redesign follow-ups: logo centering, mobile panel, scrollbar gap)
 
