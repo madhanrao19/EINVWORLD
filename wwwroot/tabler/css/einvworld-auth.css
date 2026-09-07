@@ -13,6 +13,13 @@
   --einv-auth-field-bg: #f8f9fb;
 }
 
+/* Tabler's base CSS sets `:root { margin-left: calc(100vw - 100%) }` (Bootstrap 5.3's scrollbar-width
+ * compensation trick). On a page tall enough to scroll, this shifts <html>'s whole box — including
+ * this page's background — right by the scrollbar's width, exposing a plain white sliver on the left
+ * (visible on the longer Register form). Neutralized here rather than in the shared tokens file so it
+ * only affects pages using this auth layout, not the rest of the app. */
+html { margin-left: 0 !important; margin-right: 0 !important; }
+
 .einv-auth {
   min-height: 100vh;
   margin: 0;
@@ -54,7 +61,10 @@
 .einv-auth-form-col > .container { width: 100%; max-width: 460px; margin: 0; }
 .einv-auth-form-col > .container .row.justify-content-center > [class*="col-"] { width: 100%; max-width: 100%; }
 
-.einv-auth-form-logo { display: inline-block; margin-bottom: 1.5rem; }
+/* Shares the card's own 460px band (same width/position as .container below it) and centers within
+ * that band — centering across the *whole* panel would drift right of the card on wide screens,
+ * since the card itself is only ever as wide as its 460px container, not the full panel. */
+.einv-auth-form-logo { display: block; width: 100%; max-width: 460px; text-align: center; margin: 0 0 1.5rem; }
 .einv-auth-form-logo img { width: 140px; height: auto; }
 
 /* Branding panel — deliberately a *green*-black (not neutral) with a faint ledger grid, evoking
@@ -113,30 +123,12 @@
   font-weight: 700;
 }
 
+/* Below 992px there isn't room for both the branding panel and a usable form, and a squeezed strip
+ * only clipped the headline — so the panel is dropped entirely and the form becomes a plain, fully
+ * centered single column (close to the pre-redesign mobile experience). */
 @media (max-width: 991.98px) {
   .einv-auth-shell { flex-direction: column; }
-  .einv-auth-brand-panel {
-    order: 1;
-    flex: 0 0 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: .85rem;
-    padding: 1rem 1.25rem;
-    background-size: 24px 24px;
-  }
-  .einv-auth-brand-inner { max-width: none; display: flex; align-items: center; gap: .85rem; }
-  .einv-auth-seal { margin-bottom: 0; flex: 0 0 auto; }
-  .einv-auth-seal svg { width: 28px; height: 28px; }
-  .einv-auth-brand-headline {
-    font-size: .95rem;
-    font-weight: 600;
-    max-width: none;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .einv-auth-brand-proof { display: none; }
+  .einv-auth-brand-panel { display: none; }
   .einv-auth-form-col { order: 2; align-items: center; padding: 2rem 1rem; }
   .einv-auth-form-col > .container { margin: 0 auto; }
 }
@@ -196,9 +188,12 @@
 }
 .einv-auth .einv-input > .form-control { padding-left: 2.5rem; }
 
-/* Password eye toggle stays clickable on the right. */
+/* Password eye toggle, vertically centered inside the field. Register/other pages mark this button
+ * with Bootstrap's `position-absolute end-0 top-0` utilities, which ship `!important` — so this rule
+ * needs `!important` too, or Bootstrap's `top:0` wins and pins the icon to the top edge instead of
+ * the middle. */
 .einv-auth .auth-pass-inputgroup .password-addon {
-  position: absolute; top: 50%; right: .4rem; transform: translateY(-50%);
+  position: absolute !important; top: 50% !important; right: .4rem !important; transform: translateY(-50%) !important;
   border: 0; background: transparent; color: var(--einv-auth-muted); z-index: 5;
 }
 
