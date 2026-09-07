@@ -62,6 +62,9 @@
                     <i class="ri-file-copy-2-line align-bottom me-1"></i> Review Duplicates
                 </a>
                 <a class="btn btn-outline-secondary" asp-page="Import"><i class="ri-upload-cloud-2-fill align-bottom me-1"></i> Import CSV</a>
+                <a class="btn btn-outline-secondary" asp-page-handler="ExportCsv" asp-route-searchTerm="@Model.SearchTerm" asp-route-statusFilter="@Model.StatusFilter">
+                    <i class="ri-download-2-line align-bottom me-1"></i> Export CSV
+                </a>
                 <a class="btn btn-primary" asp-page="/PublicCustomer/Create" asp-route-from="@(isAdmin ? "admin" : null)">
                     <i class="ri-add-line align-bottom me-1"></i> Add Buyer
                 </a>
