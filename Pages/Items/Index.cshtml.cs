@@ -153,5 +153,73 @@ namespace eInvWorld.Pages.Items
                 .Take(PageSize)
                 .ToListAsync();
         }
+
+        // Exports the same filtered set the on-screen table shows (search + status + company scoping),
+        // without pagination. Scoping mirrors OnGetAsync exactly (CreatedByCompanyId == the caller's
+        // company for non-admins).
+        public async Task<IActionResult> OnGetExportCsvAsync(string? searchTerm, string? statusFilter)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            bool isAdmin = User.IsInRole("Admin");
+
+            var query = from item in _context.ItemDescriptions
+                        join party in _context.PartyInfos
+                            on item.CreatedByCompanyId equals party.PartyInfoId into itemParty
+                        from party in itemParty.DefaultIfEmpty()
+                        select new ItemViewModel
+                        {
+                            Item = item,
+                            CompanyName = party != null ? party.CompanyName : "-"
+                        };
+
+            if (!isAdmin)
+            {
+                var userCompany = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .FirstOrDefaultAsync();
+
+                query = userCompany != null
+                    ? query.Where(i => i.Item.CreatedByCompanyId == userCompany.PartyInfoId)
+                    : query.Where(i => false);
+            }
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(q =>
+                    q.Item.ItemCode.Contains(searchTerm) ||
+                    q.Item.Description.Contains(searchTerm) ||
+                    q.Item.ClassificationCode.Contains(searchTerm) ||
+                    q.CompanyName.Contains(searchTerm));
+            }
+
+            if (statusFilter == "Active")
+            {
+                query = query.Where(q => q.Item.IsActive);
+            }
+            else if (statusFilter == "Inactive")
+            {
+                query = query.Where(q => !q.Item.IsActive);
+            }
+
+            var items = await query.OrderBy(q => q.Item.ItemCode).ToListAsync();
+
+            var headers = new[] { "Item Code", "Description", "Classification Code", "Unit", "Unit Price", "Status", "Company", "Updated By" };
+            var rows = items.Select(i => new[]
+            {
+                i.Item.ItemCode,
+                i.Item.Description,
+                i.Item.ClassificationCode,
+                i.Item.UnitCode,
+                i.Item.UnitPrice?.ToString("0.####"),
+                i.Item.IsActive ? "Active" : "Inactive",
+                i.CompanyName,
+                i.Item.UpdatedBy
+            });
+
+            var csvBytes = CsvExportHelper.BuildCsv(headers, rows);
+            var timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
+            return File(csvBytes, "text/csv", $"Items_{timestamp}.csv");
+        }
     }
 }

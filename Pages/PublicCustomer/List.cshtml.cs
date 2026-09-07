@@ -202,6 +202,79 @@ namespace eInvWorld.Pages.PublicCustomer
         }
 
 
+        // Exports the same filtered set the on-screen table shows (search + status + role/company
+        // scoping), but without pagination. Scoping mirrors OnGetAsync exactly — an Admin sees every
+        // buyer, a Supplier only their own company's (CreatedByCompanyId == userCompany.PartyInfoId) —
+        // so this can never leak another company's buyers the way the pre-v1.9.8 invoice export did.
+        public async Task<IActionResult> OnGetExportCsvAsync(string? searchTerm, string? statusFilter)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            bool isAdmin = User.IsInRole("Admin");
+
+            var query = from pc in _context.PublicCustomers.Include(p => p.Country)
+                        join party in _context.PartyInfos
+                            on pc.CreatedByCompanyId equals party.PartyInfoId into pcParty
+                        from party in pcParty.DefaultIfEmpty()
+                        select new PublicCustomerViewModel
+                        {
+                            Customer = pc,
+                            CreatorCompanyName = party != null ? party.CompanyName : "-"
+                        };
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(q =>
+                    q.Customer.CompanyName.Contains(searchTerm) ||
+                    q.Customer.TIN.Contains(searchTerm) ||
+                    (q.Customer.Email != null && q.Customer.Email.Contains(searchTerm)) ||
+                    q.CreatorCompanyName.Contains(searchTerm));
+            }
+
+            if (string.Equals(statusFilter, "active", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => q.Customer.IsActive);
+            }
+            else if (string.Equals(statusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(q => !q.Customer.IsActive);
+            }
+
+            if (!isAdmin)
+            {
+                var userCompany = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .FirstOrDefaultAsync();
+
+                query = userCompany != null
+                    ? query.Where(p => p.Customer.CreatedByCompanyId == userCompany.PartyInfoId)
+                    : query.Where(p => false);
+            }
+
+            var buyers = await query.OrderBy(q => q.Customer.CompanyName).ToListAsync();
+
+            var headers = new[] { "Company Name", "TIN", "Registration Type", "Registration No", "Email", "Phone", "Address", "City", "State", "Country", "Status", "Creator Company" };
+            var rows = buyers.Select(b => new[]
+            {
+                b.Customer.CompanyName,
+                b.Customer.TIN,
+                b.Customer.RegTypeCode,
+                b.Customer.RegNo,
+                b.Customer.Email,
+                b.Customer.PhoneNo,
+                string.Join(" ", new[] { b.Customer.Addr1, b.Customer.Addr2, b.Customer.Addr3 }.Where(a => !string.IsNullOrWhiteSpace(a))),
+                b.Customer.CityName,
+                b.Customer.StateCode,
+                b.Customer.Country?.Country ?? b.Customer.CountryCode,
+                b.Customer.IsActive ? "Active" : "Inactive",
+                b.CreatorCompanyName
+            });
+
+            var csvBytes = CsvExportHelper.BuildCsv(headers, rows);
+            var timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")).ToString("ddMMyyyy_HHmmss");
+            return File(csvBytes, "text/csv", $"BuyerDirectory_{timestamp}.csv");
+        }
+
         public async Task<IActionResult> OnPostDeleteAsync(int buyerId)
         {
             var entity = await _context.PublicCustomers.FindAsync(buyerId);

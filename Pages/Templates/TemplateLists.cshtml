@@ -13,10 +13,15 @@
                 <h1 class="einv-page-title mb-1">Invoice Templates</h1>
                 <p class="text-muted mb-0">Create invoices faster using saved supplier, buyer, item, tax and payment details.</p>
             </div>
-            <button type="button" class="btn btn-danger" id="remove-actions" onClick="deleteMultiple()" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="Select at least one template to enable">
-                <i class="ri-delete-bin-6-line align-bottom me-1"></i> Delete Selected
-            </button>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary" asp-page-handler="ExportCsv">
+                    <i class="ri-download-2-line align-bottom me-1"></i> Export CSV
+                </a>
+                <button type="button" class="btn btn-danger" id="remove-actions" onClick="deleteMultiple()" data-bs-toggle="tooltip"
+                        data-bs-placement="top" title="Select at least one template to enable">
+                    <i class="ri-delete-bin-6-line align-bottom me-1"></i> Delete Selected
+                </button>
+            </div>
         </div>
     </div>
 </div>
