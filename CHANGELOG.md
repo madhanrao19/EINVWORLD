@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.1`** (`AppInfo:Version` in `appsettings.json`). v1.28.1 is a **patch**
+> **Current version: `v1.28.2`** (`AppInfo:Version` in `appsettings.json`). v1.28.2 is a **patch**
+> release: the static "Download Sample CSV" file on Bulk Invoice Import was 25 columns behind the
+> dynamically-generated Excel template (never updated across the last three field-parity passes) —
+> regenerated to match — see the dated entry below for details. v1.28.1 was a **patch**
 > release: Bulk Invoice Import (CSV/Excel) now also carries `PrepaymentReferenceNumber` (submitted to
 > LHDN) and line-level `ItemCode`, closing a gap found auditing field parity against Create Invoice —
 > see the dated entry below for details. v1.28.0 was a **minor**
@@ -292,6 +295,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.28.2 (Bulk Invoice Import: regenerated the stale sample CSV)
+
+> User asked to compare a downloaded copy of the Excel template against the CSV sample. The Excel
+> template (`?handler=Template`) is generated dynamically by reflecting over `InvoiceCsvDto`, so it
+> can never drift — but "Download Sample CSV" links to a hand-maintained static file
+> (`wwwroot/samplecsv/Invoice_sample.csv`) that was never touched across the Shipping Recipient/
+> Customs/Incoterms/Tariff (v1.26.0) or PrepaymentReferenceNumber/ItemCode (v1.28.1) field additions —
+> it still only had the original 22 columns out of the current 47.
+
+### Fixed
+- **`wwwroot/samplecsv/Invoice_sample.csv` regenerated** to all 47 current `InvoiceCsvDto` columns, in
+  the same order the Excel template and importer use. Existing sample data preserved; new columns left
+  blank (all optional). No code change — this is a static reference asset, not import/parsing logic.
 
 ## 📅 2026-09-07 — v1.28.1 (Bulk Invoice Import: PrepaymentReferenceNumber + line ItemCode)
 
