@@ -443,6 +443,7 @@ namespace EINVWORLD.Pages.Invoices
                     Attention = firstLine.AttentionTo,
                     PaymentTerms = firstLine.PaymentTerms,
                     Incoterms = firstLine.Incoterms,
+                    PrepaymentReferenceNumber = firstLine.PrepaymentReferenceNumber,
                     ShippingRecipientName = firstLine.ShippingRecipientName,
                     ShippingRecipientAddrLine1 = firstLine.ShippingRecipientAddrLine1,
                     ShippingRecipientAddrLine2 = firstLine.ShippingRecipientAddrLine2,
@@ -475,7 +476,7 @@ namespace EINVWORLD.Pages.Invoices
                     var invoiceLine = new InvoiceLine
                     {
                         LineNumber = lineNum++,
-                        ItemCode = "",
+                        ItemCode = line.ItemCode ?? "",
                         ItemDescription = line.ItemDescription ?? "",
 
                         // Handle nullable decimals properly with fallbacks
@@ -577,6 +578,8 @@ namespace EINVWORLD.Pages.Invoices
             [Required(ErrorMessage = "ItemDescription is required")]
             public string? ItemDescription { get; set; }
 
+            public string? ItemCode { get; set; }
+
             // Converted to nullable to prevent TypeConverterException
             public decimal? Quantity { get; set; }
             public decimal? UnitPrice { get; set; }
@@ -604,6 +607,7 @@ namespace EINVWORLD.Pages.Invoices
 
             // Header: Incoterms
             public string? Incoterms { get; set; }
+            public string? PrepaymentReferenceNumber { get; set; }
 
             // Header: Shipping Recipient — applicable only when goods ship to a different
             // recipient/address than the Buyer's own. All optional, mirrors InvoiceHeader.
