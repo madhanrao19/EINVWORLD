@@ -1,10 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.27.0`** (`AppInfo:Version` in `appsettings.json`). v1.27.0 is a **minor**
-> release: Login, Register, Forgot Password, Resend Confirmation, and their confirmation pages get a
-> fresh split-screen visual identity — a dark green branding panel (ledger-grid texture, stamp/seal
-> mark, compliance headline) alongside the existing light form, replacing the July 2026 centered-card
-> look — see the dated entry below for details. v1.26.0 was a **minor**
+> **Current version: `v1.27.1`** (`AppInfo:Version` in `appsettings.json`). v1.27.1 is a **patch**
+> release: three follow-up fixes to the v1.27.0 auth redesign found live-testing — the logo wasn't
+> actually centering (nested inside the wrong flex box), the mobile branding strip clipped its own
+> headline, and a Tabler/Bootstrap default exposed a white sliver on tall pages — see the dated entry
+> below for details. v1.27.0 was a **minor**
 > release: Bulk Invoice Import (CSV/Excel) now supports every field the manual Create Invoice flow
 > supports — line-level Tariff Code/Country of Origin/Discount/Fee-Charge and the full header Shipping
 > Recipient/Customs/Incoterms block, previously silently dropped on import — see the dated entry below
@@ -285,6 +285,39 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-07 — v1.27.1 (Auth redesign follow-ups: logo centering, mobile panel, scrollbar gap)
+
+> Three issues found live-testing v1.27.0 across desktop/tablet/mobile.
+
+### Fixed
+- **Logo wasn't actually centered** — an earlier same-day attempt put `align-self: center` on the logo,
+  but the logo sat *inside* `.container` (the card's own narrow, left-aligned box two levels down),
+  so the property had no effect on any device. Moved the logo out of every page and into
+  `_LoginLayoutTabler.cshtml` itself, rendered once as a direct flex sibling of `.container`. A second
+  pass then found it centered across the *whole* panel instead of the card's own 460px band, drifting
+  right of the card on wide screens — fixed by giving the logo the same 460px width/position as
+  `.container` and centering within that band instead.
+- **Two more pages had their own duplicate logo row** that the original redesign's file list missed —
+  `ResetPassword.cshtml` and `ResetPasswordConfirmation.cshtml` (the "set new password" flow reached
+  from the emailed reset link). Removed, along with the same cleanup on `LoginWith2fa`/
+  `LoginWithRecoveryCode`, now that the layout owns the logo. `ResetPasswordConfirmation`'s hardcoded
+  `#006948` inline button style was also switched to `.btn-primary`, matching the earlier
+  `ForgotPasswordConfirmation` cleanup.
+- **Mobile branding strip clipped its own headline** — the collapsed top strip below 992px was too
+  short for the full headline text. Simplified: the panel is now hidden entirely below 992px instead
+  of squeezing into a strip, giving a plain, fully centered single-column form (close to the
+  pre-redesign mobile experience) with no cropping.
+- **White sliver on tall pages (e.g. Register)** — root cause was Tabler's own base CSS
+  (`:root { margin-left: calc(100vw - 100%) }`, Bootstrap 5.3's scrollbar-width compensation trick),
+  which shifts the whole `<html>` box right by the scrollbar's width whenever a page is tall enough to
+  scroll, exposing plain white canvas on the left. Neutralized with `html { margin-left: 0 !important }`
+  scoped to `einvworld-auth.css` (only loaded by the auth layout, so the rest of the app keeps Tabler's
+  default).
+- **Register's password/confirm-password eye icons pinned to the top of the field instead of centered**
+  — Register's markup uses Bootstrap's `top-0`/`end-0` utility classes, which ship `!important` and
+  were overriding the auth CSS's centering rule. Added matching `!important` to the shared
+  `.password-addon` rule, fixing every page using this pattern, not just Register.
 
 ## 📅 2026-09-07 — v1.27.0 (Auth pages: split-screen "compliance ledger" redesign)
 
