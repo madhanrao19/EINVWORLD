@@ -1,29 +1,4 @@
-﻿@* @page
-@model RegisterConfirmationModel
-@{
-    ViewData["Title"] = "Register confirmation";
-}
-
-<h1>@ViewData["Title"]</h1>
-@{
-    if (@Model.DisplayConfirmAccountLink)
-    {
-<p>
-    This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-    Normally this would be emailed: <a id="confirm-link" href="@Model.EmailConfirmationUrl">Click here to confirm your account</a>
-</p>
-    }
-    else
-    {
-<p>
-        Please check your email to confirm your account.
-</p>
-    }
-}
-
- *@
-
-@page
+﻿@page
 @model RegisterConfirmationModel
 @{
     ViewData["Title"] = "Email Confirmation";
@@ -40,22 +15,6 @@
                         Please check your inbox and click the verification link to activate your account.
                     </p>
                 </div>
-
-                @* <div class="p-2">
-                    <p class="text-center">
-                        Didn't receive an email? <a asp-page="./ResendConfirmationEmail">Resend Email</a>
-                    </p>
-                    <form method="post" asp-page="./ResendConfirmationEmail">
-                        <div class="mb-4">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control" placeholder="Enter Email" required>
-                        </div>
-
-                        <div class="text-center mt-4">
-                            <button class="btn btn-success w-100" type="submit">Resend Confirmation Email</button>
-                        </div>
-                    </form><!-- end form -->
-                </div> *@
             </div>
             <!-- end card body -->
         </div>
@@ -63,15 +22,3 @@
     </div>
 </div>
 <!-- end row -->
-@* <div class="text-white text-center">
-    <h2 class="text-success">Confirm Your Email</h2>
-    <p class="text-muted">
-        A confirmation email has been sent to <strong>@Model.Email</strong>.
-        Please check your inbox and click the verification link to activate your account.
-    </p>
-    <p>
-        Didn't receive an email? <a asp-page="./ResendConfirmationEmail">Resend Email</a>
-    </p>
-</div>
-
- *@
