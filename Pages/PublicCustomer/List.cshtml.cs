@@ -253,19 +253,45 @@ namespace eInvWorld.Pages.PublicCustomer
 
             var buyers = await query.OrderBy(q => q.Customer.CompanyName).ToListAsync();
 
-            var headers = new[] { "Company Name", "TIN", "Registration Type", "Registration No", "Email", "Phone", "Address", "City", "State", "Country", "Status", "Creator Company" };
+            var stateNames = await _context.StateCodes.ToDictionaryAsync(s => s.Code, s => s.State);
+            var regTypeNames = await _context.RegistrationTypes.ToDictionaryAsync(r => r.Code, r => r.Name);
+            var msicDescriptions = await _context.MSICSubCategoryCodes.ToDictionaryAsync(m => m.Code, m => m.Description);
+
+            var headers = new[]
+            {
+                "Company Name", "TIN", "Registration Type", "Registration No", "Old Registration No",
+                "SST No", "Tourism Tax No", "MSIC Code", "Business Description",
+                "Primary Email", "Phone", "Fax", "Address", "Postal Code", "City", "State", "Country",
+                "Bank Account No", "Bank Name", "Default Payment Terms", "Attention To",
+                "Authorisation Number", "Remarks", "Status", "Creator Company"
+            };
             var rows = buyers.Select(b => new[]
             {
                 b.Customer.CompanyName,
                 b.Customer.TIN,
-                b.Customer.RegTypeCode,
+                regTypeNames.GetValueOrDefault(b.Customer.RegTypeCode, b.Customer.RegTypeCode),
                 b.Customer.RegNo,
+                b.Customer.OldRegNo,
+                b.Customer.SST,
+                b.Customer.TTX,
+                msicDescriptions.TryGetValue(b.Customer.IndustryClassificationCode, out var msicDesc)
+                    ? $"{b.Customer.IndustryClassificationCode} - {msicDesc}"
+                    : b.Customer.IndustryClassificationCode,
+                b.Customer.BizDescription,
                 b.Customer.Email,
                 b.Customer.PhoneNo,
+                b.Customer.FaxNo,
                 string.Join(" ", new[] { b.Customer.Addr1, b.Customer.Addr2, b.Customer.Addr3 }.Where(a => !string.IsNullOrWhiteSpace(a))),
+                b.Customer.PostalCode,
                 b.Customer.CityName,
-                b.Customer.StateCode,
+                stateNames.GetValueOrDefault(b.Customer.StateCode, b.Customer.StateCode),
                 b.Customer.Country?.Country ?? b.Customer.CountryCode,
+                b.Customer.BankAccountNo,
+                b.Customer.BankName,
+                b.Customer.PaymentTerms,
+                b.Customer.Attention,
+                b.Customer.AuthorisationNumber,
+                b.Customer.Remarks,
                 b.Customer.IsActive ? "Active" : "Inactive",
                 b.CreatorCompanyName
             });
