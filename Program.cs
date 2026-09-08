@@ -593,7 +593,7 @@ var app = builder.Build();
 // Fail fast on broken/missing critical config (blank connection string, missing DataProtection key
 // ring, signing enabled without a cert, localhost URLs in Production, etc.) so a misconfigured
 // deploy stops here with ONE clear message instead of failing vaguely at runtime.
-EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Environment.IsProduction());
+EINVWORLD.Helpers.ProductionConfigValidator.Validate(app.Configuration, app.Environment.IsProduction(), app.Environment.ContentRootPath);
 
 // One-line startup summary so an operator can confirm from the logs exactly what this instance loaded
 // (no secrets — just feature/mode flags).

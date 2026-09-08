@@ -9,7 +9,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "dotnet test EINVWORLD.sln -c Release",
     "qa": "playwright test",
     "qa-headed": "playwright test --headed",
     "qa-report": "playwright show-report"
