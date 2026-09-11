@@ -1527,7 +1527,7 @@ namespace eInvWorld.Pages.Invoices
                 // 1. Fetch from PartyInfo (Standard Registered Companies)
                 if (partyType == "PI")
                 {
-                    partyData = await _context.PartyInfos
+                    var raw = await _context.PartyInfos
                         .Where(p => p.PartyInfoId == partyId)
                         .Select(p => new
                         {
@@ -1536,16 +1536,30 @@ namespace eInvWorld.Pages.Invoices
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,
-                            PaymentTerms = p.PaymentTerms ?? "", // ✅ ADD THIS
+                            PaymentTerms = p.PaymentTerms ?? "",
                             Email = p.Email,
-                            Address = p.Addr1 + " " + (p.Addr2 ?? "") + " " + (p.CityName ?? "")
+                            p.Addr1,
+                            p.Addr2,
+                            p.CityName
                         })
                         .FirstOrDefaultAsync();
+                    // Addr2 is encrypted (see ApplicationDbContext.Encrypt<PartyInfo>). Concatenating it
+                    // inside the LINQ Select above gets pushed to SQL and would concatenate the raw
+                    // ciphertext; decrypt first (materialized above), then build the display string.
+                    if (raw != null)
+                    {
+                        partyData = new
+                        {
+                            raw.PartyInfoId, raw.TIN, raw.BankAccountNo, raw.BankName, raw.Attention,
+                            raw.PaymentTerms, raw.Email,
+                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? "")
+                        };
+                    }
                 }
                 // 2. Fetch from PublicCustomer (New Logic)
                 else if (partyType == "PC")
                 {
-                    partyData = await _context.PublicCustomers
+                    var raw = await _context.PublicCustomers
                         .Where(p => p.PublicCustomerId == partyId)
                         .Select(p => new
                         {
@@ -1554,11 +1568,22 @@ namespace eInvWorld.Pages.Invoices
                             BankAccountNo = p.BankAccountNo,
                             BankName = p.BankName,
                             Attention = p.Attention,
-                            PaymentTerms = p.PaymentTerms ?? "", // ✅ ADD THIS
+                            PaymentTerms = p.PaymentTerms ?? "",
                             Email = p.Email,
-                            Address = p.Addr1 + " " + (p.Addr2 ?? "") + " " + (p.CityName ?? "")
+                            p.Addr1,
+                            p.Addr2,
+                            p.CityName
                         })
                         .FirstOrDefaultAsync();
+                    if (raw != null)
+                    {
+                        partyData = new
+                        {
+                            raw.PartyInfoId, raw.TIN, raw.BankAccountNo, raw.BankName, raw.Attention,
+                            raw.PaymentTerms, raw.Email,
+                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? "")
+                        };
+                    }
                 }
 
                 if (partyData == null)
