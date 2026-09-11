@@ -262,7 +262,7 @@ namespace eInvWorld.Pages.PublicCustomer
                 "Company Name", "TIN", "Registration Type", "Registration No", "Old Registration No",
                 "SST No", "Tourism Tax No", "MSIC Code", "Business Description",
                 "Primary Email", "Phone", "Fax", "Address", "Postal Code", "City", "State", "Country",
-                "Bank Account No", "Bank Name", "Default Payment Terms", "Attention To",
+                "Default Payment Terms", "Attention To",
                 "Authorisation Number", "Remarks", "Status", "Creator Company"
             };
             var rows = buyers.Select(b => new[]
@@ -286,8 +286,6 @@ namespace eInvWorld.Pages.PublicCustomer
                 b.Customer.CityName,
                 stateNames.GetValueOrDefault(b.Customer.StateCode, b.Customer.StateCode),
                 b.Customer.Country?.Country ?? b.Customer.CountryCode,
-                b.Customer.BankAccountNo,
-                b.Customer.BankName,
                 b.Customer.PaymentTerms,
                 b.Customer.Attention,
                 b.Customer.AuthorisationNumber,
