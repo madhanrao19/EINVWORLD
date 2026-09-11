@@ -234,8 +234,6 @@ namespace eInvWorld.Pages.PublicCustomer
                 LogoPath = logoRelativePath,
                 IsApproved = PublicCustomer.IsApproved,
                 OldRegNo = PublicCustomer.OldRegNo,
-                BankAccountNo = PublicCustomer.BankAccountNo,
-                BankName = PublicCustomer.BankName,
                 Attention = PublicCustomer.Attention,
                 PaymentTerms = PublicCustomer.PaymentTerms,
                 CreatedByCompanyId = PublicCustomer.CreatedByCompanyId
