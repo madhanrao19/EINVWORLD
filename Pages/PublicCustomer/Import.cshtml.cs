@@ -163,7 +163,6 @@ namespace eInvWorld.Pages.PublicCustomer
                     record.MSIC = FixScientificNotation(record.MSIC)?.Replace("\"", "").Trim();
                     record.SST = FixScientificNotation(record.SST);
                     record.TTX = FixScientificNotation(record.TTX);
-                    record.BankAccountNo = FixScientificNotation(record.BankAccountNo);
 
                     if (!string.IsNullOrWhiteSpace(record.PhoneNo))
                     {
@@ -306,8 +305,6 @@ namespace eInvWorld.Pages.PublicCustomer
                     Addr2 = null,
                     Addr3 = null,
                     PostalCode = string.IsNullOrWhiteSpace(record.PostalCode) ? null : record.PostalCode,
-                    BankAccountNo = string.IsNullOrWhiteSpace(record.BankAccountNo) ? null : record.BankAccountNo,
-                    BankName = string.IsNullOrWhiteSpace(record.BankName) ? null : record.BankName,
                     Attention = string.IsNullOrWhiteSpace(record.Attention) ? null : record.Attention,
                     PaymentTerms = string.IsNullOrWhiteSpace(record.PaymentTerms) ? null : record.PaymentTerms,
                     Remarks = string.IsNullOrWhiteSpace(record.Remarks) ? null : record.Remarks,
@@ -504,12 +501,6 @@ namespace eInvWorld.Pages.PublicCustomer
             [Required]
             [StringLength(17)]
             public string? TTX { get; set; }
-
-            [StringLength(150)]
-            public string? BankAccountNo { get; set; }
-
-            [StringLength(100)]
-            public string? BankName { get; set; }
 
             [StringLength(200)]
             public string? Attention { get; set; }

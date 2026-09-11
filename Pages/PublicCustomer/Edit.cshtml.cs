@@ -147,8 +147,6 @@ namespace eInvWorld.Pages.PublicCustomer
             existing.OldRegNo = PublicCustomer.OldRegNo;
             existing.BizDescription = PublicCustomer.BizDescription;
             existing.FaxNo = PublicCustomer.FaxNo;
-            existing.BankName = PublicCustomer.BankName;
-            existing.BankAccountNo = PublicCustomer.BankAccountNo;
             existing.Attention = PublicCustomer.Attention;
             existing.PaymentTerms = PublicCustomer.PaymentTerms;
             existing.SST = PublicCustomer.SST;
@@ -163,8 +161,6 @@ namespace eInvWorld.Pages.PublicCustomer
             existing.CityName = PublicCustomer.CityName;
             existing.StateCode = PublicCustomer.StateCode;
             existing.CountryCode = PublicCustomer.CountryCode;
-            existing.BankName = PublicCustomer.BankName;
-            existing.BankAccountNo = PublicCustomer.BankAccountNo;
             existing.Remarks = PublicCustomer.Remarks;
             existing.OldRegNo = PublicCustomer.OldRegNo;
             existing.Attention = PublicCustomer.Attention;

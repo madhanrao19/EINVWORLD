@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.3`** (`AppInfo:Version` in `appsettings.json`). v1.28.3 is a **patch**
+> **Current version: `v1.28.4`** (`AppInfo:Version` in `appsettings.json`). v1.28.4 is a **patch**
+> release: removed the Buyer-side Bank Name/Bank Account Number fields (Add/Edit/Details/CSV
+> export/bulk import) — the invoice's payment bank always comes from the Supplier, so the Buyer's
+> bank fields were unused and confusing; see the dated entry below for details. v1.28.3 was a **patch**
 > release: housekeeping — removed dead commented-out legacy scaffolded markup left over from the
 > Velzon→Tabler/Stitch redesign passes on 6 Identity auth pages, plus 4 unused `-old` logo image
 > variants — see the dated entry below for details. v1.28.2 was a **patch**
@@ -295,6 +298,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-11 — v1.28.4 (Buyer Directory: removed Bank Name/Bank Account fields)
+
+> The invoice's payment bank details always come from the Supplier (Datamation's own `PartyInfo`/
+> company profile) — confirmed by tracing `InvoiceMapper.cs`'s `PaymentMeans.PayeeFinancialAccount`
+> mapping and both Create/Edit Invoice flows, which never read a Buyer's bank fields. Datamation
+> flagged the Buyer-side Bank Name/Bank Account inputs as confusing (implying the buyer's own bank
+> details are used somewhere) and asked for them to be hidden. Since the fields are unused, they were
+> removed outright instead of just disabled.
+
+### Removed
+- Bank Name / Bank Account Number inputs from Add Buyer and Edit Buyer.
+- Bank Name / Bank Account Number display row from Buyer Details.
+- "Bank Account No" / "Bank Name" columns from the Buyer Directory CSV export.
+- `BankAccountNo` / `BankName` columns from Buyer Bulk Import (form instructions + sample CSV).
+- `PublicCustomers.BankName`/`BankAccountNo` DB columns are untouched (no migration) — any pre-existing
+  values are simply no longer collected, shown, or exported.
 
 ## 📅 2026-09-07 — v1.28.3 (Cleanup: dead auth-page markup + unused logo variants)
 

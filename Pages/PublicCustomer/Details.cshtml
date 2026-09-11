@@ -148,23 +148,15 @@
     <div class="col-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-transparent">
-                <h3 class="card-title mb-0">Banking &amp; Payment Terms</h3>
+                <h3 class="card-title mb-0">Payment Terms</h3>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-3 mb-3 mb-md-0">
-                        <label class="fw-bold text-muted small text-uppercase">Bank Name</label>
-                        <div>@(Model.PublicCustomer.BankName ?? "-")</div>
-                    </div>
-                    <div class="col-md-3 mb-3 mb-md-0">
-                        <label class="fw-bold text-muted small text-uppercase">Bank Account</label>
-                        <div>@(Model.PublicCustomer.BankAccountNo ?? "-")</div>
-                    </div>
-                    <div class="col-md-3 mb-3 mb-md-0">
+                    <div class="col-md-6 mb-3 mb-md-0">
                         <label class="fw-bold text-muted small text-uppercase">Payment Terms</label>
                         <div>@(Model.PublicCustomer.PaymentTerms ?? "-")</div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <label class="fw-bold text-muted small text-uppercase">Remarks</label>
                         <div>@(Model.PublicCustomer.Remarks ?? "-")</div>
                     </div>
