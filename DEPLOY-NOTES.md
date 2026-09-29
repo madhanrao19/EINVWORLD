@@ -24,7 +24,9 @@ changes are additive and AI/features stay off unless already enabled.
    `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
    `<environmentVariables>` secrets live) and crash the app on next start
    (`ArgumentNullException: connectionString` from the Serilog SQL sink) until it's restored from a
-   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview.
+   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. It also covers step 2 itself: it drops
+   `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
+   you don't need to stop the site by hand.
 4. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
@@ -68,8 +70,9 @@ changes are additive and AI/features stay off unless already enabled.
      several access-denied fixes) and MyInvois SDK 1.0 compliance work (unit-code validation, signed
      SVDP 1.3, configurable LHDN rate limits — see `LHDNApiConfig:RateLimits:*`). **No new required
      secrets.** See §1 for the 2 new migrations — both additive, no data loss, safe to auto-migrate.
-5. **Database migrations** run automatically on first boot (see §1) — additive only. Ensure the SQL login
-   has DDL rights and start in a **low-traffic window** with a **single** worker process.
+5. **Database migrations** — `scripts\Deploy-Staging.ps1` applies them for you, on both Staging and
+   Production (see §1). Otherwise run the `Apply_*.sql` scripts by hand. Additive only; do it in a
+   **low-traffic window**.
 6. **Start the site**, then **verify**:
    - `/health` returns Healthy; sign-in works; open an existing invoice; create + submit one to LHDN.
    - If AI is enabled: **Admin → AI Settings → Test connection** reports reachable + model pulled.
@@ -112,10 +115,18 @@ backup, a copy of the same backup with all 22 original migrations pre-applied un
 `dotnet ef database update` and the `Apply_*.sql` script producing identical, correct end states and
 zero errors in every case, including confirming `SystemLogs` (111k+ existing rows) is never dropped.
 
-**Default: automatic.** `appsettings.json` ships with `DatabaseSettings:AutoMigrateOnStartup = true`
-(inherited by Staging, which has no override), so on the first start of a new version the app applies
-any pending EF migrations itself. `appsettings.Production.json` overrides this to **`false`** — Production
-always requires the manual step below as a matter of policy, run in a controlled window. The migrations
+**Default: the deploy script migrates, not the app.** `DatabaseSettings:AutoMigrateOnStartup` is `false`
+in `appsettings.json`, `appsettings.Production.json`, and both servers' `web.config`, so the app never
+changes the schema on boot. `scripts\Deploy-Staging.ps1` does it instead, **before any app file is copied**:
+it reads the target's connection strings from its `web.config` (so it reaches **both** databases: the main
+DB and the separate `EINVWORLDWEBSITE[_STAGING]` DB), works out which migrations in the build are missing
+from each `__EFMigrationsHistory`, and takes a `COPY_ONLY` backup into the SQL instance's default backup
+folder. It then runs the matching `Migrations\Apply_<Name>.sql` scripts in order and checks the history
+rows landed. Any failure (a backup error, a script error, a pending migration with no `Apply_*.sql`, or a
+database with no history at all) stops the deploy with the site untouched. Fix the cause and re-run; the
+scripts are idempotent. It uses the app's own SQL login by default: if that login lacks DDL/backup rights,
+pass `-MigrationCredential (Get-Credential)` with a `db_ddladmin` login. `-WhatIf` lists what is pending
+without changing anything, and `-SkipMigrations` turns the step off. The migrations
 in this release are **additive** (new tables/columns/indexes — no `Up()` drops data), so existing data is
 preserved regardless of which path you use. Before the first start on a version bump you MUST:
 
@@ -125,9 +136,9 @@ preserved regardless of which path you use. Before the first start on a version 
 3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
    affected tables) and keep the app pool at a **single worker process**.
 
-### Manual alternative (Production's default — required, not optional)
+### Manual alternative (if you don't use the deploy script)
 
-With `AutoMigrateOnStartup = false`, run the idempotent `Apply_*.sql` scripts below **in order** (staging
+With `AutoMigrateOnStartup = false` and no deploy script, run the idempotent `Apply_*.sql` scripts below **in order** (staging
 first, then production) with a migration login (`db_ddladmin`). Each guards on `__EFMigrationsHistory` /
 `COL_LENGTH` / `OBJECT_ID` and is safe to re-run — running the full list against an already-migrated
 database is a no-op.

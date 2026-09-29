@@ -99,8 +99,9 @@ dotnet run
 
 Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 
-> Migrations auto-apply on startup when `DatabaseSettings:AutoMigrateOnStartup = true` (the default). Set it
-> to `false` in production and apply migrations as a controlled deploy step.
+> Migrations auto-apply on startup only when `DatabaseSettings:AutoMigrateOnStartup = true`. It's `false` in
+> the checked-in config: on Staging/Production, `scripts\Deploy-Staging.ps1` applies them at deploy time
+> (after a DB backup). See `DEPLOY-NOTES.md` §1.
 
 ### Tests
 
@@ -135,7 +136,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `ConnectionStrings` | Database connections (**secret** — left blank, supplied via user-secrets / env vars). |
 | `LHDNApiConfig` | MyInvois endpoints, client id, **secrets**, `SigningEnabled`, `DocVersion`, `SvdpEnabled` (show the per-invoice SVDP switch — 1.2 unsigned / 1.3 signed; programme runs until 31 Dec 2027), `SyncRetentionDays`, `RateLimits:*` (per-endpoint requests-per-minute ceilings, overridable per environment). |
 | `DataProtection:KeyRingPath` | Where encryption keys live — point **outside** `App\` on the server. **Required in Production** (startup fails if blank); preset to `E:\EINVWORLD\Keys` in `appsettings.Production.json`. |
-| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. `true` by default (Development/Staging); **`false` in `appsettings.Production.json`** — Production always applies migrations manually via `Apply_*.sql` (see `DEPLOY-NOTES.md` §1). Migrations are additive (data preserved), but **back up first** either way. |
+| `DatabaseSettings:AutoMigrateOnStartup` | Auto-apply EF migrations on boot. **`false`** in `appsettings.json`, `appsettings.Production.json`, and both servers' `web.config`. Staging/Production are migrated at deploy time by `scripts\Deploy-Staging.ps1` (DB backup, then the pending `Apply_*.sql`; see `DEPLOY-NOTES.md` §1). Migrations are additive (data preserved), but **back up first** either way. |
 | `CodeTableSync` | Daily additive sync of the 9 LHDN code tables from the official SDK JSON files (`Enabled` default `true`, `IntervalHours` 24). Inserts/renames only — never deletes or deactivates, admin `IsActive` choices preserved. |
 | `Security:EnforceAdminMfa` | Require Admins to enrol 2FA (default `true`; no lockout — they self-enrol). |
 | `Security:HttpsRedirectPort` | HTTP→HTTPS redirect. **Smart default:** off when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel — an in-app redirect would loop); `443` for a direct IIS HTTPS binding. Set explicitly to force: a port = on, `0` = off. |
