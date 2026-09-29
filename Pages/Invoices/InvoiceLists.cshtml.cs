@@ -125,8 +125,22 @@ namespace eInvWorld.Pages.Invoices
                 if (string.IsNullOrEmpty(uuid) && string.IsNullOrEmpty(submissionId))
                     return new JsonResult(new { success = false, message = "UUID and Submission ID are missing." });
 
+                // IDOR guard: the invoice must belong to one of the caller's companies (or caller is admin),
+                // and the same key is used for the check and the lookup.
+                bool byUuid = !string.IsNullOrEmpty(uuid);
+                bool canAccess = byUuid
+                    ? await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, uuid)
+                    : await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo);
+                if (!canAccess)
+                {
+                    _logger.LogWarning("ValidationDetails denied: user {User} cannot access invoice {InvoiceNo}/{UUID}.", User.Identity?.Name, invoiceNo, uuid);
+                    return new JsonResult(new { success = false, message = "Access denied." });
+                }
+
                 //  1. CHECK DATABASE FIRST (Fast Load)
-                var invoice = await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo || i.UUID == uuid);
+                var invoice = byUuid
+                    ? await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.UUID == uuid)
+                    : await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);
                 if (invoice != null && !string.IsNullOrEmpty(invoice.LHDNValidationErrorJson))
                 {
                     // 🔥 Return the raw JSON string directly to prevent the empty object [{}] bug!
@@ -137,6 +151,15 @@ namespace eInvWorld.Pages.Invoices
                 // 2. IF NOT IN DB, PROCEED WITH LHDN API CALL
                 if (string.IsNullOrEmpty(tin))
                     return new JsonResult(new { success = false, message = "TIN is missing." });
+
+                // The LHDN token is fetched for the client-supplied TIN, so pin it to a party on this invoice —
+                // otherwise any caller could spend another company's LHDN token.
+                var partyTins = invoice == null ? null : await _context.InvoiceHeaders
+                    .Where(i => i.InvoiceNo == invoice.InvoiceNo)
+                    .Select(i => new[] { i.Supplier != null ? i.Supplier.TIN : null, i.Customer != null ? i.Customer.TIN : null, i.PublicCustomer != null ? i.PublicCustomer.TIN : null })
+                    .FirstOrDefaultAsync();
+                if (partyTins == null || !partyTins.Contains(tin))
+                    return new JsonResult(new { success = false, message = "TIN does not match this invoice." });
 
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
                 if (string.IsNullOrEmpty(accessToken))
@@ -242,6 +265,13 @@ namespace eInvWorld.Pages.Invoices
                 {
                     _logger.LogError("Invoice number is required for PDF download");
                     return BadRequest("Invoice number is required");
+                }
+
+                // IDOR guard (same as InvoiceDetails2.OnGetDownloadPdfAsync).
+                if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+                {
+                    _logger.LogWarning("DownloadPdf denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
+                    return Forbid();
                 }
 
                 _logger.LogInformation($"Generating PDF for invoice: {invoiceNo}");
