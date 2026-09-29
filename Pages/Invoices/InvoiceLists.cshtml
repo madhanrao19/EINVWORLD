@@ -1944,6 +1944,16 @@
         
     });
 
+    // LHDN error text echoes submitted values, so always escape it. Since SDK 25 Sep 2026 errors may
+    // reference an SDK error page ("Please refer to https://sdk.myinvois.hasil.gov.my/...") — only
+    // those links are made clickable, after escaping.
+    function lhdnErrorHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML.replace(/https:\/\/sdk\.myinvois\.hasil\.gov\.my\/[\w\-.\/#%?=]*/g,
+            url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+    }
+
     function showInvalidReason(btn) {
         const invoiceNo = btn.getAttribute('data-invoiceno');
         const uuid = btn.getAttribute('data-uuid');
@@ -1981,11 +1991,11 @@
                         html += `
                         <div class="list-group-item list-group-item-danger border border-danger border-opacity-25 rounded shadow-sm">
                             <div class="d-flex w-100 justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0 text-danger fw-bold"><i class="ri-close-circle-line me-1"></i> Error Code: ${err.errorCode || 'N/A'}</h6>
+                                <h6 class="mb-0 text-danger fw-bold"><i class="ri-close-circle-line me-1"></i> Error Code: ${lhdnErrorHtml(err.errorCode || 'N/A')}</h6>
                             </div>
-                            <p class="mb-2"><strong>Error:</strong> ${err.error || 'Validation error'}</p>
-                            ${err.propertyPath ? `<p class="mb-2 text-muted fs-13"><i class="ri-map-pin-line me-1"></i> <strong>Location:</strong> <code class="bg-white border px-1 rounded text-danger">${err.propertyPath}</code></p>` : ''}
-                            ${err.innerErrors && err.innerErrors.length > 0 ? `<div class="bg-white border border-danger border-opacity-10 p-2 rounded mb-2 fs-13"><strong class="d-block mb-1 text-danger">Inner Errors:</strong><ul class="mb-0 text-muted" style="padding-left: 20px;">` + err.innerErrors.map(ie => `<li><b>${ie.propertyName}</b>: ${ie.error}</li>`).join('') + `</ul></div>` : ''}
+                            <p class="mb-2"><strong>Error:</strong> ${lhdnErrorHtml(err.error || 'Validation error')}</p>
+                            ${err.propertyPath ? `<p class="mb-2 text-muted fs-13"><i class="ri-map-pin-line me-1"></i> <strong>Location:</strong> <code class="bg-white border px-1 rounded text-danger">${lhdnErrorHtml(err.propertyPath)}</code></p>` : ''}
+                            ${err.innerErrors && err.innerErrors.length > 0 ? `<div class="bg-white border border-danger border-opacity-10 p-2 rounded mb-2 fs-13"><strong class="d-block mb-1 text-danger">Inner Errors:</strong><ul class="mb-0 text-muted" style="padding-left: 20px;">` + err.innerErrors.map(ie => `<li><b>${lhdnErrorHtml(ie.propertyName)}</b>: ${lhdnErrorHtml(ie.error)}</li>`).join('') + `</ul></div>` : ''}
 
                         </div>`;
                     });

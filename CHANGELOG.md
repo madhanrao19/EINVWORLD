@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.4`** (`AppInfo:Version` in `appsettings.json`). v1.28.4 is a **patch**
+> **Current version: `v1.28.5`** (`AppInfo:Version` in `appsettings.json`). v1.28.5 is a **patch**
+> release: LHDN SDK 25 Sep 2026 sweep — SDK error-reference links in validation errors are now
+> clickable — plus three security fixes found in the same Invoice Lists handlers (two IDORs and a
+> stored-XSS path in the validation-details popup); see the dated entry below. v1.28.4 was a **patch**
 > release: removed the Buyer-side Bank Name/Bank Account Number fields (Add/Edit/Details/CSV
 > export/bulk import) — the invoice's payment bank always comes from the Supplier, so the Buyer's
 > bank fields were unused and confusing; see the dated entry below for details. v1.28.3 was a **patch**
@@ -298,6 +301,33 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-29 — v1.28.5 (LHDN SDK 25 Sep 2026 sweep + Invoice Lists security fixes)
+
+Sweep against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`. The only release newer than the 2026-08-11
+sweep is **25 Sep 2026** (Production 24 Oct 2026):
+- **Search Documents: optional classification-code filter** — optional input; not adopted (no feature
+  needs it). No change.
+- **Get Document / Get Document Details: optional `typeVersionNumber` in responses** — our DTOs use
+  Newtonsoft/System.Text.Json defaults, which ignore unknown members. No change needed.
+- **Validator error-reference pages; error messages may now link to them** ("Please refer to
+  https://sdk.myinvois.hasil.gov.my/…") — errors are stored in `LHDNValidationErrorJson`
+  (`nvarchar(max)`), so nothing is truncated. The Invoice Lists validation-details popup now renders
+  those SDK links as clickable (opens in a new tab); no other URLs are linkified.
+
+Security fixes found in the same handlers (`Pages/Invoices/InvoiceLists.cshtml[.cs]`):
+- **Stored XSS:** the validation-details popup inserted LHDN error text (`error`, `errorCode`,
+  `propertyPath`, inner errors) as raw HTML. LHDN echoes submitted values, so a crafted value could run
+  script in the viewer's session. All fields are now HTML-escaped before the SDK-link step.
+- **IDOR — `OnGetValidationDetailsAsync`:** no ownership check, and it fetched an LHDN token for any
+  client-supplied TIN. It now requires `CanAccessInvoiceByUuidAsync`/`CanAccessInvoiceAsync`, looks up
+  the invoice by the same key it checked (previously `InvoiceNo == x || UUID == y`), and only accepts a
+  TIN that belongs to a party on that invoice.
+- **IDOR — `OnGetDownloadPdfAsync`:** no ownership check; now uses the same `CanAccessInvoiceAsync`
+  guard as `InvoiceDetails2.OnGetDownloadPdfAsync`.
+
+No DB/migration/config changes. Legitimate users are unaffected: the popup always sends a TIN from the
+invoice's own parties.
 
 ## 📅 2026-09-11 — v1.28.4 (Buyer Directory: removed Bank Name/Bank Account fields)
 
