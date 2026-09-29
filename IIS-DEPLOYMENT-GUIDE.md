@@ -462,10 +462,10 @@ tables automatically**. A backup is your safety net.
 `E:\EINVWORLD\App\logs\stdout` files — the error usually says exactly what's wrong, e.g. a missing
 environment variable).
 
-> **Prefer to apply database changes by hand?** (strict DBs that don't allow `db_ddladmin`.) Set the env
-> var `DatabaseSettings__AutoMigrateOnStartup` to `false`, and ask the developer for the
-> `Migrations\Apply_*.sql` scripts; run them in SSMS in the documented order **before** starting the
-> site. See `DEPLOY-NOTES.md`.
+> **Database changes on later updates:** keep the env var `DatabaseSettings__AutoMigrateOnStartup` at
+> `false`. The developer's `scripts\Deploy-Staging.ps1` backs up the database and applies any pending
+> `Migrations\Apply_*.sql` before copying the new version. To do it by hand instead, run those scripts in
+> SSMS in the documented order **before** starting the site. See `DEPLOY-NOTES.md` §1.
 
 ---
 

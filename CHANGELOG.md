@@ -302,6 +302,28 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-09-29 — Deploy script: one command, with database migrations (no app version change)
+
+`scripts\Deploy-Staging.ps1` now does the whole deploy for Staging (default) or Production
+(`-DestAppPath '\\192.168.1.26\e$\EINVWORLD\App' -Confirm`):
+- **DB migrations:** it reads both connection strings (main DB + website DB) from the target's
+  `web.config` and finds the build's migrations missing from each `__EFMigrationsHistory`. It then takes a
+  `COPY_ONLY` DB backup and runs the matching idempotent `Apply_*.sql` in order, then verifies. Any
+  failure (a backup/script error, a missing `Apply_*.sql`, or a DB with no history) stops the deploy
+  **before any app file is copied**, so the site stays on the old version. It runs while the old build
+  is still serving, which is safe because migrations are additive-only.
+  `-MigrationCredential` supplies a DDL login if the app's login lacks rights, `-SkipMigrations` turns
+  the step off, and `-WhatIf` lists what's pending.
+- **No manual IIS stop/start:** `app_offline.htm` is dropped for the copy only (after the App backup)
+  and always removed.
+- `AutoMigrateOnStartup` stays `false` everywhere (the app never migrates on boot). The docs had
+  wrongly said it defaulted to `true`; README, DOCUMENTATION, SECRETS-SETUP, IIS-DEPLOYMENT-GUIDE,
+  DEPLOY-NOTES and the `appsettings.json` comment are corrected.
+- Tested against LocalDB using a fake migration set covering both DBs: dry run, a failing migration
+  (stopped, app untouched, backup kept), resume after the fix, an idempotent re-run, and a missing
+  `Apply_*.sql` (refused). The script is now pure ASCII, because Windows PowerShell 5.1 misreads
+  UTF-8 without a BOM.
+
 ## 📅 2026-09-29 — v1.28.5 (LHDN SDK 25 Sep 2026 sweep + Invoice Lists security fixes)
 
 Sweep against `sdk.myinvois.hasil.gov.my/sdk-1-0-release`. The only release newer than the 2026-08-11
