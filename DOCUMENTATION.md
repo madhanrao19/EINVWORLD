@@ -500,7 +500,7 @@ blank in files and supplied via env vars / user-secrets.
 |---|---|
 | `AppInfo` | Name / Version / Environment (footer display). |
 | `ConnectionStrings` | `DefaultConnection` (EINVWORLD) + `WebsiteDb` (EINVWORLDWEBSITE). **Secret.** |
-| `DatabaseSettings:AutoMigrateOnStartup` | Apply EF migrations on boot. `true` in Production (additive — back up first). |
+| `DatabaseSettings:AutoMigrateOnStartup` | Apply EF migrations on boot. `false` everywhere (the checked-in config and both servers); `scripts\Deploy-Staging.ps1` migrates at deploy time instead, with a DB backup first. |
 | `DataProtection:KeyRingPath` | Encryption key-ring folder. **Required in Production**; outside `App\`. |
 | `Security:EnforceAdminMfa` | Require Admin 2FA enrolment (default `true`). |
 | `Security:HttpsRedirectPort` | HTTP→HTTPS redirect port. **Smart default:** when `ForwardedHeaders` is enabled (behind a TLS-terminating proxy / Cloudflare Tunnel) the redirect is **off** — an in-app redirect would loop (`http→https→http`) since the edge already terminates TLS; for a direct IIS HTTPS binding it defaults to `443` (set explicitly because behind IIS the port can't be auto-discovered). Override anytime: a port forces it on, `0` forces it off. |
@@ -547,12 +547,11 @@ blank in files and supplied via env vars / user-secrets.
   v1.22.0: `AddLineTariffOriginAndHeaderShippingCustoms` (`InvoiceLines.ProductTariffCode`/
   `CountryOfOrigin`/`DiscountReason`/`FeeChargeAmount`/`FeeChargeReason`, plus `InvoiceHeaders` Shipping
   Recipient + Customs/Import-Export columns, backing the Invoice Items redesign, §10) — see
-  `DEPLOY-NOTES.md` §1 for the apply order. Auto-apply on startup
-  (`AutoMigrateOnStartup=true`) is the default in Development/Staging — they are **additive** (new
-  tables/columns/indexes; no `Up()` drops), so existing data is preserved. **Production overrides this to
-  `AutoMigrateOnStartup=false`**: migrations there always apply manually as a controlled deploy step, not
-  automatically on boot. **Always back up first** and ensure the runtime/migration SQL login has DDL
-  rights.
+  `DEPLOY-NOTES.md` §1 for the apply order. Migrations are **additive** (new tables/columns/indexes; no
+  `Up()` drops), so existing data is preserved. `AutoMigrateOnStartup` is `false` everywhere; Staging and
+  Production are migrated at deploy time by `scripts\Deploy-Staging.ps1`. It backs up each DB (`COPY_ONLY`),
+  runs the pending `Apply_*.sql`, verifies `__EFMigrationsHistory`, and stops before copying any app file
+  if anything fails.
 - Every migration has an idempotent **`Apply_*.sql`** for the manual path; ordered list and current
   environment-catch-up guidance in [`DEPLOY-NOTES.md`](DEPLOY-NOTES.md) §1.
 - `SystemLogs` is created/owned by the **Serilog MSSqlServer sink**, not EF.
