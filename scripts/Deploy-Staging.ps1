@@ -25,10 +25,10 @@
          publish output are left alone (no `/MIR` — this script never deletes anything on the
          server).
 
-    This script does NOT stop/start the IIS site or app pool, and does NOT apply EF migrations —
-    both are manual steps by design (see DEPLOY-NOTES.md §0). Stop the site before running this,
-    start it again after, and check `Migrations\Apply_*.sql` against the target's
-    `__EFMigrationsHistory` first if any migration has landed since the last deploy.
+    The site is taken offline only for the copy step, via `app_offline.htm` (no IIS admin rights
+    needed), and comes back on the next request. The script does NOT apply EF migrations: if any
+    migration has landed since the last deploy, apply its `Migrations\Apply_*.sql` against the
+    target's `__EFMigrationsHistory` first (see DEPLOY-NOTES.md §0).
 
 .PARAMETER DestAppPath
     UNC (or local) path to the target `App\` folder. Defaults to the Staging deployment path from
@@ -53,7 +53,7 @@
     Preview what would be copied/backed up without changing anything on the server.
 
 .EXAMPLE
-    # Standard staging deploy (stop the site first, start it again after):
+    # Standard staging deploy (one command - site goes offline only during the copy):
     .\Deploy-Staging.ps1
 
 .EXAMPLE
@@ -153,15 +153,26 @@ Write-Host "Copying publish output into App\ (excluding: $($excludeFiles -join '
 $rcArgs = @($SourcePublishPath, $DestAppPath, '/E', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH', '/XF') + $excludeFiles
 if ($WhatIfPreference) { $rcArgs += '/L' }
 
+# app_offline.htm makes the ASP.NET Core Module stop the app and release its DLL locks, so no manual
+# site stop is needed. Dropped AFTER the backup (so a restored backup never ships it) and always removed,
+# even if the copy fails - removing it brings the site back up on the next request.
+$offlineFile = Join-Path $DestAppPath 'app_offline.htm'
 if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server-only files)')) {
-    robocopy @rcArgs | Select-Object -Last 8
-    if ($LASTEXITCODE -ge 8) { throw "Deploy robocopy failed (exit code $LASTEXITCODE) - check output above. Your pre-deploy backup is intact." }
-    Write-Host "Copy complete." -ForegroundColor Green
+    Set-Content -Path $offlineFile -Value '<html><body><h2>EINVWORLD is being updated - back in a minute.</h2></body></html>' -Encoding utf8
+    try {
+        Start-Sleep -Seconds 5   # give ANCM time to shut the app down
+        robocopy @rcArgs | Select-Object -Last 8
+        if ($LASTEXITCODE -ge 8) { throw "Deploy robocopy failed (exit code $LASTEXITCODE) - check output above. Your pre-deploy backup is intact." }
+        Write-Host "Copy complete." -ForegroundColor Green
+    }
+    finally {
+        Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
+        Write-Host "Site back online (app_offline.htm removed)." -ForegroundColor Green
+    }
 }
 
 Write-Host ""
 Write-Host "=== Done. Remaining manual steps ===" -ForegroundColor Cyan
 Write-Host "  1. If any new migration landed since the last deploy, apply its Migrations\Apply_*.sql" -ForegroundColor Yellow
 Write-Host "     against the target DB BEFORE starting the site (see DEPLOY-NOTES.md)." -ForegroundColor Yellow
-Write-Host "  2. Start the site / app pool." -ForegroundColor Yellow
-Write-Host "  3. Verify: GET /health and /health/ready both return 200; sign in; open an invoice." -ForegroundColor Yellow
+Write-Host "  2. Verify: GET /health and /health/ready both return 200; sign in; open an invoice." -ForegroundColor Yellow

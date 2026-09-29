@@ -24,7 +24,9 @@ changes are additive and AI/features stay off unless already enabled.
    `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
    `<environmentVariables>` secrets live) and crash the app on next start
    (`ArgumentNullException: connectionString` from the Serilog SQL sink) until it's restored from a
-   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview.
+   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. It also covers step 2 itself: it drops
+   `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
+   you don't need to stop the site by hand.
 4. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
