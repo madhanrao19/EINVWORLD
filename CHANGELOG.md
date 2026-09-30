@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.28.5`** (`AppInfo:Version` in `appsettings.json`). v1.28.5 is a **patch**
+> **Current version: `v1.29.0`** (`AppInfo:Version` in `appsettings.json`). v1.29.0 is a **minor**
+> release: Invalid / reject-requested invoices can now leave "Needs Attention" (a "Mark as resolved"
+> row action, plus automatic clearing once a "Resend" copy is Valid), and the Resend clone lookup is now
+> tenant-scoped (IDOR fix); one additive migration — see the dated entry below. v1.28.5 was a **patch**
 > release: LHDN SDK 25 Sep 2026 sweep — SDK error-reference links in validation errors are now
 > clickable — plus three security fixes found in the same Invoice Lists handlers (two IDORs and a
 > stored-XSS path in the validation-details popup); see the dated entry below. v1.28.4 was a **patch**
@@ -301,6 +304,30 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-09-30 — v1.29.0 (Needs Attention: resolve Invalid invoices + Resend IDOR fix)
+
+LHDN **Invalid** is final: you fix it by issuing a new invoice, and the old one can never turn Valid. So
+every Invalid invoice used to stay in the Dashboard's and Invoice List's "Needs Attention" forever.
+- **"Mark as resolved" / "Reopen"** row actions (Invoice List ⋮ menu) for Invalid and reject-requested
+  invoices. They remove the invoice from Needs Attention and from the Dashboard's "LHDN Invalid – Fix &
+  Resubmit" tile. Display-only: the LHDN/internal status is unchanged, the invoice stays in All Invoices
+  with a small "Resolved" tag, nothing is sent to LHDN, and each change is written to `InvoiceHistory`.
+  Drafts and Transmission Errors can't be dismissed, because they are fixed in place.
+- **Resend auto-clear:** an invoice created via **Resend** now records its original
+  (`ResentFromInvoiceNo`). Once the copy is LHDN Valid, the original leaves Needs Attention
+  automatically, however the copy reached Valid (live submit, background sync, manual refresh).
+- **Security (IDOR):** `CreateInvoice?cloneId=` loaded **any** company's invoice by number, and numbers
+  are sequential, so a signed-in user could copy another tenant's invoice data. It is now checked with
+  `UserExtensions.CanAccessInvoiceAsync`. The posted `ResentFromInvoiceNo` hidden field is re-checked the
+  same way, so it can't be used to clear another tenant's Needs Attention.
+- Dashboard KPI totals (Invalid count/amount) are unchanged: they are historical facts.
+- **Migration:** `20260930010000_AddNeedsAttentionResolution` (+ `Apply_AddNeedsAttentionResolution.sql`)
+  adds nullable `InvoiceHeaders.AttentionResolvedAt`, `AttentionResolvedBy` and `ResentFromInvoiceNo`
+  (indexed). Additive only.
+- Tests: `Integration/InvoiceNeedsAttentionFilterTests` (real SQL: resolved and Valid-resent invoices
+  are excluded; a copy that is only Submitted doesn't clear its original; drafts and reject-requested
+  invoices unaffected).
 
 ## 📅 2026-09-29 — Deploy script: one command, with database migrations (no app version change)
 

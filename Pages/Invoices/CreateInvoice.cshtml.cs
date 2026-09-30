@@ -159,10 +159,17 @@ namespace EINVWORLD.Pages.Invoices
             {
                 _logger.LogInformation("🔄 Cloning invoice from cloneId: {cloneId}", cloneId);
 
-                var oldInvoice = await _context.InvoiceHeaders
-                    .Include(i => i.InvoiceLines)
-                        .ThenInclude(l => l.InvoiceTaxes)
-                    .FirstOrDefaultAsync(i => i.InvoiceNo == cloneId);
+                // IDOR guard: invoice numbers are sequential, so only the user's own invoices may be cloned.
+                var oldInvoice = await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, cloneId)
+                    ? await _context.InvoiceHeaders
+                        .Include(i => i.InvoiceLines)
+                            .ThenInclude(l => l.InvoiceTaxes)
+                        .FirstOrDefaultAsync(i => i.InvoiceNo == cloneId)
+                    : null;
+                if (oldInvoice == null)
+                {
+                    _logger.LogWarning("Resend clone denied or not found: user {User}, cloneId {CloneId}.", User.Identity?.Name, cloneId);
+                }
 
                 if (oldInvoice != null)
                 {
@@ -185,6 +192,9 @@ namespace EINVWORLD.Pages.Invoices
                         EndDate = oldInvoice.EndDate,
                         PoDoNo = oldInvoice.PoDoNo,
                         RefDocumentNo = oldInvoice.RefDocumentNo,
+
+                        // Links the copy to its original so the original leaves "Needs Attention" once this is Valid.
+                        ResentFromInvoiceNo = oldInvoice.InvoiceNo,
 
                         // ⚠️ CRITICAL: Generate a brand NEW ID and Reset the Date
                         InvoiceNo = GenerateNextInvoiceNumber(),
@@ -732,6 +742,15 @@ namespace EINVWORLD.Pages.Invoices
                     }
                 }
 
+                // The Resend link arrives in a hidden field — never trust it: keep it only if the original
+                // belongs to this user, otherwise another tenant's invoice could be cleared from Needs Attention.
+                if (Invoice != null && !string.IsNullOrEmpty(Invoice.ResentFromInvoiceNo) &&
+                    !await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, Invoice.ResentFromInvoiceNo))
+                {
+                    _logger.LogWarning("Dropping unauthorised ResentFromInvoiceNo {Source} for user {User}.", Invoice.ResentFromInvoiceNo, User.Identity?.Name);
+                    Invoice.ResentFromInvoiceNo = null;
+                }
+
                 // NOW safe to save template (buyer IDs already populated)
                 if (action == "saveAsTemplate")
                 {
@@ -1038,6 +1057,7 @@ namespace EINVWORLD.Pages.Invoices
                         InvoiceNo = Invoice.InvoiceNo,
                         PrefixedID = Invoice.InvoiceNo,
                         RefDocumentNo = Invoice.RefDocumentNo,
+                        ResentFromInvoiceNo = Invoice.ResentFromInvoiceNo,
                         UUID = Invoice.UUID,
                         ForeignCurrency = Invoice.Currency ?? "MYR",
                         ExchangeRate = Invoice.ExchangeRate,
