@@ -325,6 +325,21 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260902010000_AddLineTariffOriginAndHeaderShippingCustoms
 ```
 
+### v1.29.0 migration — Needs Attention resolution
+
+`scripts\Deploy-Staging.ps1` applies this automatically (backup first). Manual equivalent:
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddNeedsAttentionResolution.sql"
+```
+
+> **`AddNeedsAttentionResolution`** adds nullable `InvoiceHeaders.AttentionResolvedAt` (datetime2),
+> `AttentionResolvedBy` (nvarchar(256)), `ResentFromInvoiceNo` (nvarchar(50)) and the index
+> `IX_InvoiceHeaders_ResentFromInvoiceNo`. Purely additive with no backfill: existing Invalid invoices
+> stay in Needs Attention until someone marks them resolved.
+
+Verify: the last `__EFMigrationsHistory` row should be `20260930010000_AddNeedsAttentionResolution`.
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:

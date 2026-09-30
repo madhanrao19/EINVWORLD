@@ -1046,6 +1046,13 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime?>("AttentionResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AttentionResolvedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("BankAccountNo")
                         .HasColumnType("nvarchar(max)");
 
@@ -1233,6 +1240,10 @@ namespace eInvWorld.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("ResentFromInvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -1345,6 +1356,8 @@ namespace eInvWorld.Migrations
                     b.HasIndex("PublicCustomerId");
 
                     b.HasIndex("RefDocumentNo");
+
+                    b.HasIndex("ResentFromInvoiceNo");
 
                     b.HasIndex("ShippingRecipientCountryCode");
 

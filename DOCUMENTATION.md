@@ -275,6 +275,15 @@ signing correctly upgrades both regular and SVDP submissions to their signed ver
 **Status sync** — `InvoiceStatusUpdater` (background) and the manual sync/import jobs poll LHDN and
 update internal/LHDN status, capturing the `LongId`/QR once Valid.
 
+**Needs Attention** — `Helpers/InvoiceNeedsAttentionFilter` is the one rule behind the Dashboard panel,
+the "LHDN Invalid" action tile, and the Invoice List chip. It flags Invalid (non-draft), TransmissionError,
+RequestReject, and drafts older than 3 days. `Unresolved()` then drops invoices that are:
+- **marked resolved**: `AttentionResolvedAt`, set by the Invoice List "Mark as resolved" action. Only
+  Invalid or reject-requested invoices qualify (`CanResolve`). Reversible, logged to `InvoiceHistory`,
+  and display-only (statuses untouched).
+- **re-issued**: a **Resend** copy (`ResentFromInvoiceNo` = the original's `InvoiceNo`) is LHDN Valid.
+  This is checked when the query runs, so no status-sync path needs a hook. The link is tenant-checked on save.
+
 **External-ERP invoices (buyer-side sync).** `InvoiceFullSyncHelper` pulls documents from LHDN's
 `documents/search` API, which is TIN-scoped, not submitter-scoped — it returns every document where the
 company is a party, including ones submitted directly to LHDN by a different system entirely (an
