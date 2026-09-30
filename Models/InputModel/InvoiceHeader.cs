@@ -119,6 +119,24 @@ namespace eInvWorld.Models.InputModel
         public string? InvoiceDirection { get; set; }
         public string? LHDNValidationErrorJson { get; set; }
 
+        /// <summary>
+        /// When a user marked this Invalid / reject-requested invoice as resolved, which removes it from
+        /// "Needs Attention" (see InvoiceNeedsAttentionFilter). Display-only: the LHDN and internal
+        /// statuses are unchanged, and nothing is sent to LHDN.
+        /// </summary>
+        public DateTime? AttentionResolvedAt { get; set; }
+
+        /// <summary>User name that marked this invoice as resolved (pairs with AttentionResolvedAt).</summary>
+        [MaxLength(256)]
+        public string? AttentionResolvedBy { get; set; }
+
+        /// <summary>
+        /// The invoice this one was cloned from via "Resend". Once this copy is LHDN Valid, the original
+        /// automatically drops out of "Needs Attention". Tenant-checked on save; not a foreign key.
+        /// </summary>
+        [MaxLength(50)]
+        public string? ResentFromInvoiceNo { get; set; }
+
         // ✅ New Fields from API Response
         public string? LongId { get; set; }  // ✅ Used for QR code generation
 		

@@ -471,7 +471,7 @@ namespace eInvWorld.Pages.Invoices
                 // via the same InvoiceNeedsAttentionFilter the Dashboard panel uses — this count and
                 // the filtered grid below (and the Dashboard's headline number) can never drift apart.
                 TotalNeedsAttentionInvoices = await InvoiceNeedsAttentionFilter.Apply(
-                    ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs)).CountAsync();
+                    ApplyDirectionFilter(_context.InvoiceHeaders.AsQueryable(), "All", userTINs), _context.InvoiceHeaders).CountAsync();
 
                 // Direction-scoped LHDN status counts for the compliance strip under the table.
                 // One grouped query pushed to the DB, computed BEFORE the user filters so the
@@ -633,7 +633,7 @@ namespace eInvWorld.Pages.Invoices
 
             if (string.Equals(internalStatus, "NeedsAttention", StringComparison.OrdinalIgnoreCase))
             {
-                query = InvoiceNeedsAttentionFilter.Apply(query);
+                query = InvoiceNeedsAttentionFilter.Apply(query, _context.InvoiceHeaders);
             }
             else if (!string.IsNullOrEmpty(internalStatus))
             {
@@ -1527,6 +1527,83 @@ namespace eInvWorld.Pages.Invoices
 
             TempData["ErrorMessage"] = wrapperResult.Message;
             return RedirectToPage();
+        }
+
+        /// <summary>
+        /// Marks an Invalid / reject-requested invoice as resolved so it leaves "Needs Attention"
+        /// (e.g. the user already re-issued it as a new invoice). Display-only: statuses are unchanged
+        /// and nothing is sent to LHDN. Reversible via <see cref="OnPostReopenAttentionAsync"/>.
+        /// </summary>
+        public Task<IActionResult> OnPostResolveAttentionAsync(string invoiceNo, string? returnQuery)
+            => SetAttentionResolvedAsync(invoiceNo, returnQuery, resolve: true);
+
+        /// <summary>Undoes <see cref="OnPostResolveAttentionAsync"/>: the invoice shows in "Needs Attention" again.</summary>
+        public Task<IActionResult> OnPostReopenAttentionAsync(string invoiceNo, string? returnQuery)
+            => SetAttentionResolvedAsync(invoiceNo, returnQuery, resolve: false);
+
+        private async Task<IActionResult> SetAttentionResolvedAsync(string invoiceNo, string? returnQuery, bool resolve)
+        {
+            // Only a same-page query string is honoured as the return target (no open redirect).
+            IActionResult Back() => Redirect(
+                !string.IsNullOrEmpty(returnQuery) && returnQuery.StartsWith('?') && Url.IsLocalUrl("/Invoices/InvoiceLists" + returnQuery)
+                    ? "/Invoices/InvoiceLists" + returnQuery
+                    : "/Invoices/InvoiceLists?invoiceDirection=All&internalStatus=NeedsAttention");
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToPage("/Account/Login");
+
+            // Same view-only rule OnGet uses to hide the action menu.
+            var company = await _context.UserCompanies.FirstOrDefaultAsync(uc => uc.UserId == user.Id && uc.IsPrimaryCompany)
+                          ?? await _context.UserCompanies.FirstOrDefaultAsync(uc => uc.UserId == user.Id);
+            if (company?.IsViewOnly == true)
+            {
+                TempData["ErrorMessage"] = "Your access is view-only.";
+                return Back();
+            }
+
+            // IDOR guard: only the user's own company's invoices.
+            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+            {
+                _logger.LogWarning("SetAttentionResolved denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
+                TempData["ErrorMessage"] = "Invoice not found.";
+                return Back();
+            }
+
+            var invoice = await _context.InvoiceHeaders.FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);
+            if (invoice == null || !InvoiceNeedsAttentionFilter.CanResolve(invoice))
+            {
+                TempData["ErrorMessage"] = "Only Invalid or reject-requested invoices can be marked as resolved.";
+                return Back();
+            }
+
+            var performedBy = User.Identity?.Name ?? "System";
+            invoice.AttentionResolvedAt = resolve ? DateTime.Now : null;
+            invoice.AttentionResolvedBy = resolve ? performedBy : null;
+            _context.InvoiceHistories.Add(new InvoiceHistory
+            {
+                InvoiceNo = invoiceNo,
+                Action = resolve ? "Attention Resolved" : "Attention Reopened",
+                Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+                PerformedBy = performedBy,
+                Remarks = resolve ? "Marked as resolved; removed from Needs Attention" : "Returned to Needs Attention"
+            });
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // RowVersion clash with a concurrent status sync — nothing saved; the user can retry.
+                TempData["ErrorMessage"] = $"{invoiceNo} was updated at the same time. Please try again.";
+                return Back();
+            }
+
+            _logger.LogInformation("Invoice {InvoiceNo} attention {Action} by {User}.", invoiceNo, resolve ? "resolved" : "reopened", performedBy);
+            TempData["SuccessMessage"] = resolve
+                ? $"{invoiceNo} marked as resolved and removed from Needs Attention."
+                : $"{invoiceNo} is back in Needs Attention.";
+            return Back();
         }
 
         // JSON sibling of SubmitFromList, used by the bulk "Submit Selected to LHDN" action. The client

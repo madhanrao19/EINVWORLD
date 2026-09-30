@@ -114,11 +114,17 @@ namespace eInvWorld.Pages.Invoices
                     // tiles below — same predicate the Invoice List's "Needs Attention" chip filters on
                     // (InvoiceNeedsAttentionFilter), computed here before the date-range filter is applied
                     // so it reflects the whole company scope like the other action counters do.
-                    NeedsAttentionCount = InvoiceNeedsAttentionFilter.Apply(invoiceQuery).Count();
+                    // Breakdown rows go through the same Unresolved() rule so resolved invoices (marked
+                    // resolved, or with a Valid Resend copy) drop out of the headline and the pills together.
+                    var allInvoices = _context.InvoiceHeaders.AsNoTracking();
+                    NeedsAttentionCount = InvoiceNeedsAttentionFilter.Apply(invoiceQuery, allInvoices).Count();
                     var needsAttentionCutoff = DateTime.Now.AddDays(-3);
-                    NeedsAttentionInvalidCount = invoiceQuery.Count(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft");
-                    NeedsAttentionTransmissionErrorCount = ActionTransmissionErrorCount;
-                    NeedsAttentionRejectedCount = invoiceQuery.Count(i => i.InternalStatusId == "RequestReject");
+                    NeedsAttentionInvalidCount = InvoiceNeedsAttentionFilter.Unresolved(invoiceQuery, allInvoices)
+                        .Count(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft");
+                    NeedsAttentionTransmissionErrorCount = InvoiceNeedsAttentionFilter.Unresolved(invoiceQuery, allInvoices)
+                        .Count(i => i.InternalStatusId == "TransmissionError");
+                    NeedsAttentionRejectedCount = InvoiceNeedsAttentionFilter.Unresolved(invoiceQuery, allInvoices)
+                        .Count(i => i.InternalStatusId == "RequestReject");
                     NeedsAttentionAgingDraftsCount = invoiceQuery.Count(i => i.InternalStatusId == "Draft" && i.CreatedDate <= needsAttentionCutoff);
 
                     // Apply Date Filters
@@ -156,9 +162,7 @@ namespace eInvWorld.Pages.Invoices
                             InvalidAmount = g.Sum(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft" ? (i.TotalAmountIncTax ?? 0m) : 0m),
 
                             CancelledInvoices = g.Count(i => i.LHDNStatusId == "Cancelled" && i.InternalStatusId != "Draft"),
-                            CancelledAmount = g.Sum(i => i.LHDNStatusId == "Cancelled" && i.InternalStatusId != "Draft" ? (i.TotalAmountIncTax ?? 0m) : 0m),
-
-                            ActionInvalidCount = g.Count(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft")
+                            CancelledAmount = g.Sum(i => i.LHDNStatusId == "Cancelled" && i.InternalStatusId != "Draft" ? (i.TotalAmountIncTax ?? 0m) : 0m)
                         })
                         .ToList()
                         .FirstOrDefault();
@@ -183,7 +187,10 @@ namespace eInvWorld.Pages.Invoices
                         CancelledInvoices = invoiceStats.CancelledInvoices;
                         CancelledAmount = invoiceStats.CancelledAmount;
 
-                        ActionInvalidCount = invoiceStats.ActionInvalidCount;
+                        // "LHDN Invalid – Fix & Resubmit" tile: only invoices still unresolved, so it stops
+                        // alerting once the user has resolved or successfully resent them.
+                        ActionInvalidCount = InvoiceNeedsAttentionFilter.Unresolved(invoiceQuery, allInvoices)
+                            .Count(i => i.LHDNStatusId == "Invalid" && i.InternalStatusId != "Draft");
                     }
 
                     // Get recent invoices (Smart Sorted for Buyers)

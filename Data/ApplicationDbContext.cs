@@ -335,6 +335,8 @@ namespace eInvWorld.Data
                 // Status-sync hot path: InvoiceStatusUpdater filters on LHDNStatusId and orders by LastUpdated.
                 // (LongId is nvarchar(max), so it can't be a key column — the single LHDNStatusId index covers it.)
                 b.HasIndex(i => new { i.LHDNStatusId, i.LastUpdated });
+                // Needs Attention: "does a Valid Resend copy of this invoice exist?" correlated lookup.
+                b.HasIndex(i => i.ResentFromInvoiceNo);
             });
 
             modelBuilder.Entity<InvoiceHistory>(b =>

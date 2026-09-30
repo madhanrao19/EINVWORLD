@@ -87,6 +87,10 @@ namespace eInvWorld.Models.ViewModels
         public DateTime? OriginalInvoiceDate { get; set; } // Date Invoice (original date)
         public string? PoDoNo { get; set; } // PO/DO No
 
+        /// <summary>Set when this invoice is a "Resend" clone of an earlier one (see InvoiceHeader.ResentFromInvoiceNo).</summary>
+        [MaxLength(50)]
+        public string? ResentFromInvoiceNo { get; set; }
+
         [MaxLength(200)]
         [Display(Name = "Payment Terms")]
         public string? PaymentTerms { get; set; }
