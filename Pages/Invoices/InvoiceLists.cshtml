@@ -808,6 +808,10 @@
                                                                 <i class="ri-error-warning-line"></i>
                                                                 @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusRej) ? EnumHelper.GetEnumDescription(internalStatusRej) : invoice.InternalStatusId)
                                                             </button>
+                                                            @if (invoice.AttentionResolvedAt != null)
+                                                            {
+                                                                <small class="text-muted d-block mt-1" title="Marked as resolved by @invoice.AttentionResolvedBy on @invoice.AttentionResolvedAt?.ToString("yyyy-MM-dd hh:mm tt")"><i class="ri-check-double-line"></i> Resolved</small>
+                                                            }
                                                             @if (!string.IsNullOrWhiteSpace(invoice.RejectedReason))
                                                             {
                                                                 <div class="small text-danger mt-1 text-truncate" style="max-width:220px;" title="@invoice.RejectedReason">@invoice.RejectedReason</div>
@@ -908,6 +912,24 @@
                                                                         <a class="dropdown-item text-info" asp-page="./CreateInvoice" asp-route-cloneId="@invoice.InvoiceNo">
                                                                             <i class="ri-file-copy-2-line me-1"></i> Resend
                                                                         </a>
+                                                                    </li>
+                                                                }
+                                                                @* Needs Attention: resolve/reopen an Invalid or reject-requested invoice (display-only; posts via #attentionForm). *@
+                                                                @if (EINVWORLD.Helpers.InvoiceNeedsAttentionFilter.CanResolve(invoice))
+                                                                {
+                                                                    <li>
+                                                                        @if (invoice.AttentionResolvedAt == null)
+                                                                        {
+                                                                            <button type="submit" form="attentionForm" formaction="?handler=ResolveAttention" name="invoiceNo" value="@invoice.InvoiceNo" class="dropdown-item" title="Remove from Needs Attention (e.g. already re-issued). The LHDN status is unchanged.">
+                                                                                <i class="ri-check-double-line me-1"></i> Mark as resolved
+                                                                            </button>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <button type="submit" form="attentionForm" formaction="?handler=ReopenAttention" name="invoiceNo" value="@invoice.InvoiceNo" class="dropdown-item">
+                                                                                <i class="ri-arrow-go-back-line me-1"></i> Reopen (Needs Attention)
+                                                                            </button>
+                                                                        }
                                                                     </li>
                                                                 }
                                                                 @if (invoice.InternalStatusId == "Draft" || invoice.InternalStatusId == "TransmissionError")
@@ -1457,6 +1479,12 @@
     //     };
     // </script>
 }
+
+@* Target of the row "Mark as resolved" / "Reopen" buttons (they supply invoiceNo + handler). *@
+<form id="attentionForm" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="returnQuery" value="@Request.QueryString" />
+</form>
 
 <form id="submitListForm" method="post" asp-page-handler="SubmitFromList">
     @Html.AntiForgeryToken()
