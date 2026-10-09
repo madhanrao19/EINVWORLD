@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 
@@ -20,9 +21,11 @@ namespace EINVWORLD.Helpers
         /// LHDN ClientId/secrets). Callers pass <c>app.Environment.IsProduction()</c>, which is
         /// <c>false</c> on the Staging server (<c>ASPNETCORE_ENVIRONMENT=Staging</c>) — deliberate:
         /// Staging gets these checks as warnings instead of hard startup failures.
+        /// <paramref name="contentRoot"/> (the deployable App folder) is used only to reject a key-ring
+        /// path that resolves INSIDE it; pass null to skip that containment check.
         /// Throws <see cref="InvalidOperationException"/> aggregating all blocking problems.
         /// </summary>
-        public static void Validate(IConfiguration config, bool isProduction)
+        public static void Validate(IConfiguration config, bool isProduction, string? contentRoot = null)
         {
             var errors = new List<string>();
             var warnings = new List<string>();
@@ -32,15 +35,38 @@ namespace EINVWORLD.Helpers
                 !string.IsNullOrWhiteSpace(v) &&
                 v.Contains("localhost", StringComparison.OrdinalIgnoreCase);
 
+            // True when 'path' (relative paths resolve against contentRoot, matching Program.cs's
+            // PostConfigure behaviour) sits at or under the deployable App folder.
+            static bool IsInside(string root, string path)
+            {
+                try
+                {
+                    var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    var fullPath = Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(root, path))
+                        .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    return fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+                        || fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+                }
+                catch
+                {
+                    return false; // a malformed path is caught elsewhere; don't crash the validator
+                }
+            }
+
             // ── Database ──────────────────────────────────────────────────────────────────
             if (Blank(config["ConnectionStrings:DefaultConnection"]))
                 errors.Add("ConnectionStrings:DefaultConnection is empty — set it via env var ConnectionStrings__DefaultConnection or user-secrets.");
 
             // ── Data Protection key ring ──────────────────────────────────────────────────
             // In-app fallback is fine for dev, but on a server a redeploy that clears App\ would
-            // wipe the keys (logging out all users, breaking 2FA/antiforgery). Require a path.
-            if (isProduction && Blank(config["DataProtection:KeyRingPath"]))
+            // wipe the keys (logging out all users, breaking 2FA/antiforgery). Require a path AND
+            // reject one that resolves inside the deployable App folder — a relative path or an
+            // absolute path under contentRoot passes the not-empty check yet is wiped on redeploy.
+            var keyRingPath = config["DataProtection:KeyRingPath"];
+            if (isProduction && Blank(keyRingPath))
                 errors.Add("DataProtection:KeyRingPath is empty — point it OUTSIDE the App folder (e.g. D:\\EINVWORLD\\Keys) so a redeploy does not wipe the keys.");
+            else if (isProduction && !Blank(contentRoot) && IsInside(contentRoot!, keyRingPath!))
+                errors.Add("DataProtection:KeyRingPath resolves INSIDE the App folder — point it to a stable location OUTSIDE the deploy folder (e.g. D:\\EINVWORLD\\Keys) so a redeploy does not wipe the keys.");
 
             // ── LHDN / MyInvois ───────────────────────────────────────────────────────────
             if (Blank(config["LHDNApiConfig:BaseUrl"]))
