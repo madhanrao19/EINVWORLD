@@ -144,21 +144,23 @@ if (-not $SkipPublish) {
     # not be found ... Requested SDK version: 10.0.300" error, surfaced here as exit code
     # -2147450752. Install the pinned SDK per-user (no admin, no PATH churn) instead.
     # Any SDK satisfying global.json's rollForward counts as present (latestFeature = same
-        # major.minor, version >= pinned), so this only installs when the pin is genuinely unmet.
-        $pinnedSdk = (Get-Content (Join-Path $repoRoot 'global.json') -Raw | ConvertFrom-Json).sdk.version
-        $pin = if ($pinnedSdk) { [version]$pinnedSdk } else { $null }
-        $have = @(dotnet --list-sdks | ForEach-Object { [version](($_ -split ' ')[0]) } |
-            Where-Object { $pin -and $_.Major -eq $pin.Major -and $_.Minor -eq $pin.Minor -and $_ -ge $pin })
-        if ($pinnedSdk -and -not $have) {
-            $dotnetDir = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
-            Write-Host "SDK $pinnedSdk not installed (global.json) - installing per-user into $dotnetDir ..." -ForegroundColor Yellow
-            $installer = Join-Path $env:TEMP 'dotnet-install.ps1'
-            Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
-            & $installer -Version $pinnedSdk -InstallDir $dotnetDir -NoPath
-            if ($LASTEXITCODE -ne 0) { throw "dotnet-install.ps1 failed (exit $LASTEXITCODE) - install SDK $pinnedSdk manually, or use -SkipPublish with a pre-built output." }
-            $env:PATH = "$dotnetDir;$env:PATH"
-            Write-Host "SDK $pinnedSdk installed." -ForegroundColor Green
-        }
+    # major.minor, version >= pinned), so this only installs when the pin is genuinely unmet.
+    $pinnedSdk = (Get-Content (Join-Path $repoRoot 'global.json') -Raw | ConvertFrom-Json).sdk.version
+    $pin = if ($pinnedSdk) { [version]$pinnedSdk } else { $null }
+    $have = @(dotnet --list-sdks | ForEach-Object { [version](($_ -split ' ')[0]) } |
+        Where-Object { $pin -and $_.Major -eq $pin.Major -and $_.Minor -eq $pin.Minor -and $_ -ge $pin })
+    $dotnetDir = Join-Path $env:LOCALAPPDATA 'Microsoft\dotnet'
+    # Gated on ShouldProcess: under -WhatIf, $WhatIfPreference leaks into dotnet-install.ps1, whose
+    # write-access probe then "creates" its test file as a no-op and falsely reports no write access.
+    if ($pinnedSdk -and -not $have -and $PSCmdlet.ShouldProcess($dotnetDir, "install .NET SDK $pinnedSdk (per-user)")) {
+        Write-Host "SDK $pinnedSdk not installed (global.json) - installing per-user into $dotnetDir ..." -ForegroundColor Yellow
+        $installer = Join-Path $env:TEMP 'dotnet-install.ps1'
+        Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer -UseBasicParsing
+        & $installer -Version $pinnedSdk -InstallDir $dotnetDir -NoPath
+        if ($LASTEXITCODE -ne 0) { throw "dotnet-install.ps1 failed (exit $LASTEXITCODE) - install SDK $pinnedSdk manually, or use -SkipPublish with a pre-built output." }
+        $env:PATH = "$dotnetDir;$env:PATH"
+        Write-Host "SDK $pinnedSdk installed." -ForegroundColor Green
+    }
     if ($PSCmdlet.ShouldProcess($repoRoot, 'dotnet publish (Release, win-x64)')) {
         Write-Host "Publishing..." -ForegroundColor Cyan
         Push-Location $repoRoot

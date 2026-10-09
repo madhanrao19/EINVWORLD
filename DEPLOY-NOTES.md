@@ -27,10 +27,10 @@ changes are additive and AI/features stay off unless already enabled.
    backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. It also covers step 2 itself: it drops
    `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
    you don't need to stop the site by hand.
-   **If you're deploying from a CI artifact** (or any pre-built output, or from the web server
-   itself, which has no .NET 10 SDK), run it with **`-SkipPublish`** after copying the publish
-   folder to `bin\Release\net10.0\win-x64\publish` on the deploying machine — otherwise it tries to
-   build there and fails with "A compatible .NET SDK was not be found" (`global.json` pins 10.0.300).
+   If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
+   per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
+   **If you're deploying from a CI artifact** (or any pre-built output), run it with
+   **`-SkipPublish`** after copying the publish folder to `bin\Release\net10.0\win-x64\publish`.
 4. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
