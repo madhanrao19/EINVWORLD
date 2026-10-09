@@ -305,6 +305,13 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-08 — Deploy script: `-WhatIf` no longer fails installing the SDK (no app version change)
+
+`Deploy-Staging.ps1 -WhatIf` on a machine without SDK 10.0.300 failed with "The current user doesn't
+have write access to the installation root". It wasn't a permissions problem: `-WhatIf` leaked into
+`dotnet-install.ps1`, whose write-access probe then skipped creating its test file. The SDK install now
+runs only on a real run; `-WhatIf` just reports it.
+
 ## 📅 2026-09-30 — v1.29.0 (Needs Attention: resolve Invalid invoices + Resend IDOR fix)
 
 LHDN **Invalid** is final: you fix it by issuing a new invoice, and the old one can never turn Valid. So
