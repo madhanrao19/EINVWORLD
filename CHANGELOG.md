@@ -1,6 +1,10 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.0`** (`AppInfo:Version` in `appsettings.json`). v1.29.0 is a **minor**
+> **Current version: `v1.29.1`** (`AppInfo:Version` in `appsettings.json`). v1.29.1 is a **patch**
+> release: buyer/supplier addresses on Create/Edit Invoice no longer show encrypted text, Production
+> refuses to start with the DataProtection key ring inside `App\`, the deploy script's `-WhatIf` works
+> again, and dependency updates (EF Core/ASP.NET 10.0.12, PuppeteerSharp, iTextSharp, SkiaSharp,
+> Magick.NET); no migration — see the dated entry below. v1.29.0 was a **minor**
 > release: Invalid / reject-requested invoices can now leave "Needs Attention" (a "Mark as resolved"
 > row action, plus automatic clearing once a "Resend" copy is Valid), and the Resend clone lookup is now
 > tenant-scoped (IDOR fix); one additive migration — see the dated entry below. v1.28.5 was a **patch**
@@ -305,12 +309,26 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
-## 📅 2026-10-08 — Deploy script: `-WhatIf` no longer fails installing the SDK (no app version change)
+## 📅 2026-10-09 — v1.29.1 (address decryption fix, key-ring guard, deploy -WhatIf, dependency updates)
 
-`Deploy-Staging.ps1 -WhatIf` on a machine without SDK 10.0.300 failed with "The current user doesn't
-have write access to the installation root". It wasn't a permissions problem: `-WhatIf` leaked into
-`dotnet-install.ps1`, whose write-access probe then skipped creating its test file. The SDK install now
-runs only on a real run; `-WhatIf` just reports it.
+- **Invoices (#220):** choosing a buyer/supplier on Create/Edit Invoice filled the Address with the
+  encrypted `Addr2` ciphertext. The address was concatenated inside the EF query, so SQL joined the raw
+  encrypted column. It is now built in C# after decryption. Display/autofill only, no data changed.
+- **Startup guard (#143):** in Production, `DataProtection:KeyRingPath` must now resolve **outside** the
+  App folder. A relative path or one under `App\` is wiped by a redeploy (mass logout, antiforgery and
+  PII-decryption failures), so startup now fails with a clear message instead. Staging is unaffected.
+  **Before deploying to Production, check `DataProtection__KeyRingPath` is outside `App\`** (e.g.
+  `E:\EINVWORLD\Keys`). Tests: `ProductionConfigValidatorKeyRingTests`.
+- **Deploy script (#273):** `Deploy-Staging.ps1 -WhatIf` on a machine without SDK 10.0.300 failed with
+  "The current user doesn't have write access to the installation root". It wasn't a permissions
+  problem: `-WhatIf` leaked into `dotnet-install.ps1`, whose write-access probe then skipped creating
+  its test file. The SDK install now runs only on a real run; `-WhatIf` just reports it.
+- **Dependencies:** EF Core / ASP.NET Identity / health checks 10.0.12, Http.Resilience 10.10.0,
+  `dotnet-ef` 10.0.12, PuppeteerSharp 25.12.0, iTextSharp.LGPLv2.Core 3.8.6, SkiaSharp 4.153.1,
+  Magick.NET 14.17.2; test-only: Test SDK 18.10.1, coverlet 10.1.0; CI: codeql-action 4.38.2
+  (#254, #259, #260, #264, #269–#272). After deploying, spot-check an invoice PDF and one Smart Capture
+  image upload, which tests don't cover visually.
+- No migration.
 
 ## 📅 2026-09-30 — v1.29.0 (Needs Attention: resolve Invalid invoices + Resend IDOR fix)
 
