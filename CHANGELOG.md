@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.2`** (`AppInfo:Version` in `appsettings.json`). v1.29.2 is a **patch**
+> **Current version: `v1.29.3`** (`AppInfo:Version` in `appsettings.json`). v1.29.3 is a **patch**
+> release: phone/tablet fixes for the signed-in Supplier and Buyer screens (search on phones, 44px
+> touch targets, no sideways scroll) — see the dated entry below. v1.29.2 was a **patch**
 > release: when LHDN is down (HTTP 5xx), submitting now says "LHDN unavailable" instead of a JSON
 > parse error — see the dated entry below. v1.29.1 was a **patch**
 > release: buyer/supplier addresses on Create/Edit Invoice no longer show encrypted text, Production
@@ -310,6 +312,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-13 — v1.29.3 (Supplier/Buyer phone and tablet fixes)
+
+- **Search on phones:** global search was hidden below 768px, with no way to open it. A search
+  button now sits next to the theme toggle; tapping it opens a full-width search box with the keyboard
+  ready. Results overlay the page instead of pushing it down, and the clear "×" now sits inside the
+  box (it rendered below it, on desktop too).
+- **Touch targets:** on touch screens (`pointer: coarse`) the row "…" action, pager links, menu items,
+  the hamburger, the drawer close button and the topbar buttons are at least 44×44px; table checkboxes
+  are larger. Mouse users keep the dense layout.
+- **No sideways scroll:** Items (32px wider than a 360px phone, from the header buttons not wrapping)
+  and Smart Capture / E-Invoice Assistant / Create Item (4px, from a `.row.g-4` gutter wider than the
+  page padding below 992px) now fit the screen.
+- **Tests:** new `tests/playwright/14-mobile-shell.spec.js` covers the drawer, the search toggle, touch
+  sizes, and the company workspace pages (Details/Edit/Users/Security/Audit/Roles/Branding) at 375 and 768px.
+  CSS/markup only: no migration, config or API change.
 
 ## 📅 2026-10-13 — v1.29.2 ("LHDN unavailable" instead of a JSON parse error)
 

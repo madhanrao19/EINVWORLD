@@ -137,6 +137,14 @@
     });
   }
 
+  // Mobile topbar search: focus the input once its collapse opens, so one tap gets a keyboard.
+  function initMobileSearch() {
+    var panel = document.getElementById("einv-topbar-content");
+    var input = document.getElementById("einv-search-input");
+    if (!panel || !input) return;
+    panel.addEventListener("shown.bs.collapse", function () { input.focus(); });
+  }
+
   window.einvworld = window.einvworld || {};
   window.einvworld.toast = makeToast;
 
@@ -146,11 +154,13 @@
       initSidebarCollapse();
       initThemeToggle();
       initScrollableTableDropdowns();
+      initMobileSearch();
     });
   } else {
     highlightCurrentRoute();
     initSidebarCollapse();
     initThemeToggle();
     initScrollableTableDropdowns();
+    initMobileSearch();
   }
 })();
