@@ -11,7 +11,7 @@
     /* Success Dialog Styling - Ensure consistent UUID/Submission UID display */
     .swal-submission-success .detail-item code.text-primary {
         background-color: rgba(58, 165, 100, 0.1) !important;  /* eInvWorld brand primary green background */
-        color: #006948 !important;  /* eInvWorld brand primary green text */
+        color: var(--einv-primary) !important;  /* eInvWorld brand primary green text */
         border: 1px solid rgba(58, 165, 100, 0.3) !important;
         border-radius: 0.25rem !important;
         padding: 0.25rem 0.5rem !important;
@@ -1004,12 +1004,12 @@
 .ci-stepper{position:relative;display:flex;justify-content:space-between;padding:0 8px;}
 .ci-step-node{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center;flex:0 0 auto;}
 .ci-step-circle{width:2rem;height:2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.875rem;background:#e9efe9;color:#3d4a42;border:2px solid #e9efe9;}
-.ci-step-node.is-active .ci-step-circle{background:var(--einv-primary,#006948);color:#fff;border-color:var(--einv-primary,#006948);}
+.ci-step-node.is-active .ci-step-circle{background:var(--einv-fill,#006948);color:#fff;border-color:var(--einv-fill,#006948);}
 .ci-step-node.is-complete .ci-step-circle{background:#0069481a;color:var(--einv-primary,#006948);border-color:var(--einv-primary,#006948);}
 .ci-step-label{font-size:.75rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#6d7a72;}
 .ci-step-node.is-active .ci-step-label{color:var(--einv-primary,#006948);}
 .ci-step-track{position:absolute;top:1rem;left:8%;right:8%;height:2px;background:#e9efe9;z-index:1;transform:translateY(-50%);}
-.ci-step-fill{height:100%;width:33%;background:var(--einv-primary,#006948);transition:width .3s ease;}
+.ci-step-fill{height:100%;width:33%;background:var(--einv-fill,#006948);transition:width .3s ease;}
 .ci-summary-row{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid #eef1f4;font-size:.875rem;color:#3d4a42;}
 .ci-summary-row:last-child{border-bottom:0;}
 .ci-summary-row strong{font-weight:600;text-align:right;}

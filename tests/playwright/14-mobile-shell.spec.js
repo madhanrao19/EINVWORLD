@@ -102,3 +102,46 @@ for (const role of ['supplier', 'buyer', 'admin']) {
     }
   });
 }
+
+// Invoice Details shows the invoice like a browser PDF viewer: a fixed A4 sheet zoomed to fit the
+// screen (never reflowed), -/+/fit zoom, print at 100%, and the sheet stays white "paper" in dark mode.
+test('supplier: invoice preview behaves like a PDF viewer (phone, print, dark mode)', async ({ page, context }) => {
+  test.setTimeout(120000);
+  await loginOrSkip(page, 'supplier');
+  await page.goto('/Invoices/InvoiceLists?invoiceDirection=Sent', { waitUntil: 'domcontentloaded' });
+  const href = await page.locator('#invoiceTable a[href*="InvoiceDetails2"]').first().getAttribute('href').catch(() => null);
+  test.skip(!href, 'no sent invoice to open');
+
+  await page.goto(href, { waitUntil: 'domcontentloaded' });
+  const sheet = page.locator('#einvPdfPage');
+  const level = page.locator('#einvPdfZoomLevel');
+  await expect(sheet).toBeVisible();
+
+  // Fit to width on a 375px phone: zoomed below 100%, the sheet keeps its A4 proportions, no page overflow.
+  const fitPct = parseInt(await level.textContent(), 10);
+  expect(fitPct).toBeLessThan(100);
+  const box = await sheet.boundingBox();
+  expect(box.height / box.width, 'A4 aspect ratio').toBeGreaterThan(1.35);
+  expect(await overflowPx(page), 'page overflow at 375px').toBeLessThanOrEqual(1);
+
+  await page.click('#einvPdfZoomIn');
+  await expect(level).toHaveText(`${fitPct + 10}%`);
+  await expect(page.locator('#einvPdfFit')).toHaveAttribute('aria-pressed', 'false');
+  await page.click('#einvPdfFit');
+  await expect(level).toHaveText(`${fitPct}%`);
+  expect(await overflowPx(page), 'zooming scrolls inside the viewer, not the page').toBeLessThanOrEqual(1);
+
+  // Print renders the sheet at 100% with no viewer chrome.
+  await page.emulateMedia({ media: 'print' });
+  expect(await sheet.evaluate(el => getComputedStyle(el).zoom)).toBe('1');
+  await expect(page.locator('.einv-pdf-toolbar')).toBeHidden();
+  await page.emulateMedia({ media: 'screen' });
+
+  // Dark mode: the sheet is still black-on-white paper; app links use the lighter dark-mode green.
+  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: page.url() }]);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const paper = await sheet.evaluate(el => ({ bg: getComputedStyle(el).backgroundColor, fg: getComputedStyle(el).color }));
+  expect(paper).toEqual({ bg: 'rgb(255, 255, 255)', fg: 'rgb(0, 0, 0)' });
+  const link = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tblr-link-color').trim());
+  expect(link).toBe('#34d399');
+});
