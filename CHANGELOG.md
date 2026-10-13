@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.5`** (`AppInfo:Version` in `appsettings.json`). v1.29.5 is a **patch**
+> **Current version: `v1.29.6`** (`AppInfo:Version` in `appsettings.json`). v1.29.6 is a **patch**
+> release: Invoice Details previews the invoice like a PDF viewer (fits any screen), and dark mode is
+> readable across the app — see the dated entry below. v1.29.5 was a **patch**
 > release: dark mode now stays on when moving between pages — see the dated entry below. v1.29.4 was a **patch**
 > release: EinvWorld can be installed as an app on phones and desktops (no offline caching) — see the
 > dated entry below. v1.29.3 was a **patch**
@@ -315,6 +317,32 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.29.6 (PDF-style invoice preview, readable dark mode)
+
+- **Invoice Details:** the invoice preview now looks like the browser's PDF viewer: a grey surround,
+  a toolbar with zoom out/in, fit to width, print and download, and the A4 sheet at its real size.
+  - On phones and tablets the sheet is zoomed to fit the screen instead of being squeezed, so it
+    matches the downloaded PDF line for line. Zooming in scrolls inside the viewer, not the page.
+  - Print still prints the sheet at 100% without the viewer chrome.
+  - Print and Download PDF moved from the status card into the viewer toolbar.
+  - The Activity Log becomes stacked cards on phones.
+  - The preview is still the same HTML facsimile. It doesn't embed the generated PDF, because phone
+    browsers don't display a PDF inside a page, and generating one on every view would be expensive.
+- **Dark mode:**
+  - Brand-green text (links, invoice numbers, breadcrumbs, the active menu item, outline buttons, the
+    Profile page labels) was about 2:1 contrast on the dark background. It now uses a lighter green
+    (about 8:1). Buttons and other green fills keep a mid green, so their white text stays readable.
+  - Pages that hard-coded light colours now follow the theme: the dashboard tiles, date filter,
+    section titles and charts; the Create/Edit Invoice section headers and Select2 boxes; and
+    `.text-dark`/`.bg-white`/`.bg-light`/`.btn-light` everywhere.
+  - Status badges use lighter tones in dark mode.
+  - The sidebar uses the light logo in dark mode.
+  - The invoice sheet stays white "paper" in both themes.
+- **Light mode:** unchanged, except that the dashboard's Apply button now uses the standard brand green.
+- **Tests:** `14-mobile-shell.spec.js` checks the viewer on a 375px phone (fit, zoom, no page overflow,
+  print at 100%) and that the sheet stays white in dark mode. CSS, markup and JS only: no migration,
+  config or API change.
 
 ## 📅 2026-10-13 — v1.29.5 (dark mode no longer resets on navigation)
 

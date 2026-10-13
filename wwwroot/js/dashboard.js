@@ -1,4 +1,13 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
+    // Chart text/grid colours follow the theme (Chart.js defaults are tuned for a white canvas).
+    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    const chartGrid = isDark ? 'rgba(255, 255, 255, 0.08)' : '#f3f4f6';
+    if (window.Chart && isDark) {
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.borderColor = chartGrid;
+        Chart.defaults.elements.arc.borderColor = '#1f2937'; // doughnut slice gaps match the card
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
 
     // --- 1. Filter Persistence ---
@@ -282,7 +291,7 @@
                             data: { labels: monthLabels, datasets },
                             options: {
                                 responsive: true, maintainAspectRatio: false,
-                                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f3f4f6' } } },
+                                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: chartGrid } } },
                                 plugins: {
                                     zoom: { zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }, pan: { enabled: true, mode: 'x' } },
                                     legend: { position: 'top', align: 'end' }
