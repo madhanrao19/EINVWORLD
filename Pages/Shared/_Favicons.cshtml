@@ -20,12 +20,18 @@
 <link rel="manifest" href="~/favicon/manifest.json">
 
 
-<!-- Theme Color for Browser UI -->
-<meta name="theme-color" content="#2e7d32">
-<meta name="background-color" content="#e8f5e9">
+<!-- Theme Color for Browser UI (brand primary; dark surface in dark mode) -->
+<meta name="theme-color" content="#006948" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1f2937" media="(prefers-color-scheme: dark)">
+
+<!-- Installed-app (standalone) mode on Android/iOS; no service worker, so pages are never cached -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EinvWorld">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <!-- Optional Windows Tile Support -->
-<meta name="msapplication-TileColor" content="#2e7d32">
+<meta name="msapplication-TileColor" content="#006948">
 <meta name="msapplication-TileImage" content="~/favicon/favicon-192x192.png">
 
 

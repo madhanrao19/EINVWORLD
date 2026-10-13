@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.3`** (`AppInfo:Version` in `appsettings.json`). v1.29.3 is a **patch**
+> **Current version: `v1.29.4`** (`AppInfo:Version` in `appsettings.json`). v1.29.4 is a **patch**
+> release: EinvWorld can be installed as an app on phones and desktops (no offline caching) — see the
+> dated entry below. v1.29.3 was a **patch**
 > release: phone/tablet fixes for the signed-in Supplier and Buyer screens (search on phones, 44px
 > touch targets, no sideways scroll) — see the dated entry below. v1.29.2 was a **patch**
 > release: when LHDN is down (HTTP 5xx), submitting now says "LHDN unavailable" instead of a JSON
@@ -312,6 +314,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-13 — v1.29.4 (install EinvWorld as an app)
+
+- **Installable:** the web manifest now has `id`, `scope`, the brand theme colour `#006948` (was the old
+  `#2e7d32` green), and `start_url` `/Dashboard/Dashboard` (was the marketing home page). Chrome and Edge
+  offer "Install app" with no installability errors. iOS gets the standalone-mode meta tags for "Add to
+  Home Screen".
+- **Browser bar colour:** `theme-color` is brand green in light mode and the dark surface in dark mode.
+  Removed the non-standard `background-color` meta tag.
+- **Deliberately no service worker:** nothing is cached on the device, so a shared phone never shows
+  another user's invoices. See DOCUMENTATION.md §4.1.
+- **Tests:** `05-responsive.spec.js` checks the manifest fields, that every icon is served, the
+  theme-color, and that no service worker is registered. Static files only: no migration, config or
+  API change.
 
 ## 📅 2026-10-13 — v1.29.3 (Supplier/Buyer phone and tablet fixes)
 
