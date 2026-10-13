@@ -138,10 +138,31 @@ test('supplier: invoice preview behaves like a PDF viewer (phone, print, dark mo
   await page.emulateMedia({ media: 'screen' });
 
   // Dark mode: the sheet is still black-on-white paper; app links use the lighter dark-mode green.
-  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: page.url() }]);
+  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: new URL(page.url()).origin }]);
   await page.reload({ waitUntil: 'domcontentloaded' });
   const paper = await sheet.evaluate(el => ({ bg: getComputedStyle(el).backgroundColor, fg: getComputedStyle(el).color }));
   expect(paper).toEqual({ bg: 'rgb(255, 255, 255)', fg: 'rgb(0, 0, 0)' });
   const link = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tblr-link-color').trim());
   expect(link).toBe('#34d399');
+});
+
+// Dark mode on the Create Invoice wizard: Invoice Items rows and Review & Submit summary used
+// light-only page styles (white rows, #3d4a42 text) that were unreadable on the dark canvas.
+test('supplier: Create Invoice steps are readable in dark mode', async ({ page, context }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: new URL(page.url()).origin }]);
+  await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => ['step2', 'step3'].forEach(id => document.getElementById(id).classList.remove('d-none')));
+
+  const lum = c => {
+    const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * r + .7152 * g + .0722 * b;
+  };
+  const rowBg = await page.locator('.item-row').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(lum(rowBg), `item row background ${rowBg}`).toBeLessThan(.1);
+  const summary = await page.locator('.ci-summary-row').first().evaluate(el => getComputedStyle(el).color);
+  expect(lum(summary), `review summary text ${summary}`).toBeGreaterThan(.5);
+  const step = await page.locator('.ci-step-node:not(.is-active) .ci-step-circle').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(lum(step), `inactive step circle ${step}`).toBeLessThan(.1);
 });
