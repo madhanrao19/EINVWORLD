@@ -153,6 +153,12 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
 - **Not migrated / deferred (Phase 8):** removing Velzon and retiring the DB-backed global-theme system
   (`/api/Theme/*`) — held until a fully-green re-verification. Two pre-existing (non-Tabler) app bugs were
   surfaced during QA and remain open: company logos emitted as `file:///` paths and 404 resource images.
+- **Install as app (PWA):** `wwwroot/favicon/manifest.json` (linked from `_Favicons`, shared by every
+  layout) makes the site installable from Chrome/Edge/Android ("Install app") and iOS Safari ("Add to Home
+  Screen"). It opens standalone at `/Dashboard/Dashboard`, and signed-out users land on login. There is
+  **deliberately no service worker**, so no page or API response is ever cached on the device and
+  invoices can't leak between users on a shared phone. Offline use would need a static-assets-only cache
+  with per-deploy versioning. The icons aren't declared `maskable` because the artwork reaches the edge.
 
 ---
 
