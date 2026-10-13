@@ -239,6 +239,11 @@ public class LHDNApiService : ILHDNApiService
             // Log the full transaction with masking
             LogApiTransaction("POST", requestUri, requestBody, responseContent, stopwatch.ElapsedMilliseconds, statusCode);
 
+            // A 5xx body is usually the gateway's HTML error page, not JSON - don't parse it.
+            var unavailable = LhdnUnavailableMessage(response.StatusCode);
+            if (unavailable is not null)
+                throw new HttpRequestException(unavailable, null, response.StatusCode);
+
             // Existing logic
             if (!string.IsNullOrWhiteSpace(responseContent))
             {
@@ -276,6 +281,15 @@ public class LHDNApiService : ILHDNApiService
             throw;
         }
     }
+
+    /// <summary>
+    /// The user-facing error for a 5xx from LHDN (or the gateway in front of it), meaning the service
+    /// is down rather than the document being wrong; null for any other status.
+    /// </summary>
+    public static string? LhdnUnavailableMessage(System.Net.HttpStatusCode status) =>
+        (int)status >= 500
+            ? $"LHDN unavailable (HTTP {(int)status} {status}). Please try again later."
+            : null;
 
     public async Task<string?> GetSubmissionStatusAsync(string submissionUid, string accessToken)
     {
