@@ -21,7 +21,9 @@
     var einvTheme = einvThemeCookie == "dark" || einvThemeCookie == "light" ? einvThemeCookie : null;
 }
 <!DOCTYPE html>
-<html lang="en"@(einvTheme != null ? $" data-bs-theme=\"{einvTheme}\"" : "")>
+@* Razor conditional attribute: omitted entirely when einvTheme is null. Don't build it as a string —
+   Razor HTML-encodes the quotes and the browser then sees the value "dark" (quotes included). *@
+<html lang="en" data-bs-theme="@einvTheme">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
