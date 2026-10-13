@@ -343,7 +343,15 @@ re-run is clean.
   unchanged.
 - **Light mode:** unchanged. A few inline colours now come from the theme tokens, at the same or a
   near-identical shade.
-- **Tests:** `14-mobile-shell.spec.js` checks that the Create Invoice steps are readable in dark mode.
+- **Security (XSS):** `dashboard.js` built the dashboard insight panels with `innerHTML` and inserted
+  values unescaped. Affected values: buyer, supplier and staff names, draft invoice numbers, LHDN
+  rejection reasons and fixes, and the `FilterDate` query parameter, which showed in the "no data"
+  message. A company or staff name containing HTML could run script on the dashboard, including the
+  Admin dashboard. That's a stored XSS; the `FilterDate` case was a reflected XSS through a crafted
+  link. Every value is now HTML-escaped, and the Edit link's invoice number is URL-encoded. This was
+  pre-existing, found by the security review on this change.
+- **Tests:** `14-mobile-shell.spec.js` checks that the Create Invoice steps are readable in dark mode, and that
+  injected `<img onerror>` names render as text on the dashboard (this test fails on the old code).
   CSS, markup and JS only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.29.6 (PDF-style invoice preview, readable dark mode)

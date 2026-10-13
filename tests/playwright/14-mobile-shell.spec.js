@@ -166,3 +166,24 @@ test('supplier: Create Invoice steps are readable in dark mode', async ({ page, 
   const step = await page.locator('.ci-step-node:not(.is-active) .ci-step-circle').first().evaluate(el => getComputedStyle(el).backgroundColor);
   expect(lum(step), `inactive step circle ${step}`).toBeLessThan(.1);
 });
+
+// Security regression: dashboard.js builds its insight panels with innerHTML. Company/staff names,
+// invoice numbers and LHDN reasons are user/server data and must render as text, never as markup.
+test('supplier: dashboard insight panels escape names and reasons (no XSS)', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  const PROBE = '<img src=x id="xss-probe" onerror="window.__xss=1">';
+  await page.route(/handler=InvoiceData/, async route => {
+    const resp = await route.fetch();
+    const data = await resp.json();
+    data.internalRejectedReasons = [{ reason: PROBE, suggestedFix: PROBE, count: 1 }];
+    data.customerRejectionRates = [{ customerName: PROBE, rejectionRate: 60, rejectedCount: 3, totalInvoices: 5 }];
+    data.internalErrorRates = [{ staffName: PROBE, errorRate: 25, cancelledCount: 1, totalCreated: 4 }];
+    data.agingDrafts = [{ invoiceNo: PROBE, customerName: PROBE, createdDate: PROBE, daysStuck: 9 }];
+    await route.fulfill({ response: resp, json: data });
+  });
+  await page.goto('/Dashboard/Dashboard', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#buyerRejectionTable')).toContainText('<img src=x', { timeout: 20000 });
+  await expect(page.locator('#xss-probe')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__xss)).toBeUndefined();
+});

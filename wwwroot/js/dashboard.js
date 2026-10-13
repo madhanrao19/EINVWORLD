@@ -1,4 +1,8 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
+    // Every value interpolated into the HTML strings below (company/staff names, invoice numbers,
+    // LHDN reasons, the FilterDate query param) is user- or server-supplied: escape it.
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
     // Chart text/grid colours follow the theme (Chart.js defaults are tuned for a white canvas).
     const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
     const chartGrid = isDark ? 'rgba(255, 255, 255, 0.08)' : '#f3f4f6';
@@ -98,7 +102,7 @@
                         <i class="ri-bar-chart-2-line fs-3"></i>
                     </div>
                     <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">No Data Found</h6>
-                    <p class="text-muted small mb-0 px-3">${customMessage}</p>
+                    <p class="text-muted small mb-0 px-3">${esc(customMessage)}</p>
                 `;
                 container.appendChild(emptyDiv);
             }
@@ -350,7 +354,7 @@
                     let fixesHtml = '<div class="mt-4 pt-2 border-top border-light-subtle"><div class="d-flex align-items-center mb-3"><div class="d-flex align-items-center justify-content-center rounded-circle me-2" style="width: 32px; height: 32px; background-color: var(--warning-soft); color: var(--warning-text);"><i class="ri-lightbulb-flash-fill fs-5"></i></div><h6 class="fw-bold text-dark mb-0">Suggested Fixes</h6></div><div class="d-flex flex-column gap-2">';
                     allFixes.forEach(item => {
                         let fixText = item.suggestedFix || item.SuggestedFix || "Review technical validation details.";
-                        fixesHtml += `<div class="p-3 rounded-3 border border-light-subtle" style="background-color: var(--tile-bg);"><div class="fw-bold text-dark mb-1 d-flex align-items-center" style="font-size: 0.85rem;"><i class="ri-error-warning-line ${item.color} me-2"></i>[${item.type}] ${item.reason}</div><div class="text-muted ms-4" style="font-size: 0.8rem; line-height: 1.5;">${fixText}</div></div>`;
+                        fixesHtml += `<div class="p-3 rounded-3 border border-light-subtle" style="background-color: var(--tile-bg);"><div class="fw-bold text-dark mb-1 d-flex align-items-center" style="font-size: 0.85rem;"><i class="ri-error-warning-line ${item.color} me-2"></i>[${esc(item.type)}] ${esc(item.reason)}</div><div class="text-muted ms-4" style="font-size: 0.8rem; line-height: 1.5;">${esc(fixText)}</div></div>`;
                     });
                     fixesHtml += '</div></div>';
                     fixesContainer.innerHTML = fixesHtml;
@@ -366,7 +370,7 @@
                     let html = '<div class="d-flex flex-column gap-4 mt-2">';
                     data.customerRejectionRates.forEach(buyer => {
                         let barColor = buyer.rejectionRate >= 50 ? 'bg-danger' : (buyer.rejectionRate >= 20 ? 'bg-warning' : 'bg-info');
-                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;">${buyer.customerName}</span><span class="fw-bold text-dark">${buyer.rejectionRate}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${buyer.rejectionRate}%" aria-valuenow="${buyer.rejectionRate}" aria-valuemin="0" aria-valuemax="100"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-danger"><i class="ri-user-unfollow-line align-middle"></i> ${buyer.rejectedCount} Rejected by Buyer</span><span class="small text-muted">out of ${buyer.totalInvoices} Total</span></div></div>`;
+                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;">${esc(buyer.customerName)}</span><span class="fw-bold text-dark">${esc(buyer.rejectionRate)}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${esc(buyer.rejectionRate)}%" aria-valuenow="${esc(buyer.rejectionRate)}" aria-valuemin="0" aria-valuemax="100"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-danger"><i class="ri-user-unfollow-line align-middle"></i> ${esc(buyer.rejectedCount)} Rejected by Buyer</span><span class="small text-muted">out of ${esc(buyer.totalInvoices)} Total</span></div></div>`;
                     });
                     html += '</div>';
                     buyerContainer.innerHTML = html;
@@ -382,7 +386,7 @@
                     let html = '<div class="d-flex flex-column gap-4 mt-2">';
                     data.internalErrorRates.forEach(staff => {
                         let barColor = staff.errorRate >= 20 ? 'bg-secondary' : 'bg-primary';
-                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;"><i class="ri-user-smile-line text-muted me-1"></i> ${staff.staffName}</span><span class="fw-bold text-dark">${staff.errorRate}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${staff.errorRate}%" aria-valuenow="${staff.errorRate}" aria-valuemin="0" aria-valuemax="100"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-secondary"><i class="ri-arrow-go-back-line align-middle"></i> ${staff.cancelledCount} Cancelled</span><span class="small text-muted">out of ${staff.totalCreated} Created</span></div></div>`;
+                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;"><i class="ri-user-smile-line text-muted me-1"></i> ${esc(staff.staffName)}</span><span class="fw-bold text-dark">${esc(staff.errorRate)}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${esc(staff.errorRate)}%" aria-valuenow="${esc(staff.errorRate)}" aria-valuemin="0" aria-valuemax="100"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-secondary"><i class="ri-arrow-go-back-line align-middle"></i> ${esc(staff.cancelledCount)} Cancelled</span><span class="small text-muted">out of ${esc(staff.totalCreated)} Created</span></div></div>`;
                     });
                     html += '</div>';
                     internalContainer.innerHTML = html;
@@ -399,7 +403,7 @@
                     data.agingDrafts.forEach(draft => {
                         let badgeClass = draft.daysStuck > 7 ? 'bg-danger text-white' : 'bg-warning text-dark';
                         let iconClass = draft.daysStuck > 7 ? 'ri-alarm-warning-fill' : 'ri-time-line';
-                        html += `<tr><td class="ps-4 fw-bold text-dark">${draft.invoiceNo}</td><td class="text-truncate" style="max-width: 250px;">${draft.customerName}</td><td class="text-muted">${draft.createdDate}</td><td><span class="badge ${badgeClass} px-2 py-1 shadow-sm" style="font-size: 0.8rem;"><i class="${iconClass} align-middle me-1"></i> ${draft.daysStuck} Days</span></td><td class="text-end pe-4"><a href="/Invoices/InvoiceEdit?id=${draft.invoiceNo}" class="btn btn-sm btn-outline-primary fw-semibold transition-hover"><i class="ri-edit-box-line align-bottom me-1"></i> Edit & Submit</a></td></tr>`;
+                        html += `<tr><td class="ps-4 fw-bold text-dark">${esc(draft.invoiceNo)}</td><td class="text-truncate" style="max-width: 250px;">${esc(draft.customerName)}</td><td class="text-muted">${esc(draft.createdDate)}</td><td><span class="badge ${badgeClass} px-2 py-1 shadow-sm" style="font-size: 0.8rem;"><i class="${iconClass} align-middle me-1"></i> ${esc(draft.daysStuck)} Days</span></td><td class="text-end pe-4"><a href="/Invoices/InvoiceEdit?id=${encodeURIComponent(draft.invoiceNo ?? '')}" class="btn btn-sm btn-outline-primary fw-semibold transition-hover"><i class="ri-edit-box-line align-bottom me-1"></i> Edit & Submit</a></td></tr>`;
                     });
                     draftsContainer.innerHTML = html;
                 } else {
@@ -414,7 +418,7 @@
                     let html = '<div class="d-flex flex-column gap-4 mt-2">';
                     data.supplierRejectionRates.forEach(supplier => {
                         let barColor = supplier.rejectionRate >= 50 ? 'bg-danger' : (supplier.rejectionRate >= 20 ? 'bg-warning' : 'bg-info');
-                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;">${supplier.supplierName}</span><span class="fw-bold text-dark">${supplier.rejectionRate}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${supplier.rejectionRate}%"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-danger"><i class="ri-error-warning-line align-middle"></i> ${supplier.rejectedCount} Issues</span><span class="small text-muted">out of ${supplier.totalInvoices} Received</span></div></div>`;
+                        html += `<div><div class="d-flex justify-content-between align-items-end mb-2"><span class="fw-bold text-dark text-truncate" style="max-width: 75%; font-size: 0.95rem;">${esc(supplier.supplierName)}</span><span class="fw-bold text-dark">${esc(supplier.rejectionRate)}%</span></div><div class="progress shadow-sm" style="height: 8px; border-radius: 4px; background-color: var(--tile-bg);"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${esc(supplier.rejectionRate)}%"></div></div><div class="d-flex justify-content-between mt-2"><span class="small fw-semibold text-danger"><i class="ri-error-warning-line align-middle"></i> ${esc(supplier.rejectedCount)} Issues</span><span class="small text-muted">out of ${esc(supplier.totalInvoices)} Received</span></div></div>`;
                     });
                     html += '</div>';
                     supplierContainer.innerHTML = html;
