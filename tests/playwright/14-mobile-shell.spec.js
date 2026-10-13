@@ -72,3 +72,33 @@ test('supplier: company workspace pages have no horizontal overflow', async ({ p
     }
   }
 });
+
+// Dark mode must survive navigation: the server renders data-bs-theme from the einv-theme cookie.
+// Regression: the attribute was built as an encoded string, so pages rendered data-bs-theme="&quot;dark&quot;"
+// (the value "dark" in quotes), which no [data-bs-theme=dark] rule matches, and every page came back light.
+// Also checks each role's pages carry the PWA manifest + theme-color (installable for Admin too).
+for (const role of ['supplier', 'buyer', 'admin']) {
+  test(`${role}: dark mode persists across pages, and pages are installable`, async ({ page, context }) => {
+    test.setTimeout(120000);
+    await page.setViewportSize({ width: 1366, height: 800 });
+    await loginOrSkip(page, role);
+    await page.goto('/Dashboard/Dashboard', { waitUntil: 'domcontentloaded' });
+    test.skip(/login|2fa/i.test(page.url()), `login for '${role}' is 2FA-gated`);
+    try {
+      if (await page.locator('html').getAttribute('data-bs-theme') !== 'dark') await page.click('#einv-theme-toggle');
+      await expect(page.locator('html')).toHaveAttribute('data-bs-theme', 'dark');
+
+      const links = (await page.$$eval('aside.navbar-vertical a[href^="/"]', as => [...new Set(as.map(a => a.getAttribute('href')))]))
+        .filter(h => !/logout/i.test(h)).slice(0, 6);
+      for (const href of links) {
+        await page.goto(href, { waitUntil: 'domcontentloaded' });
+        await expect(page.locator('html'), `theme on ${href}`).toHaveAttribute('data-bs-theme', 'dark');
+        await expect(page.locator('link[rel="manifest"]'), `manifest on ${href}`).toHaveCount(1);
+        await expect(page.locator('meta[name="theme-color"]'), `theme-color on ${href}`).toHaveCount(2);
+      }
+    } finally {
+      // Leave the shared demo account's browser state as found (cookie is per test context anyway).
+      await context.clearCookies({ name: 'einv-theme' });
+    }
+  });
+}

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.4`** (`AppInfo:Version` in `appsettings.json`). v1.29.4 is a **patch**
+> **Current version: `v1.29.5`** (`AppInfo:Version` in `appsettings.json`). v1.29.5 is a **patch**
+> release: dark mode now stays on when moving between pages — see the dated entry below. v1.29.4 was a **patch**
 > release: EinvWorld can be installed as an app on phones and desktops (no offline caching) — see the
 > dated entry below. v1.29.3 was a **patch**
 > release: phone/tablet fixes for the signed-in Supplier and Buyer screens (search on phones, 44px
@@ -314,6 +315,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-13 — v1.29.5 (dark mode no longer resets on navigation)
+
+- **Bug (all roles):** turning dark mode on worked, but the next page came back light. The
+  `einv-theme` cookie was saved correctly. However, `_LayoutTabler` built the `data-bs-theme` attribute
+  as a string, and Razor HTML-encoded its quotes, so the page got `data-bs-theme="&quot;dark&quot;"`.
+  That is the value `"dark"` with quotes, which no dark-mode CSS rule matches. The layout now uses
+  Razor's conditional attribute, which is omitted when there's no saved choice.
+- **Tests:** `14-mobile-shell.spec.js` turns dark mode on for Supplier, Buyer and Admin, walks their
+  sidebar pages, and checks that the theme stays dark and each page links the PWA manifest and
+  theme-color (the app is installable for Admin too). Layout only: no migration, config or API change.
 
 ## 📅 2026-10-13 — v1.29.4 (install EinvWorld as an app)
 
