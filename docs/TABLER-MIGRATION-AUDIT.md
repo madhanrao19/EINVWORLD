@@ -239,6 +239,9 @@ service/DB and therefore requires an explicit go-ahead per the "stop if backend 
   `app-search`, `menu-dropdown` collapse behaviour) that Tabler names differently or omits.
 - Sidebar collapse + mobile hamburger is Velzon JS (`topnav-hamburger`) → must be re-implemented with
   Tabler's offcanvas/navbar behaviour. Verify at 375 / 768 / 1440 (existing Playwright `05-responsive`).
+- **v1.29.3:** the topbar search gets its own toggler below md (`#einv-search-toggle`), touch controls are
+  44px under `pointer: coarse`, and top-level `.row.g-4` gutters are narrowed below lg so they no longer
+  overflow the page. Drawer, search and touch sizes are covered by `14-mobile-shell.spec.js`.
 
 ### 8.4 IIS / publish
 - Pure static-asset + `.cshtml` change; **no** `.csproj`, migration, or runtime change in the theme swap.
