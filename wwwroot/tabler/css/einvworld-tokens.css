@@ -222,6 +222,28 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
 [data-bs-theme="dark"] .app-search .form-control:focus {
   background-color: rgba(255, 255, 255, .09);
 }
+/* Clear-search "x": sits inside the input's right edge (its Velzon style isn't loaded under Tabler). */
+.app-search .search-widget-icon-close {
+  position: absolute;
+  top: 50%;
+  right: .5rem;
+  transform: translateY(-50%);
+  padding: .25rem;
+  line-height: 1;
+  color: var(--einv-text-muted);
+  cursor: pointer;
+}
+/* Results overlay the page at every width (Tabler makes dropdowns inside a mobile .navbar-collapse
+ * static, which pushed the page down and threw off the "x" centring above). */
+#einv-topbar-content .app-search .dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  padding: var(--tblr-dropdown-padding-y) var(--tblr-dropdown-padding-x);
+  background: var(--tblr-dropdown-bg);
+  color: var(--tblr-dropdown-color);
+  box-shadow: var(--tblr-dropdown-box-shadow);
+}
 
 /* KPI metric cards: 4px semantic left-accent (Stitch dashboard). Cards opt in via einv-kpi-*.
  * .card.einv-kpi (not bare .einv-kpi) so this outranks the dashboard page's own
@@ -712,4 +734,37 @@ button.einv-badge { cursor: pointer; }
   .einv-mobile-stack tbody td.col-action::before { content: ""; }
   .einv-mobile-stack tbody td.col-name { text-align: left; }
   .einv-mobile-stack tbody tr:nth-child(even) > td { background-color: transparent; }
+}
+
+/* Touch devices: 44px minimum hit area for the small icon/compact controls (docs/CLAUDE-UI-RULES.md
+ * touch-target rule). Scoped to coarse pointers so mouse users keep the dense Stitch layout. */
+@media (pointer: coarse) {
+  .einv-action-btn,
+  .pagination .page-link,
+  .navbar-toggler,
+  #einv-theme-toggle,
+  #einv-search-toggle,
+  .offcanvas .btn-close {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dropdown-menu .dropdown-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .table .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* Below lg the main container's side padding (.5rem) is narrower than a top-level .row.g-4's
+ * negative gutter margin (-.75rem), pushing the page 4px wider than the screen (sideways wiggle on
+ * touch). Shrink only that row's horizontal gutter to match; the vertical gutter stays g-4. */
+@media (max-width: 991.98px) {
+  #einv-main-content > .row.g-4 { --tblr-gutter-x: 1rem; }
 }
