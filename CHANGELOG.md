@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.1`** (`AppInfo:Version` in `appsettings.json`). v1.29.1 is a **patch**
+> **Current version: `v1.29.2`** (`AppInfo:Version` in `appsettings.json`). v1.29.2 is a **patch**
+> release: when LHDN is down (HTTP 5xx), submitting now says "LHDN unavailable" instead of a JSON
+> parse error — see the dated entry below. v1.29.1 was a **patch**
 > release: buyer/supplier addresses on Create/Edit Invoice no longer show encrypted text, Production
 > refuses to start with the DataProtection key ring inside `App\`, the deploy script's `-WhatIf` works
 > again, and dependency updates (EF Core/ASP.NET 10.0.12, PuppeteerSharp, iTextSharp, SkiaSharp,
@@ -308,6 +310,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-13 — v1.29.2 ("LHDN unavailable" instead of a JSON parse error)
+
+On 12 Oct the LHDN sandbox gateway answered every call with **502 Bad Gateway** and an HTML error page.
+`LHDNApiService.SubmitDocumentsAsync` parsed the body as JSON before checking the status, so users saw
+`Error submitting Invoice: Unexpected character encountered while parsing value: <...`. Any 5xx now
+fails with **"LHDN unavailable (HTTP 502 BadGateway). Please try again later."** before parsing. This
+covers every submission path (all invoice pages and the background retry job). Retry behaviour is
+unchanged: the automatic retry is still queued. Tests: `LhdnUnavailableMessageTests`. No migration.
 
 ## 📅 2026-10-09 — v1.29.1 (address decryption fix, key-ring guard, deploy -WhatIf, dependency updates)
 
