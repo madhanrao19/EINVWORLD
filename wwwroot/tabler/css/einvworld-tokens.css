@@ -53,6 +53,11 @@
   --einv-auth-panel-fg: #f3f5f1;
   --einv-auth-panel-fg-muted: #a9b9ae;
   --einv-auth-seal: #d4a24e;
+
+  /* Brand green as a FILL (buttons, active pager, KPI tiles) — white text sits on it. Same as
+   * --einv-primary in light mode; dark mode splits the two (see below). */
+  --einv-fill: var(--einv-primary);
+  --einv-fill-hover: var(--einv-primary-hover);
 }
 
 /* Dark mode: only the canvas/surface/text/border tokens need to flip — every rule elsewhere in this
@@ -65,13 +70,26 @@
   --einv-text: #e5e7eb;
   --einv-text-muted: #9ca3af;
   --einv-border: #374151;
+
+  /* The brand green #006948 is ~2:1 on these dark surfaces, so links, active nav, breadcrumbs and
+   * outline buttons were barely visible. Dark mode uses a lighter green for TEXT/accents (~8:1) and
+   * keeps a mid green for FILLS so white text on buttons still passes AA (4.6:1). */
+  --einv-primary: #34d399;
+  --einv-primary-hover: #6ee7b7;
+  --einv-primary-rgb: 52, 211, 153;
+  --einv-fill: #00855d;
+  --einv-fill-hover: #006948;
+  --tblr-primary: var(--einv-fill);
+  --tblr-primary-rgb: 0, 133, 93;
+  --tblr-link-color: var(--einv-primary);
+  --tblr-link-hover-color: var(--einv-primary-hover);
 }
 
 /* Primary buttons: explicit hover/active so the darker brand step is used instead of a derived tint. */
 .btn-primary:hover, .btn-primary:focus-visible, .btn-primary:active,
 .btn-primary.active, .btn-primary.show {
-  background-color: var(--einv-primary-hover);
-  border-color: var(--einv-primary-hover);
+  background-color: var(--einv-fill-hover);
+  border-color: var(--einv-fill-hover);
 }
 
 /* Cards: 1px subtle border + very soft ambient shadow (flat, professional). */
@@ -272,7 +290,7 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   box-shadow: 0 10px 30px rgba(0, 0, 0, .30);
 }
 .einv-bulk-bar .einv-bulk-count {
-  background: var(--einv-primary);
+  background: var(--einv-fill);
   color: #fff;
   font-weight: 600;
   font-size: .8rem;
@@ -376,7 +394,7 @@ pre { overflow-x: auto; max-width: 100%; }
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 9999px;
-  background: var(--einv-primary);
+  background: var(--einv-fill);
   color: #fff;
   display: flex;
   align-items: center;
@@ -387,7 +405,7 @@ pre { overflow-x: auto; max-width: 100%; }
 }
 .einv-fab:hover, .einv-fab:focus-visible {
   color: #fff;
-  background: var(--einv-primary-hover);
+  background: var(--einv-fill-hover);
   transform: translateY(-2px);
   box-shadow: 0 10px 22px rgba(0, 105, 72, .4);
 }
@@ -418,7 +436,7 @@ pre { overflow-x: auto; max-width: 100%; }
 .btn-soft-danger    { color: #dc3545; background-color: rgba(220, 53, 69, .12);  border-color: transparent; }
 .btn-soft-info      { color: #0aa2c0; background-color: rgba(13, 202, 240, .14); border-color: transparent; }
 .btn-soft-warning   { color: #cc9a06; background-color: rgba(255, 193, 7, .16);  border-color: transparent; }
-.btn-soft-primary:hover   { color: #fff; background-color: var(--einv-primary); }
+.btn-soft-primary:hover   { color: #fff; background-color: var(--einv-fill); }
 .btn-soft-secondary:hover { color: #fff; background-color: #6c757d; }
 .btn-soft-success:hover   { color: #fff; background-color: #198754; }
 .btn-soft-danger:hover    { color: #fff; background-color: #dc3545; }
@@ -567,8 +585,8 @@ button.einv-badge { cursor: pointer; }
 
 /* Numbered pager: brand-green active page. */
 .pagination .page-item.active .page-link {
-  background-color: var(--einv-primary);
-  border-color: var(--einv-primary);
+  background-color: var(--einv-fill);
+  border-color: var(--einv-fill);
   color: #fff;
 }
 
@@ -768,3 +786,96 @@ button.einv-badge { cursor: pointer; }
 @media (max-width: 991.98px) {
   #einv-main-content > .row.g-4 { --tblr-gutter-x: 1rem; }
 }
+
+/* ============================================================
+ * Dark mode: utility classes that pages hard-code for a light canvas.
+ * Pages use .text-dark / .bg-white / .bg-light / .btn-light / .table-light in ~300 places; flipping
+ * the utilities here fixes them all at once instead of page by page. Anything inside an element
+ * marked data-bs-theme="light" (e.g. the A4 invoice sheet, which is "paper" in both themes) is left
+ * alone by the :not([data-bs-theme="light"] *) guard.
+ * ============================================================ */
+[data-bs-theme="dark"] .text-dark:not([data-bs-theme="light"] *),
+[data-bs-theme="dark"] .text-black:not([data-bs-theme="light"] *),
+[data-bs-theme="dark"] .text-body:not([data-bs-theme="light"] *) {
+  color: var(--einv-text) !important;
+}
+[data-bs-theme="dark"] .bg-white:not([data-bs-theme="light"] *),
+[data-bs-theme="dark"] .bg-body:not([data-bs-theme="light"] *) {
+  background-color: var(--einv-surface) !important;
+}
+[data-bs-theme="dark"] .bg-light:not([data-bs-theme="light"] *),
+[data-bs-theme="dark"] .table-light:not([data-bs-theme="light"] *) {
+  background-color: rgba(255, 255, 255, .04) !important;
+  --tblr-table-bg: rgba(255, 255, 255, .04);
+  color: var(--einv-text);
+}
+[data-bs-theme="dark"] .border-light-subtle:not([data-bs-theme="light"] *) {
+  border-color: var(--einv-border) !important;
+}
+[data-bs-theme="dark"] .btn-light:not([data-bs-theme="light"] *) {
+  --tblr-btn-bg: var(--einv-surface);
+  --tblr-btn-color: var(--einv-text);
+  --tblr-btn-border-color: var(--einv-border);
+  --tblr-btn-hover-bg: rgba(255, 255, 255, .06);
+  --tblr-btn-hover-color: var(--einv-text);
+  --tblr-btn-hover-border-color: var(--einv-border);
+  --tblr-btn-active-bg: rgba(255, 255, 255, .08);
+  --tblr-btn-active-color: var(--einv-text);
+}
+[data-bs-theme="dark"] .text-primary:not([data-bs-theme="light"] *),
+[data-bs-theme="dark"] .link-primary:not([data-bs-theme="light"] *) {
+  color: var(--einv-primary) !important;
+}
+/* Outline/ghost buttons draw their TEXT in the brand/semantic colour: use the lighter dark-mode tones. */
+[data-bs-theme="dark"] .btn-outline-primary,
+[data-bs-theme="dark"] .btn-outline-success {
+  --tblr-btn-color: var(--einv-primary);
+  --tblr-btn-border-color: rgba(var(--einv-primary-rgb), .5);
+  --tblr-btn-hover-color: #fff;
+  --tblr-btn-hover-bg: var(--einv-fill);
+  --tblr-btn-hover-border-color: var(--einv-fill);
+}
+[data-bs-theme="dark"] .btn-outline-secondary {
+  --tblr-btn-color: var(--einv-text);
+  --tblr-btn-border-color: var(--einv-border);
+}
+/* Semantic tints are the light-mode 700 shades (~3:1 on dark); use the 300/400 shades instead. */
+[data-bs-theme="dark"] .einv-badge-success { color: #6ee7b7; }
+[data-bs-theme="dark"] .einv-badge-warning { color: #fcd34d; }
+[data-bs-theme="dark"] .einv-badge-danger { color: #fca5a5; }
+[data-bs-theme="dark"] .einv-badge-neutral { color: #cbd5e1; }
+[data-bs-theme="dark"] .btn-soft-success { color: #6ee7b7; }
+[data-bs-theme="dark"] .btn-soft-danger { color: #fca5a5; }
+[data-bs-theme="dark"] .btn-soft-warning { color: #fcd34d; }
+[data-bs-theme="dark"] .btn-soft-info { color: #7dd3fc; }
+[data-bs-theme="dark"] .btn-soft-secondary { color: #cbd5e1; }
+
+/* Select2 (Create/Edit Invoice, filters) ships a white light-only skin. */
+/* Any Select2 theme: pages pin a white selection box (some with !important). */
+[data-bs-theme="dark"] .select2-container .select2-selection,
+[data-bs-theme="dark"] .select2-dropdown {
+  background-color: var(--einv-surface) !important;
+  border-color: var(--einv-border) !important;
+  color: var(--einv-text);
+}
+[data-bs-theme="dark"] .select2-container .select2-selection__rendered,
+[data-bs-theme="dark"] .select2-results__option {
+  color: var(--einv-text) !important;
+}
+[data-bs-theme="dark"] .select2-container--default .select2-search--dropdown .select2-search__field {
+  background-color: var(--einv-page-bg);
+  border-color: var(--einv-border);
+  color: var(--einv-text);
+}
+[data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected],
+[data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
+[data-bs-theme="dark"] .select2-dropdown-custom .select2-results__option--highlighted,
+[data-bs-theme="dark"] .select2-dropdown-custom .select2-results__option:hover {
+  background-color: rgba(var(--einv-primary-rgb), .16) !important;
+  color: var(--einv-text) !important;
+}
+
+/* Sidebar logo: the dark-text variant is invisible on the dark sidebar. */
+.einv-logo-on-dark { display: none; }
+[data-bs-theme="dark"] .einv-logo-on-light { display: none; }
+[data-bs-theme="dark"] .einv-logo-on-dark { display: inline; }

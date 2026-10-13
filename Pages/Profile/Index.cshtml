@@ -28,7 +28,7 @@
                 {
                     <div class="avatar-lg">
                         <div class="avatar-title bg-light rounded-circle"
-                             style="color: #005137; font-size: 2rem; font-weight: bold; border: 3px solid #006948;">
+                             style="color: var(--einv-primary-hover); font-size: 2rem; font-weight: bold; border: 3px solid #006948;">
                             @(string.IsNullOrEmpty(Model.UserProfile.FullName)
                                                     ? ""
                                                     : Model.UserProfile.FullName.Substring(0, 1).ToUpper())
@@ -122,7 +122,7 @@
                         <div class="col-xxl-4">
                             <div class="card border-0 shadow" style="border-left: 4px solid #006948 !important;">
                                 <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-user-settings-line me-2"></i>Personal Information
                                     </h5>
                                 </div>
@@ -131,27 +131,27 @@
                                         <table class="table table-borderless mb-0">
                                             <tbody>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Full Name:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Full Name:</th>
                                                     <td style="color: #777676;">@Model.UserProfile.FullName</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Email:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Email:</th>
                                                     <td style="color: #777676;">@Model.UserProfile.Email</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Username:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Username:</th>
                                                     <td style="color: #777676;">@Model.UserProfile.UserName</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Mobile:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Mobile:</th>
                                                     <td style="color: #777676;">@(Model.UserProfile.PhoneNumber ?? "Not provided")</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Position:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Position:</th>
                                                     <td style="color: #777676;">@(Model.UserProfile.Position ?? "Not specified")</td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">User Roles:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">User Roles:</th>
                                                     <td style="color: #777676;">
                                                         @if (Model.Roles != null && Model.Roles.Any())
                                                         {
@@ -173,7 +173,7 @@
                         <div class="col-xxl-4">
                             <div class="card border-0 shadow" style="border-left: 4px solid #187447 !important;">
                                 <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-shield-check-line me-2"></i>Account Status
                                     </h5>
                                 </div>
@@ -182,7 +182,7 @@
                                         <table class="table table-borderless mb-0">
                                             <tbody>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Account Active:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Account Active:</th>
                                                     <td>
                                                         @if (Model.UserProfile.IsActive)
                                                         {
@@ -199,7 +199,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Approved:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Approved:</th>
                                                     <td>
                                                         @if (Model.UserProfile.IsApproved)
                                                         {
@@ -216,7 +216,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Email Confirmed:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Email Confirmed:</th>
                                                     <td>
                                                         @if (Model.UserProfile.EmailConfirmed)
                                                         {
@@ -233,19 +233,19 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Login Mode:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Login Mode:</th>
                                                     <td>
-                                                        <span class="badge px-2 py-1" style="background-color: rgba(58, 165, 100, 0.2); color: #006948;">
+                                                        <span class="badge px-2 py-1" style="background-color: rgba(58, 165, 100, 0.2); color: var(--einv-primary);">
                                                             <i class="ri-building-2-line me-1"></i>@Model.LoginMode
                                                         </span>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Role:</th>
+                                                    <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Role:</th>
                                                     <td>
                                                         @foreach (var role in Model.Roles ?? new List<string>())
                                                         {
-                                                            <span class="badge bg-primary-subtle text-primary px-2 py-1 me-1" style="background-color: rgba(5, 83, 50, 0.1) !important; color: #005137 !important;">
+                                                            <span class="badge bg-primary-subtle text-primary px-2 py-1 me-1" style="background-color: rgba(5, 83, 50, 0.1) !important; color: var(--einv-primary-hover) !important;">
                                                                 <i class="ri-user-settings-line me-1"></i>@role
                                                             </span>
                                                         }
@@ -254,7 +254,7 @@
                                                 @if (!string.IsNullOrEmpty(Model.UserTIN))
                                                 {
                                                     <tr>
-                                                        <th class="ps-0 fw-semibold" scope="row" style="color: #005137;">Company TIN:</th>
+                                                        <th class="ps-0 fw-semibold" scope="row" style="color: var(--einv-primary-hover);">Company TIN:</th>
                                                         <td style="color: #777676; font-family: monospace; font-weight: 600;">@Model.UserTIN</td>
                                                     </tr>
                                                 }
@@ -268,7 +268,7 @@
                         <div class="col-xxl-4">
                             <div class="card border-0 shadow" style="border-left: 4px solid #777676 !important;">
                                 <div class="card-header" style="background-color: rgba(119, 118, 118, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-bar-chart-line me-2"></i>Quick Stats
                                     </h5>
                                 </div>
@@ -277,11 +277,11 @@
                                         <div class="col-6">
                                             <div class="p-2">
                                                 <div class="avatar-sm mx-auto mb-2">
-                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: #006948;">
+                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: var(--einv-primary);">
                                                         <i class="ri-file-list-3-line"></i>
                                                     </div>
                                                 </div>
-                                                <h5 class="mb-1" style="color: #005137;">-</h5>
+                                                <h5 class="mb-1" style="color: var(--einv-primary-hover);">-</h5>
                                                 <p class="text-muted fs-13 mb-0">Total Invoices</p>
                                             </div>
                                         </div>
@@ -292,7 +292,7 @@
                                                         <i class="ri-calendar-check-line"></i>
                                                     </div>
                                                 </div>
-                                                <h5 class="mb-1" style="color: #005137;">-</h5>
+                                                <h5 class="mb-1" style="color: var(--einv-primary-hover);">-</h5>
                                                 <p class="text-muted fs-13 mb-0">This Month</p>
                                             </div>
                                         </div>
@@ -303,7 +303,7 @@
                                                         <i class="ri-time-line"></i>
                                                     </div>
                                                 </div>
-                                                <h6 class="mb-1" style="color: #005137;">Last Login</h6>
+                                                <h6 class="mb-1" style="color: var(--einv-primary-hover);">Last Login</h6>
                                                 <p class="text-muted fs-13 mb-0">-</p>
                                             </div>
                                         </div>
@@ -323,7 +323,7 @@
 
                             <div class="card border-0 shadow mb-4">
                                 <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-shield-keyhole-line me-2"></i>Change Password
                                     </h5>
                                 </div>
@@ -332,10 +332,10 @@
                                         <div class="row">
                                             <div class="col-lg-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-semibold" style="color: #005137;">Current Password</label>
+                                                    <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Current Password</label>
                                                     <div class="input-group">
                                                         <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
-                                                            <i class="ri-lock-line" style="color: #006948;"></i>
+                                                            <i class="ri-lock-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="OldPassword" class="form-control" placeholder="Enter current" style="border-color: #006948;" required />
                                                     </div>
@@ -343,10 +343,10 @@
                                             </div>
                                             <div class="col-lg-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-semibold" style="color: #005137;">New Password</label>
+                                                    <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">New Password</label>
                                                     <div class="input-group">
                                                         <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
-                                                            <i class="ri-lock-password-line" style="color: #006948;"></i>
+                                                            <i class="ri-lock-password-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="NewPassword" class="form-control" placeholder="Enter new" style="border-color: #006948;" required />
                                                     </div>
@@ -354,10 +354,10 @@
                                             </div>
                                             <div class="col-lg-4">
                                                 <div class="mb-3">
-                                                    <label class="form-label fw-semibold" style="color: #005137;">Confirm Password</label>
+                                                    <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Confirm Password</label>
                                                     <div class="input-group">
                                                         <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
-                                                            <i class="ri-lock-password-line" style="color: #006948;"></i>
+                                                            <i class="ri-lock-password-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="ConfirmPassword" class="form-control" placeholder="Confirm new" style="border-color: #006948;" required />
                                                     </div>
@@ -375,14 +375,14 @@
 
                             <div class="card border-0 shadow">
                                 <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-shield-check-line me-2"></i>Two-Factor Authentication (2FA)
                                     </h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="d-flex align-items-center">
                                         <div class="flex-grow-1">
-                                            <h6 class="mb-1" style="color: #005137;">Enhanced Security</h6>
+                                            <h6 class="mb-1" style="color: var(--einv-primary-hover);">Enhanced Security</h6>
                                             <p class="text-muted mb-0">
                                                 Protect your account by requiring a code from your mobile app in addition to your password.
                                             </p>
@@ -411,11 +411,11 @@
                                 <div class="card-header" style="background-color: rgba(58, 165, 100, 0.1);">
                                     <div class="d-flex align-items-center">
                                         <div class="flex-grow-1">
-                                            <h5 class="card-title mb-0" style="color: #005137;">
+                                            <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                                 <i class="ri-building-line me-2"></i>@Model.PrimaryCompany.CompanyName
                                             </h5>
                                         </div>
-                                        <span class="badge bg-success-subtle text-success px-3 py-2" style="background-color: rgba(58, 165, 100, 0.2) !important; color: #006948 !important;">
+                                        <span class="badge bg-success-subtle text-success px-3 py-2" style="background-color: rgba(58, 165, 100, 0.2) !important; color: var(--einv-primary) !important;">
                                             <i class="ri-star-line me-1"></i>Primary Company
                                         </span>
                                     </div>
@@ -424,40 +424,40 @@
                                     <div class="row">
                                         <!-- Company Basic Information -->
                                         <div class="col-md-6">
-                                            <h6 class="fw-semibold mb-3" style="color: #005137;">Company Information</h6>
+                                            <h6 class="fw-semibold mb-3" style="color: var(--einv-primary-hover);">Company Information</h6>
                                             <div class="table-responsive">
                                                 <table class="table table-borderless table-sm mb-0">
                                                     <tbody>
                                                         <tr>
-                                                            <th class="ps-0" style="color: #005137; width: 40%;">TIN:</th>
+                                                            <th class="ps-0" style="color: var(--einv-primary-hover); width: 40%;">TIN:</th>
                                                             <td style="color: #777676; font-family: monospace; font-weight: 600;">@Model.PrimaryCompany.TIN</td>
                                                         </tr>
                                                         <tr>
-                                                            <th class="ps-0" style="color: #005137;">Registration Type:</th>
+                                                            <th class="ps-0" style="color: var(--einv-primary-hover);">Registration Type:</th>
                                                             <td style="color: #777676;">@Model.PrimaryCompany.RegType?.Name</td>
                                                         </tr>
                                                         <tr>
-                                                            <th class="ps-0" style="color: #005137;">Registration No:</th>
+                                                            <th class="ps-0" style="color: var(--einv-primary-hover);">Registration No:</th>
                                                             <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.RegNo</td>
                                                         </tr>
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryCompany.SST) && Model.PrimaryCompany.SST != "NA")
                                                         {
                                                             <tr>
-                                                                <th class="ps-0" style="color: #005137;">SST Registration:</th>
+                                                                <th class="ps-0" style="color: var(--einv-primary-hover);">SST Registration:</th>
                                                                 <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.SST</td>
                                                             </tr>
                                                         }
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryCompany.TTX) && Model.PrimaryCompany.TTX != "NA")
                                                         {
                                                             <tr>
-                                                                <th class="ps-0" style="color: #005137;">Tourism Tax Registration:</th>
+                                                                <th class="ps-0" style="color: var(--einv-primary-hover);">Tourism Tax Registration:</th>
                                                                 <td style="color: #777676; font-family: monospace;">@Model.PrimaryCompany.TTX</td>
                                                             </tr>
                                                         }
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryCompany.IndustryClassificationCode))
                                                         {
                                                             <tr>
-                                                                <th class="ps-0" style="color: #005137;">MSIC Code:</th>
+                                                                <th class="ps-0" style="color: var(--einv-primary-hover);">MSIC Code:</th>
                                                                 <td style="color: #777676;">@Model.PrimaryCompany.IndustryClassificationCode</td>
                                                             </tr>
                                                         }
@@ -467,34 +467,34 @@
                                         </div>
                                         <!-- Contact & Address Information -->
                                         <div class="col-md-6">
-                                            <h6 class="fw-semibold mb-3" style="color: #005137;">Contact Information</h6>
+                                            <h6 class="fw-semibold mb-3" style="color: var(--einv-primary-hover);">Contact Information</h6>
                                             <div class="table-responsive">
                                                 <table class="table table-borderless table-sm mb-0">
                                                     <tbody>
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryCompany.Email))
                                                         {
                                                             <tr>
-                                                                <th class="ps-0" style="color: #005137; width: 30%;">Email:</th>
+                                                                <th class="ps-0" style="color: var(--einv-primary-hover); width: 30%;">Email:</th>
                                                                 <td style="color: #777676;">
-                                                                    <a href="mailto:@Model.PrimaryCompany.Email" style="color: #006948;">@Model.PrimaryCompany.Email</a>
+                                                                    <a href="mailto:@Model.PrimaryCompany.Email" style="color: var(--einv-primary);">@Model.PrimaryCompany.Email</a>
                                                                 </td>
                                                             </tr>
                                                         }
                                                         <tr>
-                                                            <th class="ps-0" style="color: #005137;">Phone:</th>
+                                                            <th class="ps-0" style="color: var(--einv-primary-hover);">Phone:</th>
                                                             <td style="color: #777676;">
-                                                                <a href="tel:@Model.PrimaryCompany.PhoneNo" style="color: #006948;">@Model.PrimaryCompany.PhoneNo</a>
+                                                                <a href="tel:@Model.PrimaryCompany.PhoneNo" style="color: var(--einv-primary);">@Model.PrimaryCompany.PhoneNo</a>
                                                             </td>
                                                         </tr>
                                                         @if (!string.IsNullOrEmpty(Model.PrimaryCompany.FaxNo))
                                                         {
                                                             <tr>
-                                                                <th class="ps-0" style="color: #005137;">Fax:</th>
+                                                                <th class="ps-0" style="color: var(--einv-primary-hover);">Fax:</th>
                                                                 <td style="color: #777676;">@Model.PrimaryCompany.FaxNo</td>
                                                             </tr>
                                                         }
                                                         <tr>
-                                                            <th class="ps-0" style="color: #005137; vertical-align: top;">Address:</th>
+                                                            <th class="ps-0" style="color: var(--einv-primary-hover); vertical-align: top;">Address:</th>
                                                             <td style="color: #777676;">
                                                                 @Model.PrimaryCompany.Addr1<br />
                                                                 @if (!string.IsNullOrEmpty(Model.PrimaryCompany.Addr2))
@@ -519,7 +519,7 @@
                                         <hr class="my-3" />
                                         <div class="row">
                                             <div class="col-md-12">
-                                                <h6 class="fw-semibold mb-3" style="color: #005137;">Banking & Payment Information</h6>
+                                                <h6 class="fw-semibold mb-3" style="color: var(--einv-primary-hover);">Banking & Payment Information</h6>
                                                 <div class="row">
                                                     @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankName))
                                                     {
@@ -555,7 +555,7 @@
                             <!-- Additional Companies -->
                             <div class="card border-0 shadow">
                                 <div class="card-header" style="background-color: rgba(24, 116, 71, 0.1);">
-                                    <h5 class="card-title mb-0" style="color: #005137;">
+                                    <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                         <i class="ri-building-2-line me-2"></i>Additional Companies (@(Model.UserCompanies.Count - 1))
                                     </h5>
                                 </div>
@@ -566,7 +566,7 @@
                                             <div class="col-lg-6 mb-3">
                                                 <div class="card border h-100" style="border-left: 3px solid #187447 !important;">
                                                     <div class="card-body">
-                                                        <h6 class="card-title mb-2" style="color: #005137;">@company.CompanyName</h6>
+                                                        <h6 class="card-title mb-2" style="color: var(--einv-primary-hover);">@company.CompanyName</h6>
                                                         <div class="row">
                                                             <div class="col-12">
                                                                 <small class="text-muted d-block">TIN</small>
@@ -580,15 +580,15 @@
                                                                         @if (!string.IsNullOrEmpty(company.Email))
                                                                         {
                                                                             <div class="mb-1">
-                                                                                <i class="ri-mail-line me-1" style="color: #006948;"></i>
-                                                                                <a href="mailto:@company.Email" style="color: #006948;">@company.Email</a>
+                                                                                <i class="ri-mail-line me-1" style="color: var(--einv-primary);"></i>
+                                                                                <a href="mailto:@company.Email" style="color: var(--einv-primary);">@company.Email</a>
                                                                             </div>
                                                                         }
                                                                         @if (!string.IsNullOrEmpty(company.PhoneNo))
                                                                         {
                                                                             <div class="mb-1">
-                                                                                <i class="ri-phone-line me-1" style="color: #006948;"></i>
-                                                                                <a href="tel:@company.PhoneNo" style="color: #006948;">@company.PhoneNo</a>
+                                                                                <i class="ri-phone-line me-1" style="color: var(--einv-primary);"></i>
+                                                                                <a href="tel:@company.PhoneNo" style="color: var(--einv-primary);">@company.PhoneNo</a>
                                                                             </div>
                                                                         }
                                                                     </div>
@@ -609,7 +609,7 @@
                         <!-- No Companies Assigned -->
                         <div class="card border-0 shadow">
                             <div class="card-header" style="background-color: rgba(119, 118, 118, 0.1);">
-                                <h5 class="card-title mb-0" style="color: #005137;">
+                                <h5 class="card-title mb-0" style="color: var(--einv-primary-hover);">
                                     <i class="ri-building-line me-2"></i>Company Information
                                 </h5>
                             </div>
@@ -620,7 +620,7 @@
                                             <i class="ri-building-line" style="font-size: 2.5rem;"></i>
                                         </div>
                                     </div>
-                                    <h5 style="color: #005137;">No Companies Assigned</h5>
+                                    <h5 style="color: var(--einv-primary-hover);">No Companies Assigned</h5>
                                     <p class="text-muted mb-0">You are not currently associated with any companies. Please contact your administrator to assign you to a company.</p>
                                 </div>
                             </div>
@@ -639,7 +639,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0">
             <div class="modal-header bg-light p-3" style="background: linear-gradient(135deg, rgba(5, 83, 50, 0.1) 0%, rgba(58, 165, 100, 0.1) 100%) !important;">
-                <h5 class="modal-title" id="editProfileModalLabel" style="color: #005137;">
+                <h5 class="modal-title" id="editProfileModalLabel" style="color: var(--einv-primary-hover);">
                     <i class="ri-edit-box-line me-2"></i>Edit Profile
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -647,17 +647,17 @@
             <form method="post" asp-page-handler="UpdateProfile">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold" style="color: #005137;">Full Name</label>
+                        <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Full Name</label>
                         <div class="input-group">
-                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-user-line" style="color: #006948;"></i></span>
+                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-user-line" style="color: var(--einv-primary);"></i></span>
                             <input asp-for="Input.FullName" class="form-control" placeholder="Enter your full name" style="border-color: #006948;" />
                         </div>
                         <span asp-validation-for="Input.FullName" class="text-danger small"></span>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold" style="color: #005137;">Phone Number</label>
+                        <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Phone Number</label>
                         <div class="input-group">
-                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-phone-line" style="color: #006948;"></i></span>
+                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-phone-line" style="color: var(--einv-primary);"></i></span>
                             <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" style="border-color: #006948;" />
                         </div>
                         <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>

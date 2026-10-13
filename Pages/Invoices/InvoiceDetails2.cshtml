@@ -35,15 +35,17 @@
 <style>
     /* ── Web Container wrapper to mimic an A4 piece of paper ── */
     .invoice-web-container {
-        max-width: 210mm; /* A4 width */
-        margin: 20px auto;
+        width: 210mm; /* A4: fixed like a PDF page; the viewer zoom scales it to the screen */
+        min-height: 297mm;
+        box-sizing: border-box;
+        margin: 0 auto;
         padding: 12mm 10mm; /* Exact margins from PDF */
         background: #fff;
         color: #000;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         font-size: 10pt;
-        border-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
     }
 
     #invoiceWrapper {
@@ -51,17 +53,65 @@
         width: 100%;
     }
 
-    /* The invoice preview below is a fixed-width A4 facsimile of the generated PDF (deliberately
-     * NOT responsive — it must match the downloaded document exactly). On narrow viewports this
-     * wrapper scrolls horizontally instead of forcing the whole page to overflow. */
-    .invoice-preview-scroll {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    /* PDF-viewer chrome (colours match the browser's built-in PDF viewer). The A4 sheet below is a
+     * fixed-size facsimile of the generated PDF — never reflowed; it is zoomed (CSS zoom, so layout
+     * size follows) to fit the stage width, and scrolls sideways only when zoomed past it. */
+    .einv-pdf-card { overflow: hidden; }
+    .einv-pdf-viewer { background: #525659; }
+    [data-bs-theme="dark"] .einv-pdf-viewer { background: #2b2d31; }
+    .einv-pdf-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: .5rem;
+        padding: .35rem .75rem;
+        background: #323639;
+        color: #f1f3f4;
+        box-shadow: 0 1px 4px rgba(0,0,0,.35);
+        position: relative;
+        z-index: 1;
+    }
+    .einv-pdf-title { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: .9rem; }
+    .einv-pdf-zoom, .einv-pdf-actions { display: flex; align-items: center; gap: .15rem; flex-shrink: 0; }
+    .einv-pdf-actions { padding-left: .5rem; border-left: 1px solid rgba(255,255,255,.18); }
+    .einv-pdf-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #f1f3f4;
+        font-size: 1.15rem;
+        text-decoration: none;
+    }
+    .einv-pdf-btn:hover, .einv-pdf-btn[aria-pressed="true"] { background: rgba(255,255,255,.12); color: #fff; }
+    .einv-pdf-btn:focus-visible { outline: 2px solid #8ab4f8; outline-offset: 1px; }
+    .einv-pdf-btn:disabled { opacity: .4; }
+    .einv-pdf-zoom-level {
+        min-width: 3.25rem;
+        padding: .15rem .35rem;
+        border-radius: .25rem;
+        background: rgba(0,0,0,.3);
+        text-align: center;
+        font-size: .8rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .einv-pdf-stage { overflow: auto; padding: 1.25rem; -webkit-overflow-scrolling: touch; }
+    @@media (max-width: 575.98px) {
+        .einv-pdf-toolbar { padding: .25rem .5rem; gap: .25rem; }
+        .einv-pdf-title { font-size: .8rem; }
+        .einv-pdf-stage { padding: .75rem; }
+    }
+    @@media (pointer: coarse) {
+        .einv-pdf-btn { width: 44px; height: 44px; }
     }
     @@media print {
-        .invoice-preview-scroll {
-            overflow-x: visible;
-        }
+        .einv-pdf-viewer, [data-bs-theme="dark"] .einv-pdf-viewer { background: none; }
+        .einv-pdf-stage { overflow: visible; padding: 0; }
+        .einv-pdf-page { zoom: 1 !important; width: auto; min-height: 0; }
     }
 
         #invoiceWrapper h4 {
@@ -473,12 +523,6 @@
                             <i class="ri-close-circle-line align-middle me-1"></i>Cancel Invoice
                         </button>
                     }
-                    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
-                        <i class="ri-printer-line align-middle me-1"></i>Print
-                    </button>
-                    <a href="?handler=DownloadPdf&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-primary btn-sm">
-                        <i class="ri-download-2-line align-middle me-1"></i>Download PDF
-                    </a>
                 </div>
             </div>
         </div>
@@ -487,11 +531,29 @@
 
 <div class="row">
     <div class="col-xxl-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="col-lg-12">
-                    <div class="invoice-preview-scroll d-print-block">
-                    <div class="invoice-web-container">
+        <div class="card border-0 shadow-sm einv-pdf-card">
+            <div class="card-body p-0">
+                @* PDF-viewer-style preview: dark surround + toolbar, the A4 sheet zoomed to fit like a
+                   browser PDF viewer (fit width, -/+ zoom). The sheet is "paper" in both themes. *@
+                <div class="einv-pdf-viewer" id="einvPdfViewer">
+                    <div class="einv-pdf-toolbar d-print-none" role="toolbar" aria-label="Invoice preview">
+                        @* Phones: no room beside the zoom controls; the invoice number is in the page header. *@
+                        <span class="einv-pdf-title text-truncate d-none d-sm-block">
+                            <i class="ri-file-pdf-2-line me-1" aria-hidden="true"></i>Invoice @invoice.InvoiceNo
+                        </span>
+                        <div class="einv-pdf-zoom" role="group" aria-label="Zoom">
+                            <button type="button" class="einv-pdf-btn" id="einvPdfZoomOut" aria-label="Zoom out" title="Zoom out"><i class="ri-subtract-line" aria-hidden="true"></i></button>
+                            <output class="einv-pdf-zoom-level" id="einvPdfZoomLevel" aria-live="polite">100%</output>
+                            <button type="button" class="einv-pdf-btn" id="einvPdfZoomIn" aria-label="Zoom in" title="Zoom in"><i class="ri-add-line" aria-hidden="true"></i></button>
+                            <button type="button" class="einv-pdf-btn" id="einvPdfFit" aria-label="Fit to width" title="Fit to width" aria-pressed="true"><i class="ri-aspect-ratio-line" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="einv-pdf-actions">
+                            <button type="button" class="einv-pdf-btn" onclick="window.print()" aria-label="Print" title="Print"><i class="ri-printer-line" aria-hidden="true"></i></button>
+                            <a class="einv-pdf-btn" href="?handler=DownloadPdf&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" aria-label="Download PDF" title="Download PDF"><i class="ri-download-2-line" aria-hidden="true"></i></a>
+                        </div>
+                    </div>
+                    <div class="einv-pdf-stage d-print-block" id="einvPdfStage">
+                    <div class="invoice-web-container einv-pdf-page" id="einvPdfPage" data-bs-theme="light">
                         <div id="invoiceWrapper">
 
                             <table class="supplier-table">
@@ -790,9 +852,9 @@
             <div class="card-body">
                 @if (Model.InvoiceHistories != null && Model.InvoiceHistories.Any())
                 {
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
+                    <div class="table-responsive einv-table-scroll-x">
+                        <table class="table align-middle mb-0 einv-mobile-stack">
+                            <thead class="einv-table-head">
                                 <tr>
                                     <th>#</th>
                                     <th>Timestamp</th>
@@ -813,11 +875,11 @@
                                     }
 
                                     <tr class="@(h.Action == "FileMoved" ? "table-warning" : "")">
-                                        <td>@(i + 1)</td>
-                                        <td class="text-muted small">@h.Timestamp.ToString("yyyy-MM-dd hh:mm:ss tt")</td>
-                                        <td>@GetActionIcon(h.Action) @h.Action</td>
-                                        <td>@h.PerformedBy</td>
-                                        <td title="@h.Remarks">@h.Remarks</td>
+                                        <td data-label="#">@(i + 1)</td>
+                                        <td data-label="Timestamp" class="text-muted small">@h.Timestamp.ToString("yyyy-MM-dd hh:mm:ss tt")</td>
+                                        <td data-label="Action"><span>@GetActionIcon(h.Action) @h.Action</span></td>
+                                        <td data-label="Performed By"><span class="text-break">@h.PerformedBy</span></td>
+                                        <td data-label="Remarks" title="@h.Remarks"><span class="text-break">@h.Remarks</span></td>
                                     </tr>
                                 }
 
@@ -844,6 +906,41 @@
 <script src="~/js/invoice-details-actions.js"></script>
 <script src="/assets/libs/html2pdf/html2pdf.bundle.min.js"></script>
 <script>
+    // PDF-viewer zoom for the A4 preview: starts at "fit to width" (never above 100%), re-fits on
+    // resize until the user zooms manually, -/+ step 10% between 25% and 200%.
+    (function () {
+        const stage = document.getElementById('einvPdfStage');
+        const page = document.getElementById('einvPdfPage');
+        const level = document.getElementById('einvPdfZoomLevel');
+        const zoomIn = document.getElementById('einvPdfZoomIn');
+        const zoomOut = document.getElementById('einvPdfZoomOut');
+        const fitBtn = document.getElementById('einvPdfFit');
+        if (!stage || !page) return;
+
+        const A4_PX = 210 * 96 / 25.4; // 210mm at CSS 96dpi
+        const MIN = 0.25, MAX = 2;
+        let zoom = 1, fit = true;
+
+        function fitZoom() {
+            const cs = getComputedStyle(stage);
+            const avail = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            return Math.max(MIN, Math.min(1, avail / A4_PX));
+        }
+        function apply(z) {
+            zoom = Math.max(MIN, Math.min(MAX, Math.round(z * 100) / 100));
+            page.style.zoom = zoom;
+            level.textContent = Math.round(zoom * 100) + '%';
+            zoomOut.disabled = zoom <= MIN;
+            zoomIn.disabled = zoom >= MAX;
+            fitBtn.setAttribute('aria-pressed', String(fit));
+        }
+        zoomIn.addEventListener('click', () => { fit = false; apply(zoom + 0.1); });
+        zoomOut.addEventListener('click', () => { fit = false; apply(zoom - 0.1); });
+        fitBtn.addEventListener('click', () => { fit = true; apply(fitZoom()); });
+        new ResizeObserver(() => { if (fit) apply(fitZoom()); }).observe(stage);
+        apply(fitZoom());
+    })();
+
     // Activity log filter functionality
     document.addEventListener('DOMContentLoaded', function() {
         const actionFilter = document.getElementById('actionFilter');
