@@ -76,6 +76,9 @@ test('Create e-Invoice: Stitch layout + wizard navigation works', async ({ page 
   await page.locator('.quantity-input').first().fill('1');
   await selectFirstRealOption(page, '#lineItemsTable select[name*=".UnitOfMeasure"]');
   await page.locator('.price-input').first().fill('100');
+  // Taxes sit in a collapsed panel on each line (open it the way a user does) before filling them.
+  await page.locator('.irow-extras-toggle[data-bs-target="#taxesCollapse-0"]').click();
+  await expect(page.locator('#taxesCollapse-0')).toBeVisible();
   await selectFirstRealOption(page, '.tax-category');
   // Any category + a positive percentage satisfies validateItemRequirements()'s taxValid check
   // regardless of category (including "Not Applicable"/"Exemption", which only need percentage
