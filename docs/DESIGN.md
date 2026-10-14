@@ -335,6 +335,19 @@ Every page contains:
 
 Never overload page headers.
 
+The header markup every page uses: an `h1.einv-page-title`, then one `<p>` description directly
+after it (styled muted, max ~70ch), with the actions in a flex group on the right. Keep that shape;
+the styles target it, so no header partial is needed.
+
+Cards are separated by a 1px rule and never a shadow. `.shadow*` utilities on a `.card` are
+neutralised and `.card.border-0` gets its rule back. Use a filled card only for the single most
+important figure on a page.
+
+Labels are sentence case. `.text-uppercase` renders as authored (no transform) inside the app.
+
+Empty states use `.einv-empty` with `.einv-empty-icon`, `.einv-empty-title` and `.einv-empty-text`.
+Say what will appear and how to add the first item; never a bare "No data".
+
 ---
 
 # TABLES

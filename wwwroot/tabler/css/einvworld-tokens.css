@@ -476,11 +476,15 @@ pre { overflow-x: auto; max-width: 100%; }
 
 /* Stitch page header: large tight-tracked title under a quiet breadcrumb. */
 .einv-page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: var(--einv-fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
   color: var(--einv-text);
+  text-wrap: balance;
 }
+/* The one-line description under a page title. */
+.einv-page-title + p { color: var(--einv-text-muted); max-width: 70ch; }
 .breadcrumb { font-size: .8rem; }
 .breadcrumb .breadcrumb-item.active { color: var(--einv-primary); font-weight: 600; }
 .page-title-box h1,
@@ -1110,3 +1114,39 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 }
 @keyframes einv-stamp { from { transform: scale(1.15) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .einv-meta-label { margin: 0; font-size: var(--einv-fs-xs); color: var(--einv-text-muted); }
+
+/* ============================================================
+ * Ledger component layer: page headers, cards, labels, empty states (v1.33.0).
+ * Pages share one header pattern (h1.einv-page-title + a muted <p> + an actions group); these rules
+ * style that pattern everywhere instead of adding a partial no page uses.
+ * ============================================================ */
+/* Cards are separated by a 1px rule, not a shadow: neutralise the shadow utilities pages put on
+ * cards and give borderless cards their rule back, so every card reads the same in both themes. */
+.card.shadow-sm, .card.shadow, .card.shadow-lg { box-shadow: var(--einv-shadow-card) !important; }
+.card.border-0 { border: 1px solid var(--einv-border) !important; }
+/* Filled (brand) cards keep their fill as the edge. */
+.card.bg-primary.border-0, .card.bg-success.border-0 { border-color: transparent !important; }
+
+/* No all-caps labels: small uppercase eyebrows/KPI labels render in sentence case as authored.
+ * Text authored in capitals (codes like MYR, TIN) is unaffected. */
+.text-uppercase:not(body [data-bs-theme="light"] *) { text-transform: none !important; letter-spacing: normal !important; }
+
+/* KPI cards: a quiet left rule instead of a thick accent bar; value in tabular figures. */
+.card.einv-kpi { border-left-width: 3px !important; }
+.card.einv-kpi .fs-1, .card.einv-kpi .fs-2, .card.einv-kpi .fs-3, .card.einv-kpi h2, .card.einv-kpi h3 {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Empty states: an invitation to act, not a dead end (dashboard charts use this via dashboard.js). */
+.einv-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--einv-space-2); min-height: 200px; padding: var(--einv-space-6) var(--einv-space-4);
+  text-align: center; color: var(--einv-text-muted);
+}
+.einv-empty-icon {
+  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--einv-surface-2); color: var(--einv-text-muted); font-size: 1.5rem;
+}
+.einv-empty-title { margin: 0; font-size: var(--einv-fs-md); font-weight: 600; color: var(--einv-text); }
+.einv-empty-text { margin: 0; font-size: var(--einv-fs-sm); max-width: 40ch; }

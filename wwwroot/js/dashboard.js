@@ -99,14 +99,11 @@
             canvas.style.display = 'none'; // Hide the empty canvas
             if (!emptyDiv) {
                 emptyDiv = document.createElement('div');
-                emptyDiv.className = 'empty-chart-state d-flex flex-column justify-content-center align-items-center h-100 w-100 text-center';
-                emptyDiv.style.minHeight = "200px";
+                emptyDiv.className = 'empty-chart-state einv-empty h-100 w-100';
                 emptyDiv.innerHTML = `
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2 shadow-sm" style="width: 48px; height: 48px; background-color: var(--tile-bg); color: #9ca3af;">
-                        <i class="ri-bar-chart-2-line fs-3"></i>
-                    </div>
-                    <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">No Data Found</h6>
-                    <p class="text-muted small mb-0 px-3">${esc(customMessage)}</p>
+                    <span class="einv-empty-icon" aria-hidden="true"><i class="ri-bar-chart-2-line"></i></span>
+                    <p class="einv-empty-title">No data for this period</p>
+                    <p class="einv-empty-text">${esc(customMessage)}</p>
                 `;
                 container.appendChild(emptyDiv);
             }
