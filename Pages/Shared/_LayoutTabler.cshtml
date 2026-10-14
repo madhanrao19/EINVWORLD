@@ -17,31 +17,18 @@
     // so there's no flash of the wrong theme for returning visitors — validated against an allowlist
     // before going anywhere near an HTML attribute. First-time visitors with no cookie get the
     // system-preference fallback below (must run client-side; the server has no way to know it).
-    var einvThemeCookie = Context.Request.Cookies["einv-theme"];
-    var einvTheme = einvThemeCookie == "dark" || einvThemeCookie == "light" ? einvThemeCookie : null;
-    ViewData["EinvTheme"] = einvTheme; // _Favicons: browser bar colour follows the saved theme
+    var einvTheme = eInvWorld.Helpers.ThemePreference.Read(Context);
+    ViewData["EinvTheme"] = einvTheme; // _ThemeInit + _Favicons follow the saved theme
 }
 <!DOCTYPE html>
-@* Razor conditional attribute: omitted entirely when einvTheme is null. Don't build it as a string —
+@* Renders data-bs-theme="" when einvTheme is null (Razor always emits data-* attributes); _ThemeInit sets it before paint. Don't build it as a string —
    Razor HTML-encodes the quotes and the browser then sees the value "dark" (quotes included). *@
 <html lang="en" data-bs-theme="@einvTheme">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    @if (einvTheme == null)
-    {
-        <script>
-            // First-time visitor, no saved preference: follow the OS/browser setting. Must be the very
-            // first thing in <head> and run synchronously (blocking, no defer/async) so the attribute
-            // lands before anything paints — same FOUC-avoidance approach as the sidebar-collapse
-            // script further down, just needed earlier here since it affects the whole page's CSS.
-            (function () {
-                var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-                document.documentElement.setAttribute("data-bs-theme", dark ? "dark" : "light");
-            })();
-        </script>
-    }
+    <partial name="_ThemeInit" />
 
     @await Html.PartialAsync("_Favicons")
 

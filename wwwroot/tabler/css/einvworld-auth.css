@@ -154,13 +154,13 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
   max-width: 460px;
   margin: 0 auto;
   border: 1px solid var(--einv-auth-line);
-  border-radius: 8px;
+  border-radius: var(--einv-radius-md);
   box-shadow: 0 2px 4px rgba(0, 0, 0, .02), 0 12px 32px rgba(23, 29, 25, .06);
-  background: #fff;
+  background: var(--einv-surface);
 }
 .einv-auth .card-body { padding: 2rem; }
 .einv-auth .card .text-primary,
-.einv-auth h5.text-primary { color: var(--einv-primary, #006948) !important; }
+.einv-auth h5.text-primary { color: var(--einv-primary) !important; }
 .einv-auth .card > .card-body > .text-center h5 { font-size: 1.6rem; font-weight: 700; color: var(--einv-auth-ink); }
 
 /* Labels + inputs. */
@@ -174,11 +174,11 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
   color: var(--einv-auth-ink);
 }
 .einv-auth .form-control:focus {
-  border-color: var(--einv-primary, #006948);
-  box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .12);
-  background: #fff;
+  border-color: var(--einv-primary);
+  box-shadow: 0 0 0 .2rem rgba(var(--einv-primary-rgb), .2);
+  background: var(--einv-surface);
 }
-.einv-auth .form-control::placeholder { color: #98a2b3; }
+.einv-auth .form-control::placeholder { color: var(--einv-text-muted); opacity: .8; }
 
 /* Input with a left icon. Wrap: <div class="einv-input"><i class="einv-input-ic ..."></i><input …></div> */
 .einv-auth .einv-input { position: relative; }
@@ -199,41 +199,41 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
 
 /* Forgot-password link (right of the password label). */
 .einv-auth a#forgot-password,
-.einv-auth .card a.text-primary { color: var(--einv-primary, #006948); text-decoration: none; font-weight: 600; }
+.einv-auth .card a.text-primary { color: var(--einv-primary); text-decoration: none; font-weight: 600; }
 .einv-auth a#forgot-password:hover,
-.einv-auth .card a.text-primary:hover { text-decoration: underline; color: var(--einv-primary-hover, #005137); }
+.einv-auth .card a.text-primary:hover { text-decoration: underline; color: var(--einv-primary-hover); }
 
 /* Remember-me. */
-.einv-auth .form-check-input:checked { background-color: var(--einv-primary, #006948); border-color: var(--einv-primary, #006948); }
-.einv-auth .form-check-input:focus { box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .12); }
+.einv-auth .form-check-input:checked { background-color: var(--einv-fill); border-color: var(--einv-fill); }
+.einv-auth .form-check-input:focus { box-shadow: 0 0 0 .2rem rgba(var(--einv-primary-rgb), .2); }
 
 /* Turnstile widget spacing. */
 .einv-auth .cf-turnstile, .einv-auth .einv-turnstile { margin: 1rem 0 .25rem; display: flex; justify-content: center; }
 
 /* Primary (Login) button — deep compliance green with the darker hover step. */
 .einv-auth .btn-primary {
-  --bs-btn-bg: var(--einv-primary, #006948);
-  --bs-btn-border-color: var(--einv-primary, #006948);
-  --bs-btn-hover-bg: var(--einv-primary-hover, #005137);
-  --bs-btn-hover-border-color: var(--einv-primary-hover, #005137);
-  --bs-btn-active-bg: var(--einv-primary-hover, #005137);
-  background-color: var(--einv-primary, #006948);
-  border-color: var(--einv-primary, #006948);
+  --bs-btn-bg: var(--einv-fill);
+  --bs-btn-border-color: var(--einv-fill);
+  --bs-btn-hover-bg: var(--einv-fill-hover);
+  --bs-btn-hover-border-color: var(--einv-fill-hover);
+  --bs-btn-active-bg: var(--einv-fill-hover);
+  background-color: var(--einv-fill);
+  border-color: var(--einv-fill);
   border-radius: 4px;
   padding: .8rem 1rem;
   font-weight: 600;
   font-size: 1.05rem;
 }
-.einv-auth .btn-primary:hover { background-color: var(--einv-primary-hover, #005137); border-color: var(--einv-primary-hover, #005137); }
+.einv-auth .btn-primary:hover { background-color: var(--einv-fill-hover); border-color: var(--einv-fill-hover); }
 
 /* Links under the card (Register / Resend) now sit on the light canvas — brand green, not lime. */
 .einv-auth .card ~ .text-center { color: var(--einv-auth-muted); }
-.einv-auth .card ~ .text-center a { color: var(--einv-primary, #006948) !important; font-weight: 600; text-decoration: none; }
-.einv-auth .card ~ .text-center a:hover { text-decoration: underline; color: var(--einv-primary-hover, #005137) !important; }
+.einv-auth .card ~ .text-center a { color: var(--einv-primary) !important; font-weight: 600; text-decoration: none; }
+.einv-auth .card ~ .text-center a:hover { text-decoration: underline; color: var(--einv-primary-hover) !important; }
 
 /* Footer on the light canvas. */
 .einv-auth .footer, .einv-auth footer { color: var(--einv-auth-muted); }
-.einv-auth .footer a { color: var(--einv-primary, #006948); }
+.einv-auth .footer a { color: var(--einv-primary); }
 
 @media (max-width: 575.98px) {
   .einv-auth .card-body { padding: 1.5rem; }
@@ -241,7 +241,7 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
 
 /* Stitch auth: soft green footer strip attached to the auth card (register/resend links). */
 .card-footer.einv-auth-alt {
-  background-color: #eff5ef;
-  border-top: 1px solid var(--einv-border, #e6e8eb);
+  background-color: var(--einv-surface-2);
+  border-top: 1px solid var(--einv-border);
   padding: 1rem 1.5rem;
 }
