@@ -17,11 +17,8 @@ It must be followed by all developers, designers, AI coding agents and contribut
 
 This document overrides previous UI conventions including the former Velzon implementation.
 
-> **Superseded: colour palette.** The Navy/Blue/Teal palette in the COLOUR SYSTEM section below was
-> never adopted — the team explicitly chose to keep the existing green "EinvWorld Professional" brand
-> instead (see CHANGELOG 2026-07-15). The actual authoritative colour tokens are
-> `wwwroot/tabler/css/einvworld-tokens.css` (`--einv-primary: #006948` etc.). Everything else in this
-> document (components, spacing, responsive rules, patterns) is still the source of truth.
+> **Colour, type and radius** sections below describe the live "Ledger" tokens (v1.30.0) in
+> `wwwroot/tabler/css/einvworld-tokens.css` — that file is authoritative if the two ever disagree.
 
 ---
 
@@ -177,69 +174,68 @@ Maintain clear space around the logo.
 
 # COLOUR SYSTEM
 
-> ⚠️ **Not implemented — superseded.** See the note near the top of this document. The live palette is
-> `wwwroot/tabler/css/einvworld-tokens.css`, not the values below.
+"Ledger" palette (v1.30.0, 2026-10). The authoritative values live in
+`wwwroot/tabler/css/einvworld-tokens.css`; this table mirrors them. Use the token, never the hex.
 
-Primary Navy
-#123B66
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--einv-primary` | `#006948` | `#34d399` | Links, active nav, accent text |
+| `--einv-fill` | `#006948` | `#00855d` | Primary button / filled surfaces (white text) |
+| `--einv-page-bg` | `#f5f7f6` | `#0c1411` | Page canvas |
+| `--einv-surface` | `#ffffff` | `#131d19` | Cards, panels, inputs |
+| `--einv-surface-2` | `#f0f3f1` | `#1a2621` | Hover rows, quiet fills |
+| `--einv-text` | `#14201a` | `#e4ebe7` | Body text |
+| `--einv-text-muted` | `#4a5a51` | `#9fb0a6` | Secondary text |
+| `--einv-border` | `#dfe5e1` | `#2a3832` | Card and table rules |
+| `--einv-input-border` | `#7d8d84` | `#5f736a` | Form-control outlines |
+| `--einv-table-head` | `#eef2ef` | `#17221e` | Table header fill |
 
-Primary Blue
-#1769AA
+Neutrals carry a slight green bias so they read as part of the brand. Dark mode is a green-black ramp,
+not a neutral grey, and Tabler's own dark surface variables are pointed at the same ramp.
 
-Accent Blue
-#2584D8
+**Semantic tones** (`--einv-tone-{success,warning,danger,info,neutral,muted}-{fg,bg}`) are the only
+colours for text on a tint (badges, pills, notices). **Invoice statuses** map to tones in one place
+(`--einv-status-{valid,submitted,draft,invalid,rejected,cancelled}-{fg,bg}`). Every status always
+shows its text label; colour is never the only signal.
 
-Teal
-#00A6A6
+**Contrast** (WCAG 2.2 AA: 4.5:1 text, 3:1 UI outlines), computed from the token values:
 
-Dark Teal
-#087F8C
+| Pair | Light | Dark |
+|---|---|---|
+| Text on surface | 16.8:1 | 14.2:1 |
+| Text on page | 15.6:1 | 15.4:1 |
+| Muted text on surface | 7.3:1 | 7.6:1 |
+| Muted text on table head | 6.5:1 | 7.2:1 |
+| Link / accent on surface | 6.7:1 | 9.0:1 |
+| White on button fill | 6.7:1 | 4.7:1 |
+| Input border on surface (UI) | 3.5:1 | 3.4:1 |
+| Success tone | 6.9:1 | 8.5:1 |
+| Warning tone | 6.0:1 | 8.4:1 |
+| Danger tone | 6.2:1 | 7.9:1 |
+| Info tone | 7.0:1 | 8.3:1 |
+| Neutral tone | 6.3:1 | 8.0:1 |
+| Muted tone | 6.7:1 | 8.3:1 |
 
-Background
-#F7F9FC
+Any new token pair must be added to this table with its ratio before it ships.
 
-Surface
-#FFFFFF
-
-Border
-#DFE5EC
-
-Text
-#172033
-
-Success
-#15803D
-
-Warning
-#D97706
-
-Danger
-#C62828
-
-Information
-#2563EB
-
-Green is ONLY for success.
-
-Never use green as the primary brand colour.
+The LHDN validation seal is the only place the gold seal colour appears. The A4 invoice / PDF sheet
+is paper in both themes and keeps its own fixed colours (it is not themed).
 
 ---
 
 # TYPOGRAPHY
 
-Primary Font
+Primary font: **IBM Plex Sans** (OFL), self-hosted as static latin woff2 files (400/500/600/700) in
+`wwwroot/tabler/fonts/` (licence: `OFL.txt`). Token: `--einv-font-sans`, mapped onto
+`--tblr-font-sans-serif`. No font CDN.
 
-Inter
+Scale (ratio ~1.2, 14px body): `--einv-fs-xs` 12 · `-sm` 13 · `-base` 14 · `-md` 16 · `-lg` 20 ·
+`-xl` 24 · `-2xl` 30 (px).
 
-Monospace
+Numbers in tables use tabular figures (`font-variant-numeric: tabular-nums`) so RM amounts,
+quantities, TINs and dates line up. Right-align money columns.
 
-JetBrains Mono
-
-Use clear hierarchy.
-
-Never use tiny text.
-
-Avoid excessive uppercase.
+Use clear hierarchy. Never use tiny text. Avoid uppercase labels for new work.
 
 ---
 
@@ -265,24 +261,16 @@ Allowed increments:
 
 # BORDER RADIUS
 
-Small
-2px
+Radius follows hierarchy, not one value everywhere:
 
-Standard
-4px
+| Token | Value | Use |
+|---|---|---|
+| `--einv-radius-sm` | 6px | Inputs, buttons (`--tblr-border-radius`) |
+| `--einv-radius-md` | 10px | Cards, modals, dropdowns (`--tblr-border-radius-lg`) |
+| `--einv-radius-pill` | 9999px | Status pills, chips |
 
-Medium
-6px
-
-Large
-8px
-
-XL
-12px
-
-Use subtle borders.
-
-Avoid heavy shadows.
+Cards are separated by a 1px rule, not a shadow (`--einv-shadow-card: none`). The only shadow is
+`--einv-shadow-overlay`, used for dropdowns, popovers and modals.
 
 ---
 
