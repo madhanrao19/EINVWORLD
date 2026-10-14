@@ -3,13 +3,17 @@
     // LHDN reasons, the FilterDate query param) is user- or server-supplied: escape it.
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-    // Chart text/grid colours follow the theme (Chart.js defaults are tuned for a white canvas).
-    const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-    const chartGrid = isDark ? 'rgba(255, 255, 255, 0.08)' : '#f3f4f6';
-    if (window.Chart && isDark) {
-        Chart.defaults.color = '#9ca3af';
+    // Chart font and text/grid colours come from the design tokens (einvworld-tokens.css), so they
+    // follow the active theme. Fallbacks keep charts readable if the token sheet failed to load.
+    const rootStyle = getComputedStyle(document.documentElement);
+    const token = (name, fallback) => rootStyle.getPropertyValue(name).trim() || fallback;
+    const chartFont = token('--einv-font-sans', 'sans-serif');
+    const chartGrid = token('--einv-chart-grid', '#f3f4f6');
+    if (window.Chart) {
+        Chart.defaults.font.family = chartFont;
+        Chart.defaults.color = token('--einv-text-muted', '#6b7280');
         Chart.defaults.borderColor = chartGrid;
-        Chart.defaults.elements.arc.borderColor = '#1f2937'; // doughnut slice gaps match the card
+        Chart.defaults.elements.arc.borderColor = token('--einv-surface', '#ffffff'); // doughnut slice gaps match the card
     }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -78,7 +82,7 @@
     const doughnutOptions = {
         responsive: true, maintainAspectRatio: false, cutout: '78%',
         plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: "'Inter', sans-serif" } } },
+            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 20, font: { size: 12, family: chartFont } } },
             tooltip: { backgroundColor: '#1f2937', padding: 10, cornerRadius: 8 }
         }
     };
@@ -163,7 +167,7 @@
                         options: {
                             responsive: true, maintainAspectRatio: false, cutout: '78%',
                             plugins: {
-                                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11, family: "'Inter', sans-serif" } } },
+                                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11, family: chartFont } } },
                                 tooltip: {
                                     backgroundColor: '#1f2937', padding: 12, cornerRadius: 8,
                                     callbacks: {
@@ -202,7 +206,7 @@
                         options: {
                             responsive: true, maintainAspectRatio: false, cutout: '78%',
                             plugins: {
-                                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11, family: "'Inter', sans-serif" } } },
+                                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 15, font: { size: 11, family: chartFont } } },
                                 tooltip: {
                                     backgroundColor: '#1f2937', padding: 12, cornerRadius: 8,
                                     callbacks: {
