@@ -273,13 +273,14 @@ td .badge.bg-secondary { background-color: var(--einv-tone-neutral-bg) !importan
   color: #f9fafb;
 }
 
-/* Table headers: subtle green-tinted fill with tracking-heavy uppercase labels (DESIGN.md). */
+/* Table headers: tinted fill, sentence-case labels at 13px (Ledger: no all-caps labels). */
 .table thead th {
   background-color: var(--einv-table-head) !important;
   color: var(--einv-text-muted);
-  font-size: .72rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  font-size: var(--einv-fs-sm);
+  font-weight: 600;
+  text-transform: none; /* Tabler uppercases table heads by default */
+  letter-spacing: normal;
 }
 
 /* Topbar search: quiet rounded pill with an inline magnifier, brand focus ring. */
@@ -491,20 +492,13 @@ pre { overflow-x: auto; max-width: 100%; }
   font-weight: 600;
 }
 
-/* Velzon "soft" buttons → light-tinted, colored-text buttons (semantic RGBs are
- * theme-independent so they read correctly without visual verification). */
-.btn-soft-primary   { color: var(--einv-primary);     background-color: rgba(var(--einv-primary-rgb), .12); border-color: transparent; }
-.btn-soft-secondary { color: #5a6570; background-color: rgba(108, 117, 125, .12); border-color: transparent; }
-.btn-soft-success   { color: #198754; background-color: rgba(25, 135, 84, .12);  border-color: transparent; }
-.btn-soft-danger    { color: #dc3545; background-color: rgba(220, 53, 69, .12);  border-color: transparent; }
-.btn-soft-info      { color: #0aa2c0; background-color: rgba(13, 202, 240, .14); border-color: transparent; }
-.btn-soft-warning   { color: #cc9a06; background-color: rgba(255, 193, 7, .16);  border-color: transparent; }
-.btn-soft-primary:hover   { color: #fff; background-color: var(--einv-fill); }
-.btn-soft-secondary:hover { color: #fff; background-color: #6c757d; }
-.btn-soft-success:hover   { color: #fff; background-color: #198754; }
-.btn-soft-danger:hover    { color: #fff; background-color: #dc3545; }
-.btn-soft-info:hover      { color: #fff; background-color: #0aa2c0; }
-.btn-soft-warning:hover   { color: #000; background-color: #ffc107; }
+/* Soft buttons: tone tokens (text-on-tint, AA in both themes); hover deepens the tint. */
+.btn-soft-primary { --tblr-btn-color: var(--einv-tone-success-fg); --tblr-btn-bg: var(--einv-tone-success-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-success-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-success-fg) 14%, var(--einv-tone-success-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-success-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-success-fg) 14%, var(--einv-tone-success-bg)); --tblr-btn-active-border-color: transparent; }
+.btn-soft-secondary { --tblr-btn-color: var(--einv-tone-neutral-fg); --tblr-btn-bg: var(--einv-tone-neutral-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-neutral-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-neutral-fg) 14%, var(--einv-tone-neutral-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-neutral-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-neutral-fg) 14%, var(--einv-tone-neutral-bg)); --tblr-btn-active-border-color: transparent; }
+.btn-soft-success { --tblr-btn-color: var(--einv-tone-success-fg); --tblr-btn-bg: var(--einv-tone-success-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-success-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-success-fg) 14%, var(--einv-tone-success-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-success-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-success-fg) 14%, var(--einv-tone-success-bg)); --tblr-btn-active-border-color: transparent; }
+.btn-soft-danger { --tblr-btn-color: var(--einv-tone-danger-fg); --tblr-btn-bg: var(--einv-tone-danger-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-danger-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-danger-fg) 14%, var(--einv-tone-danger-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-danger-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-danger-fg) 14%, var(--einv-tone-danger-bg)); --tblr-btn-active-border-color: transparent; }
+.btn-soft-info { --tblr-btn-color: var(--einv-tone-info-fg); --tblr-btn-bg: var(--einv-tone-info-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-info-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-info-fg) 14%, var(--einv-tone-info-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-info-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-info-fg) 14%, var(--einv-tone-info-bg)); --tblr-btn-active-border-color: transparent; }
+.btn-soft-warning { --tblr-btn-color: var(--einv-tone-warning-fg); --tblr-btn-bg: var(--einv-tone-warning-bg); --tblr-btn-border-color: transparent; --tblr-btn-hover-color: var(--einv-tone-warning-fg); --tblr-btn-hover-bg: color-mix(in srgb, var(--einv-tone-warning-fg) 14%, var(--einv-tone-warning-bg)); --tblr-btn-hover-border-color: transparent; --tblr-btn-active-color: var(--einv-tone-warning-fg); --tblr-btn-active-bg: color-mix(in srgb, var(--einv-tone-warning-fg) 14%, var(--einv-tone-warning-bg)); --tblr-btn-active-border-color: transparent; }
 
 /* Velzon 'material-shadow' is decorative only — no-op under Tabler. */
 .material-shadow, .material-shadow-none { box-shadow: none; }
@@ -578,12 +572,10 @@ pre { overflow-x: auto; max-width: 100%; }
  * overrides, so every media block wins over the base.
  * ============================================================ */
 
-/* Tinted table header (Stitch #e9efe9 family) with quiet uppercase labels. */
+/* Tinted table header with quiet sentence-case labels. */
 #invoiceTable thead.einv-table-head th {
   background-color: var(--einv-table-head);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-size: .72rem;
+  font-size: var(--einv-fs-sm);
   font-weight: 600;
   color: var(--einv-text-muted);
   white-space: nowrap;
@@ -706,9 +698,7 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable tbody td::before {
     content: attr(data-label);
     font-weight: 600;
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
+    font-size: var(--einv-fs-xs);
     color: var(--einv-text-muted);
     text-align: left;
     flex-shrink: 0;
@@ -728,9 +718,7 @@ button.einv-badge { cursor: pointer; }
  * ============================================================ */
 .einv-mobile-stack thead.einv-table-head th {
   background-color: var(--einv-table-head);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-size: .72rem;
+  font-size: var(--einv-fs-sm);
   font-weight: 600;
   color: var(--einv-text-muted);
   white-space: nowrap;
@@ -801,9 +789,7 @@ button.einv-badge { cursor: pointer; }
   .einv-mobile-stack tbody td::before {
     content: attr(data-label);
     font-weight: 600;
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
+    font-size: var(--einv-fs-xs);
     color: var(--einv-text-muted);
     text-align: left;
     flex-shrink: 0;
@@ -898,12 +884,6 @@ button.einv-badge { cursor: pointer; }
   --tblr-btn-color: var(--einv-text);
   --tblr-btn-border-color: var(--einv-border);
 }
-/* Velzon soft buttons still use fixed light-mode text tones (retargeted to tone tokens in the component pass). */
-[data-bs-theme="dark"] .btn-soft-success { color: #6ee7b7; }
-[data-bs-theme="dark"] .btn-soft-danger { color: #fca5a5; }
-[data-bs-theme="dark"] .btn-soft-warning { color: #fcd34d; }
-[data-bs-theme="dark"] .btn-soft-info { color: #7dd3fc; }
-[data-bs-theme="dark"] .btn-soft-secondary { color: #cbd5e1; }
 
 /* Select2 (Create/Edit Invoice, filters) ships a white light-only skin. */
 /* Any Select2 theme: pages pin a white selection box (some with !important). */
@@ -1051,3 +1031,54 @@ body {
 .offcanvas-start { padding-left: env(safe-area-inset-left, 0px); }
 .offcanvas-end { padding-right: env(safe-area-inset-right, 0px); }
 .einv-toast-host { margin-bottom: env(safe-area-inset-bottom, 0px); margin-right: env(safe-area-inset-right, 0px); }
+
+/* ============================================================
+ * Ledger component layer: buttons + tables (v1.31.0).
+ * ============================================================ */
+/* Secondary outline buttons: visible outline (border-strong) and body-coloured text. */
+.btn-outline-secondary {
+  --tblr-btn-color: var(--einv-text);
+  --tblr-btn-border-color: var(--einv-border-strong);
+  --tblr-btn-hover-color: var(--einv-text);
+  --tblr-btn-hover-bg: var(--einv-surface-2);
+  --tblr-btn-hover-border-color: var(--einv-border-strong);
+  --tblr-btn-active-color: var(--einv-text);
+  --tblr-btn-active-bg: var(--einv-surface-2);
+  --tblr-btn-active-border-color: var(--einv-border-strong);
+}
+/* One visible keyboard focus ring for every button. */
+.btn:focus-visible {
+  outline: 2px solid var(--einv-primary);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Tables: quiet hover, numbers line up and sit right. */
+.table > tbody > tr:hover > * { --tblr-table-bg-state: var(--einv-surface-2); }
+.einv-num, .table td.text-end, .table th.text-end { font-variant-numeric: tabular-nums; text-align: right; }
+/* Opt-in sticky header for long lists: wrap the table in .einv-table-sticky (it scrolls itself). */
+.einv-table-sticky { max-height: 70vh; overflow: auto; }
+.einv-table-sticky thead th { position: sticky; top: 0; z-index: 2; }
+
+/* einvworld-table.js: Columns menu + client-sorted headers. */
+.einv-col-hidden { display: none !important; }
+.einv-table-tools { display: flex; justify-content: flex-end; padding: var(--einv-space-2) var(--einv-space-3); }
+.einv-cols-menu { min-width: 15rem; max-height: 60vh; overflow-y: auto; }
+.einv-cols-title { padding: var(--einv-space-1) var(--einv-space-3) var(--einv-space-2); font-size: var(--einv-fs-sm); font-weight: 600; color: var(--einv-text); }
+.einv-cols-item { display: flex; align-items: center; gap: var(--einv-space-2); cursor: pointer; white-space: normal; }
+.einv-cols-item input:disabled + span { color: var(--einv-text-muted); }
+.einv-cols-foot { border-top: 1px solid var(--einv-border); margin-top: var(--einv-space-1); padding: var(--einv-space-1) var(--einv-space-3) 0; }
+.einv-sort {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: 0; border: 0; background: none;
+  font: inherit; color: inherit; text-align: inherit; cursor: pointer;
+}
+.einv-sort:hover, th[aria-sort="ascending"] .einv-sort, th[aria-sort="descending"] .einv-sort { color: var(--einv-text); }
+.einv-sort-icon { font-size: .9em; opacity: .45; }
+th[aria-sort="ascending"] .einv-sort-icon, th[aria-sort="descending"] .einv-sort-icon { opacity: 1; color: var(--einv-primary); }
+th.text-end .einv-sort { flex-direction: row-reverse; }
+/* Server-sorted header links (paged lists) read as the same control. */
+.table thead th a { color: inherit; text-decoration: none; }
+.table thead th a:hover { color: var(--einv-text); }
+
+.einv-table-tools .btn { gap: .35rem; }
