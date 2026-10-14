@@ -222,6 +222,10 @@
 
             tinymce.init({
                 selector: '#Resource_ContentHtml',
+                // Follow the app theme; both skins ship with the self-hosted TinyMCE. Editor chrome only —
+                // the saved article HTML is unaffected.
+                skin: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'oxide-dark' : 'oxide',
+                content_css: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'default',
                 height: 400,
                 menubar: false,
                 plugins: 'image link code lists autoresize autolink',

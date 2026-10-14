@@ -288,7 +288,7 @@
                                         <div class="col-6">
                                             <div class="p-2">
                                                 <div class="avatar-sm mx-auto mb-2">
-                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: #187447;">
+                                                    <div class="avatar-title bg-light rounded-circle fs-18" style="color: var(--einv-primary);">
                                                         <i class="ri-calendar-check-line"></i>
                                                     </div>
                                                 </div>
@@ -334,7 +334,7 @@
                                                 <div class="mb-3">
                                                     <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Current Password</label>
                                                     <div class="input-group">
-                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
+                                                        <span class="input-group-text" style="background-color: var(--einv-page-bg); border-color: var(--einv-fill);">
                                                             <i class="ri-lock-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="OldPassword" class="form-control" placeholder="Enter current" style="border-color: #006948;" required />
@@ -345,7 +345,7 @@
                                                 <div class="mb-3">
                                                     <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">New Password</label>
                                                     <div class="input-group">
-                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
+                                                        <span class="input-group-text" style="background-color: var(--einv-page-bg); border-color: var(--einv-fill);">
                                                             <i class="ri-lock-password-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="NewPassword" class="form-control" placeholder="Enter new" style="border-color: #006948;" required />
@@ -356,7 +356,7 @@
                                                 <div class="mb-3">
                                                     <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Confirm Password</label>
                                                     <div class="input-group">
-                                                        <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;">
+                                                        <span class="input-group-text" style="background-color: var(--einv-page-bg); border-color: var(--einv-fill);">
                                                             <i class="ri-lock-password-line" style="color: var(--einv-primary);"></i>
                                                         </span>
                                                         <input type="password" name="ConfirmPassword" class="form-control" placeholder="Confirm new" style="border-color: #006948;" required />
@@ -570,7 +570,7 @@
                                                         <div class="row">
                                                             <div class="col-12">
                                                                 <small class="text-muted d-block">TIN</small>
-                                                                <p class="mb-1" style="font-family: monospace; font-weight: 600; color: #187447;">@company.TIN</p>
+                                                                <p class="mb-1" style="font-family: monospace; font-weight: 600; color: var(--einv-primary);">@company.TIN</p>
                                                                 <small class="text-muted d-block">Registration</small>
                                                                 <p class="mb-1" style="color: #777676;">@company.RegType?.Name: @company.RegNo</p>
                                                                 @if (!string.IsNullOrEmpty(company.Email) || !string.IsNullOrEmpty(company.PhoneNo))
@@ -649,7 +649,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Full Name</label>
                         <div class="input-group">
-                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-user-line" style="color: var(--einv-primary);"></i></span>
+                            <span class="input-group-text" style="background-color: var(--einv-page-bg); border-color: var(--einv-fill);"><i class="ri-user-line" style="color: var(--einv-primary);"></i></span>
                             <input asp-for="Input.FullName" class="form-control" placeholder="Enter your full name" style="border-color: #006948;" />
                         </div>
                         <span asp-validation-for="Input.FullName" class="text-danger small"></span>
@@ -657,7 +657,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold" style="color: var(--einv-primary-hover);">Phone Number</label>
                         <div class="input-group">
-                            <span class="input-group-text" style="background-color: #f8f9fa; border-color: #006948;"><i class="ri-phone-line" style="color: var(--einv-primary);"></i></span>
+                            <span class="input-group-text" style="background-color: var(--einv-page-bg); border-color: var(--einv-fill);"><i class="ri-phone-line" style="color: var(--einv-primary);"></i></span>
                             <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Enter your phone number" style="border-color: #006948;" />
                         </div>
                         <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
