@@ -488,6 +488,27 @@ Tooltip where useful
 
 Never rely on colour alone.
 
+**Invoice status badges** come from one helper, `Helpers/InvoiceStatusBadge.cs`. Don't write a
+per-page `switch`:
+
+- `@InvoiceStatusBadge.Render(statusId)` renders the whole badge: icon, label from the `StatusCodes`
+  description, and HTML-encoding. A blank status renders a quiet dash.
+- `InvoiceStatusBadge.CssClass(statusId)` gives the classes for a clickable badge `<button>`, such as
+  the Invalid / Request Reject reason buttons on Invoice Lists.
+
+| Status ids | Tone | Colour tokens |
+|---|---|---|
+| Valid, Completed | valid | `--einv-status-valid-*` (green) |
+| Submitted, ValidInternal | submitted | `--einv-status-submitted-*` (blue) |
+| Invalid, TransmissionError | invalid | `--einv-status-invalid-*` (red) |
+| RequestReject | rejected | `--einv-status-rejected-*` (amber) |
+| Cancelled, CancelledInternal | cancelled | `--einv-status-cancelled-*` (muted brown) |
+| Draft, anything else | draft | `--einv-status-draft-*` (neutral) |
+
+**LHDN validation seal** (`Pages/Shared/_LhdnSeal.cshtml`, `.einv-seal`): shown only on Invoice Details
+for a Valid invoice that has a validation date. It is the only place the seal gold appears. Don't use
+it in tables or lists.
+
 ---
 
 # ACCESSIBILITY

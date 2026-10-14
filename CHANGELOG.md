@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.31.0`** (`AppInfo:Version` in `appsettings.json`). v1.31.0 is a **minor**
+> **Current version: `v1.32.0`** (`AppInfo:Version` in `appsettings.json`). v1.32.0 is a **minor**
+> release: new look, part 2b — one set of invoice status badges everywhere and the LHDN validation
+> seal on Invoice Details — see the dated entry below. v1.31.0 was a **minor**
 > release: new look, part 2a — sortable tables and a Columns menu on every list, sentence-case table
 > headers, and restyled buttons — see the dated entry below. v1.30.1 was a **patch**
 > release: installed-app polish — the status bar follows the in-app theme, pages keep clear of the
@@ -325,6 +327,32 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.32.0 (new look, part 2b: status badges and the LHDN seal)
+
+- **One set of status badges.** Invoice Lists (internal and LHDN status), Invoice Details and the two
+  dashboard tables now draw invoice statuses from one helper (`Helpers/InvoiceStatusBadge.cs`).
+  Before, each page had its own colours. The colours follow the approved design:
+  - **Valid / Completed:** green.
+  - **Submitted:** blue (was amber).
+  - **Invalid:** red.
+  - **Request Reject:** amber (was red), so it reads as "needs a decision", not "failed".
+  - **Cancelled:** muted brown (was red on lists, amber on Details), so it no longer looks like an
+    error.
+  - **Draft:** neutral.
+  Every badge keeps its icon and text, and every pair passes 4.5:1 contrast in both themes. A blank
+  status shows a quiet dash instead of an empty pill.
+- **LHDN validation seal.** A Valid invoice's Details page shows a round "Validated ✦ LHDN MyInvois"
+  stamp with the validation date, next to the status. It plays a short stamp animation, which is
+  skipped when the user prefers reduced motion. The seal appears only here.
+- **Invoice Details summary labels** (Total payable, UUID, Validated) are sentence case, and amounts
+  use aligned digits.
+- The PDF/A4 invoice sheet is unchanged.
+- **Tests:** `InvoiceStatusBadgeTests` (20 cases) cover the status→tone mapping, labels, icons,
+  HTML-encoding and the blank-status dash.
+
+Markup, CSS and one view helper: no migration, config or API change. The clickable Invalid / Request
+Reject reason buttons on Invoice Lists work as before; only their colour class comes from the helper.
 
 ## 📅 2026-10-14 — v1.31.0 (new look, part 2a: tables and buttons)
 
