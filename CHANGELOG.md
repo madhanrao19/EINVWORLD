@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.34.0`** (`AppInfo:Version` in `appsettings.json`). v1.34.0 is a **minor**
+> **Current version: `v1.34.1`** (`AppInfo:Version` in `appsettings.json`). v1.34.1 is a **patch**
+> release: sign-in and account pages get dark mode and a standards-mode fix — see the dated entry
+> below. v1.34.0 was a **minor**
 > release: new look, part 2d — form fields with visible outlines, and restyled dropdowns, date
 > pickers, dialogs and toasts; this completes the shared component layer — see the dated entry
 > below. v1.33.0 was a **minor**
@@ -332,6 +334,34 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.34.1 (sign-in and account pages: dark mode, standards-mode fix)
+
+First page group of Phase 3 of the "Ledger" refresh.
+- **Dark mode on the sign-in pages.** Login, register, forgot/reset password, 2FA, resend
+  confirmation and the Account → Manage pages now follow the same saved theme as the rest of the app.
+  With no saved choice they follow the phone/computer setting, with no flash of the wrong theme. Before,
+  they were always light.
+  - The logo switches to its light version on dark backgrounds.
+  - The Cloudflare check box matches the page theme.
+  - The **Login** button and **Remember me** checkbox use the button green, so the white text stays
+    readable in dark mode (the light text green is too pale behind white text).
+  - The card, focused fields and the register/resend strip no longer have hard-coded white
+    backgrounds.
+- **Standards-mode fix.** For signed-in users (Account → Manage, 2FA pages), the idle-timeout script was
+  written before `<!DOCTYPE html>`. That makes browsers use "quirks mode", which can subtly change
+  layout. It now sits at the end of the page and works as before.
+- **Shared theme reading.** A small helper (`Helpers/ThemePreference.cs`) reads and allowlists the
+  saved `einv-theme` choice, and a shared `_ThemeInit` partial applies the OS fallback. Both layouts and
+  the Cloudflare widget use them, so they always agree. The theme cookie value only ever reaches the
+  page as `dark` or `light`.
+- **Removed** the unused TinyMCE editor stylesheet from the sign-in pages (one fewer download).
+- **Tests:** `17-auth-theme.spec.js` covers the saved theme in both modes, the OS fallback, the button
+  colour, the logo swap, the Turnstile theme, and standards mode on a signed-in account page.
+  `ThemePreferenceTests` covers the cookie allowlist, including an injection attempt.
+
+Markup, CSS and one view helper: no migration, config or API change. Form ids, Turnstile and the
+password show/hide control are unchanged.
 
 ## 📅 2026-10-14 — v1.34.0 (new look, part 2d: forms and dialogs)
 

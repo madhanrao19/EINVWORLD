@@ -9,6 +9,9 @@
         var match = System.Text.RegularExpressions.Regex.Match(returnUrl, @"logoutReason=([^&]*)");
         if (match.Success) { logoutReason = match.Groups[1].Value; }
     }
+    // Dark mode: the same saved choice as the app (einv-theme cookie), else the OS setting.
+    var einvTheme = eInvWorld.Helpers.ThemePreference.Read(Context);
+    ViewData["EinvTheme"] = einvTheme;
 }
 @*
     Tabler auth layout (Phase 7). Replaces the Velzon _LoginLayout for Identity pages (login, 2FA,
@@ -19,42 +22,12 @@
     and the logout-reason toast. Velzon auth classes are shimmed in einvworld-tokens.css.
 *@
 
-@if (SignInManager.IsSignedIn(User))
-{
-    <script>
-        const idleTimeoutMinutes = @SessionOptions.Value.IdleTimeoutMinutes;
-        (function () {
-            const idleWarningMinutes = idleTimeoutMinutes - 1;
-            const warnAfter = idleWarningMinutes * 60 * 1000;
-            const logoutAfter = idleTimeoutMinutes * 60 * 1000;
-            let warnTimeout, logoutTimeout;
-            function startTimers() {
-                clearTimeout(warnTimeout);
-                clearTimeout(logoutTimeout);
-                warnTimeout = setTimeout(() => {
-                    Swal.fire({
-                        title: "Session Expiring",
-                        text: `You will be logged out in ${idleTimeoutMinutes - idleWarningMinutes} minute(s) due to inactivity.`,
-                        icon: "warning", confirmButtonText: "Stay Logged In", timer: 60000,
-                        showCancelButton: false, allowOutsideClick: false
-                    }).then(() => { startTimers(); });
-                }, warnAfter);
-                logoutTimeout = setTimeout(() => {
-                    window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
-                }, logoutAfter);
-            }
-            ['mousemove', 'keydown', 'mousedown', 'scroll'].forEach(evt => {
-                document.addEventListener(evt, startTimers, true);
-            });
-            startTimers();
-        })();
-    </script>
-}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="@einvTheme">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <partial name="_ThemeInit" />
     <meta name="robots" content="noindex, nofollow" />
     <title>@ViewData["Title"]</title>
     <meta name="description" content="@ViewData["Description"]" />
@@ -67,13 +40,11 @@
     <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css" asp-append-version="true">
     <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
 
-    <!-- Auth page design ("EinvWorld Professional"). Inter-first with the system fallback —
-         self-hosted policy, no font CDN (the previous Google Fonts dependency was removed). -->
+    <!-- Auth page design: fonts and colours from the shared tokens (self-hosted, no font CDN). -->
     <link href="~/tabler/css/einvworld-auth.css" rel="stylesheet" type="text/css" asp-append-version="true">
 
     <link href="~/assets/libs/sweetalert2/sweetalert2.min.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
-    <link href="~/assets/js/tinymce/skins/ui/oxide/skin.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
     <link href="~/assets/libs/select2/css/select2.min.css" rel="stylesheet" />
 
@@ -103,7 +74,8 @@
             <div class="einv-auth-shell">
                 <div class="einv-auth-form-col">
                     <a href="/" class="einv-auth-form-logo">
-                        <img src="~/images/einvworld-logo.png" alt="eInvWorld">
+                        <img src="~/images/einvworld-logo.png" alt="eInvWorld" class="einv-logo-on-light">
+                        <img src="~/images/einvworld-logo-light.png" alt="eInvWorld" class="einv-logo-on-dark">
                     </a>
                     <div id="einv-main-content" class="container" tabindex="-1">
                         @RenderBody()
@@ -144,5 +116,39 @@
     <partial name="_ValidationScriptsPartial" />
 
     @RenderSection("Scripts", required: false)
+
+    @* Idle timeout for signed-in users (Manage/2FA pages). Inside <body>: anything before <!DOCTYPE>
+       puts the browser in quirks mode. *@
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <script>
+            const idleTimeoutMinutes = @SessionOptions.Value.IdleTimeoutMinutes;
+            (function () {
+                const idleWarningMinutes = idleTimeoutMinutes - 1;
+                const warnAfter = idleWarningMinutes * 60 * 1000;
+                const logoutAfter = idleTimeoutMinutes * 60 * 1000;
+                let warnTimeout, logoutTimeout;
+                function startTimers() {
+                    clearTimeout(warnTimeout);
+                    clearTimeout(logoutTimeout);
+                    warnTimeout = setTimeout(() => {
+                        Swal.fire({
+                            title: "Session Expiring",
+                            text: `You will be logged out in ${idleTimeoutMinutes - idleWarningMinutes} minute(s) due to inactivity.`,
+                            icon: "warning", confirmButtonText: "Stay Logged In", timer: 60000,
+                            showCancelButton: false, allowOutsideClick: false
+                        }).then(() => { startTimers(); });
+                    }, warnAfter);
+                    logoutTimeout = setTimeout(() => {
+                        window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
+                    }, logoutAfter);
+                }
+                ['mousemove', 'keydown', 'mousedown', 'scroll'].forEach(evt => {
+                    document.addEventListener(evt, startTimers, true);
+                });
+                startTimers();
+            })();
+        </script>
+    }
 </body>
 </html>
