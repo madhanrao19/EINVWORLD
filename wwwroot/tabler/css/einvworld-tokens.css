@@ -1202,6 +1202,17 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 :root .flatpickr-day.today { border-color: var(--einv-primary); }
 :root .flatpickr-calendar { border-radius: var(--einv-radius-md); box-shadow: var(--einv-shadow-overlay); }
 
+/* One calendar (v1.35.0): month grid (Dashboard "Full Month") in the same colours as the day grid. */
+:root .flatpickr-monthSelect-month { color: var(--einv-text); border-radius: var(--einv-radius-sm); }
+:root .flatpickr-monthSelect-month:hover, :root .flatpickr-monthSelect-month:focus { background: var(--einv-surface-2, rgba(0, 0, 0, .05)); border-color: transparent; }
+:root .flatpickr-monthSelect-month.today { border-color: var(--einv-primary); }
+:root .flatpickr-monthSelect-month.selected, :root .flatpickr-monthSelect-month.selected:hover {
+  background: var(--einv-fill); border-color: var(--einv-fill); color: #fff;
+}
+:root .flatpickr-monthSelect-month.flatpickr-disabled { color: var(--einv-text-muted); opacity: .45; }
+/* The visible calendar field is read-only text; show it as a picker, not a disabled box. */
+:root input.einv-date-display[readonly] { background-color: var(--einv-surface); cursor: pointer; }
+
 /* Modals: card radius, rule-separated header/footer, overlay shadow. */
 .modal-content { border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); box-shadow: var(--einv-shadow-overlay); }
 .modal-header, .modal-footer { border-color: var(--einv-border); }
@@ -1312,3 +1323,11 @@ body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bo
     border-bottom: 1px solid var(--einv-border);
   }
 }
+
+/* One calendar: "Clear" under the calendar for optional date fields (einvworld-date.js). */
+.flatpickr-calendar .einv-date-clear {
+  display: block; width: 100%; border: 0; border-top: 1px solid var(--einv-border); background: none;
+  color: var(--einv-primary); font: inherit; font-size: var(--einv-fs-sm, .8125rem); font-weight: 500;
+  padding: .5rem; cursor: pointer; border-radius: 0 0 var(--einv-radius-md) var(--einv-radius-md);
+}
+.flatpickr-calendar .einv-date-clear:hover, .flatpickr-calendar .einv-date-clear:focus-visible { background: var(--einv-surface-2); }

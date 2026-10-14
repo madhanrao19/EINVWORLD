@@ -163,20 +163,8 @@
         transform: translateY(-2px); /* A slight lift up looks more natural for buttons than shifting right */
     }
 
-    /* Force calendar picker to open when clicking anywhere on the input */
-    #filterDate {
-        position: relative;
-    }
-    
-        #filterDate::-webkit-calendar-picker-indicator {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
+    /* Period field: the shared calendar's visible input replaces #filterDate, so size both. */
+    #filterForm .einv-date-display { width: 160px; }
 </style>
 
 <div class="row mb-4">
@@ -213,7 +201,6 @@
                        class="form-control form-control-sm border-0"
                        value="@(Model.FilterType == "Month" ? Model.FilterDate?.ToString("yyyy-MM") : Model.FilterDate?.ToString("yyyy-MM-dd"))"
                        data-default-date="@(Model.FilterDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"))"
-                       style="width: 160px; cursor: pointer;"
                        onkeydown="return false;" />
            
                 <select id="filterYear" class="form-select form-select-sm border-0" style="width: 160px; display: none;">

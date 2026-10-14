@@ -1300,6 +1300,7 @@
                 if (issueDateInput) {
                     flatpickr(issueDateInput, {
                         dateFormat: "Y-m-d H:i",
+                        altFormat: "j M Y, h:i K", // display only; the posted value keeps dateFormat
                         enableTime: true,
                         time_24hr: false,
                         defaultDate: issueDateInput.value || new Date(),
