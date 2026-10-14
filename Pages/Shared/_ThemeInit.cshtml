@@ -1,0 +1,14 @@
+@* First-time visitor, no saved theme (ViewData["EinvTheme"] null — the layout sets it from
+   ThemePreference.Read): follow the OS/browser setting. Render as the very first thing in <head>; it
+   runs synchronously so the attribute lands before anything paints (no flash of the wrong theme).
+   With a saved theme the layout renders data-bs-theme server-side and this outputs nothing.
+   (ViewData, not a model: a null partial model would fall back to the page's model.) *@
+@if (ViewData["EinvTheme"] is not string)
+{
+    <script>
+        (function () {
+            var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.setAttribute("data-bs-theme", dark ? "dark" : "light");
+        })();
+    </script>
+}
