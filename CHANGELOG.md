@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.30.0`** (`AppInfo:Version` in `appsettings.json`). v1.30.0 is a **minor**
+> **Current version: `v1.30.1`** (`AppInfo:Version` in `appsettings.json`). v1.30.1 is a **patch**
+> release: installed-app polish — the status bar follows the in-app theme, pages keep clear of the
+> notch and home indicator, and a maskable Android icon — see the dated entry below. v1.30.0 was a **minor**
 > release: new look, part 1 — IBM Plex Sans, retuned colours and a green-black dark mode, applied
 > app-wide through the shared design tokens (no page markup changes) — see the dated entry below. v1.29.7 was a **patch**
 > release: dark mode fixed system-wide (Create Invoice steps, dialogs, date picker, editor, buttons,
@@ -321,6 +323,26 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.30.1 (installed app: status bar, notch and app icon)
+
+Polish for EinvWorld when it's installed as an app on a phone, tablet or desktop.
+- **Status bar follows your theme:** the browser and status bar colour now follows the theme you
+  picked in EinvWorld, not your phone's setting. Before, choosing dark mode on a phone in light mode
+  left a green bar over a dark app. The toggle repaints the bar straight away, and later pages render
+  it in the right colour from the start. Dark mode uses the new dark page colour (`#0c1411`).
+- **Notch and home bar:** pages now run edge to edge (`viewport-fit=cover`) and keep clear of the
+  iPhone notch in landscape and of the home indicator. The + button, the bulk-action bar, toasts and
+  the phone menu drawer move up or in by the space the phone reserves. Nothing moves on desktops or
+  phones without a notch.
+- **App icon on Android:** a padded "maskable" icon, so launchers that crop icons to a circle or
+  squircle no longer cut off the logo. The splash screen uses the page background colour.
+- Still no service worker, by design: nothing is cached on shared devices.
+- **Tests:** `05-responsive` checks the maskable icon, both theme colours and `viewport-fit=cover`.
+  `14-mobile-shell` checks that the toggle repaints the bar and that a saved theme renders one
+  matching theme-color on every page.
+
+Markup, CSS, JS and one new image only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.30.0 (new look, part 1: colours, font and dark mode)
 
