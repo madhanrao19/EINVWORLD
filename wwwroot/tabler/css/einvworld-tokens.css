@@ -1031,3 +1031,23 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .flatpickr-day.endRange { background: var(--einv-fill); border-color: var(--einv-fill); color: #fff; }
 [data-bs-theme="dark"] .flatpickr-day.inRange { background: rgba(var(--einv-primary-rgb), .15); border-color: transparent; box-shadow: none; }
 [data-bs-theme="dark"] .flatpickr-time { border-top-color: var(--einv-border) !important; }
+
+/* ============================================================
+ * Installed app / notched phones. The layouts use viewport-fit=cover so the page runs edge to edge;
+ * these keep content and the fixed controls clear of the notch (landscape) and the home indicator.
+ * The insets are 0 on desktops and most Android phones, so nothing moves there.
+ * ============================================================ */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.einv-fab {
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+.einv-bulk-bar { bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)); }
+.offcanvas { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.offcanvas-start { padding-left: env(safe-area-inset-left, 0px); }
+.offcanvas-end { padding-right: env(safe-area-inset-right, 0px); }
+.einv-toast-host { margin-bottom: env(safe-area-inset-bottom, 0px); margin-right: env(safe-area-inset-right, 0px); }

@@ -19,6 +19,7 @@
     // system-preference fallback below (must run client-side; the server has no way to know it).
     var einvThemeCookie = Context.Request.Cookies["einv-theme"];
     var einvTheme = einvThemeCookie == "dark" || einvThemeCookie == "light" ? einvThemeCookie : null;
+    ViewData["EinvTheme"] = einvTheme; // _Favicons: browser bar colour follows the saved theme
 }
 <!DOCTYPE html>
 @* Razor conditional attribute: omitted entirely when einvTheme is null. Don't build it as a string —
@@ -26,7 +27,7 @@
 <html lang="en" data-bs-theme="@einvTheme">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     @if (einvTheme == null)
     {
@@ -80,7 +81,7 @@
     </script>
 
     <!-- Bootstrap toast host (id reused by existing app scripts + einvworld.toast helper) -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+    <div class="position-fixed bottom-0 end-0 p-3 einv-toast-host" style="z-index: 1055">
         <div id="toast-success" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body" id="toast-success-message"></div>

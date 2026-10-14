@@ -125,6 +125,18 @@
       btn.setAttribute("aria-pressed", String(isDark));
       btn.setAttribute("title", isDark ? "Switch to light mode" : "Switch to dark mode");
     }
+    // Repaint the browser/status bar (installed app) to match the chosen theme; colours come from
+    // the theme-color tags themselves (_Favicons). Dropping `media` makes the explicit choice win
+    // over the OS setting until the next page load renders it server-side.
+    function reflectThemeColor() {
+      var theme = currentTheme();
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+        var color = meta.getAttribute(theme === "dark" ? "data-dark" : "data-light");
+        if (!color) return;
+        meta.setAttribute("content", color);
+        meta.removeAttribute("media");
+      });
+    }
 
     reflectState();
     btn.addEventListener("click", function () {
@@ -134,6 +146,7 @@
       // no Secure flag forced — the app is also served over plain HTTP behind the Cloudflare tunnel.
       document.cookie = COOKIE_NAME + "=" + next + "; Path=/; Max-Age=31536000; SameSite=Lax";
       reflectState();
+      reflectThemeColor();
     });
   }
 
