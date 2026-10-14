@@ -1,3 +1,4 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
 @*
     Tabler parallel layout (migration foundation). PARALLEL & OPT-IN: no page uses this by default —
     a view opts in with `@{ Layout = "_LayoutTabler"; }`. Velzon `_Layout` remains the default.
@@ -19,6 +20,9 @@
     // system-preference fallback below (must run client-side; the server has no way to know it).
     var einvTheme = eInvWorld.Helpers.ThemePreference.Read(Context);
     ViewData["EinvTheme"] = einvTheme; // _ThemeInit + _Favicons follow the saved theme
+    var einvUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var einvUid = string.IsNullOrEmpty(einvUserId) ? "" : Convert.ToHexString(
+        System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(einvUserId)))[..16];
 }
 <!DOCTYPE html>
 @* Renders data-bs-theme="" when einvTheme is null (Razor always emits data-* attributes); _ThemeInit sets it before paint. Don't build it as a string —
@@ -27,6 +31,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    @* Shared scripts (einvworld-table.js) send this antiforgery token with their saves; einv-uid is a
+       one-way hash of the user id, used only to keep one user's cached table layout from another's. *@
+    <meta name="einv-csrf" content="@Xsrf.GetAndStoreTokens(Context).RequestToken">
+    <meta name="einv-uid" content="@einvUid">
 
     <partial name="_ThemeInit" />
 
