@@ -894,9 +894,10 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .select2-container .select2-selection,
 [data-bs-theme="dark"] .select2-dropdown {
   background-color: var(--einv-surface) !important;
-  border-color: var(--einv-border) !important;
   color: var(--einv-text);
 }
+[data-bs-theme="dark"] .select2-container .select2-selection { border-color: var(--einv-input-border) !important; }
+[data-bs-theme="dark"] .select2-dropdown { border-color: var(--einv-border) !important; }
 [data-bs-theme="dark"] .select2-container .select2-selection__rendered,
 [data-bs-theme="dark"] .select2-results__option {
   color: var(--einv-text) !important;
@@ -1150,3 +1151,90 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 }
 .einv-empty-title { margin: 0; font-size: var(--einv-fs-md); font-weight: 600; color: var(--einv-text); }
 .einv-empty-text { margin: 0; font-size: var(--einv-fs-sm); max-width: 40ch; }
+
+/* ============================================================
+ * Ledger component layer: forms + dialogs (v1.34.0).
+ * ============================================================ */
+/* Plugin stylesheets (Select2, Flatpickr, toastr) load after this file, so their rules here carry
+ * a :root (or extra class) prefix to win at equal specificity.
+ * Form controls: a visible outline (3:1 against the surface, WCAG 1.4.11) and one brand focus ring.
+ * The same for native inputs, Select2 (default + bootstrap-5 themes) and Flatpickr's alt input. */
+.form-control, .form-select,
+:root .select2-container--default .select2-selection,
+:root .select2-container--bootstrap-5 .select2-selection {
+  border-color: var(--einv-input-border);
+  border-radius: var(--einv-radius-sm);
+}
+.form-control:focus, .form-select:focus,
+:root .select2-container--default.select2-container--focus .select2-selection,
+:root .select2-container--default.select2-container--open .select2-selection,
+:root .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+:root .select2-container--bootstrap-5.select2-container--open .select2-selection {
+  border-color: var(--einv-primary);
+  box-shadow: 0 0 0 3px rgba(var(--einv-primary-rgb), .2);
+  outline: 0;
+}
+.form-control::placeholder { color: var(--einv-text-muted); opacity: .8; }
+.form-control:disabled, .form-select:disabled, .form-control[readonly] { background-color: var(--einv-surface-2); }
+.form-label { font-weight: 500; color: var(--einv-text); }
+.form-check-input:checked { background-color: var(--einv-fill); border-color: var(--einv-fill); }
+.form-check-input { border-color: var(--einv-input-border); }
+:root .select2-dropdown { border-color: var(--einv-border); border-radius: var(--einv-radius-sm); box-shadow: var(--einv-shadow-overlay); }
+:root .select2-container--default .select2-results__option--highlighted[aria-selected],
+:root .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
+:root .select2-container--bootstrap-5 .select2-dropdown .select2-results__options .select2-results__option.select2-results__option--highlighted {
+  background-color: rgba(var(--einv-primary-rgb), .12);
+  color: var(--einv-text);
+}
+/* Phones: 16px text in fields so iOS doesn't zoom the page when one is focused. */
+@media (max-width: 767.98px) and (pointer: coarse) {
+  .form-control, .form-select, :root .select2-container .select2-selection, :root .select2-search__field { font-size: 16px; }
+}
+
+/* Flatpickr: brand selection in light mode too (dark mode is styled above). */
+:root .flatpickr-day.selected, :root .flatpickr-day.startRange, :root .flatpickr-day.endRange,
+:root .flatpickr-day.selected:hover, :root .flatpickr-day.startRange:hover, :root .flatpickr-day.endRange:hover {
+  background: var(--einv-fill); border-color: var(--einv-fill); color: #fff;
+}
+:root .flatpickr-day.today { border-color: var(--einv-primary); }
+:root .flatpickr-calendar { border-radius: var(--einv-radius-md); box-shadow: var(--einv-shadow-overlay); }
+
+/* Modals: card radius, rule-separated header/footer, overlay shadow. */
+.modal-content { border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); box-shadow: var(--einv-shadow-overlay); }
+.modal-header, .modal-footer { border-color: var(--einv-border); }
+.modal-title { font-weight: 600; }
+@media (max-width: 575.98px) {
+  .modal-dialog:not(.modal-sm) { margin: 0; max-width: none; min-height: 100%; }
+  .modal-dialog:not(.modal-sm) .modal-content { min-height: 100vh; border-radius: 0; border: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+
+/* SweetAlert2 (confirm/submit/cancel prompts). v11 wraps its own selectors in :where(), so these set
+ * the brand defaults while a call that passes its own confirmButtonColor (inline style) still wins.
+ * This replaces the old Swal.fire() colour patch in both layouts. */
+.swal2-popup { border-radius: var(--einv-radius-md); font-family: var(--einv-font-sans); }
+.swal2-title { color: var(--einv-text); font-weight: 600; }
+.swal2-html-container { color: var(--einv-text-muted); }
+.swal2-styled { border-radius: var(--einv-radius-sm); font-weight: 500; }
+.swal2-styled.swal2-confirm { background-color: var(--einv-fill); color: #fff; }
+.swal2-styled.swal2-confirm:hover { background-image: none; background-color: var(--einv-fill-hover); }
+.swal2-styled.swal2-cancel, .swal2-styled.swal2-deny {
+  background-color: var(--einv-surface); color: var(--einv-text);
+  box-shadow: inset 0 0 0 1px var(--einv-border-strong);
+}
+.swal2-styled.swal2-cancel:hover { background-image: none; background-color: var(--einv-surface-2); }
+.swal2-styled:focus-visible { outline: 2px solid var(--einv-primary); outline-offset: 2px; box-shadow: none; }
+
+/* Toastr: solid, fully opaque toasts with AA white text in both themes (fixed deep tones, not the
+ * theme tones, because the text is always white). */
+#toast-container > div.toast { /* .toast: outranks toastr.min.css, which loads after this file */
+  opacity: 1; border-radius: var(--einv-radius-sm); box-shadow: var(--einv-shadow-overlay);
+  font-family: var(--einv-font-sans);
+}
+#toast-container > div.toast:hover { box-shadow: var(--einv-shadow-overlay); }
+#toast-container > .toast-success { background-color: #006948; }
+#toast-container > .toast-error   { background-color: #a3271f; }
+#toast-container > .toast-warning { background-color: #8a4b00; }
+#toast-container > .toast-info    { background-color: #1d4f91; }
+#toast-container.toast-bottom-right, #toast-container.toast-bottom-center, #toast-container.toast-bottom-left {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
