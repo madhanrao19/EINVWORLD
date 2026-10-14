@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.30.1`** (`AppInfo:Version` in `appsettings.json`). v1.30.1 is a **patch**
+> **Current version: `v1.31.0`** (`AppInfo:Version` in `appsettings.json`). v1.31.0 is a **minor**
+> release: new look, part 2a — sortable tables and a Columns menu on every list, sentence-case table
+> headers, and restyled buttons — see the dated entry below. v1.30.1 was a **patch**
 > release: installed-app polish — the status bar follows the in-app theme, pages keep clear of the
 > notch and home indicator, and a maskable Android icon — see the dated entry below. v1.30.0 was a **minor**
 > release: new look, part 1 — IBM Plex Sans, retuned colours and a green-black dark mode, applied
@@ -323,6 +325,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.31.0 (new look, part 2a: tables and buttons)
+
+Second step of the "Ledger" refresh: one shared table behaviour for every list, and restyled buttons.
+- **Columns menu on every list.** Items, Buyers, Companies, Templates, Recurring Invoices, Create from
+  Document, Leads, the Admin code tables, users, logs, audit, sync jobs, webhooks, notifications,
+  resources and AI history all get a **Columns** button. Hide the columns you don't need. The choice is
+  remembered on that browser, and "Reset to default" brings them back. Invoice Lists keeps its own
+  Customize panel.
+- **Sorting.** Lists that show every row on one page now sort by any column header (A–Z, amounts,
+  dates), with the arrow showing the direction. Paged lists keep sorting on the server, so a sort always
+  covers every record, not just the visible page.
+- **Table headers** are sentence case instead of all caps, at a readable 13px.
+- **Buttons:** the soft-coloured buttons use the shared colours (readable in both themes), outline
+  buttons have a clearer border, and every button shows one consistent keyboard focus ring.
+- New shared script `wwwroot/tabler/js/einvworld-table.js`; pages switch it on with a
+  `data-einv-table` attribute (see `docs/DESIGN.md` → Tables). Date cells whose text doesn't sort
+  (e.g. "14 Oct 2026") carry the ISO date for sorting.
+- **Tests:** new `15-tables.spec.js` checks the Columns menu (hide, remembered after reload, reset)
+  and sorting of text, RM amounts, dates and placeholders in both directions.
+
+Markup attributes, CSS and JS only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.30.1 (installed app: status bar, notch and app icon)
 

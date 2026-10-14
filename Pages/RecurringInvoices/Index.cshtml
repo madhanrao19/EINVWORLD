@@ -65,7 +65,7 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle table-nowrap mb-0" id="recurringProfilesTable">
+                    <table data-einv-table="recurring" data-einv-sort="client" class="table align-middle table-nowrap mb-0" id="recurringProfilesTable">
                         <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
                             <tr>
                                 <th>Profile</th>
@@ -103,14 +103,14 @@
                                                 <i class="ri-time-line align-bottom me-1"></i> @item.Frequency
                                             </span>
                                         </td>
-                                        <td>
+                                        <td data-sort-value="@item.NextRunDate.ToString("yyyy-MM-dd")">
                                             @item.NextRunDate.ToString("dd MMM yyyy")
                                             @if (isDueSoon)
                                             {
                                                 <span class="badge rounded-pill bg-warning-subtle text-warning ms-1">Soon</span>
                                             }
                                         </td>
-                                        <td>
+                                        <td data-sort-value="@(lastRun?.RunTimestamp.ToString("o") ?? "")">
                                             @if (lastRun == null)
                                             {
                                                 <span class="text-muted">Never run</span>
