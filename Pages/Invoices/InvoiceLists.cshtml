@@ -163,24 +163,6 @@
             return "ri-arrow-up-down-line";
         }
 
-        // Compact Stitch status badge classes: soft tinted background + solid semantic text.
-        string LhdnBadgeClass(string? statusId) => statusId switch
-        {
-            "Valid" => "einv-badge einv-badge-success",
-            "Submitted" => "einv-badge einv-badge-warning",
-            "Invalid" => "einv-badge einv-badge-danger",
-            "Cancelled" => "einv-badge einv-badge-danger",
-            _ => "einv-badge einv-badge-neutral"
-        };
-
-        string InternalBadgeClass(string? statusId) => statusId switch
-        {
-            "Valid" or "Completed" => "einv-badge einv-badge-success",
-            "Submitted" or "ValidInternal" => "einv-badge einv-badge-warning",
-            "Invalid" or "RequestReject" or "TransmissionError" => "einv-badge einv-badge-danger",
-            "Cancelled" or "CancelledInternal" => "einv-badge einv-badge-danger",
-            _ => "einv-badge einv-badge-neutral" // Draft & informational states
-        };
     }
 @if (TempData["DeleteMessage"] != null)
     {
@@ -797,7 +779,7 @@
                                                     <td class="col-internal-status" data-label="Internal Status">
                                                         @if (invoice.InternalStatusId == "Invalid" || invoice.InternalStatusId == "RequestReject")
                                                         {
-                                                            <button type="button" class="einv-badge einv-badge-danger border-0"
+                                                            <button type="button" class="@InvoiceStatusBadge.CssClass(invoice.InternalStatusId) border-0"
                                                                     data-invoiceno="@invoice.InvoiceNo"
                                                                     data-uuid="@invoice.UUID"
                                                                     data-submissionid="@invoice.SubmissionID"
@@ -819,26 +801,13 @@
                                                         }
                                                         else
                                                         {
-                                                            var internalIcon = invoice.InternalStatusId switch
-                                                            {
-                                                                "Valid" or "Completed" => "ri-checkbox-circle-line",
-                                                                "Submitted" or "ValidInternal" => "ri-time-line",
-                                                                "Cancelled" or "CancelledInternal" => "ri-close-circle-line",
-                                                                _ => null
-                                                            };
-                                                            <span class="@InternalBadgeClass(invoice.InternalStatusId)">
-                                                                @if (internalIcon != null)
-                                                                {
-                                                                    <i class="@internalIcon"></i>
-                                                                }
-                                                                @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.InternalStatusId, out var internalStatusStr) ? EnumHelper.GetEnumDescription(internalStatusStr) : invoice.InternalStatusId)
-                                                            </span>
+                                                            @InvoiceStatusBadge.Render(invoice.InternalStatusId)
                                                         }
                                                     </td>
                                                     <td class="col-lhdn-status" data-label="LHDN Status">
                                                         @if (invoice.LHDNStatusId == "Invalid")
                                                         {
-                                                            <button type="button" class="einv-badge einv-badge-danger border-0"
+                                                            <button type="button" class="@InvoiceStatusBadge.CssClass("Invalid") border-0"
                                                                     data-invoiceno="@invoice.InvoiceNo"
                                                                     data-uuid="@invoice.UUID"
                                                                     data-submissionid="@invoice.SubmissionID"
@@ -856,20 +825,7 @@
                                                         }
                                                         else
                                                         {
-                                                            var lhdnIcon = invoice.LHDNStatusId switch
-                                                            {
-                                                                "Valid" => "ri-checkbox-circle-line",
-                                                                "Submitted" => "ri-time-line",
-                                                                "Cancelled" => "ri-close-circle-line",
-                                                                _ => null
-                                                            };
-                                                            <span class="@LhdnBadgeClass(invoice.LHDNStatusId)">
-                                                                @if (lhdnIcon != null)
-                                                                {
-                                                                    <i class="@lhdnIcon"></i>
-                                                                }
-                                                                @(Enum.TryParse<eInvWorld.Models.StatusCodes>(invoice.LHDNStatusId, out var lhdnStatus) ? EnumHelper.GetEnumDescription(lhdnStatus) : invoice.LHDNStatusId)
-                                                            </span>
+                                                            @InvoiceStatusBadge.Render(invoice.LHDNStatusId)
                                                         }
                                                     </td>
                                                     <td class="col-created-by truncate" data-label="Created By" title="@invoice.CreatedBy">@invoice.CreatedBy</td>
