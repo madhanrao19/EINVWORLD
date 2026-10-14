@@ -1265,6 +1265,10 @@ body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bo
 }
 
 @media (min-width: 992px) {
+  /* Tabler shifts <html> right by the scrollbar width (margin-left: calc(100vw - 100%)) to stop
+   * layout jumps, but the fixed sidebar doesn't move, leaving a ~15px strip beside it on desktops
+   * with classic scrollbars. A stable gutter stops the jump without the shift. */
+  :root { margin-left: 0; scrollbar-gutter: stable; }
   /* Logo left with the collapse chevron beside it (was centred above it, costing a whole row). */
   .navbar-vertical.navbar-expand-lg .navbar-brand { justify-content: flex-start; padding: .75rem 3rem .75rem .5rem; }
   #einv-sidebar-collapse-toggle { position: absolute; top: 1.125rem; right: .5rem; }
