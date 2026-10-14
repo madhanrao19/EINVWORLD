@@ -4,7 +4,10 @@
  * no build step, self-hosted, offline-friendly. Does not affect the Velzon layout (only pages
  * that opt into _LayoutTabler load this file).
  */
-:root {
+/* `[data-bs-theme="light"]` too (as Tabler does): a light island inside a dark page — the A4 invoice
+ * sheet — gets the light token values instead of inheriting the dark ones from <html>. */
+:root,
+[data-bs-theme="light"] {
   /* Brand palette — "EinvWorld Professional" (Stitch design direction, 2026-07).
    * Deep compliance green; hover is one step darker, container one step lighter. */
   --einv-primary: #006948;
@@ -15,18 +18,54 @@
   /* Legacy alias — older rules/pages reference --einv-primary-dark for the darker brand tone. */
   --einv-primary-dark: #005137;
 
-  /* Canvas + surfaces: cool gray-blue page canvas vs pure-white component cards. */
-  --einv-page-bg: #f6f8fb;
+  /* Canvas + surfaces ("Ledger", 2026-10): neutrals carry a slight green bias toward the brand so
+   * they read as chosen, not inherited. Muted text is >= 7:1 on white; every pair is listed with its
+   * contrast ratio in docs/DESIGN.md. */
+  --einv-page-bg: #f5f7f6;
   --einv-surface: #ffffff;
-  --einv-text: #171d19;
-  --einv-text-muted: #3d4a42;
-  --einv-border: #e6e8eb;
+  --einv-surface-2: #f0f3f1;     /* hover rows, quiet fills, search field */
+  --einv-text: #14201a;
+  --einv-text-muted: #4a5a51;
+  --einv-border: #dfe5e1;        /* card/table rules (decorative) */
+  --einv-border-strong: #c6d0ca; /* secondary-button outlines */
+  --einv-input-border: #7d8d84;  /* form-control outlines: 3.5:1 on white (WCAG 1.4.11) */
+  --einv-table-head: #eef2ef;
+  --einv-chart-grid: #eef1ef;
 
-  /* Semantic states (status badges, alerts, validation). */
+  /* Semantic states (solid fills: Tabler buttons/alerts). */
   --einv-success: #10b981;
   --einv-warning: #f59e0b;
   --einv-error: #ef4444;
   --einv-info: #0ea5e9;
+
+  /* Semantic tones for text-on-tint (badges, pills, notices). Each fg/bg pair is >= 4.5:1 in both
+   * themes; dark mode redefines them below, so rules using these need no dark override. */
+  --einv-tone-success-fg: #0a5c3f; --einv-tone-success-bg: #e3f2ea;
+  --einv-tone-warning-fg: #8a4b00; --einv-tone-warning-bg: #fdf0dc;
+  --einv-tone-danger-fg:  #a3271f; --einv-tone-danger-bg:  #fbe9e7;
+  --einv-tone-info-fg:    #1d4f91; --einv-tone-info-bg:    #e6eefa;
+  --einv-tone-neutral-fg: #4a5a51; --einv-tone-neutral-bg: #eceFed;
+  --einv-tone-muted-fg:   #5b4f45; --einv-tone-muted-bg:   #f1ece6;
+  /* Invoice status → tone. Statuses map to tones here only, so a status can change colour in one place. */
+  --einv-status-valid-fg: var(--einv-tone-success-fg);     --einv-status-valid-bg: var(--einv-tone-success-bg);
+  --einv-status-submitted-fg: var(--einv-tone-info-fg);    --einv-status-submitted-bg: var(--einv-tone-info-bg);
+  --einv-status-draft-fg: var(--einv-tone-neutral-fg);     --einv-status-draft-bg: var(--einv-tone-neutral-bg);
+  --einv-status-invalid-fg: var(--einv-tone-danger-fg);    --einv-status-invalid-bg: var(--einv-tone-danger-bg);
+  --einv-status-rejected-fg: var(--einv-tone-warning-fg);  --einv-status-rejected-bg: var(--einv-tone-warning-bg);
+  --einv-status-cancelled-fg: var(--einv-tone-muted-fg);   --einv-status-cancelled-bg: var(--einv-tone-muted-bg);
+
+  /* Type: IBM Plex Sans (self-hosted, OFL — wwwroot/tabler/fonts). Scale ~1.2, 14px body. */
+  --einv-font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --einv-fs-xs: .75rem; --einv-fs-sm: .8125rem; --einv-fs-base: .875rem; --einv-fs-md: 1rem;
+  --einv-fs-lg: 1.25rem; --einv-fs-xl: 1.5rem; --einv-fs-2xl: 1.875rem;
+
+  /* Shape: radius by hierarchy (controls 6px, cards/modals 10px, pills round); rules, not shadows,
+   * separate cards — the only shadow is on overlays. Spacing follows a 4px step. */
+  --einv-radius-sm: 6px; --einv-radius-md: 10px; --einv-radius-pill: 9999px;
+  --einv-shadow-card: none;
+  --einv-shadow-overlay: 0 12px 32px rgba(20, 32, 26, .16);
+  --einv-space-1: .25rem; --einv-space-2: .5rem; --einv-space-3: .75rem; --einv-space-4: 1rem;
+  --einv-space-5: 1.25rem; --einv-space-6: 1.5rem; --einv-space-8: 2rem;
 
   /* Map Tabler's tokens onto the brand so buttons/links/tabs/active states inherit everywhere. */
   --tblr-primary: var(--einv-primary);
@@ -35,7 +74,15 @@
   --tblr-link-color: var(--einv-primary);
   --tblr-link-hover-color: var(--einv-primary-hover);
   --tblr-body-bg: var(--einv-page-bg);
+  --tblr-body-color: var(--einv-text);
+  --tblr-body-color-rgb: 20, 32, 26;
+  --tblr-secondary-color: var(--einv-text-muted);
   --tblr-border-color: var(--einv-border);
+  --tblr-font-sans-serif: var(--einv-font-sans);
+  --tblr-border-radius: var(--einv-radius-sm);
+  --tblr-border-radius-lg: var(--einv-radius-md);
+  --tblr-shadow-dropdown: var(--einv-shadow-overlay);
+  --tblr-shadow-card: var(--einv-shadow-card);
   --tblr-success: var(--einv-success);
   --tblr-success-rgb: 16, 185, 129;
   --tblr-warning: var(--einv-warning);
@@ -60,16 +107,42 @@
   --einv-fill-hover: var(--einv-primary-hover);
 }
 
-/* Dark mode: only the canvas/surface/text/border tokens need to flip — every rule elsewhere in this
- * file that uses var(--einv-page-bg|surface|text|text-muted|border) picks this up automatically.
- * Values match Tabler's own dark palette (tabler.min.css gray-900/800/700/200/400) so the rebrand
- * blends with Tabler's built-in dark-mode components instead of introducing a second dark palette. */
+/* Dark mode: the canvas/surface/text/border/tone tokens flip — every rule that uses them picks this
+ * up automatically. A green-black ramp ("Ledger", 2026-10) instead of Tabler's gray-900/800 so dark
+ * mode still reads as EinvWorld; Tabler's own dark surface tokens are pointed at the same ramp so its
+ * built-in components (forms, dropdowns, modals) match instead of showing a second, grey palette. */
 [data-bs-theme="dark"] {
-  --einv-page-bg: #111827;
-  --einv-surface: #1f2937;
-  --einv-text: #e5e7eb;
-  --einv-text-muted: #9ca3af;
-  --einv-border: #374151;
+  --einv-page-bg: #0c1411;
+  --einv-surface: #131d19;
+  --einv-surface-2: #1a2621;
+  --einv-text: #e4ebe7;
+  --einv-text-muted: #9fb0a6;
+  --einv-border: #2a3832;
+  --einv-border-strong: #3a4a43;
+  --einv-input-border: #5f736a;
+  --einv-table-head: #17221e;
+  --einv-chart-grid: #1f2b26;
+  --einv-shadow-overlay: 0 12px 32px rgba(0, 0, 0, .5);
+
+  --einv-tone-success-fg: #7fe0b4; --einv-tone-success-bg: #12342a;
+  --einv-tone-warning-fg: #f2c27a; --einv-tone-warning-bg: #3a2a12;
+  --einv-tone-danger-fg:  #f5a59c; --einv-tone-danger-bg:  #3d1a17;
+  --einv-tone-info-fg:    #a8c6f5; --einv-tone-info-bg:    #182a44;
+  --einv-tone-neutral-fg: #b5c3bb; --einv-tone-neutral-bg: #1f2b26;
+  --einv-tone-muted-fg:   #cbbfb0; --einv-tone-muted-bg:   #2c2620;
+
+  --tblr-body-bg: var(--einv-page-bg);
+  --tblr-body-bg-rgb: 12, 20, 17;
+  --tblr-body-color: var(--einv-text);
+  --tblr-body-color-rgb: 228, 235, 231;
+  --tblr-secondary-color: var(--einv-text-muted);
+  --tblr-secondary-bg: var(--einv-surface);
+  --tblr-tertiary-bg: var(--einv-surface-2);
+  --tblr-bg-surface: var(--einv-surface);
+  --tblr-bg-surface-secondary: var(--einv-page-bg);
+  --tblr-bg-surface-tertiary: var(--einv-surface-2);
+  --tblr-bg-forms: var(--einv-page-bg);
+  --tblr-border-color: var(--einv-border);
 
   /* The brand green #006948 is ~2:1 on these dark surfaces, so links, active nav, breadcrumbs and
    * outline buttons were barely visible. Dark mode uses a lighter green for TEXT/accents (~8:1) and
@@ -92,11 +165,14 @@
   border-color: var(--einv-fill-hover);
 }
 
-/* Cards: 1px subtle border + very soft ambient shadow (flat, professional). */
+/* Cards: 1px rule, no shadow (a rule separates; shadows are kept for overlays). */
 .card {
   border-color: var(--einv-border);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .02);
+  box-shadow: var(--einv-shadow-card);
 }
+
+/* Digits line up in every table (RM amounts, quantities, TINs, dates). */
+.table td, .table th { font-variant-numeric: tabular-nums; }
 
 /* Light sidebar (Navigation Master): white surface, subtle divider, green active states. */
 .navbar-vertical.navbar-expand-lg {
@@ -148,23 +224,13 @@
 
 /* ── "EinvWorld Professional" signature elements (Stitch design system) ─────────────────── */
 
-/* Self-hosted Inter (variable, latin subset, OFL licence — wwwroot/tabler/fonts). Tabler's font
- * stack already prefers "Inter Var"/Inter, so providing the face makes the whole app render the
- * design's typeface with zero markup changes and no font CDN. */
-@font-face {
-  font-family: "Inter Var";
-  src: url("../fonts/inter-latin-var.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Inter";
-  src: url("../fonts/inter-latin-var.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* Self-hosted IBM Plex Sans (latin subset, OFL — wwwroot/tabler/fonts/OFL.txt). --tblr-font-sans-serif
+ * points at --einv-font-sans, so every page renders it with zero markup changes and no font CDN.
+ * 400/500/600/700 are real faces so bold text is never synthesised. */
+@font-face { font-family: "IBM Plex Sans"; src: url("../fonts/ibm-plex-sans-latin-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("../fonts/ibm-plex-sans-latin-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("../fonts/ibm-plex-sans-latin-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans"; src: url("../fonts/ibm-plex-sans-latin-700.woff2") format("woff2"); font-weight: 700 900; font-style: normal; font-display: swap; }
 
 /* Status pills in tables: 10-12% tinted background of the semantic colour + solid darker text +
  * a leading semantic icon (Remix glyph via ::before, skipped when the badge already carries its
@@ -184,16 +250,16 @@ td .badge:not(:has(i))::before {
   font-weight: 400;
   line-height: 1;
 }
-td .badge.bg-success { background-color: rgba(16, 185, 129, .12) !important; color: #047857 !important; }
+td .badge.bg-success { background-color: var(--einv-tone-success-bg) !important; color: var(--einv-tone-success-fg) !important; }
 td .badge.bg-success:not(:has(i))::before { content: "\eb81"; } /* ri-checkbox-circle-line */
-td .badge.bg-danger { background-color: rgba(239, 68, 68, .12) !important; color: #b91c1c !important; }
+td .badge.bg-danger { background-color: var(--einv-tone-danger-bg) !important; color: var(--einv-tone-danger-fg) !important; }
 td .badge.bg-danger:not(:has(i))::before { content: "\eca1"; } /* ri-error-warning-line */
-td .badge.bg-warning { background-color: rgba(245, 158, 11, .15) !important; color: #b45309 !important; }
+td .badge.bg-warning { background-color: var(--einv-tone-warning-bg) !important; color: var(--einv-tone-warning-fg) !important; }
 td .badge.bg-warning:not(:has(i))::before { content: "\f20f"; } /* ri-time-line */
-td .badge.bg-info { background-color: rgba(14, 165, 233, .12) !important; color: #0369a1 !important; }
+td .badge.bg-info { background-color: var(--einv-tone-info-bg) !important; color: var(--einv-tone-info-fg) !important; }
 td .badge.bg-info:not(:has(i))::before { content: "\f0da"; } /* ri-send-plane-line */
 td .badge.bg-dark,
-td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; color: #3d4a42 !important; }
+td .badge.bg-secondary { background-color: var(--einv-tone-neutral-bg) !important; color: var(--einv-tone-neutral-fg) !important; }
 
 /* Solid badges outside table cells (page headers, detail views, status pills): Tabler's own .badge
  * base rule defaults text to --tblr-secondary (a mid-gray) regardless of background — bg-success/
@@ -209,19 +275,16 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
 
 /* Table headers: subtle green-tinted fill with tracking-heavy uppercase labels (DESIGN.md). */
 .table thead th {
-  background-color: #e9efe9 !important;
+  background-color: var(--einv-table-head) !important;
   color: var(--einv-text-muted);
   font-size: .72rem;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-[data-bs-theme="dark"] .table thead th {
-  background-color: rgba(var(--einv-primary-rgb), .16) !important;
-}
 
 /* Topbar search: quiet rounded pill with an inline magnifier, brand focus ring. */
 .app-search .form-control {
-  background: #f1f5f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236d7a72' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat .75rem center;
+  background: var(--einv-surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236d7a72' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat .75rem center;
   background-size: 1rem;
   border: 1px solid transparent;
   border-radius: .5rem;
@@ -229,9 +292,9 @@ td .badge.bg-secondary { background-color: rgba(61, 74, 66, .10) !important; col
   min-width: 16rem;
 }
 .app-search .form-control:focus {
-  background-color: #fff;
+  background-color: var(--einv-surface);
   border-color: var(--einv-primary);
-  box-shadow: 0 0 0 .2rem rgba(0, 105, 72, .10);
+  box-shadow: 0 0 0 .2rem rgba(var(--einv-primary-rgb), .12);
 }
 [data-bs-theme="dark"] .app-search .form-control {
   background-color: rgba(255, 255, 255, .06);
@@ -517,7 +580,7 @@ pre { overflow-x: auto; max-width: 100%; }
 
 /* Tinted table header (Stitch #e9efe9 family) with quiet uppercase labels. */
 #invoiceTable thead.einv-table-head th {
-  background-color: #eef4ef;
+  background-color: var(--einv-table-head);
   text-transform: uppercase;
   letter-spacing: .04em;
   font-size: .72rem;
@@ -577,10 +640,10 @@ pre { overflow-x: auto; max-width: 100%; }
   white-space: nowrap;
 }
 .einv-badge i { font-size: .85rem; line-height: 1; }
-.einv-badge-success { background: rgba(16, 185, 129, .12); color: #047857; }
-.einv-badge-warning { background: rgba(245, 158, 11, .14); color: #b45309; }
-.einv-badge-danger { background: rgba(239, 68, 68, .12); color: #b91c1c; }
-.einv-badge-neutral { background: rgba(100, 116, 139, .12); color: #475569; }
+.einv-badge-success { background: var(--einv-tone-success-bg); color: var(--einv-tone-success-fg); }
+.einv-badge-warning { background: var(--einv-tone-warning-bg); color: var(--einv-tone-warning-fg); }
+.einv-badge-danger { background: var(--einv-tone-danger-bg); color: var(--einv-tone-danger-fg); }
+.einv-badge-neutral { background: var(--einv-tone-neutral-bg); color: var(--einv-tone-neutral-fg); }
 button.einv-badge { cursor: pointer; }
 
 /* Numbered pager: brand-green active page. */
@@ -664,7 +727,7 @@ button.einv-badge { cursor: pointer; }
  * so the row-action dropdown-clipping fix also applies.
  * ============================================================ */
 .einv-mobile-stack thead.einv-table-head th {
-  background-color: #eef4ef;
+  background-color: var(--einv-table-head);
   text-transform: uppercase;
   letter-spacing: .04em;
   font-size: .72rem;
@@ -673,10 +736,6 @@ button.einv-badge { cursor: pointer; }
   white-space: nowrap;
   border-bottom: 1px solid var(--einv-border);
   padding: .6rem .6rem;
-}
-[data-bs-theme="dark"] #invoiceTable thead.einv-table-head th,
-[data-bs-theme="dark"] .einv-mobile-stack thead.einv-table-head th {
-  background-color: rgba(var(--einv-primary-rgb), .16);
 }
 .einv-mobile-stack thead.einv-table-head th a { color: inherit; text-decoration: none; }
 .einv-mobile-stack thead.einv-table-head th a:hover { color: var(--einv-primary); }
@@ -839,11 +898,7 @@ button.einv-badge { cursor: pointer; }
   --tblr-btn-color: var(--einv-text);
   --tblr-btn-border-color: var(--einv-border);
 }
-/* Semantic tints are the light-mode 700 shades (~3:1 on dark); use the 300/400 shades instead. */
-[data-bs-theme="dark"] .einv-badge-success { color: #6ee7b7; }
-[data-bs-theme="dark"] .einv-badge-warning { color: #fcd34d; }
-[data-bs-theme="dark"] .einv-badge-danger { color: #fca5a5; }
-[data-bs-theme="dark"] .einv-badge-neutral { color: #cbd5e1; }
+/* Velzon soft buttons still use fixed light-mode text tones (retargeted to tone tokens in the component pass). */
 [data-bs-theme="dark"] .btn-soft-success { color: #6ee7b7; }
 [data-bs-theme="dark"] .btn-soft-danger { color: #fca5a5; }
 [data-bs-theme="dark"] .btn-soft-warning { color: #fcd34d; }
@@ -891,13 +946,7 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .btn-secondary { --tblr-btn-bg: #4b5563; --tblr-btn-border-color: #4b5563; --tblr-btn-hover-bg: #6b7280; --tblr-btn-hover-border-color: #6b7280; --tblr-btn-active-bg: #6b7280; --tblr-btn-color: #fff; --tblr-btn-hover-color: #fff; }
 [data-bs-theme="dark"] .btn-warning { --tblr-btn-color: #1f2937; --tblr-btn-hover-color: #111827; --tblr-btn-active-color: #111827; }
 
-/* Table status badges (td .badge.bg-*): light-mode 700 text tones -> 300 tones on dark. */
-[data-bs-theme="dark"] td .badge.bg-success { color: #6ee7b7 !important; }
-[data-bs-theme="dark"] td .badge.bg-danger { color: #fca5a5 !important; }
-[data-bs-theme="dark"] td .badge.bg-warning { color: #fcd34d !important; }
-[data-bs-theme="dark"] td .badge.bg-info { color: #7dd3fc !important; }
-[data-bs-theme="dark"] td .badge.bg-dark,
-[data-bs-theme="dark"] td .badge.bg-secondary { background-color: rgba(255, 255, 255, .08) !important; color: #d1d5db !important; }
+/* Table status badges (td .badge.bg-*) use the tone tokens, which already flip in dark mode. */
 
 /* Active pill/tab text is drawn in --tblr-primary (the fill green): use the readable text green. */
 [data-bs-theme="dark"] .nav-pills { --tblr-nav-pills-link-active-color: var(--einv-primary); }

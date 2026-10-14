@@ -4,13 +4,13 @@
  * Light centered-card look: cool-gray dotted canvas, white card with subtle border, the colour logo
  * above the card, deep compliance-green primary action. Selectors are unchanged from the previous
  * design — only values changed — so the auth PAGE markup (form ids, Turnstile, password toggle)
- * needs no edits. Font: Inter-first with the system fallback (self-hosted policy — no font CDN).
+ * needs no edits. Font and colours come from the shared tokens (einvworld-tokens.css), self-hosted.
  */
 :root {
-  --einv-auth-ink: #171d19;
-  --einv-auth-muted: #3d4a42;
-  --einv-auth-line: #e6e8eb;
-  --einv-auth-field-bg: #f8f9fb;
+  --einv-auth-ink: var(--einv-text);
+  --einv-auth-muted: var(--einv-text-muted);
+  --einv-auth-line: var(--einv-border);
+  --einv-auth-field-bg: var(--einv-surface);
 }
 
 /* Tabler's base CSS sets `:root { margin-left: calc(100vw - 100%) }` (Bootstrap 5.3's scrollbar-width
@@ -25,9 +25,9 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
   margin: 0;
   display: flex;
   flex-direction: column;
-  font-family: "Inter Var", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--einv-font-sans);
   color: var(--einv-auth-ink);
-  background-color: var(--einv-page-bg, #f6f8fb);
+  background-color: var(--einv-page-bg);
 }
 
 /* The Velzon gradient hero band is retired in this design: hide the shim band entirely. */
@@ -167,8 +167,8 @@ html { margin-left: 0 !important; margin-right: 0 !important; }
 .einv-auth .form-label { font-weight: 600; font-size: .9rem; color: var(--einv-auth-ink); margin-bottom: .4rem; }
 .einv-auth .form-control {
   background: var(--einv-auth-field-bg);
-  border: 1px solid var(--einv-auth-line);
-  border-radius: 4px;
+  border: 1px solid var(--einv-input-border);
+  border-radius: var(--einv-radius-sm);
   padding: .7rem .9rem;
   font-size: 1rem;
   color: var(--einv-auth-ink);
