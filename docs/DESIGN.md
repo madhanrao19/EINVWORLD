@@ -365,6 +365,23 @@ Support where applicable:
 - Keyboard accessibility (arrow/tab navigation, operable row actions)
 - Responsive fallback
 
+**Sorting and column visibility** come from one shared script, `wwwroot/tabler/js/einvworld-table.js`
+(loaded by `_LayoutTabler`). Pages switch it on with attributes and never write their own:
+
+- `<table data-einv-table="key">` adds a **Columns** menu above the table. Users hide or show columns;
+  the choice is kept per browser under `einv-cols:key`, with a "Reset to default" option.
+- Adding `data-einv-sort="client"` turns on click-to-sort headers (text, RM amounts, dates), both
+  directions, with `aria-sort`. Use it **only** for tables that hold their whole list on the page. Paged
+  lists sort on the server through their header links; never sort a single page in the browser.
+- Put `data-sort-value` on a cell when the shown text doesn't sort (for example a `dd MMM yyyy` date:
+  put the ISO date there). `data-col-lock` keeps a column always shown; `data-col-default="hidden"` hides
+  it until the user turns it on; `data-sort="none"` turns sorting off for one column. Empty headers,
+  "Action"/"Actions", `col-action` and `col-checkbox` are never sortable or hideable.
+- Invoice Lists keeps its own Customize panel (saved views). Don't add `data-einv-table` there.
+
+Header labels are sentence case, not all caps. A long list can wrap its table in `.einv-table-sticky`
+for a sticky header inside its own scroll box.
+
 Row hierarchy: primary identifying column (e.g. Invoice No) reads clearly against
 secondary/metadata columns — do not give every column equal visual weight.
 
