@@ -1,0 +1,13 @@
+@model DateTime
+@* LHDN validation seal for Invoice Details (Ledger design): shown only for a validated invoice.
+   Decorative ring text; the accessible name carries the meaning. Date is the stored validation
+   timestamp, formatted like the rest of the page. *@
+<svg class="einv-seal" viewBox="0 0 200 200" role="img" aria-label="Validated by LHDN MyInvois on @Model.ToString("d MMMM yyyy")">
+    <defs><path id="einv-seal-ring" d="M100,100 m-80,0 a80,80 0 1,1 160,0 a80,80 0 1,1 -160,0" /></defs>
+    <circle class="einv-seal-rim" cx="100" cy="100" r="96" fill="none" stroke-width="3" />
+    <circle class="einv-seal-rim" cx="100" cy="100" r="90" fill="none" stroke-width="1" />
+    <text class="einv-seal-ring" aria-hidden="true"><textPath href="#einv-seal-ring">VALIDATED ✦ LHDN MYINVOIS ✦</textPath></text>
+    <circle class="einv-seal-core" cx="100" cy="100" r="64" stroke-width="2" />
+    <path d="M80 92l14 14 26-28" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+    <text class="einv-seal-date" x="100" y="134" text-anchor="middle" aria-hidden="true">@Model.ToString("dd MMM yyyy").ToUpperInvariant()</text>
+</svg>

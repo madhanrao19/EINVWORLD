@@ -1082,3 +1082,31 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 .table thead th a:hover { color: var(--einv-text); }
 
 .einv-table-tools .btn { gap: .35rem; }
+
+/* ============================================================
+ * Ledger component layer: invoice status badges + LHDN seal (v1.32.0).
+ * Badges come from Helpers/InvoiceStatusBadge (einv-badge einv-status-{tone}); colours are the
+ * --einv-status-* tokens, so a status changes colour in one place and both themes stay AA.
+ * ============================================================ */
+.einv-status-valid     { background: var(--einv-status-valid-bg);     color: var(--einv-status-valid-fg); }
+.einv-status-submitted { background: var(--einv-status-submitted-bg); color: var(--einv-status-submitted-fg); }
+.einv-status-draft     { background: var(--einv-status-draft-bg);     color: var(--einv-status-draft-fg); }
+.einv-status-invalid   { background: var(--einv-status-invalid-bg);   color: var(--einv-status-invalid-fg); }
+.einv-status-rejected  { background: var(--einv-status-rejected-bg);  color: var(--einv-status-rejected-fg); }
+.einv-status-cancelled { background: var(--einv-status-cancelled-bg); color: var(--einv-status-cancelled-fg); }
+.einv-badge { font-size: var(--einv-fs-xs); }
+.einv-badge-lg { font-size: var(--einv-fs-sm); padding: .3rem .75rem; }
+
+/* LHDN validation seal (Invoice Details only — the one place the seal gold appears). */
+:root, [data-bs-theme="light"] { --einv-seal: #b8862f; }
+[data-bs-theme="dark"] { --einv-seal: #d4a24e; }
+.einv-seal { width: 112px; height: 112px; flex: none; color: var(--einv-primary); }
+.einv-seal .einv-seal-rim { stroke: var(--einv-seal); }
+.einv-seal .einv-seal-ring { fill: var(--einv-seal); font: 700 15px var(--einv-font-sans); letter-spacing: .12em; }
+.einv-seal .einv-seal-core { fill: var(--einv-status-valid-bg); stroke: var(--einv-primary); }
+.einv-seal .einv-seal-date { fill: var(--einv-text); font: 700 17px var(--einv-font-sans); }
+@media (prefers-reduced-motion: no-preference) {
+  .einv-seal { animation: einv-stamp .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+}
+@keyframes einv-stamp { from { transform: scale(1.15) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.einv-meta-label { margin: 0; font-size: var(--einv-fs-xs); color: var(--einv-text-muted); }
