@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.34.2`** (`AppInfo:Version` in `appsettings.json`). v1.34.2 is a **patch**
+> **Current version: `v1.34.3`** (`AppInfo:Version` in `appsettings.json`). v1.34.3 is a **patch**
+> release: removes a thin strip between the sidebar and the page on desktops — see the dated entry
+> below. v1.34.2 was a **patch**
 > release: the app shell (sidebar, top bar, footer) tidied for phones and the collapsed sidebar —
 > see the dated entry below. v1.34.1 was a **patch**
 > release: sign-in and account pages get dark mode and a standards-mode fix — see the dated entry
@@ -336,6 +338,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.34.3 (sidebar gap on desktop)
+
+- **No strip beside the sidebar.** On desktops whose browser shows a normal (non-overlay)
+  scrollbar, Tabler shifted the whole page right by the scrollbar width (about 15px) to stop it
+  jumping, but the fixed sidebar didn't move, leaving a strip between the two (expanded and
+  collapsed). The page now reserves the scrollbar space with `scrollbar-gutter: stable` instead, so
+  nothing jumps and nothing is left uncovered. Found while checking v1.34.2 on Staging.
+- **Tests:** `18-shell.spec.js` asserts the page is no longer shifted.
+
+CSS only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.34.2 (app shell: sidebar, top bar, footer)
 

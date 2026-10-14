@@ -53,6 +53,8 @@ test('desktop: collapsed sidebar hands its width to the page', async ({ page }) 
   await page.goto('/Dashboard/Dashboard', { waitUntil: 'domcontentloaded' });
   const wrapper = page.locator('.page-wrapper');
   const toggle = page.locator('#einv-sidebar-collapse-toggle');
+  // Headless Chrome uses overlay scrollbars, so assert the cause of the classic-scrollbar strip directly.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).marginLeft)).toBe('0px');
   try {
     await toggle.click();
     await expect(page.locator('body')).toHaveClass(/einv-sidebar-collapsed/);
