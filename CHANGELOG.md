@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.34.1`** (`AppInfo:Version` in `appsettings.json`). v1.34.1 is a **patch**
+> **Current version: `v1.34.2`** (`AppInfo:Version` in `appsettings.json`). v1.34.2 is a **patch**
+> release: the app shell (sidebar, top bar, footer) tidied for phones and the collapsed sidebar —
+> see the dated entry below. v1.34.1 was a **patch**
 > release: sign-in and account pages get dark mode and a standards-mode fix — see the dated entry
 > below. v1.34.0 was a **minor**
 > release: new look, part 2d — form fields with visible outlines, and restyled dropdowns, date
@@ -334,6 +336,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.34.2 (app shell: sidebar, top bar, footer)
+
+Second page group of Phase 3 of the "Ledger" refresh.
+- **Phones: one top bar.** The menu button, logo, search, theme switch and avatar now share one row
+  (before, there were two 56px bars). The search box drops down under it.
+- **Phone menu drawer.** The menu fills its panel (it was squeezed into a 194px centred column) and is
+  at most 20rem wide, so the page behind it can still be tapped to close it.
+- **Close buttons visible in dark mode.** A dark-mode rule painted every "x" close button transparent;
+  it is removed (Tabler already colours them from the text colour).
+- **Collapsed desktop sidebar** now gives its width back to the page (a 10rem gap was left). The logo
+  shrinks instead of being cropped, and group labels hide instead of wrapping mid-word. Expanded, the
+  collapse arrow sits beside the logo instead of on its own row.
+- **Footer** stacks and centres on narrow screens, and on the Dashboard it leaves room so the floating
+  "+" button no longer covers the Contact link.
+- **Search:** the clear "x" is a real button with a "Clear search" label, 44px wide on touch screens.
+- Sidebar group labels, the Beta badge and the avatar initial use shared classes instead of inline
+  styles; labels are sentence case.
+- **Tests:** `18-shell.spec.js` covers the single phone bar, the drawer width, the dark-mode close
+  button, the footer/floating-button overlap, and the collapsed sidebar width.
+
+Markup and CSS only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.34.1 (sign-in and account pages: dark mode, standards-mode fix)
 

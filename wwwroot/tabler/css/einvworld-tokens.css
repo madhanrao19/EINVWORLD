@@ -306,6 +306,8 @@ td .badge.bg-secondary { background-color: var(--einv-tone-neutral-bg) !importan
 }
 /* Clear-search "x": sits inside the input's right edge (its Velzon style isn't loaded under Tabler). */
 .app-search .search-widget-icon-close {
+  border: 0;
+  background: none;
   position: absolute;
   top: 50%;
   right: .5rem;
@@ -407,7 +409,8 @@ td .badge.bg-secondary { background-color: var(--einv-tone-neutral-bg) !importan
  * applies at the lg breakpoint where the sidebar is a fixed 15rem column (see tabler.min.css). */
 @media (min-width: 992px) {
   body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg { width: 4.5rem; }
-  body.einv-sidebar-collapsed .page-wrapper { margin-left: 4.5rem; }
+  /* Must out-rank Tabler's .navbar-expand-lg.navbar-vertical~.page-wrapper (15rem), or the content keeps a 10rem gap. */
+  body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg ~ .page-wrapper { margin-left: 4.5rem; }
   body.einv-sidebar-collapsed .navbar-vertical .container-fluid { flex-direction: column; }
   body.einv-sidebar-collapsed .navbar-vertical .navbar-brand { margin: 0 0 .5rem; }
   body.einv-sidebar-collapsed #einv-sidebar-collapse-toggle { margin: 0 0 .5rem; transform: rotate(180deg); }
@@ -944,14 +947,14 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .table-info { --tblr-table-bg: rgba(14, 165, 233, .14); --tblr-table-color: var(--einv-text); --tblr-table-border-color: var(--einv-border); }
 [data-bs-theme="dark"] .table thead th { color: var(--einv-text-muted); }
 
-/* Form add-ons, close buttons, list-group "mode" buttons. */
+/* Form add-ons, list-group "mode" buttons. */
 [data-bs-theme="dark"] .input-group-text:not([data-bs-theme="light"] *) {
   background-color: rgba(255, 255, 255, .04);
   border-color: var(--einv-border);
   color: var(--einv-text-muted);
 }
-[data-bs-theme="dark"] .btn-close { background-color: transparent; }
-[data-bs-theme="dark"] .btn-close:not(.btn-close-white) { filter: invert(1) grayscale(100%) brightness(200%); }
+/* No .btn-close override: Tabler draws the "x" as a currentColor mask, which already follows the
+ * dark text colour (a transparent background-color here made every close button invisible). */
 [data-bs-theme="dark"] .list-group-item-action { background-color: transparent; color: var(--einv-text); }
 [data-bs-theme="dark"] .list-group-item-action.active,
 [data-bs-theme="dark"] .assistant-mode-btn.active {
@@ -1237,4 +1240,71 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 #toast-container > .toast-info    { background-color: #1d4f91; }
 #toast-container.toast-bottom-right, #toast-container.toast-bottom-center, #toast-container.toast-bottom-left {
   margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Ledger 3b: app shell (sidebar, topbar, footer) ─────────────────────────────────────── */
+
+/* Sidebar group labels (Overview, E-Invoicing…): quiet sentence case, no inline styles. */
+.einv-nav-label {
+  font-size: var(--einv-fs-xs);
+  font-weight: 600;
+  color: var(--einv-text-muted);
+}
+.einv-badge-beta { font-size: .625rem; font-weight: 600; vertical-align: middle; }
+.einv-avatar-initial {
+  background: var(--einv-page-bg);
+  color: var(--einv-primary-hover);
+  font-weight: 700;
+}
+.einv-search-scroll { max-height: 320px; overflow: auto; }
+/* The Dashboard's floating "+" sat on top of the footer's Contact link once scrolled to the end. */
+body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+@media (pointer: coarse) {
+  /* Clear-search "x": full input height and 44px wide on touch. */
+  .app-search .search-widget-icon-close { top: 0; bottom: 0; right: 0; width: 44px; transform: none; }
+}
+
+@media (min-width: 992px) {
+  /* Logo left with the collapse chevron beside it (was centred above it, costing a whole row). */
+  .navbar-vertical.navbar-expand-lg .navbar-brand { justify-content: flex-start; padding: .75rem 3rem .75rem .5rem; }
+  #einv-sidebar-collapse-toggle { position: absolute; top: 1.125rem; right: .5rem; }
+  body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg .navbar-brand { justify-content: center; padding: .75rem 0 .25rem; }
+  body.einv-sidebar-collapsed #einv-sidebar-collapse-toggle { position: static; }
+  /* Collapsed (4.5rem): the wordmark was cropped and group labels wrapped mid-word. */
+  body.einv-sidebar-collapsed .navbar-vertical .navbar-brand img { width: 2.75rem !important; height: auto !important; }
+  body.einv-sidebar-collapsed .navbar-vertical .einv-nav-label { display: none; }
+}
+
+@media (max-width: 991.98px) {
+  /* Phones/tablets: one top bar instead of two. The topbar (search, theme, avatar) overlays the
+   * right-hand side of the sidebar row (menu + logo); its search panel drops down underneath. */
+  .page { position: relative; }
+  /* Drawer: Tabler's navbar-collapse centred the whole menu into a 194px column, and the 400px
+   * default width covered the phone with no backdrop left to tap. */
+  #einv-sidebar-menu.offcanvas-lg { --tblr-offcanvas-width: min(20rem, 85vw); align-items: stretch; }
+  #einv-sidebar-menu .offcanvas-header { border-bottom: 1px solid var(--einv-border); }
+  #einv-sidebar-menu .offcanvas-header .btn-close { opacity: .7; }
+  .navbar-vertical.navbar-expand-lg { border-right: 0; border-bottom: 1px solid var(--einv-border); }
+  .navbar-vertical .navbar-brand { margin-right: auto; margin-left: .25rem; }
+  .page-wrapper > header.navbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1020;
+    min-height: 0;
+    background: transparent;
+    border-bottom: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  .page-wrapper > header.navbar > .container-fluid { padding-top: .375rem; }
+  .page-wrapper > header.navbar > .container-fluid > * { pointer-events: auto; }
+  #einv-topbar-content.show,
+  #einv-topbar-content.collapsing {
+    margin-top: .375rem;
+    padding: 0 .5rem .5rem;
+    background: var(--einv-surface);
+    border-bottom: 1px solid var(--einv-border);
+  }
 }
