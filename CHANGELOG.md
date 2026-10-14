@@ -362,10 +362,12 @@
 - Invoice Lists keeps its own Customize panel and saved choices for now; it moves to this menu with the
   invoice-list redesign.
 - How it works: new `api/table-preferences` endpoint (your own account only; saving needs the page's
-  antiforgery token; strict size limits). Stored in the existing `UserPreferences` field. See
+  antiforgery token; strict size limits). Stored in the existing `UserPreferences` field with a
+  compare-and-swap update of that one column, so a concurrent save is never silently lost and the rest of
+  the account record (including its concurrency stamp) is untouched. See
   `docs/DESIGN.md` → Tables and `DOCUMENTATION.md` → HTTP endpoints.
 - **Tests:** `TablePreferencesTests` (validation, limits, keeps Invoice Lists' saved keys, damaged
-  data), `15-tables.spec.js` (hide + reorder survive clearing the browser, drag, keyboard, utility
+  data), `TablePreferencesIntegrationTests` (real SQL Server: column-only write, conflict guard), `15-tables.spec.js` (hide + reorder survive clearing the browser, drag, keyboard, utility
   columns stay put, sort after reorder, rows added later, API security checks, phone menu).
 
 No migration (uses the existing `UserPreferences` column). No config change.

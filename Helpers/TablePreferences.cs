@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using eInvWorld.Data;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -16,6 +18,9 @@ namespace eInvWorld.Helpers
         public List<string> Hidden { get; set; } = new();
         public List<string> Order { get; set; } = new();
     }
+
+    /// <summary>Outcome of <see cref="TablePreferences.SaveAsync"/>.</summary>
+    public enum TablePreferenceSaveResult { Saved, Unchanged, Rejected, Conflict }
 
     /// <summary>Validation and read/write of <see cref="TableColumnPreference"/> entries.</summary>
     public static class TablePreferences
@@ -98,6 +103,35 @@ namespace eInvWorld.Helpers
             }
             var result = root.ToString(Formatting.None);
             return result.Length > MaxTotalJsonLength ? null : result;
+        }
+
+        /// <summary>The user's saved choices for these tables, reading only the preferences column.</summary>
+        public static async Task<Dictionary<string, TableColumnPreference>> LoadAsync(
+            ApplicationDbContext db, string userId, IEnumerable<string> keys, CancellationToken ct = default)
+        {
+            var json = await db.Users.Where(u => u.Id == userId).Select(u => u.UserPreferences).SingleOrDefaultAsync(ct);
+            return Read(json, keys);
+        }
+
+        /// <summary>
+        /// Saves one table's choice with a compare-and-swap on the preferences column alone: the update
+        /// applies only if the column still holds what was read, so a concurrent save is never silently
+        /// lost (it returns <see cref="TablePreferenceSaveResult.Conflict"/>). Unlike
+        /// <c>UserManager.UpdateAsync</c> it leaves the rest of the identity row — and its
+        /// ConcurrencyStamp — alone, so a layout change never fails someone's profile edit in another tab.
+        /// </summary>
+        public static async Task<TablePreferenceSaveResult> SaveAsync(
+            ApplicationDbContext db, string userId, string key, TableColumnPreference pref, CancellationToken ct = default)
+        {
+            var current = await db.Users.Where(u => u.Id == userId).Select(u => u.UserPreferences).SingleOrDefaultAsync(ct);
+            var json = Write(current, key, pref);
+            if (json == null) return TablePreferenceSaveResult.Rejected;
+            if (json == current) return TablePreferenceSaveResult.Unchanged;
+
+            var users = db.Users.Where(u => u.Id == userId);
+            users = current == null ? users.Where(u => u.UserPreferences == null) : users.Where(u => u.UserPreferences == current);
+            var rows = await users.ExecuteUpdateAsync(s => s.SetProperty(u => u.UserPreferences, json), ct);
+            return rows == 1 ? TablePreferenceSaveResult.Saved : TablePreferenceSaveResult.Conflict;
         }
 
         // Unreadable JSON is replaced rather than failing every save (Invoice Lists does the same).
