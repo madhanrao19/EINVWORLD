@@ -5,15 +5,13 @@
 *@
 <footer class="footer footer-transparent d-print-none">
     <div class="container-fluid">
-        <div class="row text-muted align-items-center">
-            <div class="col-6 text-start">
+        <div class="row g-1 align-items-center small">
+            <div class="col-12 col-md text-center text-md-start">
                 <a href="https://www.datamationgroup.com/" class="link-secondary" rel="noopener">
-                    <strong>
-                        © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
-                    </strong>
+                    © eInvWorld @(User.IsInRole("Admin") ? $"| {Configuration["AppInfo:Version"]} " : "")| Datamation Technology (M) Sdn Bhd [199601004511 (376857P)]
                 </a>
             </div>
-            <div class="col-6 text-end">
+            <div class="col-12 col-md-auto text-center text-md-end">
                 <a href="/contact" class="link-secondary">Contact</a>
             </div>
         </div>

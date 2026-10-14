@@ -26,9 +26,9 @@
                 <form class="app-search my-2 my-md-0 position-relative" role="search" onsubmit="return false;">
                     <label for="einv-search-input" class="visually-hidden">Search</label>
                     <input type="text" class="form-control" placeholder="Search..." autocomplete="off" id="einv-search-input">
-                    <span class="mdi mdi-close-circle search-widget-icon-close d-none" id="einv-search-close" aria-hidden="true"></span>
+                    <button type="button" class="search-widget-icon-close d-none" id="einv-search-close" aria-label="Clear search"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
                     <div class="dropdown-menu dropdown-menu-lg w-100" id="einv-search-dropdown">
-                        <div style="max-height: 320px; overflow:auto;">
+                        <div class="einv-search-scroll">
                             <div id="einv-search-results"></div>
                         </div>
                     </div>
