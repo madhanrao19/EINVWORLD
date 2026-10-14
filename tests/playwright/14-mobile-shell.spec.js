@@ -87,6 +87,10 @@ for (const role of ['supplier', 'buyer', 'admin']) {
     try {
       if (await page.locator('html').getAttribute('data-bs-theme') !== 'dark') await page.click('#einv-theme-toggle');
       await expect(page.locator('html')).toHaveAttribute('data-bs-theme', 'dark');
+      // The toggle repaints the browser/status bar at once (installed app), whatever the OS theme.
+      for (const meta of await page.locator('meta[name="theme-color"]').all()) {
+        await expect(meta).toHaveAttribute('content', '#0c1411');
+      }
 
       const links = (await page.$$eval('aside.navbar-vertical a[href^="/"]', as => [...new Set(as.map(a => a.getAttribute('href')))]))
         .filter(h => !/logout/i.test(h)).slice(0, 6);
@@ -94,7 +98,9 @@ for (const role of ['supplier', 'buyer', 'admin']) {
         await page.goto(href, { waitUntil: 'domcontentloaded' });
         await expect(page.locator('html'), `theme on ${href}`).toHaveAttribute('data-bs-theme', 'dark');
         await expect(page.locator('link[rel="manifest"]'), `manifest on ${href}`).toHaveCount(1);
-        await expect(page.locator('meta[name="theme-color"]'), `theme-color on ${href}`).toHaveCount(2);
+        // A saved theme renders one theme-color in that theme's colour, not the OS-dependent pair.
+        await expect(page.locator('meta[name="theme-color"]'), `theme-color on ${href}`).toHaveCount(1);
+        await expect(page.locator('meta[name="theme-color"]'), `theme-color on ${href}`).toHaveAttribute('content', '#0c1411');
       }
     } finally {
       // Leave the shared demo account's browser state as found (cookie is per test context anyway).
