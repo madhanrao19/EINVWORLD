@@ -32,6 +32,7 @@ test.skip(process.env.RUN_VISUAL_AUDIT !== '1', 'visual audit runs only with RUN
 const OUT = 'temp/ui-screenshots';
 const WIDTHS = [
   { name: 'mobile-360', width: 360, height: 800 },
+  { name: 'mobile-390', width: 390, height: 844 },
   { name: 'tablet-768', width: 768, height: 1024 },
   { name: 'laptop-1366', width: 1366, height: 768 },
   { name: 'desktop-1920', width: 1920, height: 1080 },
@@ -52,7 +53,15 @@ const AUTH_PAGES = [
   { name: 'invoices-draft', path: '/Invoices/InvoiceLists?invoiceDirection=Draft' },
   { name: 'invoices-sent', path: '/Invoices/InvoiceLists?invoiceDirection=Sent' },
   { name: 'invoices-received', path: '/Invoices/InvoiceLists?invoiceDirection=Received' },
+  { name: 'create-invoice', path: '/Invoices/CreateInvoice' },
+  { name: 'items', path: '/Items/Index' },
+  { name: 'buyers', path: '/PublicCustomer/List' },
+  { name: 'profile', path: '/Profile/Index' },
 ];
+
+// Signed-in pages are captured in both themes. The theme is the server-rendered einv-theme cookie
+// (what the topbar toggle writes), so the first paint is already in the right theme.
+const THEMES = ['light', 'dark'];
 
 test.describe('visual audit — restyled pages', () => {
   test('anonymous pages at all breakpoints', async ({ browser }) => {
@@ -75,17 +84,23 @@ test.describe('visual audit — restyled pages', () => {
     }
   });
 
-  test('authenticated pages at all breakpoints (supplier)', async ({ browser }) => {
-    test.setTimeout(600000);
+  test('authenticated pages at all breakpoints and themes (supplier)', async ({ browser, baseURL }) => {
+    test.setTimeout(1200000);
     for (const bp of WIDTHS) {
       const ctx = await browser.newContext({ viewport: { width: bp.width, height: bp.height } });
       const page = await ctx.newPage();
       try {
         await login(page, 'supplier');
-        for (const p of AUTH_PAGES) {
-          await page.goto(p.path, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await page.waitForTimeout(800);
-          await robustScreenshot(page, `${OUT}/${p.name}-${bp.name}.png`, false);
+        for (const theme of THEMES) {
+          await ctx.addCookies([{ name: 'einv-theme', value: theme, url: baseURL }]);
+          for (const p of AUTH_PAGES) {
+            await page.goto(p.path, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await page.waitForTimeout(800);
+            const overflow = await page.evaluate(() =>
+              document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            expect.soft(overflow, `${p.name} horizontal overflow at ${bp.name} (${theme})`).toBeLessThanOrEqual(17);
+            await robustScreenshot(page, `${OUT}/${p.name}-${bp.name}-${theme}.png`, false);
+          }
         }
       } finally {
         await ctx.close();

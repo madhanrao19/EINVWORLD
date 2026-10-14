@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.7`** (`AppInfo:Version` in `appsettings.json`). v1.29.7 is a **patch**
+> **Current version: `v1.30.0`** (`AppInfo:Version` in `appsettings.json`). v1.30.0 is a **minor**
+> release: new look, part 1 — IBM Plex Sans, retuned colours and a green-black dark mode, applied
+> app-wide through the shared design tokens (no page markup changes) — see the dated entry below. v1.29.7 was a **patch**
 > release: dark mode fixed system-wide (Create Invoice steps, dialogs, date picker, editor, buttons,
 > badges) — see the dated entry below. v1.29.6 was a **patch**
 > release: Invoice Details previews the invoice like a PDF viewer (fits any screen), and dark mode is
@@ -319,6 +321,33 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.30.0 (new look, part 1: colours, font and dark mode)
+
+First step of the "Ledger" visual refresh, approved from a mockup. This release changes only the shared
+design settings. No page markup changes, so every signed-in page and the sign-in pages pick it up at
+once. Later releases restyle components and pages one group at a time.
+- **Font:** IBM Plex Sans replaces Inter. It's free (OFL) and hosted by EinvWorld itself, with no font
+  CDN. Digits in every table now line up, so RM amounts, quantities, TINs and dates are easier to scan.
+- **Colours:** the same brand green, with a page background, borders and grey text that lean slightly
+  green. Grey text is darker than before, at 7:1 or better.
+- **Dark mode:** a dark green-black palette instead of grey. Tabler's own dark backgrounds (forms,
+  dropdowns, modals) now use the same colours, so dark pages no longer mix two different greys.
+- **Status badges:** Valid, Warning, Invalid and neutral badges use one shared set of colours. Every
+  pair passes 4.5:1 in both themes, which replaces about a dozen separate dark-mode fixes.
+- **Cards:** a thin border and no shadow, with 10px corners. Buttons and inputs keep 6px corners.
+- **Sign-in pages:** the same font and colours. Input outlines are darker, at 3.5:1, so the fields are
+  easy to see.
+- **Dashboard charts:** chart text, grid lines and the font now come from the design settings. Before,
+  dark-mode values were hard-coded in `dashboard.js`.
+- **Docs:** the colour, type and corner-radius sections of `docs/DESIGN.md` now describe the live
+  values, with a contrast table. The old, never-used blue palette is removed.
+- **Tests:** the screenshot audit (`visual-restyle.audit.spec.js`, run with `RUN_VISUAL_AUDIT=1`) now
+  covers dark mode, a 390px phone width and four more pages. It also checks that signed-in pages
+  never scroll sideways.
+
+CSS, fonts and one JS file only: no migration, config or API change. The PDF and A4 invoice sheet is
+unchanged.
 
 ## 📅 2026-10-14 — v1.29.7 (dark mode fixed across the whole app)
 
