@@ -1,6 +1,9 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.33.0`** (`AppInfo:Version` in `appsettings.json`). v1.33.0 is a **minor**
+> **Current version: `v1.34.0`** (`AppInfo:Version` in `appsettings.json`). v1.34.0 is a **minor**
+> release: new look, part 2d — form fields with visible outlines, and restyled dropdowns, date
+> pickers, dialogs and toasts; this completes the shared component layer — see the dated entry
+> below. v1.33.0 was a **minor**
 > release: new look, part 2c — page titles, ruled cards without shadows, sentence-case labels and a
 > shared empty state — see the dated entry below. v1.32.0 was a **minor**
 > release: new look, part 2b — one set of invoice status badges everywhere and the LHDN validation
@@ -329,6 +332,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.34.0 (new look, part 2d: forms and dialogs)
+
+The last shared-component step of the "Ledger" refresh.
+- **Form fields:** inputs, dropdowns and Select2 boxes have a clearly visible outline (3:1 contrast,
+  the accessibility minimum for controls; before it was about 1.3:1). Focus is shown with the brand
+  green and a soft ring, the same on every kind of field and in both themes. On phones, fields use
+  16px text, so iOS no longer zooms the page when you tap one.
+- **Date picker** (Flatpickr): the selected day and range use the brand green in light mode too.
+- **Dropdown lists** (Select2): the same outline as other fields, a softer highlight, and the overlay
+  shadow.
+- **Confirmation pop-ups** (SweetAlert2): the brand-green button and an outlined Cancel come from the
+  stylesheet. The old script that patched every `Swal.fire` call is removed from both layouts. Pop-ups
+  that pick their own colour (e.g. red for delete) keep it. Titles use the app's text colour.
+- **Bootstrap dialogs:** card-style corners and ruled header and footer. On phones they open full
+  screen.
+- **Notifications** (toastr): solid and fully opaque, in deep green, red, amber and blue, with white
+  text that is readable in both themes. Before they were 80% see-through.
+- **Tests:** new `16-forms-dialogs.spec.js` checks the field outline, the pop-up button colours
+  (including that an explicit colour still wins) and the toast colours and opacity.
+
+CSS and two layout script blocks removed: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.33.0 (new look, part 2c: page headers, cards, labels, empty states)
 

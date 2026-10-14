@@ -425,6 +425,20 @@ choose the pattern that fits the table's column count and content.
 
 # FORMS
 
+**Shared styling** (`einvworld-tokens.css`, forms + dialogs layer). Don't restyle these per page:
+
+- Every field outline (`.form-control`, `.form-select`, Select2 in both themes) uses
+  `--einv-input-border`, which is 3:1 against the surface. Focus is a brand border plus a 3px ring.
+- On phones with a touch screen, fields use 16px text so iOS doesn't zoom the page.
+- Plugin stylesheets load after the tokens file, so Select2 and Flatpickr overrides carry a `:root`
+  prefix and toastr overrides an extra `.toast` class. Keep that when adding rules.
+- **Dialogs:** SweetAlert2 confirm and cancel buttons get their brand colours from CSS. Don't pass
+  `confirmButtonColor` for the normal case; pass it only for a deliberately different action (e.g.
+  red for destructive). The old global `Swal.fire` patch is gone.
+- Bootstrap modals use the card radius with ruled header and footer, and go full-screen below 576px.
+- **toastr:** solid, opaque toasts in fixed deep tones (success `#006948`, error `#a3271f`, warning
+  `#8a4b00`, info `#1d4f91`), white text, AA in both themes.
+
 Always use:
 
 - Labels above controls (never rely on placeholders as labels)
