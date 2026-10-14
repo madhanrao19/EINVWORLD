@@ -39,12 +39,22 @@ for (const vp of VIEWPORTS) {
       const cardBox = await card.boundingBox();
       expect(cardBox.width, `card width on ${pageDef.path} @${vp.width}`).toBeGreaterThan(280);
 
-      // Card is horizontally centred (within 40px of viewport centre).
-      const centreDelta = Math.abs((cardBox.x + cardBox.width / 2) - vp.width / 2);
-      expect(centreDelta, `card centred on ${pageDef.path} @${vp.width}`).toBeLessThanOrEqual(40);
+      // Since the split-screen redesign (#246) the card lives in the form column: centred in it below
+      // 992px (brand panel hidden), and start-aligned after the column's side padding
+      // beside the brand panel on wider screens. Either way it stays inside the column.
+      const colBox = await page.locator('.einv-auth-form-col').first().boundingBox();
+      expect(cardBox.x, `card inside form column on ${pageDef.path} @${vp.width}`).toBeGreaterThanOrEqual(colBox.x);
+      expect(cardBox.x + cardBox.width, `card inside form column on ${pageDef.path} @${vp.width}`)
+        .toBeLessThanOrEqual(colBox.x + colBox.width + 1);
+      if (vp.width < 992) {
+        const centreDelta = Math.abs((cardBox.x + cardBox.width / 2) - (colBox.x + colBox.width / 2));
+        expect(centreDelta, `card centred on ${pageDef.path} @${vp.width}`).toBeLessThanOrEqual(40);
+      } else {
+        expect(cardBox.x - colBox.x, `card start-aligned on ${pageDef.path} @${vp.width}`).toBeLessThanOrEqual(colBox.width / 4);
+      }
 
       // Logo sits above the card (not side-by-side).
-      const logo = page.locator('.auth-logo').first();
+      const logo = page.locator('.einv-auth-form-logo').first();
       await expect(logo).toBeVisible();
       const logoBox = await logo.boundingBox();
       expect(logoBox.y + logoBox.height, `logo above card on ${pageDef.path} @${vp.width}`)
