@@ -20,9 +20,24 @@
 <link rel="manifest" href="~/favicon/manifest.json">
 
 
-<!-- Theme Color for Browser UI (brand primary; dark surface in dark mode) -->
-<meta name="theme-color" content="#006948" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1f2937" media="(prefers-color-scheme: dark)">
+@{
+    // Browser/status-bar colour: brand green in light mode, the dark page canvas in dark mode.
+    // _LayoutTabler passes the user's saved choice (einv-theme cookie, already allowlisted there) so
+    // the bar matches the in-app theme, not the OS setting; with no saved choice the OS decides.
+    // einvworld-ui.js reads data-light/data-dark to repaint the bar when the topbar toggle is used.
+    var themeColorLight = "#006948";
+    var themeColorDark = "#0c1411";
+    var savedTheme = ViewData["EinvTheme"] as string;
+}
+@if (savedTheme == "dark" || savedTheme == "light")
+{
+    <meta name="theme-color" content="@(savedTheme == "dark" ? themeColorDark : themeColorLight)" data-light="@themeColorLight" data-dark="@themeColorDark">
+}
+else
+{
+    <meta name="theme-color" content="@themeColorLight" media="(prefers-color-scheme: light)" data-light="@themeColorLight" data-dark="@themeColorDark">
+    <meta name="theme-color" content="@themeColorDark" media="(prefers-color-scheme: dark)" data-light="@themeColorLight" data-dark="@themeColorDark">
+}
 
 <!-- Installed-app (standalone) mode on Android/iOS; no service worker, so pages are never cached -->
 <meta name="mobile-web-app-capable" content="yes">
