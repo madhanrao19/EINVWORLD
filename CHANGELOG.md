@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.29.6`** (`AppInfo:Version` in `appsettings.json`). v1.29.6 is a **patch**
+> **Current version: `v1.29.7`** (`AppInfo:Version` in `appsettings.json`). v1.29.7 is a **patch**
+> release: dark mode fixed system-wide (Create Invoice steps, dialogs, date picker, editor, buttons,
+> badges) — see the dated entry below. v1.29.6 was a **patch**
 > release: Invoice Details previews the invoice like a PDF viewer (fits any screen), and dark mode is
 > readable across the app — see the dated entry below. v1.29.5 was a **patch**
 > release: dark mode now stays on when moving between pages — see the dated entry below. v1.29.4 was a **patch**
@@ -317,6 +319,40 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.29.7 (dark mode fixed across the whole app)
+
+An automated audit opened every page for Supplier, Buyer and Admin in dark mode: 82 pages, including
+create, edit and details pages, plus hidden wizard steps, tabs, collapsed sections and modals. It
+flagged light backgrounds and any text below 3:1 contrast. The 38 problems it found are fixed, and the
+re-run is clean.
+- **Create/Edit Invoice:** step 2 (Invoice Items) had white item rows with near-invisible totals.
+  Step 3 (Review & Submit) had its summary values in a fixed dark grey. The step circles and track
+  were light. All now follow the theme.
+- **Buttons:** green, blue and grey buttons had white text at 2–2.6:1. Dark mode now uses deeper
+  shades (5:1 or better). Amber buttons get dark text.
+- **Table status badges** (Users, Audit Trail, Sync Jobs, Company pages) use lighter text tones.
+- **Active tabs and pills** use the readable green. Highlighted table rows, such as the activity log's
+  "FileMoved" row, become a soft tint.
+- **Smaller fixes:** input add-on boxes, close (×) buttons, the topbar avatar and the Assistant mode
+  list.
+- **Dashboard:** the empty-state and fix-suggestion chips built by `dashboard.js` now use the
+  dashboard's theme colours.
+- **Third-party widgets:** SweetAlert2 dialogs and the Flatpickr date picker get dark styles. The
+  TinyMCE editor (Admin → Resources) switches to its bundled `oxide-dark` skin. Saved article HTML is
+  unchanged.
+- **Light mode:** unchanged. A few inline colours now come from the theme tokens, at the same or a
+  near-identical shade.
+- **Security (XSS):** `dashboard.js` built the dashboard insight panels with `innerHTML` and inserted
+  values unescaped. Affected values: buyer, supplier and staff names, draft invoice numbers, LHDN
+  rejection reasons and fixes, and the `FilterDate` query parameter, which showed in the "no data"
+  message. A company or staff name containing HTML could run script on the dashboard, including the
+  Admin dashboard. That's a stored XSS; the `FilterDate` case was a reflected XSS through a crafted
+  link. Every value is now HTML-escaped, and the Edit link's invoice number is URL-encoded. This was
+  pre-existing, found by the security review on this change.
+- **Tests:** `14-mobile-shell.spec.js` checks that the Create Invoice steps are readable in dark mode, and that
+  injected `<img onerror>` names render as text on the dashboard (this test fails on the old code).
+  CSS, markup and JS only: no migration, config or API change.
 
 ## 📅 2026-10-14 — v1.29.6 (PDF-style invoice preview, readable dark mode)
 
