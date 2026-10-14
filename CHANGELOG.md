@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.32.0`** (`AppInfo:Version` in `appsettings.json`). v1.32.0 is a **minor**
+> **Current version: `v1.33.0`** (`AppInfo:Version` in `appsettings.json`). v1.33.0 is a **minor**
+> release: new look, part 2c — page titles, ruled cards without shadows, sentence-case labels and a
+> shared empty state — see the dated entry below. v1.32.0 was a **minor**
 > release: new look, part 2b — one set of invoice status badges everywhere and the LHDN validation
 > seal on Invoice Details — see the dated entry below. v1.31.0 was a **minor**
 > release: new look, part 2a — sortable tables and a Columns menu on every list, sentence-case table
@@ -327,6 +329,26 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.33.0 (new look, part 2c: page headers, cards, labels, empty states)
+
+These are shared styles, so every signed-in page picks them up without page-by-page edits.
+- **Page titles:** 24px semibold (was 28px bold), with the description line under each title in muted
+  text, kept to a readable width.
+- **Cards:** every card has a 1px border and no shadow. That includes the many cards marked
+  "borderless with shadow", which were hard to see against the page in dark mode. Filled brand cards
+  keep their fill.
+- **Labels:** small all-caps labels (sidebar section names, summary-card labels, eyebrows) now show
+  in sentence case as written. Codes written in capitals, such as MYR, are unchanged. A few labels on
+  the Dashboard and Invoice Lists are typed in capitals or styled by the page itself; they change with
+  those pages' own restyle.
+- **Summary cards (KPI):** a thinner left accent, and numbers use aligned digits.
+- **Empty states:** a shared `.einv-empty` pattern (icon, title, short text). Dashboard charts with no
+  data now use it ("No data for this period") instead of inline-styled markup.
+- Removed the unused `_PageHeader` partial (no page referenced it).
+
+CSS, one JS file and one deleted unused partial: no migration, config or API change. The PDF/A4 sheet
+is unchanged.
 
 ## 📅 2026-10-14 — v1.32.0 (new look, part 2b: status badges and the LHDN seal)
 
