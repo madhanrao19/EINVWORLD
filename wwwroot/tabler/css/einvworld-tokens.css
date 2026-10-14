@@ -879,3 +879,106 @@ button.einv-badge { cursor: pointer; }
 .einv-logo-on-dark { display: none; }
 [data-bs-theme="dark"] .einv-logo-on-light { display: none; }
 [data-bs-theme="dark"] .einv-logo-on-dark { display: inline; }
+
+/* ============================================================
+ * Dark mode, round 2 — found by a full-app contrast audit (every sidebar page per role, with wizard
+ * steps / collapses / tabs / modals revealed). Each rule names what it fixes.
+ * ============================================================ */
+/* Solid buttons: Tabler's bright fills (#10b981 / #0ea5e9 / #9ca3af) put white text at 2-2.6:1.
+ * Dark mode uses the deeper 700 shades (white text >= 5:1); amber keeps its fill with dark text. */
+[data-bs-theme="dark"] .btn-success { --tblr-btn-bg: #047857; --tblr-btn-border-color: #047857; --tblr-btn-hover-bg: #065f46; --tblr-btn-hover-border-color: #065f46; --tblr-btn-active-bg: #065f46; --tblr-btn-color: #fff; --tblr-btn-hover-color: #fff; }
+[data-bs-theme="dark"] .btn-info { --tblr-btn-bg: #0369a1; --tblr-btn-border-color: #0369a1; --tblr-btn-hover-bg: #075985; --tblr-btn-hover-border-color: #075985; --tblr-btn-active-bg: #075985; --tblr-btn-color: #fff; --tblr-btn-hover-color: #fff; }
+[data-bs-theme="dark"] .btn-secondary { --tblr-btn-bg: #4b5563; --tblr-btn-border-color: #4b5563; --tblr-btn-hover-bg: #6b7280; --tblr-btn-hover-border-color: #6b7280; --tblr-btn-active-bg: #6b7280; --tblr-btn-color: #fff; --tblr-btn-hover-color: #fff; }
+[data-bs-theme="dark"] .btn-warning { --tblr-btn-color: #1f2937; --tblr-btn-hover-color: #111827; --tblr-btn-active-color: #111827; }
+
+/* Table status badges (td .badge.bg-*): light-mode 700 text tones -> 300 tones on dark. */
+[data-bs-theme="dark"] td .badge.bg-success { color: #6ee7b7 !important; }
+[data-bs-theme="dark"] td .badge.bg-danger { color: #fca5a5 !important; }
+[data-bs-theme="dark"] td .badge.bg-warning { color: #fcd34d !important; }
+[data-bs-theme="dark"] td .badge.bg-info { color: #7dd3fc !important; }
+[data-bs-theme="dark"] td .badge.bg-dark,
+[data-bs-theme="dark"] td .badge.bg-secondary { background-color: rgba(255, 255, 255, .08) !important; color: #d1d5db !important; }
+
+/* Active pill/tab text is drawn in --tblr-primary (the fill green): use the readable text green. */
+[data-bs-theme="dark"] .nav-pills { --tblr-nav-pills-link-active-color: var(--einv-primary); }
+[data-bs-theme="dark"] .nav-tabs { --tblr-nav-tabs-link-active-color: var(--einv-primary); }
+
+/* Contextual table rows (e.g. the highlighted FileMoved row in the activity log): pastel -> tint. */
+[data-bs-theme="dark"] .table-warning { --tblr-table-bg: rgba(245, 158, 11, .14); --tblr-table-color: var(--einv-text); --tblr-table-border-color: var(--einv-border); }
+[data-bs-theme="dark"] .table-success { --tblr-table-bg: rgba(16, 185, 129, .14); --tblr-table-color: var(--einv-text); --tblr-table-border-color: var(--einv-border); }
+[data-bs-theme="dark"] .table-danger { --tblr-table-bg: rgba(239, 68, 68, .14); --tblr-table-color: var(--einv-text); --tblr-table-border-color: var(--einv-border); }
+[data-bs-theme="dark"] .table-info { --tblr-table-bg: rgba(14, 165, 233, .14); --tblr-table-color: var(--einv-text); --tblr-table-border-color: var(--einv-border); }
+[data-bs-theme="dark"] .table thead th { color: var(--einv-text-muted); }
+
+/* Form add-ons, close buttons, list-group "mode" buttons. */
+[data-bs-theme="dark"] .input-group-text:not([data-bs-theme="light"] *) {
+  background-color: rgba(255, 255, 255, .04);
+  border-color: var(--einv-border);
+  color: var(--einv-text-muted);
+}
+[data-bs-theme="dark"] .btn-close { background-color: transparent; }
+[data-bs-theme="dark"] .btn-close:not(.btn-close-white) { filter: invert(1) grayscale(100%) brightness(200%); }
+[data-bs-theme="dark"] .list-group-item-action { background-color: transparent; color: var(--einv-text); }
+[data-bs-theme="dark"] .list-group-item-action.active,
+[data-bs-theme="dark"] .assistant-mode-btn.active {
+  background-color: rgba(var(--einv-primary-rgb), .14);
+  color: var(--einv-primary);
+}
+
+/* Create / Edit Invoice wizard (page-local light styles): step tracker, item rows (Invoice Items),
+ * and the summary rows (Review & Submit). Class names are unique to those two pages. */
+[data-bs-theme="dark"] .ci-step-circle { background: var(--einv-border); color: var(--einv-text); border-color: var(--einv-border); }
+[data-bs-theme="dark"] .ci-step-node.is-complete .ci-step-circle { background: rgba(var(--einv-primary-rgb), .15); }
+[data-bs-theme="dark"] .ci-step-label { color: var(--einv-text-muted); }
+[data-bs-theme="dark"] .ci-step-track { background: var(--einv-border); }
+[data-bs-theme="dark"] .ci-summary-row { color: var(--einv-text); border-bottom-color: var(--einv-border); }
+[data-bs-theme="dark"] .item-row { background: var(--einv-surface); border-color: var(--einv-border); }
+[data-bs-theme="dark"] .irow-extras-toggle:not(.collapsed) { background: rgba(var(--einv-primary-rgb), .1); }
+[data-bs-theme="dark"] .select2-dropdown-custom .select2-results__option { border-bottom-color: var(--einv-border); }
+[data-bs-theme="dark"] #refUUIDSelect + .select2-container .select2-selection__rendered { color: var(--einv-text) !important; }
+[data-bs-theme="dark"] #refUUIDSelect + .select2-container .select2-selection__placeholder { color: var(--einv-text-muted) !important; }
+
+/* SweetAlert2 dialogs (confirm/submit/cancel prompts) ship a white-only skin. */
+[data-bs-theme="dark"] .swal2-popup { background: var(--einv-surface); color: var(--einv-text); }
+[data-bs-theme="dark"] .swal2-title,
+[data-bs-theme="dark"] .swal2-html-container,
+[data-bs-theme="dark"] .swal2-input-label { color: var(--einv-text); }
+[data-bs-theme="dark"] .swal2-input,
+[data-bs-theme="dark"] .swal2-textarea,
+[data-bs-theme="dark"] .swal2-select {
+  background: var(--einv-page-bg);
+  color: var(--einv-text);
+  border-color: var(--einv-border);
+}
+[data-bs-theme="dark"] .swal2-validation-message { background: rgba(239, 68, 68, .14); color: #fca5a5; }
+[data-bs-theme="dark"] .swal2-icon.swal2-success [class^="swal2-success-circular-line"],
+[data-bs-theme="dark"] .swal2-icon.swal2-success .swal2-success-fix { background-color: var(--einv-surface) !important; }
+
+/* Flatpickr date picker (invoice dates, dashboard/list filters). */
+[data-bs-theme="dark"] .flatpickr-calendar { background: var(--einv-surface); box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
+[data-bs-theme="dark"] .flatpickr-calendar.arrowTop::after { border-bottom-color: var(--einv-surface); }
+[data-bs-theme="dark"] .flatpickr-calendar.arrowBottom::after { border-top-color: var(--einv-surface); }
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-month,
+[data-bs-theme="dark"] .flatpickr-current-month,
+[data-bs-theme="dark"] .flatpickr-current-month input.cur-year,
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month,
+[data-bs-theme="dark"] span.flatpickr-weekday,
+[data-bs-theme="dark"] .flatpickr-time input,
+[data-bs-theme="dark"] .flatpickr-time .flatpickr-am-pm,
+[data-bs-theme="dark"] .flatpickr-day { color: var(--einv-text); fill: var(--einv-text); background: transparent; }
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month svg,
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month svg { fill: var(--einv-text); }
+[data-bs-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months { background: var(--einv-surface); color: var(--einv-text); }
+[data-bs-theme="dark"] .flatpickr-day:hover,
+[data-bs-theme="dark"] .flatpickr-day:focus,
+[data-bs-theme="dark"] .flatpickr-time input:hover { background: rgba(255, 255, 255, .08); border-color: transparent; }
+[data-bs-theme="dark"] .flatpickr-day.today { border-color: var(--einv-primary); }
+[data-bs-theme="dark"] .flatpickr-day.prevMonthDay,
+[data-bs-theme="dark"] .flatpickr-day.nextMonthDay,
+[data-bs-theme="dark"] .flatpickr-day.flatpickr-disabled { color: #6b7280; }
+[data-bs-theme="dark"] .flatpickr-day.selected,
+[data-bs-theme="dark"] .flatpickr-day.startRange,
+[data-bs-theme="dark"] .flatpickr-day.endRange { background: var(--einv-fill); border-color: var(--einv-fill); color: #fff; }
+[data-bs-theme="dark"] .flatpickr-day.inRange { background: rgba(var(--einv-primary-rgb), .15); border-color: transparent; box-shadow: none; }
+[data-bs-theme="dark"] .flatpickr-time { border-top-color: var(--einv-border) !important; }

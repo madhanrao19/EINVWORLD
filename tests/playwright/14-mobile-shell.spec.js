@@ -138,10 +138,52 @@ test('supplier: invoice preview behaves like a PDF viewer (phone, print, dark mo
   await page.emulateMedia({ media: 'screen' });
 
   // Dark mode: the sheet is still black-on-white paper; app links use the lighter dark-mode green.
-  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: page.url() }]);
+  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: new URL(page.url()).origin }]);
   await page.reload({ waitUntil: 'domcontentloaded' });
   const paper = await sheet.evaluate(el => ({ bg: getComputedStyle(el).backgroundColor, fg: getComputedStyle(el).color }));
   expect(paper).toEqual({ bg: 'rgb(255, 255, 255)', fg: 'rgb(0, 0, 0)' });
   const link = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tblr-link-color').trim());
   expect(link).toBe('#34d399');
+});
+
+// Dark mode on the Create Invoice wizard: Invoice Items rows and Review & Submit summary used
+// light-only page styles (white rows, #3d4a42 text) that were unreadable on the dark canvas.
+test('supplier: Create Invoice steps are readable in dark mode', async ({ page, context }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  await context.addCookies([{ name: 'einv-theme', value: 'dark', url: new URL(page.url()).origin }]);
+  await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => ['step2', 'step3'].forEach(id => document.getElementById(id).classList.remove('d-none')));
+
+  const lum = c => {
+    const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * r + .7152 * g + .0722 * b;
+  };
+  const rowBg = await page.locator('.item-row').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(lum(rowBg), `item row background ${rowBg}`).toBeLessThan(.1);
+  const summary = await page.locator('.ci-summary-row').first().evaluate(el => getComputedStyle(el).color);
+  expect(lum(summary), `review summary text ${summary}`).toBeGreaterThan(.5);
+  const step = await page.locator('.ci-step-node:not(.is-active) .ci-step-circle').first().evaluate(el => getComputedStyle(el).backgroundColor);
+  expect(lum(step), `inactive step circle ${step}`).toBeLessThan(.1);
+});
+
+// Security regression: dashboard.js builds its insight panels with innerHTML. Company/staff names,
+// invoice numbers and LHDN reasons are user/server data and must render as text, never as markup.
+test('supplier: dashboard insight panels escape names and reasons (no XSS)', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  const PROBE = '<img src=x id="xss-probe" onerror="window.__xss=1">';
+  await page.route(/handler=InvoiceData/, async route => {
+    const resp = await route.fetch();
+    const data = await resp.json();
+    data.internalRejectedReasons = [{ reason: PROBE, suggestedFix: PROBE, count: 1 }];
+    data.customerRejectionRates = [{ customerName: PROBE, rejectionRate: 60, rejectedCount: 3, totalInvoices: 5 }];
+    data.internalErrorRates = [{ staffName: PROBE, errorRate: 25, cancelledCount: 1, totalCreated: 4 }];
+    data.agingDrafts = [{ invoiceNo: PROBE, customerName: PROBE, createdDate: PROBE, daysStuck: 9 }];
+    await route.fulfill({ response: resp, json: data });
+  });
+  await page.goto('/Dashboard/Dashboard', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#buyerRejectionTable')).toContainText('<img src=x', { timeout: 20000 });
+  await expect(page.locator('#xss-probe')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__xss)).toBeUndefined();
 });
