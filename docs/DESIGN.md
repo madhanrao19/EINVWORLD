@@ -668,6 +668,13 @@ Each entry below is tagged with its implementation source:
 - **Date pickers** — Lib: Flatpickr.
 - **Date-range pickers** — Lib: Flatpickr (`mode: "range"`).
 - **Time pickers** — Lib: Flatpickr (`enableTime`).
+- **One calendar everywhere (v1.35.0).** `wwwroot/tabler/js/einvworld-date.js` sets Flatpickr defaults
+  for every page: the visible field shows `14 Oct 2026` (`altInput`, `altFormat "j M Y"`), phones get the
+  same calendar (`disableMobile`), and the real input keeps posting its page's own `dateFormat`.
+  Write plain `<input type="date">` / `type="month"`: they are upgraded automatically (value `Y-m-d` /
+  `Y-m`, via the vendored `monthSelect` plugin for months). Opt out with `data-einv-date="native"`;
+  call `window.einvworld.initDates(root)` for fields added after load. Never change a field's
+  `dateFormat` to change how it looks: that changes what the server receives. Use `altFormat`.
 
 ### Specialized inputs
 - **Currency input** — Lib: Cleave.js for input masking/grouping, paired with

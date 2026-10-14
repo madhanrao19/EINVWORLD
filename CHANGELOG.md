@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.34.3`** (`AppInfo:Version` in `appsettings.json`). v1.34.3 is a **patch**
+> **Current version: `v1.35.0`** (`AppInfo:Version` in `appsettings.json`). v1.35.0 is a **minor**
+> release: one calendar for every date field, showing dates as "14 Oct 2026" — see the dated entry
+> below. v1.34.3 was a **patch**
 > release: removes a thin strip between the sidebar and the page on desktops — see the dated entry
 > below. v1.34.2 was a **patch**
 > release: the app shell (sidebar, top bar, footer) tidied for phones and the collapsed sidebar —
@@ -338,6 +340,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.35.0 (one calendar everywhere)
+
+- **Every date field uses the same calendar.** Before, the app mixed the browser's own date and month
+  pickers (Admin Logs, Resources, Recurring Invoices, Invoice Lists filters and export, Original
+  Invoice Date, the Dashboard period) with the Flatpickr calendar on the invoice forms, and showed
+  dates three different ways. Now every field opens the same calendar, in the Ledger colours, in
+  light and dark mode, on phones too.
+- **Dates read "14 Oct 2026".** Issue Date shows its time as well ("14 Oct 2026, 3:30 PM").
+- **The Dashboard "Full Month" filter** opens a month grid instead of the browser's month picker.
+- **Nothing the server receives changes.** Only the visible text is new; each field still sends
+  exactly the value it sent before (Issue Date `2026-10-14 15:30`, Start/End `14-Oct-2026`, other
+  dates `2026-10-14`, the Dashboard month `2026-10`). No change to invoice data, LHDN submission, or
+  the 3-day Issue Date limit.
+- How it works: a shared `einvworld-date.js` sets the calendar defaults and upgrades every
+  `type="date"`/`type="month"` field; the Flatpickr `monthSelect` plugin (MIT, same 4.6.13 release)
+  is now bundled. See `docs/DESIGN.md` → Date & time inputs.
+- **Tests:** `19-calendar.spec.js` checks the posted value and the shown text of every converted
+  field, the Dashboard Day/Month/Year filter end to end, and that no browser date picker is left on
+  the page (desktop and phone).
+
+Client-side only: no migration, config, API or server change.
 
 ## 📅 2026-10-14 — v1.34.3 (sidebar gap on desktop)
 

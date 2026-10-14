@@ -47,6 +47,7 @@
     <link href="~/assets/libs/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/assets/libs/toastr/toastr.min.css">
     <link rel="stylesheet" href="~/assets/libs/flatpickr/flatpickr.min.css">
+    <link rel="stylesheet" href="~/assets/libs/flatpickr/plugins/monthSelect/style.css">
     <link rel="stylesheet" href="~/assets/libs/font-awesome/css/all.min.css" />
 
     @await Html.PartialAsync("_GoogleAnalytics")
@@ -134,6 +135,9 @@
 
     <!-- Flatpickr (self-hosted) -->
     <script src="~/assets/libs/flatpickr/flatpickr.min.js"></script>
+    <script src="~/assets/libs/flatpickr/plugins/monthSelect/index.js"></script>
+    @* One calendar everywhere: shared Flatpickr defaults + upgrades native date/month inputs. *@
+    <script src="~/tabler/js/einvworld-date.js" asp-append-version="true"></script>
 
     <!-- Toastr (self-hosted) -->
     <script src="~/assets/libs/toastr/toastr.min.js"></script>
