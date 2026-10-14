@@ -78,7 +78,7 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table data-einv-table="sync-jobs" data-einv-sort="client" class="table align-middle mb-0">
                 <thead class="einv-table-head">
                     <tr>
                         <th>#</th>
@@ -109,7 +109,7 @@
                                     <span class="text-muted ms-1" title="Attempts">×@j.AttemptCount</span>
                                 }
                             </td>
-                            <td>@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
+                            <td data-sort-value="@j.QueuedAtUtc.ToString("o")">@j.QueuedAtUtc.ToString("MM-dd HH:mm:ss")</td>
                             <td>@Dur(j)</td>
                             <td style="max-width:480px;"><small>@j.Message</small></td>
                             <td><small>@j.TriggeredBy</small></td>

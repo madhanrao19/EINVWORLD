@@ -118,7 +118,7 @@
                 else
                 {
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table data-einv-table="smart-capture" data-einv-sort="client" class="table table-hover align-middle mb-0">
                             <thead>
                                 <tr>
                                     <th>File</th>
@@ -143,7 +143,7 @@
                                     var pendingAutoSubmit = Model.PendingAutoSubmitRunAtUtc.TryGetValue(d.Id, out var runAtUtc);
                                     <tr>
                                         <td>@d.OriginalFileName</td>
-                                        <td><small class="text-muted">@d.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
+                                        <td data-sort-value="@d.CreatedAtUtc.ToString("o")"><small class="text-muted">@d.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
                                         <td>
                                             <span class="einv-badge @badgeClass">@label</span>
                                             @if (pendingAutoSubmit)

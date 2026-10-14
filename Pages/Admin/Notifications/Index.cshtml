@@ -20,7 +20,7 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table align-middle mb-0" id="dataTable1">
+            <table data-einv-table="notifications" data-einv-sort="client" class="table align-middle mb-0" id="dataTable1">
                 <thead class="einv-table-head">
                     <tr>
                         <th>@Html.DisplayNameFor(model => model.Notification[0].TemplateName)</th>
@@ -48,8 +48,8 @@
                             <td>
                                 <span class="badge @(item.IsActive ? "bg-success" : "bg-secondary")">@(item.IsActive ? "Active" : "Inactive")</span>
                             </td>
-                            <td>@Html.DisplayFor(modelItem => item.CreatedDate)</td>
-                            <td>@Html.DisplayFor(modelItem => item.UpdatedDate)</td>
+                            <td data-sort-value="@item.CreatedDate.ToString("o")">@Html.DisplayFor(modelItem => item.CreatedDate)</td>
+                            <td data-sort-value="@item.UpdatedDate.ToString("o")">@Html.DisplayFor(modelItem => item.UpdatedDate)</td>
                             <td>
                                 <div class="d-flex gap-1">
                                     <a asp-page="./Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary btn-sm">Edit</a>
