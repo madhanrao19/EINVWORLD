@@ -430,18 +430,6 @@
 </style>
 
 @functions {
-    public string GetBadgeClass(string status)
-    {
-        return status switch
-        {
-            "Valid" => "badge bg-success",
-            "Invalid" => "badge bg-danger",
-            "Cancelled" => "badge bg-warning",
-            "Submitted" => "badge bg-info",
-            _ => "badge bg-secondary"
-        };
-    }
-
     public IHtmlContent GetActionIcon(string action)
     {
         return action switch
@@ -476,29 +464,39 @@
     </div>
 </div>
 
-@{ var badgeClass = GetBadgeClass(Model!.DisplayStatusName); var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown"; }
+@{ var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown"; }
 <div class="row mb-3 d-print-none">
     <div class="col-12">
         <div class="card border-0 shadow-sm p-3">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <div class="d-flex align-items-center gap-4 flex-wrap">
-                    <div class="badge rounded-pill fs-12 @badgeClass px-3 py-2">@displayStatus</div>
+                    @if (displayStatus == "Valid" && invoice.DateTimeValidated.HasValue)
+                    {
+                        <partial name="_LhdnSeal" model="invoice.DateTimeValidated.Value" />
+                    }
+                    <div class="einv-badge-lg @InvoiceStatusBadge.CssClass(Model!.DisplayStatusName)">
+                        @if (InvoiceStatusBadge.Icon(Model!.DisplayStatusName) is string statusIcon)
+                        {
+                            <i class="@statusIcon" aria-hidden="true"></i>
+                        }
+                        @displayStatus
+                    </div>
                     <div>
-                        <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">Total Payable</p>
-                        <span class="fw-bold fs-5">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</span>
+                        <p class="einv-meta-label">Total payable</p>
+                        <span class="fw-bold fs-5 einv-num">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</span>
                     </div>
                     @if (!string.IsNullOrEmpty(invoice.UUID))
                     {
                         <div>
-                            <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">UUID</p>
+                            <p class="einv-meta-label">UUID</p>
                             <span class="font-monospace small">@invoice.UUID</span>
                         </div>
                     }
                     @if (invoice.DateTimeValidated.HasValue)
                     {
                         <div>
-                            <p class="text-uppercase text-muted mb-0" style="font-size: 0.7rem; letter-spacing: 0.05em;">Validated</p>
-                            <span>@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</span>
+                            <p class="einv-meta-label">Validated</p>
+                            <span class="einv-num">@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</span>
                         </div>
                     }
                 </div>

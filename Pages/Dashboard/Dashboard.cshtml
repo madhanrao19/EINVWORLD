@@ -770,9 +770,7 @@ else if (Model.UserType == "Supplier")
                                         </td>
                                         <td>@item.TotalAmountIncTax?.ToString("N2")</td>
                                         <td>
-                                            <span class="badge rounded-pill @(item.LHDNStatusId == "Valid" ? "bg-success-soft text-success" : (item.LHDNStatusId == "Invalid" || item.LHDNStatusId == "Cancelled" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"))">
-                                                @item.LHDNStatusId
-                                            </span>
+                                            @eInvWorld.Helpers.InvoiceStatusBadge.Render(item.LHDNStatusId)
                                         </td>
                                         <td class="text-muted small">@item.CreatedDate.ToString("dd MMM yyyy, HH:mm")</td>
                                         <td class="text-truncate text-danger small fw-medium" style="max-width: 150px;" title="@item.RejectedReason">
@@ -1029,9 +1027,7 @@ else if (Model.UserType == "Buyer")
                                             </td>
                                             <td class="fw-medium text-dark">@item.TotalAmountIncTax?.ToString("N2")</td>
                                             <td>
-                                                <span class="badge rounded-pill @(item.LHDNStatusId == "Valid" ? "bg-success-soft text-success" : (item.LHDNStatusId == "Invalid" || item.LHDNStatusId == "Cancelled" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"))">
-                                                    @item.LHDNStatusId
-                                                </span>
+                                                @eInvWorld.Helpers.InvoiceStatusBadge.Render(item.LHDNStatusId)
                                                 
                                                 @if (item.InternalStatusId == "RequestReject")
                                                 {
