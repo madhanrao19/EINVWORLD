@@ -39,6 +39,8 @@
 
         const mode = filterType.value;
         const defaultDateFull = filterDate.getAttribute('data-default-date') || new Date().toISOString().split('T')[0];
+        // The shared calendar (einvworld-date.js) wraps this input; rebuild it for the new mode.
+        if (filterDate._flatpickr) { filterDate._flatpickr.destroy(); filterDate._flatpickr = undefined; } // destroy() leaves the reference
 
         if (mode === 'Year') {
             filterDate.style.display = 'none';
@@ -48,7 +50,7 @@
         } else {
             filterYear.style.display = 'none';
             filterYear.removeAttribute('name');
-            filterDate.style.display = 'block';
+            filterDate.style.display = '';
             filterDate.setAttribute('name', 'FilterDate');
 
             if (mode === 'Month') {
@@ -58,6 +60,7 @@
                 filterDate.type = 'date';
                 filterDate.value = defaultDateFull;
             }
+            if (window.einvworld && window.einvworld.initDates) window.einvworld.initDates(filterDate.parentNode);
         }
     }
 
