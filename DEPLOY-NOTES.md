@@ -368,7 +368,7 @@ setting is blank/wrong (connection string, key ring, signing cert, localhost URL
 
 ## 3. IIS / App Pool
 
-- Install the latest **.NET Hosting Bundle** (patch monthly; restart IIS after a runtime update). **Minimum 10.0.13** since v1.46.7 — the security fixes for `System.Security.Cryptography.Pkcs` come from the runtime, not the app folder.
+- Install the latest **.NET Hosting Bundle** (patch monthly; restart IIS after a runtime update). **Minimum 10.0.13** since v1.46.7 — the security fixes for `System.Security.Cryptography.Pkcs` come from the runtime, not the app folder. `scripts\Deploy-Staging.ps1` checks this first (via `\\server\c$`) and, if the server is older than the `Microsoft.AspNetCore.*` version the build references, installs the latest Hosting Bundle (SHA-512 checked, silent, no reboot, no IIS restart) over PowerShell remoting — needs WinRM + admin on the server. `-WhatIf` previews it; `-SkipRuntimeCheck` turns it off.
 - App Pool: **No Managed Code**, **Start Mode = AlwaysRunning**, **Idle Time-out = 0**,
   **Regular Time Interval (recycle) = 0** or scheduled at a low-traffic hour. Enable
   **Preload** on the site. (The durable SQL queue does not *depend* on always-running, but it avoids
