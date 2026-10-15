@@ -36,8 +36,8 @@ test('Create e-Invoice: Stitch layout + wizard navigation works', async ({ page 
   const nodes = page.locator('.ci-step-node');
   await expect(nodes).toHaveCount(3);
   await expect(nodes.nth(0)).toHaveClass(/is-active/); // step 1 active
-  // Brand green fill on the progress track
-  await expect(page.locator('#formProgress')).toBeVisible();
+  // Since v1.40.0 (Ledger) the active segment shows progress; the old track stays in the page for the script.
+  await expect(page.locator('#formProgress')).toBeAttached();
 
   // --- Appearance: Step 1 is visible, 2 & 3 hidden ---
   await expect(page.locator('#step1')).toBeVisible();

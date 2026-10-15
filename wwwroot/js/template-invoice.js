@@ -279,9 +279,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lastValidationResult = false;
     }
 
-    const openModalBtn = document.querySelector('[data-bs-target="#saveTemplateModal"]');
-    if (openModalBtn && templateNameInput) {
-        openModalBtn.addEventListener("click", () => {
+    // Create Invoice has a "Save as template" button on every step, so prepare the dialog when it opens
+    // rather than on one button's click.
+    const templateModalEl = document.getElementById('saveTemplateModal');
+    if (templateModalEl && templateNameInput) {
+        templateModalEl.addEventListener("show.bs.modal", () => {
             const today = new Date().toISOString().split("T")[0];
             templateNameInput.value = `Template_${today}`;
             
