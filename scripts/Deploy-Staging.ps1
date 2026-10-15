@@ -22,9 +22,10 @@
          point - never deleted automatically).
       3. Copy the fresh publish output into `App\`, EXCLUDING `web.config` and
          `appsettings.Production.json` (the two files DEPLOY-NOTES.md calls out as
-         "never overwrite server secrets"). Existing files at the destination not present in the
-         publish output are left alone (no `/MIR` - this script never deletes anything on the
-         server).
+         "never overwrite server secrets"). No `/MIR`: the only files ever deleted are ones the
+         PREVIOUS run of this script shipped (listed in `App\.deploy-manifest.txt`) that are no
+         longer in this release, so old JS/CSS/DLLs don't pile up. Files it never shipped (uploads
+         under wwwroot, server-only files) are never touched; the first run only lists candidates.
 
     Database migrations (unless -SkipMigrations): for each database in the target's web.config
     (ConnectionStrings__DefaultConnection -> ApplicationDbContext, ConnectionStrings__WebsiteDb ->
@@ -307,7 +308,7 @@ else {
     Write-Host "Skipping database migrations (-SkipMigrations)." -ForegroundColor Yellow
 }
 
-# -- 3. Deploy (copy, never delete, never touch excluded files) ------------------------------------
+# -- 3. Deploy (copy, never touch excluded files; remove only files the last deploy shipped) -------
 Write-Host ""
 Write-Host "Copying publish output into App\ (excluding: $($excludeFiles -join ', ')) ..." -ForegroundColor Cyan
 
@@ -325,6 +326,50 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
         robocopy @rcArgs | Select-Object -Last 8
         if ($LASTEXITCODE -ge 8) { throw "Deploy robocopy failed (exit code $LASTEXITCODE) - check output above. Your pre-deploy backup is intact." }
         Write-Host "Copy complete." -ForegroundColor Green
+
+        # Remove files the PREVIOUS deploy shipped that this release no longer has. Driven only by the
+        # manifest this script wrote last time, so anything it never shipped (uploads under wwwroot,
+        # server-only files, the backup) is never touched. The pre-deploy backup still has every file.
+        $manifestPath = Join-Path $DestAppPath '.deploy-manifest.txt'
+        # .NET enumeration: child paths always start with the root's own FullName (Get-ChildItem can
+        # return long names under a short 8.3 root, which would break the relative paths).
+        function Get-RelativeFiles([string]$root) {
+            $dir = New-Object IO.DirectoryInfo $root
+            if (-not $dir.Exists) { return @() }
+            $prefix = $dir.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar).Length + 1
+            $dir.GetFiles('*', [IO.SearchOption]::AllDirectories) | ForEach-Object { $_.FullName.Substring($prefix) }
+        }
+        $shipped = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        Get-RelativeFiles $SourcePublishPath | ForEach-Object {
+            if ($excludeFiles -notcontains (Split-Path $_ -Leaf)) { [void]$shipped.Add($_) }
+        }
+        if (Test-Path $manifestPath) {
+            $stale = @(Get-Content $manifestPath | Where-Object {
+                $_ -and -not $shipped.Contains($_) -and $_ -notmatch '\.\.' -and -not [IO.Path]::IsPathRooted($_) -and
+                $excludeFiles -notcontains (Split-Path $_ -Leaf)
+            })
+            $removed = 0
+            foreach ($rel in $stale) {
+                $full = Join-Path $DestAppPath $rel
+                if (Test-Path -LiteralPath $full -PathType Leaf) {
+                    Remove-Item -LiteralPath $full -Force
+                    Write-Host "  removed (no longer in this release): $rel"
+                    $removed++
+                }
+            }
+            Write-Host "Stale-file clean-up: removed $removed file(s) dropped since the last deploy." -ForegroundColor Green
+        }
+        else {
+            # First run with this script version: no manifest yet, so delete nothing; list what a human should review.
+            $unshipped = @(Get-RelativeFiles (Join-Path $DestAppPath 'wwwroot') | ForEach-Object { "wwwroot\$_" } |
+                Where-Object { -not $shipped.Contains($_) })
+            Write-Host "No deploy manifest yet - nothing removed this time (the next deploy cleans up automatically)." -ForegroundColor Yellow
+            if ($unshipped.Count) {
+                Write-Host "  $($unshipped.Count) file(s) under wwwroot are not in this release - review, and delete by hand only if they are old build files (NOT uploads):" -ForegroundColor Yellow
+                $unshipped | Select-Object -First 40 | ForEach-Object { Write-Host "    $_" }
+            }
+        }
+        Set-Content -Path $manifestPath -Value ($shipped | Sort-Object) -Encoding utf8
     }
     finally {
         Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
