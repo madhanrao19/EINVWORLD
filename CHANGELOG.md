@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.42.0`** (`AppInfo:Version` in `appsettings.json`). v1.42.0 is a **minor**
+> **Current version: `v1.43.0`** (`AppInfo:Version` in `appsettings.json`). v1.43.0 is a **minor**
+> release: My Account (profile) and the company workspace get the new look — see the dated entry below.
+> v1.42.0 was a **minor**
 > release: "Create from document" (Smart Capture) gets the new look — see the dated entry below.
 > v1.41.0 was a **minor**
 > release: Invoice Edit gets the same new look and billing-period rule as Create Invoice — see the dated
@@ -353,6 +355,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.43.0 (new look: My Account and company pages)
+
+Phase 3g of the "Ledger" refresh.
+- **My Account:** the header keeps its green brand band (now a design token, with a darker version in
+  dark mode); the cards lose their coloured left bars and tinted headers for plain ruled ones; status
+  badges use the shared colours; grey and green text overrides (117 inline styles) are replaced by the
+  standard muted / brand classes; the overview cards have space between them when they stack.
+- **Password and 2FA forms:** buttons and field outlines use the shared styles (the green was hard-coded).
+- **Company Details:** the summary labels (Users, Buyers, Suppliers, Verification) are sentence case.
+- **Tests:** `11-company-details-parity.spec.js` looked for "Verified", "Active", "Supplier", the buyer
+  column names and "Unassign" anywhere on the page; they now also appear in the KPI strip, the nav, the
+  Columns menu and once per buyer, so the checks are scoped to the identity card and the table headers.
+
+Markup and CSS only: no account, password, 2FA or company data change.
 
 ## 📅 2026-10-15 — v1.42.0 (new look: Create from document)
 
