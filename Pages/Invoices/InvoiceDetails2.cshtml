@@ -449,88 +449,26 @@
 
 }
 
-<!-- Page Title -->
-<div class="row mb-3 d-print-none">
-    <div class="col-12">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div>
-                <h1 class="einv-page-title mb-1">Invoice Details</h1>
-                <p class="text-muted mb-0">E-INVOICE NO: @invoice.InvoiceNo</p>
-            </div>
-            <a href="/Invoices/InvoiceLists" class="btn btn-outline-secondary">
-                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Invoice Lists
-            </a>
-        </div>
+@{
+    var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown";
+    bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+    bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
+}
+@* Ledger 3d-2 (mockup "Details"): the A4 viewer on the left and the status/actions panels beside it on
+   wide screens, stacked on narrow ones. The A4 sheet itself is the frozen PdfTemplate layout. *@
+<div class="einv-ph d-print-none">
+    <div class="einv-ph-text">
+        <h1 class="einv-page-title mb-1">Invoice @invoice.InvoiceNo</h1>
+        <p class="text-muted mb-0">e-Invoice details, as issued and as validated by LHDN</p>
+    </div>
+    <div class="einv-ph-actions">
+        <a href="/Invoices/InvoiceLists" class="btn btn-outline-secondary"><i class="ri-arrow-left-line" aria-hidden="true"></i>Back to invoices</a>
     </div>
 </div>
 
-@{ var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown"; }
-<div class="row mb-3 d-print-none">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm p-3">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                <div class="d-flex align-items-center gap-4 flex-wrap">
-                    @if (displayStatus == "Valid" && invoice.DateTimeValidated.HasValue)
-                    {
-                        <partial name="_LhdnSeal" model="invoice.DateTimeValidated.Value" />
-                    }
-                    <div class="einv-badge-lg @InvoiceStatusBadge.CssClass(Model!.DisplayStatusName)">
-                        @if (InvoiceStatusBadge.Icon(Model!.DisplayStatusName) is string statusIcon)
-                        {
-                            <i class="@statusIcon" aria-hidden="true"></i>
-                        }
-                        @displayStatus
-                    </div>
-                    <div>
-                        <p class="einv-meta-label">Total payable</p>
-                        <span class="fw-bold fs-5 einv-num">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</span>
-                    </div>
-                    @if (!string.IsNullOrEmpty(invoice.UUID))
-                    {
-                        <div>
-                            <p class="einv-meta-label">UUID</p>
-                            <span class="font-monospace small">@invoice.UUID</span>
-                        </div>
-                    }
-                    @if (invoice.DateTimeValidated.HasValue)
-                    {
-                        <div>
-                            <p class="einv-meta-label">Validated</p>
-                            <span class="einv-num">@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</span>
-                        </div>
-                    }
-                </div>
-                <div class="hstack gap-2 flex-wrap">
-                    @{
-                        bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
-                        bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours;
-                    }
-                    @if (canReject)
-                    {
-                        var rejectTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN ?? "";
-                        <button type="button" id="rejectInvoiceBtn" class="btn btn-outline-warning btn-sm"
-                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@rejectTin">
-                            <i class="ri-forbid-line align-middle me-1"></i>Request Rejection
-                        </button>
-                    }
-                    @if (canCancel)
-                    {
-                        var cancelTin = invoice.Supplier?.TIN ?? "";
-                        <button type="button" id="cancelInvoiceBtn" class="btn btn-outline-danger btn-sm"
-                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@cancelTin">
-                            <i class="ri-close-circle-line align-middle me-1"></i>Cancel Invoice
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-xxl-12">
-        <div class="card border-0 shadow-sm einv-pdf-card">
-            <div class="card-body p-0">
+<div class="einv-det-grid">
+    <div class="einv-det-main">
+        <div class="einv-panel einv-pdf-card">
                 @* PDF-viewer-style preview: dark surround + toolbar, the A4 sheet zoomed to fit like a
                    browser PDF viewer (fit width, -/+ zoom). The sheet is "paper" in both themes. *@
                 <div class="einv-pdf-viewer" id="einvPdfViewer">
@@ -820,38 +758,95 @@
                                 </table>
 
                             </div>
-                        </div><span id="invoiceNumber" style="display:none;">@invoice.InvoiceNo</span>
+                        </div><span id="invoiceNumber" hidden>@invoice.InvoiceNo</span>
                     </div>
                     </div>
                 </div>
-            </div>
-         </div>
+        </div>
+    </div>
 
-        <div class="card border-0 shadow-sm d-print-none">
-            <div class="card-header-clean">
-                <div class="d-flex align-items-center flex-wrap gap-2">
-                    <div class="flex-grow-1 mb-0">
-                        <h5 class="mb-0 fw-bold text-dark d-inline-block me-3">e-Invoice Activity Log</h5>
-                        <select id="actionFilter" class="form-select form-select-sm d-inline-block" style="width: auto;">
-                            <option value="">All Actions</option>
-                            <option value="EmailSent">✉️ Email Sent</option>
-                            <option value="PDFGenerated">📄 PDF Generated</option>
-                            <option value="StatusChanged">🟢 Status Changed</option>
-                            <option value="Cancelled">❌ Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <a href="?handler=ExportHistory&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-outline-secondary btn-sm">
-                            <i class="ri-download-2-line align-middle me-1"></i>Export History CSV
-                        </a>
-                    </div>
+    <aside class="einv-det-side d-print-none" aria-label="Status and actions">
+        <section class="einv-panel">
+            <div class="einv-panel-h"><h2>LHDN status</h2></div>
+            <div class="einv-panel-b einv-det-status">
+                @if (displayStatus == "Valid" && invoice.DateTimeValidated.HasValue)
+                {
+                    <partial name="_LhdnSeal" model="invoice.DateTimeValidated.Value" />
+                }
+                <div class="einv-badge-lg @InvoiceStatusBadge.CssClass(Model!.DisplayStatusName)">
+                    @if (InvoiceStatusBadge.Icon(Model!.DisplayStatusName) is string statusIcon)
+                    {
+                        <i class="@statusIcon" aria-hidden="true"></i>
+                    }
+                    @displayStatus
                 </div>
             </div>
-            <div class="card-body">
+        </section>
+
+        <section class="einv-panel">
+            <div class="einv-panel-h"><h2>Summary</h2></div>
+            <dl class="einv-kv einv-panel-b">
+                <dt>Total payable</dt>
+                <dd class="einv-num fw-semibold">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</dd>
+                @if (!string.IsNullOrEmpty(invoice.UUID))
+                {
+                    <dt>UUID</dt>
+                    <dd class="font-monospace small">@invoice.UUID</dd>
+                }
+                @if (invoice.DateTimeValidated.HasValue)
+                {
+                    <dt>Validated</dt>
+                    <dd class="einv-num">@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</dd>
+                }
+            </dl>
+        </section>
+
+        @if (canReject || canCancel)
+        {
+            <section class="einv-panel">
+                <div class="einv-panel-h"><h2>Actions</h2><span class="einv-panel-sub">Within 72 hours of validation</span></div>
+                <div class="einv-panel-b d-grid gap-2">
+                    @if (canReject)
+                    {
+                        var rejectTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN ?? "";
+                        <button type="button" id="rejectInvoiceBtn" class="btn btn-outline-warning"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@rejectTin">
+                            <i class="ri-forbid-line" aria-hidden="true"></i>Request rejection
+                        </button>
+                    }
+                    @if (canCancel)
+                    {
+                        var cancelTin = invoice.Supplier?.TIN ?? "";
+                        <button type="button" id="cancelInvoiceBtn" class="btn btn-outline-danger"
+                                data-invoiceno="@invoice.InvoiceNo" data-uuid="@invoice.UUID" data-tin="@cancelTin">
+                            <i class="ri-close-circle-line" aria-hidden="true"></i>Cancel invoice
+                        </button>
+                    }
+                </div>
+            </section>
+        }
+    </aside>
+</div>
+
+        <section class="einv-panel d-print-none mt-4">
+            <div class="einv-panel-h">
+                <h2>e-Invoice activity log</h2>
+                <label for="actionFilter" class="visually-hidden">Filter by action</label>
+                <select id="actionFilter" class="form-select form-select-sm w-auto">
+                    <option value="">All actions</option>
+                    <option value="EmailSent">Email sent</option>
+                    <option value="PDFGenerated">PDF generated</option>
+                    <option value="StatusChanged">Status changed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+                <div data-einv-columns-for="invoice-activity"></div>
+                <a href="?handler=ExportHistory&invoiceNo=@Model.InvoiceDetail?.InvoiceNo" class="btn btn-sm btn-outline-secondary"><i class="ri-download-2-line" aria-hidden="true"></i>Export CSV</a>
+            </div>
+            <div class="einv-panel-b p-0">
                 @if (Model.InvoiceHistories != null && Model.InvoiceHistories.Any())
                 {
                     <div class="table-responsive einv-table-scroll-x">
-                        <table data-einv-table="invoice-activity" class="table align-middle mb-0 einv-mobile-stack">
+                        <table data-einv-table="invoice-activity" id="activityLogTable" class="table align-middle mb-0 einv-mobile-stack">
                             <thead class="einv-table-head">
                                 <tr>
                                     <th>#</th>
@@ -887,13 +882,10 @@
                 }
                 else
                 {
-                    <p class="text-muted mb-0">No history found for this invoice.</p>
+                    <div class="einv-empty"><span class="einv-empty-icon" aria-hidden="true"><i class="ri-history-line"></i></span><p class="einv-empty-title">No activity yet</p><p class="einv-empty-text">Status changes, emails and PDFs for this invoice will be listed here.</p></div>
                 }
             </div>
-        </div>
-        <!--end card-->
-    </div>
-</div>
+        </section>
 
 <!-- Hidden inputs -->
 <input type="hidden" id="validatedTimestamp" value="@Model.InvoiceDetail?.DateTimeValidated?.ToString("o")" />
@@ -949,7 +941,7 @@
                 console.log('Filter value:', value);
                 
                 // Target the activity log table specifically
-                const activityTable = document.querySelector('.card:last-of-type .table tbody');
+                const activityTable = document.querySelector('#activityLogTable tbody');
                 if (activityTable) {
                     const rows = activityTable.querySelectorAll('tr');
                     console.log('Found rows:', rows.length);

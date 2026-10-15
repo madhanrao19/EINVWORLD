@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.38.0`** (`AppInfo:Version` in `appsettings.json`). v1.38.0 is a **minor**
+> **Current version: `v1.39.0`** (`AppInfo:Version` in `appsettings.json`). v1.39.0 is a **minor**
+> release: Invoice Details gets the new layout — see the dated entry below. v1.38.0 was a **minor**
 > release: Invoice Lists gets the new look and the shared Columns menu — see the dated entry below.
 > v1.37.0 was a **minor**
 > release: the Dashboard gets the new look from the approved mockup — see the dated entry below.
@@ -346,6 +347,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.39.0 (new look: Invoice Details)
+
+Phase 3d-2 of the "Ledger" refresh, following the mockup's Details screen.
+- **Side-by-side on wide screens:** the A4 invoice preview on the left; the LHDN status (validation seal +
+  status badge), a summary (total payable, UUID, validated time) and the Cancel / Request rejection
+  actions in a column beside it, which stays in view while you scroll the invoice. On tablets the three
+  panels sit under the preview, two across; on phones they stack.
+- **The invoice itself is unchanged:** the A4 sheet is still the existing PDF template (your logo, the
+  black-ruled table, the green total band, the QR code), and Print and Download still produce it.
+- **Activity log** is a ruled panel with the action filter, the Columns menu and Export CSV in its
+  header, and the shared empty state when there's no history.
+- The page title is now the invoice number ("Invoice EINV100530").
+- Fix: the activity filter found its table as "the last card on the page", which would have broken with
+  any layout change; it now targets the activity table directly.
+
+Markup and CSS only (plus that one selector): no data, permission, LHDN, PDF or print change.
 
 ## 📅 2026-10-15 — v1.38.0 (new look: Invoice Lists; one Columns menu everywhere)
 
