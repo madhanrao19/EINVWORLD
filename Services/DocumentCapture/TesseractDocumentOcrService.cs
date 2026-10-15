@@ -54,6 +54,8 @@ namespace EINVWORLD.Services.DocumentCapture
         public string OcrPdf(byte[] pdfBytes, int maxPages)
         {
             if (!IsAvailable || pdfBytes is null || pdfBytes.Length == 0) return string.Empty;
+            // PDFtoImage (PDFium) only ships native binaries for these OSes.
+            if (!(OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())) return string.Empty;
 
             var language = string.IsNullOrWhiteSpace(_options.OcrLanguage) ? "eng" : _options.OcrLanguage;
             var dpi = _options.OcrDpi > 0 ? _options.OcrDpi : 300;

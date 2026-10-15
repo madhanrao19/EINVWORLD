@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.6`** (`AppInfo:Version` in `appsettings.json`). v1.46.6 is a **patch**
+> **Current version: `v1.46.7`** (`AppInfo:Version` in `appsettings.json`). v1.46.7 is a **patch**
+> release: build warnings fixed and vulnerable packages patched — see the dated entry below. v1.46.6 was a **patch**
 > release: the shipping recipient's TIN field now matches the other fields — see the dated entry below. v1.46.5 was a **patch**
 > release: removed three old invoice pages that were no longer built — see the dated entry below. v1.46.4 was a **patch**
 > release: saved billing dates no longer change when an invoice is reopened — see the dated entry below. v1.46.3 was a **patch**
@@ -367,6 +368,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.7 (build warnings + vulnerable packages, issue #311)
+
+- **Release build and publish now have 0 warnings** (were 15). Nothing is suppressed.
+- **Security:** `System.Security.Cryptography.Pkcs` pinned to 10.0.13 (CVE-2026-84008 / CVE-2026-70162,
+  DoS; came in via SqlClient). Microsoft ASP.NET Core / EF Core packages 10.0.12 → 10.0.13 (patch).
+- **Removed `Microsoft.VisualStudio.Web.CodeGeneration.Design`** (Visual Studio scaffolding, unused by the
+  app). It pulled the vulnerable `NuGet.Packaging`/`NuGet.Protocol` 6.12.1, and its DLLs no longer ship.
+- `PDFtoImage` reference set to 5.1.0, the version that was already being resolved (no runtime change).
+- Tests project references the ASP.NET Core shared framework, so the vulnerable
+  `System.Security.Cryptography.Xml` 4.5.0 (via NToastNotify) is no longer restored.
+- Code: obsolete `KnownNetworks` → `KnownIPNetworks` (same behaviour), nullable fixes, OCR checks the OS
+  before rendering PDF pages.
+
+**Deploy note:** the server's .NET 10 Hosting Bundle must be **10.0.13 or later**. The framework copy of
+Pkcs is what runs, not the NuGet package. No database change.
 
 ## 📅 2026-10-15 — Deploy script removes old build files (no app change)
 
