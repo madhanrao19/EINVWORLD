@@ -475,7 +475,7 @@ namespace eInvWorld.Data
                 var secret = b.Property(s => s.Secret);
                 secret.HasColumnType("nvarchar(max)");
                 if (_secretProtector is not null)
-                    secret.HasConversion(new ProtectedStringConverter(_secretProtector));
+                    ((Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder)secret).HasConversion(new ProtectedStringConverter(_secretProtector));
             });
         }
     }
