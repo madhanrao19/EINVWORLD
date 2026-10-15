@@ -1596,3 +1596,13 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
   max-height: 25rem; overflow: auto; padding: var(--einv-space-3); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-sm);
   background: var(--einv-surface-2); color: var(--einv-text); font-size: var(--einv-fs-xs); white-space: pre-wrap;
 }
+
+/* ── Ledger 3g: profile / company workspace ────────────────────────────────────────────────── */
+.einv-profile-hero { background: linear-gradient(135deg, var(--einv-primary-hover) 0%, var(--einv-fill) 100%); color: #fff; }
+[data-bs-theme="dark"] .einv-profile-hero { background: linear-gradient(135deg, #0b2a1f 0%, #0f3d2c 100%); border: 1px solid var(--einv-border); }
+.einv-profile-hero .badge.bg-light { background: #fff !important; color: #14201a !important; }
+.einv-hero-chip { background: rgba(255, 255, 255, .15); color: #fff; border: 1px solid rgba(255, 255, 255, .5); }
+.einv-avatar-ring-lg { border: 3px solid rgba(255, 255, 255, .85); }
+.einv-avatar-initial-lg { color: var(--einv-primary-hover); font-size: 2rem; font-weight: 700; border: 3px solid rgba(255, 255, 255, .85); }
+.einv-w-40 { width: 40%; }
+.einv-w-30 { width: 30%; }

@@ -41,9 +41,11 @@ test('Company Details matches the screen.png layout', async ({ page }, testInfo)
   await expect(page).not.toHaveURL(/login/i, { timeout: 15000 });
 
   // --- Identity card: status pills ---
-  await expect(page.getByText('Verified', { exact: true })).toBeVisible();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
-  await expect(page.getByText('Supplier', { exact: true })).toBeVisible();
+  // Scoped to the identity card: the same words also appear in the KPI strip and the nav.
+  const identity = page.locator('#company-view-detail');
+  await expect(identity.getByText('Verified', { exact: true })).toBeVisible();
+  await expect(identity.getByText('Active', { exact: true }).first()).toBeVisible();
+  await expect(identity.getByText('Supplier', { exact: true }).first()).toBeVisible();
 
   // --- Two-column data grid ---
   await expect(page.getByText('Legal & Registration')).toBeVisible();
@@ -51,11 +53,12 @@ test('Company Details matches the screen.png layout', async ({ page }, testInfo)
 
   // --- Assigned Buyers table (mockup columns) ---
   const buyersCard = page.locator('.card', { hasText: 'Assigned Buyers' }).first();
-  await expect(buyersCard.getByText('Buyer Entity')).toBeVisible();
-  await expect(buyersCard.getByText(/TIN \/ Registration/i)).toBeVisible();
-  await expect(buyersCard.getByText('Industry')).toBeVisible();
+  // Header cells (the Columns menu lists the same names).
+  await expect(buyersCard.locator('th', { hasText: 'Buyer Entity' })).toBeVisible();
+  await expect(buyersCard.locator('th', { hasText: /TIN \/ Registration/i })).toBeVisible();
+  await expect(buyersCard.locator('th', { hasText: 'Industry' })).toBeVisible();
   // Actions: Manage (mailto) + Unassign (calls existing unassignBuyer handler)
-  await expect(buyersCard.getByRole('button', { name: 'Unassign' })).toBeVisible();
+  await expect(buyersCard.getByRole('button', { name: 'Unassign' }).first()).toBeVisible(); // one per assigned buyer
 
   // --- Screenshot for visual diff against screen.png ---
   await page.screenshot({ path: testInfo.outputPath('company-details.png'), fullPage: true });
