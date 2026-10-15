@@ -272,21 +272,20 @@
     <PackageReference Include="Humanizer" Version="3.0.10" />
     <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.8.6" />
     <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.17.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.12" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.13" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.13">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.12" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.13" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="NToastNotify" Version="8.0.0" />
     <PackageReference Include="PuppeteerSharp" Version="25.12.0" />
@@ -305,7 +304,10 @@
          rasterizer on the already-referenced SkiaSharp; no Ghostscript). Native libs ship but are only
          loaded when DocumentCapture:OcrEnabled=true, so they're inert on installs that leave OCR off. -->
     <PackageReference Include="Tesseract" Version="5.2.0" />
-    <PackageReference Include="PDFtoImage" Version="5.0.1" />
+    <PackageReference Include="PDFtoImage" Version="5.1.0" />
+    <!-- Security pin: Microsoft.Data.SqlClient 7.0.1 (via EF Core SqlServer) pulls Pkcs 9.0.13, which has CVE-2026-84008/CVE-2026-70162 (DoS).
+         ponytail: drop this pin once EF Core SqlServer brings a SqlClient that references a patched Pkcs. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageReference Include="TimeZoneConverter" Version="7.2.0" />
     <!-- Removed unused packages (no code references): 'toastr' (CDN-loaded, pulled vulnerable jQuery 1.6.3),
          OpenTK, CopilotDev.NET.Api, Microsoft.EntityFrameworkCore.Sqlite, Razor.Templating.Core

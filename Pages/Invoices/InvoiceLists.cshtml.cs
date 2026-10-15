@@ -1302,7 +1302,7 @@ namespace eInvWorld.Pages.Invoices
                     var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
                     if (uuidList.Count > 0)
                     {
-                        query = query.Where(i => uuidList.Contains(i.UUID));
+                        query = query.Where(i => uuidList.Contains(i.UUID!));
                     }
                 }
 
@@ -2148,7 +2148,7 @@ namespace eInvWorld.Pages.Invoices
                 var invoicesToCheck = await _context.InvoiceHeaders
                     .Include(i => i.Supplier)
                     .Include(i => i.Customer)
-                    .Where(i => uuids.Contains(i.UUID) &&
+                    .Where(i => uuids.Contains(i.UUID!) &&
                                 (userTINs.Contains(i.Supplier.TIN) ||
                                  (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                                  (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
@@ -2217,7 +2217,7 @@ namespace eInvWorld.Pages.Invoices
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => uuids.Contains(i.UUID) &&
+                .Where(i => uuids.Contains(i.UUID!) &&
                             (userTINs.Contains(i.Supplier.TIN) ||
                              (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                              (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
@@ -2303,7 +2303,7 @@ namespace eInvWorld.Pages.Invoices
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => uuidList.Contains(i.UUID) &&
+                .Where(i => uuidList.Contains(i.UUID!) &&
                             (userTINs.Contains(i.Supplier.TIN) ||
                              (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                              (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
