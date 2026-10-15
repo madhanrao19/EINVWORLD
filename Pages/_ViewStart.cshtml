@@ -1,18 +1,6 @@
-﻿@* @{
-    // Layout = "_Layout";
-    Layout = "_HomeLayout";
-}
-
- *@
-
-
+﻿@* Ledger Phase 4 (v1.46.0): signed-in users get the Tabler app shell everywhere; the Velzon _Layout is no
+   longer used (kept on disk for rollback: put "_Layout" back here). Public marketing pages set
+   Layout = "_HomeLayout" themselves; pages with Layout = null (errors, PDF templates) are unaffected. *@
 @{
-    if (Context.User.Identity?.IsAuthenticated == true)
-    {
-        Layout = "_Layout";
-    }
-    else
-    {
-        Layout = "_HomeLayout";
-    }
+    Layout = Context.User.Identity?.IsAuthenticated == true ? "_LayoutTabler" : "_HomeLayout";
 }

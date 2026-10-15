@@ -15,7 +15,9 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
 - **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). The authenticated theme has been migrated
   from Velzon to the free MIT **Tabler** template (all authenticated pages; layout switched per folder via
   `_ViewStart` → `_LayoutTabler`; shared partials in `Pages/Shared/_Tabler*`, tokens/shims in
-  `wwwroot/tabler/`). Velzon is kept as a fallback until Phase 8. Public pages use the marketing layout.
+  `wwwroot/tabler/`). Since v1.46.0 the Velzon app layout is no longer used: every signed-in page renders Tabler
+  (root `Pages/_ViewStart` included) with Remix icons only (`tabler/css/remixicon.css`); `_Layout`/`_LoginLayout`
+  stay on disk for rollback. Public pages use the marketing layout (`_HomeLayout`, still Velzon CSS).
   See `docs/TABLER-MIGRATION-AUDIT.md` + `CHANGELOG.md`.
 - **Deployment:** self-hosted **on-prem Windows / IIS (in-process)**, typically behind a **Cloudflare
   Tunnel** (TLS terminated at the edge, plain HTTP to localhost). Single-instance.

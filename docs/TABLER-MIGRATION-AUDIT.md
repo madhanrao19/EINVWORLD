@@ -1,5 +1,10 @@
 # EINVWORLD — Velzon → Tabler UI Migration Audit (Phase 1)
 
+> **Status (2026-10-15, v1.46.0):** migration complete. No signed-in page uses Velzon: the root
+> `Pages/_ViewStart` serves `_LayoutTabler`, and the Tabler layouts load Remix icons from
+> `wwwroot/tabler/css/remixicon.css` (not `icons.min.css`, Font Awesome or lord-icon). Velzon files remain for the
+> public `_HomeLayout` and as a rollback. Sections below describe the migration as it happened.
+
 > ## Progress log (updated 2026-07-10)
 > | Phase | Status | Notes |
 > |---|---|---|

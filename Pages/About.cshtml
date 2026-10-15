@@ -1,6 +1,7 @@
 ﻿@page "/about"
 @model eInvWorld.Pages.AboutModel
 @{
+    Layout = "_HomeLayout"; // public marketing page: same layout whether or not the visitor is signed in
     ViewData["Title"] = "About eInvWorld | E-Invoicing Solutions for Malaysian SMEs";
     ViewData["Description"] = "Discover how eInvWorld empowers Malaysian SMEs with LHDN-compliant e-invoicing solutions, streamlining operations and ensuring tax compliance.";
     ViewData["Keywords"] = "about einvworld, e-invoicing Malaysia, LHDN compliance, SME e-invoicing solutions";
