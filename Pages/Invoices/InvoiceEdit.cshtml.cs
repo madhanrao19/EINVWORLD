@@ -902,6 +902,7 @@ namespace eInvWorld.Pages.Invoices
                     draftInvoice.IssueDate = Invoice.IssueDate;
                     draftInvoice.Currency = Invoice.Currency ?? "MYR";
                     draftInvoice.DocTypeCode = Invoice.DocTypeCode ?? "01";
+                    draftInvoice.InvoicePeriod = Invoice.InvoicePeriod ?? eInvWorld.Models.InputModel.InvoicePeriodEnum.Not_Applicable;
                     draftInvoice.StartDate = Invoice.StartDate;
                     draftInvoice.EndDate = Invoice.EndDate;
                     draftInvoice.TotalAmountExclTax = Invoice.TotalAmountExclTax;
@@ -977,6 +978,7 @@ namespace eInvWorld.Pages.Invoices
                             TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
                         Currency = Invoice.Currency ?? "MYR",
                         DocTypeCode = Invoice.DocTypeCode ?? "01",
+                        InvoicePeriod = Invoice.InvoicePeriod ?? eInvWorld.Models.InputModel.InvoicePeriodEnum.Not_Applicable,
                         StartDate = Invoice.StartDate,
                         EndDate = Invoice.EndDate,
                         TotalAmountExclTax = Invoice.TotalAmountExclTax,
