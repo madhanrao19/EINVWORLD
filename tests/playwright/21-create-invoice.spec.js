@@ -70,3 +70,30 @@ test('Save as template is on every step and opens the template dialog', async ({
   await expect(page.locator('#saveTemplateModal')).toBeVisible();
   await expect(page.locator('#TemplateName')).toHaveValue(/^Template_\d{4}-\d{2}-\d{2}$/);
 });
+
+// Issue #308: the shipping recipient's TIN uses a floating label like the other fields, the Validate
+// with LHDN button is the same height as the field, and the button still works (no LHDN call here:
+// missing details and general TINs are handled in the browser).
+test('shipping recipient TIN matches the other fields and Validate still works', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => document.getElementById('shippingRecipientCollapse').classList.add('show'));
+  const box = sel => page.locator(sel).evaluate(e => Math.round(e.getBoundingClientRect().height));
+  const tin = page.locator('#shippingRecipientTIN');
+  await expect(page.locator('.form-floating > label[for="shippingRecipientTIN"]')).toHaveText("Shipping Recipient's TIN");
+  expect(await box('#shippingRecipientTIN')).toBe(await box('#shippingRecipientName'));
+  expect(await box('.btn-validate-shipping')).toBe(await box('#shippingRecipientTIN'));
+
+  const btn = page.locator('.btn-validate-shipping');
+  await btn.click();
+  await expect(btn).toHaveText('Missing Info - Retry');
+  await tin.fill('EI00000000010');
+  await expect(btn).toHaveText('Validate with LHDN'); // typing resets it
+  await page.evaluate(() => {
+    const t = document.getElementById('shippingRecipientIdType'); t.value = t.options[t.options.length - 1].value;
+    document.getElementById('shippingRecipientIdNumber').value = 'NA';
+  });
+  await btn.click();
+  await expect(btn).toHaveText(/Validated/);
+});

@@ -874,17 +874,19 @@
                         <div class="card mb-3">
                             <div class="card-body">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-12 col-xxl-6">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientName" class="form-control" id="shippingRecipientName" placeholder="Shipping recipient's name" />
                                             <label for="shippingRecipientName">Shipping Recipient's Name</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label" for="shippingRecipientTIN">Shipping Recipient's TIN</label>
-                                        <div class="input-group">
-                                            <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="TIN" oninput="resetShippingRecipientValidation()" />
-                                            <button class="btn btn-info btn-validate-shipping" type="button" onclick="validateShippingRecipientLHDN()">Validate with LHDN</button>
+                                    <div class="col-12 col-xxl-6">
+                                        <div class="input-group mb-2">
+                                            <div class="form-floating mb-0">
+                                                <input asp-for="Invoice.ShippingRecipientTIN" class="form-control" id="shippingRecipientTIN" placeholder="Shipping recipient's TIN" oninput="resetShippingRecipientValidation()" />
+                                                <label for="shippingRecipientTIN">Shipping Recipient's TIN</label>
+                                            </div>
+                                            <button class="btn btn-info btn-validate-shipping text-nowrap" type="button" onclick="validateShippingRecipientLHDN()">Validate with LHDN</button>
                                         </div>
                                     </div>
                                     <div class="col-md-4">

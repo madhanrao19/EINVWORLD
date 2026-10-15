@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.5`** (`AppInfo:Version` in `appsettings.json`). v1.46.5 is a **patch**
+> **Current version: `v1.46.6`** (`AppInfo:Version` in `appsettings.json`). v1.46.6 is a **patch**
+> release: the shipping recipient's TIN field now matches the other fields — see the dated entry below. v1.46.5 was a **patch**
 > release: removed three old invoice pages that were no longer built — see the dated entry below. v1.46.4 was a **patch**
 > release: saved billing dates no longer change when an invoice is reopened — see the dated entry below. v1.46.3 was a **patch**
 > release: drafts keep the Billing frequency you chose — see the dated entry below. v1.46.2 was a **patch**
@@ -366,6 +367,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.6 (Shipping recipient's TIN field, issue #308)
+
+- **Create Invoice and Invoice Edit: "Shipping Recipient's TIN" now looks like the fields around it** —
+  label inside the box (floating), same height, border and spacing as "Shipping Recipient's Name". The
+  "Validate with LHDN" button is unchanged, now exactly the field's height and kept on one line.
+- Name and TIN each take a full row below very wide screens (they sit side by side from 1400px), so the
+  TIN label isn't cut off next to the button.
+
+No change to validation or the LHDN lookup.
 
 ## 📅 2026-10-15 — v1.46.5 (clean-up: legacy credit-note / self-billed pages)
 
