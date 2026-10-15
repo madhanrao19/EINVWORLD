@@ -381,15 +381,22 @@ Support where applicable:
 **Sorting and column visibility** come from one shared script, `wwwroot/tabler/js/einvworld-table.js`
 (loaded by `_LayoutTabler`). Pages switch it on with attributes and never write their own:
 
-- `<table data-einv-table="key">` adds a **Columns** menu above the table. Users hide or show columns;
-  the choice is kept per browser under `einv-cols:key`, with a "Reset to default" option.
+- `<table data-einv-table="key">` adds a **Columns** menu above the table (or inside an element marked
+  `data-einv-columns-for="key"`, e.g. a card header). Users show or hide columns and drag them (or use
+  ↑/↓ on the handle) to reorder them; Reset restores the default. Since v1.36.0 the choice is **saved to
+  the user's account** (`api/table-preferences`, `UserPreferences` key `tableColumns:<key>`) and cached in
+  the browser for the first paint. Every list table should carry this attribute, with a unique key.
+- Reordering moves the `<td>`/`<th>` cells, so page scripts must not find cells by position
+  (`cells[3]`, `td:nth-child(4)`): mark the cell with a class or `data-` attribute instead. Utility
+  columns (below) never move, so an Actions column stays last and a checkbox column stays first.
 - Adding `data-einv-sort="client"` turns on click-to-sort headers (text, RM amounts, dates), both
   directions, with `aria-sort`. Use it **only** for tables that hold their whole list on the page. Paged
   lists sort on the server through their header links; never sort a single page in the browser.
 - Put `data-sort-value` on a cell when the shown text doesn't sort (for example a `dd MMM yyyy` date:
   put the ISO date there). `data-col-lock` keeps a column always shown; `data-col-default="hidden"` hides
   it until the user turns it on; `data-sort="none"` turns sorting off for one column. Empty headers,
-  "Action"/"Actions", `col-action` and `col-checkbox` are never sortable or hideable.
+  "Action"/"Actions", `col-action` and `col-checkbox` are never sortable, hideable or movable. A column of
+  form checkboxes whose header has text (e.g. "Select") needs `class="col-checkbox"`.
 - Invoice Lists keeps its own Customize panel (saved views). Don't add `data-einv-table` there.
 
 Header labels are sentence case, not all caps. A long list can wrap its table in `.einv-table-sticky`

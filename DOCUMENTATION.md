@@ -494,6 +494,12 @@ access grid), resources (CMS), system logs, **Sync Jobs**, **Audit Trail**, **Sy
 - `POST /api/import/validate` — ERP invoice-row validation (`X-Api-Key`). *InvoiceImportApiController*
 - `POST /csp-report` — CSP violation sink (anonymous). *CspReportController*
 - `GET  /api/Image/logo?fileName=` — company logo (auth, path-guarded). *ImageController*
+- `GET  /api/table-preferences?keys=a&keys=b`, `PUT /api/table-preferences/{key}` — the signed-in user's
+  own list-table column choices (hidden + order), stored in `UserPreferences` under `tableColumns:<key>`.
+  Auth required; PUT needs the antiforgery header (`RequestVerificationToken`, from the layout's
+  `einv-csrf` meta tag); keys `^[a-z0-9][a-z0-9:_-]{0,63}$`, ≤60 names ≤120 chars, ≤60 tables per user,
+  whole preferences JSON ≤64 KB, request body ≤16 KB.
+  *TablePreferencesController*
 - `GET  /api/resources/images/{category}/{size}/{fileName}` — resource images. *ResourcesApiController*
 - `GET  /api/resources/editor/{fileName}`, `companies/logos/{fileName}` — resource/logo files.
 - `POST /api/…/submitDocuments`, `save`, `save-pdf` — invoice operations. *EInvoicing/Invoice controllers*

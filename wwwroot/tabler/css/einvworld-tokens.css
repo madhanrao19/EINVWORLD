@@ -1070,12 +1070,37 @@ body {
 
 /* einvworld-table.js: Columns menu + client-sorted headers. */
 .einv-col-hidden { display: none !important; }
-.einv-table-tools { display: flex; justify-content: flex-end; padding: var(--einv-space-2) var(--einv-space-3); }
-.einv-cols-menu { min-width: 15rem; max-height: 60vh; overflow-y: auto; }
-.einv-cols-title { padding: var(--einv-space-1) var(--einv-space-3) var(--einv-space-2); font-size: var(--einv-fs-sm); font-weight: 600; color: var(--einv-text); }
-.einv-cols-item { display: flex; align-items: center; gap: var(--einv-space-2); cursor: pointer; white-space: normal; }
+.einv-table-tools {
+  display: flex; justify-content: flex-end; align-items: center; gap: var(--einv-space-2);
+  padding: var(--einv-space-2) var(--einv-space-3); border-bottom: 1px solid var(--einv-border);
+}
+/* Columns menu (mockup "pop-menu"): show/hide + drag to reorder, saved to the account. */
+.einv-cols-menu { min-width: 16rem; max-height: 70vh; overflow-y: auto; padding: var(--einv-space-2); }
+.einv-cols-title { padding: var(--einv-space-1) var(--einv-space-2) 0; font-size: var(--einv-fs-sm); font-weight: 600; color: var(--einv-text); }
+.einv-cols-hint { margin: 0; padding: 0 var(--einv-space-2) var(--einv-space-2); font-size: var(--einv-fs-xs); color: var(--einv-text-muted); }
+.einv-cols-list { list-style: none; margin: 0; padding: 0; }
+.einv-cols-item { display: flex; align-items: center; gap: var(--einv-space-1); border-radius: var(--einv-radius-sm); }
+.einv-cols-item:hover { background: var(--einv-surface-2); }
+.einv-cols-item label { flex: 1; display: flex; align-items: center; gap: var(--einv-space-2); padding: 6px var(--einv-space-2) 6px 0; margin: 0; cursor: pointer; font-size: var(--einv-fs-sm); white-space: normal; }
+.einv-cols-item input { accent-color: var(--einv-fill); }
 .einv-cols-item input:disabled + span { color: var(--einv-text-muted); }
-.einv-cols-foot { border-top: 1px solid var(--einv-border); margin-top: var(--einv-space-1); padding: var(--einv-space-1) var(--einv-space-3) 0; }
+.einv-cols-handle {
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: var(--einv-radius-sm); background: none; color: var(--einv-text-muted);
+  cursor: grab; touch-action: none;
+}
+.einv-cols-handle:hover, .einv-cols-handle:focus-visible { color: var(--einv-text); background: var(--einv-surface); }
+.einv-cols-item.is-dragging { background: var(--einv-surface); box-shadow: var(--einv-shadow-overlay); }
+.einv-cols-item.is-dragging .einv-cols-handle { cursor: grabbing; }
+@media (pointer: coarse) { .einv-cols-handle { width: 44px; height: 44px; } }
+.einv-cols-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--einv-space-2);
+  border-top: 1px solid var(--einv-border); margin-top: var(--einv-space-1); padding: var(--einv-space-2) var(--einv-space-2) 0;
+  font-size: var(--einv-fs-xs); color: var(--einv-text-muted);
+}
+/* List tables (mockup): 38px header row, 42px body rows, labels on one line. */
+table[data-einv-table] > thead > tr > th { height: 38px; vertical-align: middle; white-space: nowrap; font-weight: 500; }
+table[data-einv-table] > tbody > tr > td { height: 42px; }
 .einv-sort {
   display: inline-flex; align-items: center; gap: .25rem;
   padding: 0; border: 0; background: none;
@@ -1331,3 +1356,7 @@ body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bo
   padding: .5rem; cursor: pointer; border-radius: 0 0 var(--einv-radius-md) var(--einv-radius-md);
 }
 .flatpickr-calendar .einv-date-clear:hover, .flatpickr-calendar .einv-date-clear:focus-visible { background: var(--einv-surface-2); }
+/* Columns menu placed in a card header (data-einv-columns-for host): no toolbar strip of its own. */
+[data-einv-columns-for] > .einv-table-tools { padding: 0; border: 0; }
+.einv-cols-foot .btn-link { color: var(--einv-primary); font-size: var(--einv-fs-xs); text-decoration: none; }
+.einv-cols-foot .btn-link:hover { text-decoration: underline; }
