@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.36.0`** (`AppInfo:Version` in `appsettings.json`). v1.36.0 is a **minor**
+> **Current version: `v1.37.0`** (`AppInfo:Version` in `appsettings.json`). v1.37.0 is a **minor**
+> release: the Dashboard gets the new look from the approved mockup — see the dated entry below.
+> v1.36.0 was a **minor**
 > release: every list table gets a Columns menu to show, hide and drag-reorder columns, saved to your
 > account — see the dated entry below. v1.35.0 was a **minor**
 > release: one calendar for every date field, showing dates as "14 Oct 2026" — see the dated entry
@@ -342,6 +344,36 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.37.0 (new look: Dashboard)
+
+Phase 3c of the "Ledger" refresh, following the approved mockup. Supplier, Buyer and Admin dashboards.
+- **Page header:** the greeting, with the period filter and (for suppliers) a **New invoice** button
+  beside it. On phones the floating "+" takes the button's place.
+- **KPI band:** the numbers sit in one ruled strip instead of separate cards, with sentence-case labels
+  and status dots in the same colours as the status badges. Two per row on phones (the status
+  strip used to squeeze six columns into a phone, wrapping labels mid-word).
+- **Panels:** charts, insights and tables sit in ruled panels with one heading style. Action Center
+  shortcuts are quiet tiles; "LHDN invalid" and "Connection failed" show their counts as badges.
+- **Needs attention** is one red-edged notice with a badge per reason.
+- **Insights** (buyers by rejection rate, internal errors, supplier quality) use thin meters instead of
+  striped, animated bars. Suggested fixes are a plain list. Empty panels use the shared empty state.
+- **Charts** use the status badge colours (the status donut now matches the badges), and the trends
+  legend sits under the chart, so it no longer fills a phone screen.
+- **Tables** (recent invoices, aging drafts, recent incoming) show as cards on phones, with amounts
+  right-aligned. "Full month" is no longer cut off in the period filter.
+- **Fix:** opening the Dashboard with a period type but no date (e.g. `?FilterType=Month`) stored the
+  text "null" as the date, so the trends chart showed "No invoice trends to display for null" even
+  when there were invoices. It now falls back to today.
+- **Fix (all phone card tables):** the 42px list-row height from v1.36.0 clipped stacked cards — a
+  card's empty state showed as a blank box and every label/value line was 42px tall (Invoice Details
+  activity log, Company Security). Stacked cells size to their content again, and "no records" rows
+  stay full width.
+- Column headers on the three Dashboard tables are now sentence case ("Invoice", "Last updated"), so a
+  Columns choice saved for them under v1.36.0 resets once (v1.36.0 hasn't been deployed yet).
+
+Markup, CSS and display-only script changes: no data, permission, migration or config change. Every
+script hook (filter, charts, insight panels, aging drafts, recent-invoices export) is unchanged.
 
 ## 📅 2026-10-14 — v1.36.0 (tables: choose and reorder columns, saved to your account)
 
