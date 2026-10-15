@@ -1360,3 +1360,120 @@ body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bo
 [data-einv-columns-for] > .einv-table-tools { padding: 0; border: 0; }
 .einv-cols-foot .btn-link { color: var(--einv-primary); font-size: var(--einv-fs-xs); text-decoration: none; }
 .einv-cols-foot .btn-link:hover { text-decoration: underline; }
+
+/* ── Ledger 3c: dashboard components (reusable: KPI band, panels, tiles, meters) ─────────────── */
+/* Page header with actions: period control + primary action to the right of the title. */
+.einv-ph { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--einv-space-3) var(--einv-space-4); margin-bottom: var(--einv-space-4); }
+.einv-ph-text { margin-right: auto; min-width: 0; }
+.einv-ph-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-2); }
+.einv-period { display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-2); margin: 0; }
+.einv-period .form-select { width: auto; }
+.einv-period .einv-date-display { width: 9.5rem; }
+
+/* KPI band (mockup): one ruled strip; each cell draws its own hairline divider, so wrapped rows stay clean. */
+.einv-kpis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md);
+  overflow: hidden; margin-bottom: var(--einv-space-4);
+}
+.einv-kpi-cell {
+  display: block; min-width: 0; padding: var(--einv-space-4) 1.25rem; color: var(--einv-text); text-decoration: none;
+  box-shadow: 1px 0 0 var(--einv-border), 0 1px 0 var(--einv-border);
+}
+a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-text); }
+.einv-kpi-l { display: flex; align-items: center; gap: 6px; font-size: var(--einv-fs-sm); color: var(--einv-text-muted); }
+.einv-kpi-v { margin-top: 4px; font-size: 1.875rem; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.einv-kpi-v small { margin-right: 4px; font-size: var(--einv-fs-md); font-weight: 500; color: var(--einv-text-muted); }
+.einv-kpi-d { margin-top: 2px; font-size: var(--einv-fs-sm); color: var(--einv-text-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 575.98px) { .einv-kpi-v { font-size: 1.5rem; } .einv-kpi-cell { padding: var(--einv-space-3) var(--einv-space-4); } }
+
+/* Status dots, coloured like the invoice status badges. */
+.einv-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: currentColor; }
+.einv-dot-valid { color: var(--einv-status-valid-fg); }
+.einv-dot-submitted { color: var(--einv-status-submitted-fg); }
+.einv-dot-draft { color: var(--einv-status-draft-fg); }
+.einv-dot-invalid { color: var(--einv-status-invalid-fg); }
+.einv-dot-rejected { color: var(--einv-status-rejected-fg); }
+.einv-dot-cancelled { color: var(--einv-status-cancelled-fg); }
+.einv-dot-brand { color: var(--einv-primary); }
+
+/* Panels: a ruled card with a 16px heading row. */
+.einv-panel { background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); min-width: 0; height: 100%; }
+.einv-panel-h {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-2) var(--einv-space-3);
+  padding: var(--einv-space-3) 1.25rem; min-height: 3.25rem; border-bottom: 1px solid var(--einv-border);
+}
+.einv-panel-h h2 { margin: 0 auto 0 0; font-size: var(--einv-fs-md); font-weight: 600; color: var(--einv-text); }
+.einv-panel-sub { font-size: var(--einv-fs-sm); color: var(--einv-text-muted); }
+.einv-panel-b { padding: 1.25rem; }
+.einv-panel-b.einv-scroll { max-height: 26rem; overflow: auto; }
+.einv-panel .table { margin-bottom: 0; }
+.einv-panel > .table-responsive { border-radius: 0 0 var(--einv-radius-md) var(--einv-radius-md); }
+.einv-chart { position: relative; height: 17.5rem; width: 100%; }
+.einv-chart-lg { height: 20rem; }
+.einv-chart-sm { height: 15.5rem; }
+
+/* Action tiles: quiet ruled links (no lift, no shadow). */
+.einv-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--einv-space-3); }
+.einv-tile {
+  display: flex; align-items: center; gap: var(--einv-space-3); min-width: 0; padding: var(--einv-space-3) var(--einv-space-4);
+  border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); background: var(--einv-surface);
+  color: var(--einv-text); text-decoration: none;
+}
+.einv-tile:hover, .einv-tile:focus-visible { background: var(--einv-surface-2); color: var(--einv-text); }
+.einv-tile-ico {
+  flex: none; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--einv-radius-sm);
+  background: var(--einv-tone-success-bg); color: var(--einv-primary); font-size: 1.125rem;
+}
+.einv-tile-text { min-width: 0; }
+.einv-tile-text b { display: block; font-weight: 500; }
+.einv-tile-text small { display: block; font-size: var(--einv-fs-sm); color: var(--einv-text-muted); }
+.einv-tile .einv-badge { margin-left: auto; }
+.einv-tile-danger .einv-tile-ico { background: var(--einv-tone-danger-bg); color: var(--einv-tone-danger-fg); }
+.einv-tile-warning .einv-tile-ico { background: var(--einv-tone-warning-bg); color: var(--einv-tone-warning-fg); }
+
+/* "Needs attention" notice: one red-edged ruled strip linking to the filtered invoice list. */
+.einv-attn {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-3) var(--einv-space-4); margin-bottom: var(--einv-space-4);
+  padding: var(--einv-space-3) var(--einv-space-4); border: 1px solid var(--einv-border); border-left: 3px solid var(--einv-tone-danger-fg);
+  border-radius: var(--einv-radius-md); background: var(--einv-surface); color: var(--einv-text); text-decoration: none;
+}
+.einv-attn:hover, .einv-attn:focus-visible { background: var(--einv-surface-2); color: var(--einv-text); }
+.einv-attn .einv-tile-ico { background: var(--einv-tone-danger-bg); color: var(--einv-tone-danger-fg); }
+.einv-attn-text { min-width: 0; margin-right: auto; }
+.einv-attn-text b { display: block; font-weight: 600; }
+.einv-attn-text span { font-size: var(--einv-fs-sm); color: var(--einv-text-muted); }
+.einv-attn-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Insight meters (rejection / error rates) and the suggested-fixes list, filled by dashboard.js. */
+.einv-meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--einv-space-4); }
+.einv-meter-top { display: flex; justify-content: space-between; gap: var(--einv-space-3); font-size: var(--einv-fs-sm); }
+.einv-meter-top span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.einv-meter-top span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+.einv-meter-bar { height: 6px; margin: 6px 0; border-radius: var(--einv-radius-pill); background: var(--einv-surface-2); overflow: hidden; color: var(--einv-tone-info-fg); }
+.einv-meter-bar > span { display: block; height: 100%; max-width: 100%; background: currentColor; border-radius: inherit; }
+.einv-meter-danger .einv-meter-bar { color: var(--einv-tone-danger-fg); }
+.einv-meter-warning .einv-meter-bar { color: var(--einv-tone-warning-fg); }
+.einv-meter-neutral .einv-meter-bar { color: var(--einv-tone-neutral-fg); }
+.einv-meter-meta { display: flex; justify-content: space-between; gap: var(--einv-space-3); font-size: var(--einv-fs-xs); color: var(--einv-text-muted); }
+.einv-fixes { list-style: none; margin: 0; padding: 0; }
+.einv-fixes li { padding: var(--einv-space-3) 0; border-bottom: 1px solid var(--einv-border); }
+.einv-fixes li:first-child { padding-top: 0; }
+.einv-fixes li:last-child { border-bottom: 0; padding-bottom: 0; }
+.einv-fixes b { display: block; font-size: var(--einv-fs-sm); font-weight: 600; }
+.einv-fixes p { margin: 2px 0 0; font-size: var(--einv-fs-sm); color: var(--einv-text-muted); }
+.einv-row-risk > td { background-color: color-mix(in srgb, var(--einv-tone-danger-bg) 55%, transparent) !important; }
+
+/* The floating "+" repeats the header's New invoice button, so it only shows on phones. */
+@media (min-width: 768px) { body:has(.einv-ph-new) .einv-fab { display: none; } }
+@media (max-width: 767.98px) { .einv-ph-new { display: none; } }
+/* Stacked tables on phones: a full-width colspan row (empty state, loading) stays a block, not a label/value flex row. */
+@media (max-width: 767.98px) {
+  .einv-mobile-stack tbody td[colspan] { display: block; text-align: center; }
+  .einv-mobile-stack tbody td[colspan]::before { content: none; }
+  /* The 42px list-row height is for table rows, not the stacked label/value lines (it clipped them). */
+  table[data-einv-table].einv-mobile-stack > tbody > tr > td { height: auto; }
+  /* Desktop edge padding (ps-4 / pe-4 on the first and last cells) doesn't belong in a stacked card. */
+  .einv-mobile-stack tbody td.ps-4 { padding-left: .75rem !important; }
+  .einv-mobile-stack tbody td.pe-4 { padding-right: .75rem !important; }
+}
