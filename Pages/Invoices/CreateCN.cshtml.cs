@@ -637,6 +637,7 @@ namespace EINVWORLD.Pages.Invoices
                     LastUpdated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
                     Currency = Invoice.Currency,
                     DocTypeCode = Invoice.DocTypeCode,
+                    InvoicePeriod = Invoice.InvoicePeriod ?? eInvWorld.Models.InputModel.InvoicePeriodEnum.Not_Applicable,
                     StartDate = Invoice.StartDate,
                     EndDate = Invoice.EndDate,
                     TotalAmountExclTax = Invoice.TotalAmountExclTax,
