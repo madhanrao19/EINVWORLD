@@ -851,12 +851,12 @@
                 @if (Model.InvoiceHistories != null && Model.InvoiceHistories.Any())
                 {
                     <div class="table-responsive einv-table-scroll-x">
-                        <table class="table align-middle mb-0 einv-mobile-stack">
+                        <table data-einv-table="invoice-activity" class="table align-middle mb-0 einv-mobile-stack">
                             <thead class="einv-table-head">
                                 <tr>
                                     <th>#</th>
                                     <th>Timestamp</th>
-                                    <th>Action</th>
+                                    <th data-col-data>Action</th>
                                     <th>Performed By</th>
                                     <th>Remarks</th>
                                 </tr>
@@ -955,7 +955,7 @@
                     console.log('Found rows:', rows.length);
                     
                     rows.forEach(row => {
-                        const actionCell = row.children[2];
+                        const actionCell = row.querySelector('td[data-label="Action"]'); // columns can be reordered
                         if (actionCell) {
                             const actionText = actionCell.innerText.trim();
                             

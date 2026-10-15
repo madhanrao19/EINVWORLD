@@ -16,10 +16,10 @@
     <div class="card-body">
         <form method="post">
             <div class="table-responsive">
-                <table id="dataTable" class="table align-middle mb-3">
+                <table data-einv-table="assign-buyers-available" id="dataTable" class="table align-middle mb-3">
                     <thead class="einv-table-head">
                         <tr>
-                            <th>Select</th>
+                            <th class="col-checkbox">Select</th>
                             <th>Buyer Name</th>
                             <th>Tax Identification Number</th>
                             <th>MSIC Code</th>
@@ -60,10 +60,10 @@
     <div class="card-body">
         <form method="post" asp-page-handler="Unassign">
             <div class="table-responsive">
-                <table id="dataTable2" class="table align-middle mb-3">
+                <table data-einv-table="assign-buyers-assigned" id="dataTable2" class="table align-middle mb-3">
                     <thead class="einv-table-head">
                         <tr>
-                            <th>Unassign</th>
+                            <th class="col-checkbox">Unassign</th>
                             <th>Buyer Name</th>
                             <th>Tax Identification Number</th>
                             <th>MSIC Code</th>

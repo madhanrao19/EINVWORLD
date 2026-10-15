@@ -725,13 +725,14 @@ else if (Model.UserType == "Supplier")
                         <span class="badge bg-primary-soft text-primary">Latest 5</span>
                     </div>
                     <div class="d-flex gap-2">
+                        <div data-einv-columns-for="dash-recent"></div>
                         <a href="/Invoices/ImportCsv" class="btn btn-sm btn-outline-secondary fw-semibold transition-hover"><i class="ri-upload-cloud-2-line me-1 align-bottom"></i>Bulk Invoice Import</a>
                         <button type="button" onclick="exportRecentInvoices()" class="btn btn-sm btn-primary fw-semibold transition-hover"><i class="ri-download-2-line me-1 align-bottom"></i>Export</button>
                     </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" id="recentInvoicesTable">
+                        <table data-einv-table="dash-recent" class="table table-hover align-middle mb-0" id="recentInvoicesTable">
                             <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
                                 <tr>
                                     <th class="ps-4">Invoice #</th>
@@ -796,11 +797,14 @@ else if (Model.UserType == "Supplier")
                     <h5 class="mb-0 text-warning-emphasis fw-bold">
                         <i class="ri-timer-flash-line me-2 fs-5 align-middle"></i>Action Required: Aging Drafts
                     </h5>
-                    <span class="badge bg-warning text-dark">Older than 3 Days</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <div data-einv-columns-for="dash-aging-drafts"></div>
+                        <span class="badge bg-warning text-dark">Older than 3 Days</span>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table data-einv-table="dash-aging-drafts" class="table table-hover align-middle mb-0">
                             <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
                                 <tr>
                                     <th class="ps-4">Invoice #</th>
@@ -979,11 +983,14 @@ else if (Model.UserType == "Buyer")
                         <h5 class="mb-0 me-3 fw-bold text-dark">Recent Incoming Invoices</h5>
                         <span class="badge bg-primary-soft text-primary">Latest 5</span>
                     </div>
-                    <a href="/Invoices/InvoiceLists?invoiceDirection=Received" class="btn btn-sm btn-outline-primary transition-hover shadow-sm">View All</a>
+                    <div class="d-flex align-items-center gap-2">
+                        <div data-einv-columns-for="dash-buyer-recent"></div>
+                        <a href="/Invoices/InvoiceLists?invoiceDirection=Received" class="btn btn-sm btn-outline-primary transition-hover shadow-sm">View All</a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table data-einv-table="dash-buyer-recent" class="table table-hover align-middle mb-0">
                             <thead class="table-light text-muted" style="font-size: 0.85rem; text-transform: uppercase;">
                                 <tr>
                                     <th class="ps-4">Invoice #</th>

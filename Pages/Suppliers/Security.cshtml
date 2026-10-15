@@ -81,11 +81,11 @@
             @if (Model.RecentActivity.Any())
             {
                 <div class="table-responsive einv-table-scroll-x">
-                    <table class="table align-middle mb-0 einv-mobile-stack" id="securityActivityTable">
+                    <table data-einv-table="company-security-activity" class="table align-middle mb-0 einv-mobile-stack" id="securityActivityTable">
                         <thead class="einv-table-head">
                             <tr>
                                 <th scope="col">When</th>
-                                <th scope="col">Action</th>
+                                <th scope="col" data-col-data>Action</th>
                                 <th scope="col">By</th>
                             </tr>
                         </thead>
