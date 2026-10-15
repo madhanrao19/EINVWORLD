@@ -61,16 +61,10 @@
 
   <ItemGroup>
     <Compile Remove="Models\DocumentSubmission.cs" />
-    <Compile Remove="Pages\Invoices\CreateCN.cshtml.cs" />
-    <Compile Remove="Pages\Invoices\CreateSBCN.cshtml.cs" />
-    <Compile Remove="Pages\Invoices\CreateSBI.cshtml.cs" />
     <Compile Remove="Pages\Invoices\PdfTemplate_v2.cshtml.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="Pages\Invoices\CreateCN.cshtml" />
-    <Content Remove="Pages\Invoices\CreateSBCN.cshtml" />
-    <Content Remove="Pages\Invoices\CreateSBI.cshtml" />
     <Content Remove="wwwroot\assets\libs\advance-ui-animation.html" />
     <Content Remove="wwwroot\assets\libs\advance-ui-highlight.html" />
     <Content Remove="wwwroot\assets\libs\advance-ui-nestable.html" />
