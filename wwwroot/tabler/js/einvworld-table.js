@@ -15,7 +15,10 @@
  * "Action" makes it an ordinary data column instead. data-col-lock keeps a column
  * always visible (it can still move); data-sort="none" disables sorting on it.
  * Cells may carry data-sort-value (e.g. an ISO date or raw number) when the shown text doesn't sort.
- * Hidden-by-default columns: data-col-default="hidden" on the <th>.
+ * Hidden-by-default columns: data-col-default="hidden" on the <th>. data-col-id gives a column a stable
+ * saved name that survives header text changes (otherwise the header text is the name).
+ * A page moving from an older column system can set table.einvLegacyColumns = async () => ({ hidden, order })
+ * (column ids); it's read once, only when the account has nothing saved for that table yet.
  * Rows whose cell count doesn't match the header (e.g. a colspan "no records" row) are left alone.
  * Rows added later by page scripts get the same layout (MutationObserver).
  * No dependencies; ids, names and form fields are never changed — only cell visibility and order.
@@ -97,7 +100,8 @@
       var utility = isUtility(th);
       return {
         index: i, th: th, name: name,
-        id: seen[name] > 1 ? name + "#" + seen[name] : name, // repeated labels stay distinct
+        // data-col-id is stable across header renames; repeated labels stay distinct
+        id: th.getAttribute("data-col-id") || (seen[name] > 1 ? name + "#" + seen[name] : name),
         movable: !utility,
         hideable: !utility && !th.hasAttribute("data-col-lock"),
         defaultHidden: th.getAttribute("data-col-default") === "hidden"
@@ -124,10 +128,13 @@
     return { hidden: this.cols.filter(function (c) { return c.defaultHidden; }).map(function (c) { return c.id; }), order: [] };
   };
 
-  // Keeps only names this table still has (a renamed header simply falls back to its default).
+  // Keeps every saved name, including ones this table doesn't show: tabs that share a key can differ
+  // (Invoice Lists' Draft tab has no UUID column), and a save from one must not drop the others' choice.
+  // Unknown names are simply ignored when laying out this table (a renamed header gets its default).
   Table.prototype.clean = function (s) {
-    var ids = this.cols.map(function (c) { return c.id; });
-    function keep(list) { return (Array.isArray(list) ? list : []).filter(function (n) { return ids.indexOf(n) !== -1; }); }
+    function keep(list) {
+      return (Array.isArray(list) ? list : []).filter(function (n, i, a) { return typeof n === "string" && n && a.indexOf(n) === i; });
+    }
     return { hidden: keep(s.hidden), order: keep(s.order) };
   };
 
@@ -196,6 +203,19 @@
     } else if (Array.isArray(local(LEGACY_PREFIX + this.key))) {
       this.changed(); // a choice from before account saving: move it up to the account (once)
       return;
+    } else if (typeof this.table.einvLegacyColumns === "function") {
+      // The page's previous column system may hold this user's choice: adopt it once, then save it here.
+      var self = this, legacyLoad = this.table.einvLegacyColumns;
+      this.table.einvLegacyColumns = null;
+      Promise.resolve().then(legacyLoad).then(function (old) {
+        if (self.dirty || !old) return;
+        var state = self.clean(old);
+        if (!state.hidden.length && !state.order.length) return;
+        self.state = state;
+        self.changed();
+      }, function () { /* old store unreadable: keep the defaults */ });
+      this.state = this.defaults();
+      local(cachePrefix + this.key, null);
     } else {
       // The account is the source of truth: nothing saved (e.g. Reset on another device) = defaults.
       this.state = this.defaults();
@@ -208,11 +228,14 @@
   // ---- Columns menu ---------------------------------------------------------------------------
   Table.prototype.buildMenu = function () {
     var self = this, menuId = "einv-cols-" + (++uid);
+    var host = document.querySelector('[data-einv-columns-for="' + CSS.escape(this.key) + '"]');
+    // A host among full-size page-header buttons (data-einv-columns-size="md") gets a matching button.
+    var btnSize = host && host.getAttribute("data-einv-columns-size") === "md" ? "" : " btn-sm";
     var wrap = document.createElement("div");
     wrap.className = "einv-table-tools";
     wrap.innerHTML =
       '<div class="dropdown">' +
-      '<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-controls="' + menuId + '">' +
+      '<button type="button" class="btn' + btnSize + ' btn-outline-secondary" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-controls="' + menuId + '">' +
       '<i class="ri-layout-column-line" aria-hidden="true"></i> Columns</button>' +
       '<div class="dropdown-menu dropdown-menu-end einv-cols-menu" id="' + menuId + '">' +
       '<div class="einv-cols-title">Columns</div>' +
@@ -262,7 +285,6 @@
       self.changed();
     });
 
-    var host = document.querySelector('[data-einv-columns-for="' + CSS.escape(this.key) + '"]');
     if (host) host.appendChild(wrap);
     else {
       var anchor = this.table.closest(".table-responsive, .einv-table-scroll-x, .einv-table-sticky") || this.table;
@@ -311,7 +333,9 @@
     var order = Array.prototype.map.call(this.list.children, function (li) { return li.getAttribute("data-col"); });
     var current = this.ordered().map(function (c) { return c.id; });
     if (order.join("\u0001") === current.join("\u0001")) return;
-    this.state.order = order;
+    var shown = this.cols.map(function (c) { return c.id; });
+    // Columns this table doesn't have keep their saved place for the tables that do.
+    this.state.order = order.concat(this.state.order.filter(function (id) { return shown.indexOf(id) === -1; }));
     this.changed();
   };
 

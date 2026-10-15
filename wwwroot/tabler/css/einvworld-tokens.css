@@ -1477,3 +1477,13 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
   .einv-mobile-stack tbody td.ps-4 { padding-left: .75rem !important; }
   .einv-mobile-stack tbody td.pe-4 { padding-right: .75rem !important; }
 }
+
+/* ── Ledger 3d: invoice lists ──────────────────────────────────────────────────────────────── */
+.einv-filter-group { margin: 0 0 var(--einv-space-2); font-size: var(--einv-fs-sm); font-weight: 600; color: var(--einv-text-muted); }
+.einv-reason { max-width: 220px; }
+.einv-empty-icon.einv-icon-danger { background: var(--einv-tone-danger-bg); color: var(--einv-tone-danger-fg); }
+
+.einv-meter-success .einv-meter-bar { color: var(--einv-tone-success-fg); }
+/* Link-style buttons use the brand green like every other link (Tabler's default is blue). */
+.btn-link { --tblr-btn-color: var(--einv-primary); --tblr-btn-hover-color: var(--einv-primary-hover); --tblr-btn-active-color: var(--einv-primary-hover); color: var(--einv-primary); }
+.btn-link:hover, .btn-link:focus-visible { color: var(--einv-primary-hover); }
