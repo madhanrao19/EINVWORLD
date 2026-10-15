@@ -368,6 +368,16 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-15 — Deploy script removes old build files (no app change)
+
+- **`scripts\Deploy-Staging.ps1` now removes files a release no longer ships** (old JS/CSS/DLLs used to
+  pile up on the server — e.g. `invoice-line-items.js`, deleted in v1.46.5, was still served). It is driven
+  by `App\.deploy-manifest.txt`, which each run writes: only files the previous run shipped can be
+  deleted, so uploads under `wwwroot` and server-only files (`web.config`, `appsettings.Production.json`)
+  are never touched. The first run deletes nothing and lists `wwwroot` files not in the release for review.
+  `-WhatIf` still previews without changes; the pre-deploy backup keeps every removed file. See
+  `DEPLOY-NOTES.md` §1.
+
 ## 📅 2026-10-15 — v1.46.6 (Shipping recipient's TIN field, issue #308)
 
 - **Create Invoice and Invoice Edit: "Shipping Recipient's TIN" now looks like the fields around it** —

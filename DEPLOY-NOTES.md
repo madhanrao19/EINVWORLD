@@ -27,6 +27,12 @@ changes are additive and AI/features stay off unless already enabled.
    backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. It also covers step 2 itself: it drops
    `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
    you don't need to stop the site by hand.
+   It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
+   `App\.deploy-manifest.txt` (outside `wwwroot`, never served) and the next run deletes only files on
+   that list that the new publish output lacks. Files it never shipped — uploads under `wwwroot`,
+   `web.config`, `appsettings.Production.json`, the key ring — are never touched, and the pre-deploy
+   backup keeps every removed file. The first run after this change deletes nothing; it lists the
+   `wwwroot` files not in the release so you can delete old build files by hand (not uploads).
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
    **If you're deploying from a CI artifact** (or any pre-built output), run it with
