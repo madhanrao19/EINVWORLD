@@ -27,8 +27,7 @@
             gap: .5rem;
             padding: .35rem .75rem;
             font-size: .7rem;
-            text-transform: uppercase;
-            letter-spacing: .04em;
+            text-transform: none; /* Ledger: sentence-case labels */
             color: var(--einv-muted, #6c757d);
             border-bottom: 1px solid var(--einv-border, #e9ecef);
             margin-bottom: .25rem;
@@ -61,8 +60,7 @@
     .irow-head-actions { flex: 0 0 60px; text-align: right; }
     .irow-mlabel {
         font-size: .65rem;
-        text-transform: uppercase;
-        letter-spacing: .03em;
+        text-transform: none; /* Ledger: sentence-case labels */
         color: var(--einv-muted, #6c757d);
         margin-bottom: .15rem;
     }
@@ -73,8 +71,7 @@
        Classification/Unit/Qty/Price, its label must stay visible at every width. */
     .irow-desc .irow-mlabel-always {
         font-size: .65rem;
-        text-transform: uppercase;
-        letter-spacing: .03em;
+        text-transform: none; /* Ledger: sentence-case labels */
         color: var(--einv-muted, #6c757d);
         margin-bottom: .15rem;
     }
@@ -352,12 +349,12 @@
 </style>
 
 <!-- Start page title -->
-<div class="row mb-4">
+<div class="row">
     <div class="col-12">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="einv-ph">
             @if (Model.IsTemplateMode)
             {
-                <div>
+                <div class="einv-ph-text">
                     <h1 class="einv-page-title mb-1">Edit Template: @Model.TemplateName</h1>
                     <p class="text-muted mb-0">Changes here update the reusable template, not any invoice already created from it.</p>
                 </div>
@@ -367,7 +364,7 @@
             }
             else
             {
-                <div>
+                <div class="einv-ph-text">
                     <h1 class="einv-page-title mb-1">Edit e-Invoice @Model.Invoice?.InvoiceNo</h1>
                     <p class="text-muted mb-0">Draft invoices can be freely edited before submission to LHDN.</p>
                 </div>
@@ -379,8 +376,8 @@
     </div>
 </div>
 
-<!-- Step Indicator (Stitch-style 3-step — matches Create e-Invoice) -->
-<div class="mb-4">
+<!-- Step Indicator (Ledger segments — matches Create e-Invoice) -->
+<div class="mb-4 einv-ci">
     <div class="ci-stepper">
         <div class="ci-step-node is-active" data-step="1">
             <div class="ci-step-circle">1</div>
@@ -397,31 +394,15 @@
         <div class="ci-step-track"><div class="ci-step-fill" id="formProgress"></div></div>
     </div>
 </div>
-<style>
-.ci-stepper{position:relative;display:flex;justify-content:space-between;padding:0 8px;}
-.ci-step-node{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center;flex:0 0 auto;}
-.ci-step-circle{width:2rem;height:2rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.875rem;background:#e9efe9;color:#3d4a42;border:2px solid #e9efe9;}
-.ci-step-node.is-active .ci-step-circle{background:var(--einv-fill,#006948);color:#fff;border-color:var(--einv-fill,#006948);}
-.ci-step-node.is-complete .ci-step-circle{background:#0069481a;color:var(--einv-primary,#006948);border-color:var(--einv-primary,#006948);}
-.ci-step-label{font-size:.75rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#6d7a72;}
-.ci-step-node.is-active .ci-step-label{color:var(--einv-primary,#006948);}
-.ci-step-track{position:absolute;top:1rem;left:8%;right:8%;height:2px;background:#e9efe9;z-index:1;transform:translateY(-50%);}
-.ci-step-fill{height:100%;width:33%;background:var(--einv-fill,#006948);transition:width .3s ease;}
-.ci-summary-row{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid #eef1f4;font-size:.875rem;color:#3d4a42;}
-.ci-summary-row:last-child{border-bottom:0;}
-.ci-summary-row strong{font-weight:600;text-align:right;}
-.ci-summary-total{font-size:1rem;}
-.ci-summary-total strong{color:var(--einv-primary,#006948);}
-</style>
 
 <!-- SVDP Notice (matches Create e-Invoice; gated on config) -->
 @if (Configuration.GetValue<bool>("LHDNApiConfig:SvdpEnabled", false))
 {
-    <div class="mb-4 d-flex align-items-start gap-3 p-3 rounded border bg-light-info" style="border-color:#cfe8ff;">
-        <i class="ri-information-line fs-5 text-info mt-1"></i>
+    <div class="einv-notice mb-4" role="note">
+        <i class="ri-information-line" aria-hidden="true"></i>
         <div>
-            <div class="text-uppercase fw-semibold text-info" style="font-size:.75rem;letter-spacing:.05em;">Notice</div>
-            <div class="text-secondary small">
+            <b>SVDP notice</b>
+            <div>
                 Taxpayers under the e-Invoice Special Voluntary Disclosure Programme (SVDP) must use document version
                 SVDP 1.3 to rectify inaccuracies and regularise compliance with e-Invoice requirements.
             </div>
@@ -473,7 +454,7 @@
 
 <!-- Main Form -->
 <div class="row">
-    <div class="col-lg-12">
+    <div class="col-lg-12 einv-ci">
         <form asp-page="/Invoices/InvoiceEdit" method="post" id="invoice_form" class="needs-validation" novalidate>
             <input type="hidden" name="action" id="invoiceAction" />
             <input type="hidden" name="TemplateName" id="templateNameInput" value="@Model.TemplateName" />
@@ -494,7 +475,7 @@
 
             <!-- Step 1: Basic Information -->
             <div class="card mb-3" id="step1">
-                <div class="card-header bg-primary bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+                <div class="card-header einv-step-h d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <i class="ri-file-text-line fs-4 text-primary me-2"></i>
                         <div>
@@ -509,7 +490,7 @@
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-lg-3">
                             <div class="border rounded-3 p-3 h-100">
-                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Buyer Status</div>
+                                <div class="text-muted einv-label">Buyer Status</div>
                                 <div class="d-flex align-items-center gap-2 mt-2">
                                     <span class="rounded-circle bg-secondary" style="width:8px;height:8px;" id="kpiBuyerDot"></span>
                                     <span class="fw-bold" id="kpiBuyerStatus">Not Selected</span>
@@ -518,19 +499,19 @@
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="border rounded-3 p-3 h-100">
-                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Currency</div>
+                                <div class="text-muted einv-label">Currency</div>
                                 <div class="fw-bold mt-2" id="kpiCurrency">-</div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="border rounded-3 p-3 h-100">
-                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Running Total</div>
+                                <div class="text-muted einv-label">Running Total</div>
                                 <div class="fw-bold mt-2 text-primary" id="kpiRunningTotal">RM 0.00</div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="border rounded-3 p-3 h-100">
-                                <div class="text-uppercase text-muted" style="font-size:.7rem;letter-spacing:.05em;">Document Type</div>
+                                <div class="text-muted einv-label">Document Type</div>
                                 <div class="fw-bold mt-2" id="kpiDocType">-</div>
                             </div>
                         </div>
@@ -747,7 +728,7 @@
 
                     <!-- Additional Party Information (collapsed by default — auto-populated, not required reading) -->
                     <button type="button" class="btn btn-light border w-100 d-flex align-items-center justify-content-between mb-3 mt-4" data-bs-toggle="collapse" data-bs-target="#editAdditionalPartyCollapse" aria-expanded="false">
-                        <span><i class="ri-bank-card-line text-primary me-2"></i><strong>Additional Party Information</strong> <span class="badge bg-primary-lt text-primary fw-bold ms-2" style="font-size:.65rem;letter-spacing:.04em;">PRE-FILLED</span></span>
+                        <span><i class="ri-bank-card-line text-primary me-2"></i><strong>Additional Party Information</strong> <span class="badge bg-primary-lt text-primary fw-bold ms-2 einv-label">PRE-FILLED</span></span>
                         <i class="ri-arrow-down-s-line"></i>
                     </button>
                     <div class="collapse" id="editAdditionalPartyCollapse">
@@ -759,7 +740,7 @@
                                         <i class="ri-bank-card-line me-2 text-primary"></i>Additional Party Information
                                         <small class="text-muted ms-2">(Auto-populated)</small>
                                     </h6>
-                                    <span class="badge bg-primary-lt text-primary fw-bold" style="font-size:.65rem;letter-spacing:.04em;">SYSTEM PRE-FILLED</span>
+                                    <span class="badge bg-primary-lt text-primary fw-bold einv-label">SYSTEM PRE-FILLED</span>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
@@ -1034,44 +1015,40 @@
                     <!-- /main column -->
 
                     <!-- Sticky right panel: Invoice Summary + Validation Checklist (matches Create e-Invoice) -->
-                    <div class="flex-shrink-0" style="width:100%; max-width:320px;">
-                    <div style="position:sticky; top:1rem;">
-                        <div class="card bg-primary text-white mb-3">
-                            <div class="card-body">
-                                <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Invoice Summary</h6>
-                                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="step1SummarySubtotal">RM 0.00</strong></div>
-                                <div class="d-flex justify-content-between mb-2"><span>Tax Amount</span><strong id="step1SummaryTax">RM 0.00</strong></div>
-                                <hr class="border-white opacity-25" />
-                                <div class="d-flex justify-content-between align-items-end">
-                                    <span class="text-uppercase opacity-75" style="font-size:.7rem;">Total Payable</span>
-                                    <span class="fs-3 fw-bold" id="step1SummaryTotal">0.00</span>
-                                </div>
-                                <div class="text-end opacity-75" style="font-size:.65rem;" id="step1SummaryCurrencyLabel">MYR - Malaysian Ringgit</div>
-                            </div>
-                        </div>
+                    <div class="einv-ci-side">
+                    <div class="einv-ci-sticky">
+                        <section class="einv-sum mb-3" aria-label="Invoice summary">
+                            <div class="einv-sum-h">Invoice summary</div>
+                            <dl class="einv-sum-rows">
+                            <dt>Subtotal</dt><dd id="step1SummarySubtotal">RM 0.00</dd>
+                            <dt>Tax amount</dt><dd id="step1SummaryTax">RM 0.00</dd>
+                            </dl>
+                            <div class="einv-sum-total"><span>Total payable</span><b id="step1SummaryTotal">0.00</b></div>
+                            <div class="einv-sum-note" id="step1SummaryCurrencyLabel">MYR - Malaysian Ringgit</div>
+                        </section>
                         <div class="card">
                             <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Validation Checklist</h6>
+                                <h6 class="text-muted mb-3 einv-label">Validation Checklist</h6>
                                 <ul class="list-unstyled mb-0">
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-checkbox-circle-fill text-secondary" id="chkBuyerIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkBuyerText">Buyer Not Selected</div>
-                                            <div class="text-muted" style="font-size:.7rem;" id="chkBuyerDetail">Select a buyer to continue.</div>
+                                            <div class="text-muted small" id="chkBuyerDetail">Select a buyer to continue.</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-checkbox-circle-fill text-success"></i>
                                         <div>
                                             <div class="fw-bold" id="chkCurrencyText">Currency Selected</div>
-                                            <div class="text-muted" style="font-size:.7rem;" id="chkCurrencyDetail">MYR</div>
+                                            <div class="text-muted small" id="chkCurrencyDetail">MYR</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2">
                                         <i class="ri-error-warning-fill text-danger" id="chkPoIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkPoText">PO/DO Number Not Set</div>
-                                            <div class="text-muted" style="font-size:.7rem;">Optional — set if your buyer requires PO matching.</div>
+                                            <div class="text-muted">Optional — set if your buyer requires PO matching.</div>
                                         </div>
                                     </li>
                                 </ul>
@@ -1084,12 +1061,19 @@
                     <!-- /two-column layout -->
 
                     <!-- Step Navigation -->
-                    <div class="d-flex justify-content-end mt-4 pt-3 border-top">
-                        <button type="button" class="btn btn-outline-danger me-2" onclick="location.reload()">
-                            <i class="ri-refresh-line me-1"></i>Reset
+                    <div class="einv-wiz-actions">
+                        <button type="button" class="btn btn-outline-danger" onclick="location.reload()">
+                            <i class="ri-refresh-line" aria-hidden="true"></i>Reset
                         </button>
-                        <button type="button" class="btn btn-primary waves-effect waves-light" onclick="nextStep()">
-                            Next: Invoice Items <i class="ri-arrow-right-line align-middle ms-2"></i>
+                        <span class="einv-wiz-spacer"></span>
+                        @if (!Model.IsTemplateMode)
+                        {
+                            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                                <i class="ri-file-copy-line" aria-hidden="true"></i>Save as template
+                            </button>
+                        }
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">
+                            Next: invoice items <i class="ri-arrow-right-line" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -1097,7 +1081,7 @@
 
             <!-- Step 2: Invoice Items -->
             <div class="card mb-3 d-none" id="step2">
-                <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+                <div class="card-header einv-step-h d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <i class="ri-list-check-2 fs-4 text-success me-2"></i>
                         <div>
@@ -1305,43 +1289,39 @@
                     <!-- /main column -->
 
                     <!-- Sticky right panel: Invoice Summary + Validation Checklist (matches Step 1/Step 3) -->
-                    <div class="flex-shrink-0" style="width:100%; max-width:320px;">
-                    <div style="position:sticky; top:1rem;">
-                        <div class="card bg-primary text-white mb-3">
-                            <div class="card-body">
-                                <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Invoice Summary</h6>
-                                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="step2SummarySubtotal">0.00</strong></div>
-                                <div class="d-flex justify-content-between mb-2"><span>Tax Amount</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
-                                <hr class="border-white opacity-25" />
-                                <div class="d-flex justify-content-between align-items-end">
-                                    <span class="text-uppercase opacity-75" style="font-size:.7rem;">Total Payable</span>
-                                    <span class="fs-3 fw-bold" id="step2SummaryTotalAmount">0.00</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="einv-ci-side">
+                    <div class="einv-ci-sticky">
+                        <section class="einv-sum mb-3" aria-label="Invoice summary">
+                            <div class="einv-sum-h">Invoice summary</div>
+                            <dl class="einv-sum-rows">
+                            <dt>Subtotal</dt><dd id="step2SummarySubtotal">0.00</dd>
+                            <dt>Tax amount</dt><dd id="step2SummaryTaxAmount">0.00</dd>
+                            </dl>
+                            <div class="einv-sum-total"><span>Total payable</span><b id="step2SummaryTotalAmount">0.00</b></div>
+                        </section>
                         <div class="card">
                             <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Validation Checklist</h6>
+                                <h6 class="text-muted mb-3 einv-label">Validation Checklist</h6>
                                 <ul class="list-unstyled mb-0">
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-error-warning-fill text-danger" id="chkLineItemsIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkLineItemsText">No Items</div>
-                                            <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                            <div class="text-muted">At least one line item is required.</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-error-warning-fill text-danger" id="chkLineFieldsIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkLineFieldsText">Classification / Unit Incomplete</div>
-                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Classification and Unit.</div>
+                                            <div class="text-muted">Every line needs a Classification and Unit.</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2">
                                         <i class="ri-error-warning-fill text-danger" id="chkQtyPriceIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkQtyPriceText">Quantity / Price Incomplete</div>
-                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Quantity and Unit Price greater than 0.</div>
+                                            <div class="text-muted">Every line needs a Quantity and Unit Price greater than 0.</div>
                                         </div>
                                     </li>
                                 </ul>
@@ -1372,12 +1352,19 @@
                 </div> *@
 
                 <!-- Step Navigation -->
-                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                <div class="einv-wiz-actions">
                     <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
-                        <i class="ri-arrow-left-line me-1"></i>Previous
+                        <i class="ri-arrow-left-line" aria-hidden="true"></i>Previous
                     </button>
-                    <button type="button" class="btn btn-primary waves-effect waves-light" onclick="nextStep()">
-                        Next: Review & Submit <i class="ri-arrow-right-line align-middle ms-2"></i>
+                    <span class="einv-wiz-spacer"></span>
+                    @if (!Model.IsTemplateMode)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                            <i class="ri-file-copy-line" aria-hidden="true"></i>Save as template
+                        </button>
+                    }
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">
+                        Next: review and submit <i class="ri-arrow-right-line" aria-hidden="true"></i>
                     </button>
                 </div>
                 </div>
@@ -1385,7 +1372,7 @@
         </form>
         <!-- Step 3: Review & Submit -->
         <div class="card mb-4 d-none" id="step3">
-            <div class="card-header bg-warning bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+            <div class="card-header einv-step-h d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
                     <i class="ri-clipboard-check-line fs-4 text-warning me-2"></i>
                     <div>
@@ -1402,7 +1389,7 @@
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-body">
-                                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Invoice Details</h6>
+                                        <h6 class="text-muted mb-3 einv-label">Invoice Details</h6>
                                         <div class="ci-summary-row"><span>Document Type:</span><strong id="summaryDocType">-</strong></div>
                                         <div class="ci-summary-row"><span>Issue Date:</span><strong id="summaryIssueDate">-</strong></div>
                                         <div class="ci-summary-row"><span>Items Count:</span><strong id="summaryItemsCount">-</strong></div>
@@ -1412,7 +1399,7 @@
                             <div class="col-md-6">
                                 <div class="card h-100">
                                     <div class="card-body">
-                                        <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Buyer &amp; Supplier</h6>
+                                        <h6 class="text-muted mb-3 einv-label">Buyer &amp; Supplier</h6>
                                         <div class="ci-summary-row"><span>Supplier:</span><strong id="summarySupplier">-</strong></div>
                                         <div class="ci-summary-row"><span>Buyer:</span><strong id="summaryBuyer">-</strong></div>
                                     </div>
@@ -1446,7 +1433,7 @@
                         <!-- Payment & Terms -->
                         <div class="card">
                             <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.75rem;letter-spacing:.05em;">Payment &amp; Terms</h6>
+                                <h6 class="text-muted mb-3 einv-label">Payment &amp; Terms</h6>
                                 <div class="ci-summary-row"><span>Payment Terms:</span><strong id="summaryPaymentTerms">-</strong></div>
                                 <div class="ci-summary-row"><span>Billing Frequency:</span><strong id="summaryBillingFrequency">-</strong></div>
                             </div>
@@ -1455,39 +1442,38 @@
 
                     <!-- Right: Financial Summary, Submission Readiness & Actions (sticky) -->
                     <div class="col-lg-4">
-                        <div style="position:sticky; top:1rem;">
-                            <div class="card bg-primary text-white mb-3">
-                                <div class="card-body">
-                                    <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Total Amount</h6>
-                                    <div class="fs-2 fw-bold mb-3" id="summaryTotalAmount">0.00</div>
-                                    <hr class="border-white opacity-25" />
-                                    <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="summarySubtotal">0.00</strong></div>
-                                    <div class="d-flex justify-content-between"><span>Tax Amount</span><strong id="summaryTaxAmount">0.00</strong></div>
-                                </div>
-                            </div>
+                        <div class="einv-ci-sticky">
+                            <section class="einv-sum mb-3" aria-label="Total amount due">
+                                <div class="einv-sum-h">Total amount due</div>
+                                <dl class="einv-sum-rows">
+                                <dt>Subtotal</dt><dd id="summarySubtotal">0.00</dd>
+                                <dt>Tax amount</dt><dd id="summaryTaxAmount">0.00</dd>
+                                </dl>
+                                <div class="einv-sum-total"><span>Total payable</span><b id="summaryTotalAmount">0.00</b></div>
+                            </section>
                             <div class="card mb-3">
                                 <div class="card-body">
-                                    <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Submission Readiness</h6>
+                                    <h6 class="text-muted mb-3 einv-label">Submission Readiness</h6>
                                     <ul class="list-unstyled mb-0">
                                         <li class="d-flex align-items-start gap-2 mb-3">
                                             <i class="ri-checkbox-circle-fill" id="chkItemsIcon"></i>
                                             <div>
                                                 <div class="fw-bold" id="chkItemsText">No Items</div>
-                                                <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                                <div class="text-muted">At least one line item is required.</div>
                                             </div>
                                         </li>
                                         <li class="d-flex align-items-start gap-2 mb-3">
                                             <i class="ri-checkbox-circle-fill" id="chkPartiesIcon"></i>
                                             <div>
                                                 <div class="fw-bold" id="chkPartiesText">Supplier/Buyer Not Set</div>
-                                                <div class="text-muted" style="font-size:.7rem;">Both supplier and buyer must be selected.</div>
+                                                <div class="text-muted">Both supplier and buyer must be selected.</div>
                                             </div>
                                         </li>
                                         <li class="d-flex align-items-start gap-2">
                                             <i class="ri-checkbox-circle-fill" id="chkTotalsIcon"></i>
                                             <div>
                                                 <div class="fw-bold" id="chkTotalsText">Totals Not Calculated</div>
-                                                <div class="text-muted" style="font-size:.7rem;">Subtotal and tax are computed from item rows.</div>
+                                                <div class="text-muted">Subtotal and tax are computed from item rows.</div>
                                             </div>
                                         </li>
                                     </ul>
@@ -1517,7 +1503,7 @@
                                         </div>
                                         <div class="col-6">
                                             <button type="button" class="btn btn-outline-secondary w-100 waves-effect waves-light" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
-                                                <i class="ri-file-copy-line align-middle me-2"></i>Template
+                                                <i class="ri-file-copy-line align-middle me-2" aria-hidden="true"></i>Save as template
                                             </button>
                                         </div>
                                     </div>
@@ -5583,4 +5569,5 @@
     <!-- External scripts removed to avoid conflicts with inline functionality -->
     <!-- <script type="module" src="~/js/create-invoice-new.js?v=@DateTime.Now.Ticks"></script> -->
     <script type="module" src="~/js/template-invoice.js"></script>
+    <script src="~/js/invoices/billing-period.js" asp-append-version="true"></script>
 }
