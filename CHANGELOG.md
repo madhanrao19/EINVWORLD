@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.3`** (`AppInfo:Version` in `appsettings.json`). v1.46.3 is a **patch**
+> **Current version: `v1.46.4`** (`AppInfo:Version` in `appsettings.json`). v1.46.4 is a **patch**
+> release: saved billing dates no longer change when an invoice is reopened — see the dated entry below. v1.46.3 was a **patch**
 > release: drafts keep the Billing frequency you chose — see the dated entry below. v1.46.2 was a **patch**
 > release: Invoice Edit no longer opens with Billing frequency blank — see the dated entry below. v1.46.1 was a **patch**
 > release: legacy pages and leftover demo code removed — see the dated entry below. v1.46.0 was a **minor**
@@ -364,6 +365,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.4 (fix: billing dates changed when an invoice was reopened)
+
+- **Invoice Edit and Create Invoice now show saved billing Start/End dates correctly.** The page wrote the
+  stored date in the server's default format ("15/3/2026 12:00:00 AM") but the calendar reads
+  "15-Mar-2026", so it kept the day and turned the month into January (sometimes the year too) — e.g.
+  1 Jan 2027 reopened as 1 Jan 2026, 15 Mar 2026 as 15 Jan 2026. Saving or submitting from that screen
+  then stored the wrong dates. Affected: Invoice Edit (drafts, templates), and Create Invoice when it
+  pre-fills dates (copy / resend / template). Dates are now written as `dd-MMM-yyyy` with English month
+  names, the calendar's own format.
+
+No database change. Invoices saved from these screens before this release may carry wrong billing dates;
+check any invoice with a billing period whose dates fall in January.
 
 ## 📅 2026-10-15 — v1.46.3 (fix: drafts lost their Billing frequency)
 
