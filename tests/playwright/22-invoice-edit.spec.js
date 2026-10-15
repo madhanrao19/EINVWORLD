@@ -22,6 +22,11 @@ test('wizard look, Save as template on steps 1-3, billing period rule', async ({
   for (const step of ['#step1', '#step2', '#step3'])
     await expect(page.locator(`${step} button[data-bs-target="#saveTemplateModal"]`)).toHaveCount(1);
 
+  // Saved billing dates are written in the calendar's own format, so it can't misread the year.
+  for (const id of ['startDate', 'endDate']) {
+    const v = await page.locator('#' + id).getAttribute('value');
+    if (v) expect(v).toMatch(/^\d{2}-[A-Z][a-z]{2}-\d{4}$/);
+  }
   // A draft saved without a period (e.g. a credit note) opens as Not Applicable, like Create Invoice.
   await expect(page.locator('select[name="Invoice.InvoicePeriod"]')).not.toHaveValue('');
 
