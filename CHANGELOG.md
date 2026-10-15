@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.44.0`** (`AppInfo:Version` in `appsettings.json`). v1.44.0 is a **minor**
+> **Current version: `v1.45.0`** (`AppInfo:Version` in `appsettings.json`). v1.45.0 is a **minor**
+> release: the Admin pages get the new look; this completes Phase 3 of the "Ledger" refresh — see the
+> dated entry below. v1.44.0 was a **minor**
 > release: Items, Templates, Buyers, Recurring, Leads and the Assistant get the new look — see the dated
 > entry below. v1.43.0 was a **minor**
 > release: My Account (profile) and the company workspace get the new look — see the dated entry below.
@@ -357,6 +359,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.45.0 (new look: Admin; Phase 3 complete)
+
+Phase 3i of the "Ledger" refresh, and the last page group of Phase 3.
+- **Role management** uses the standard page header, and its card headings sit above their descriptions
+  (the title and description ran together on one line).
+- **AI Settings** and **Add / Edit user** labels are sentence case (15 all-caps labels).
+- The other Admin pages (codes, users, logs, audit, sync jobs, webhooks, system health, resources,
+  Smart Capture auto-submit) were already on the shared components; no DataTables pages remain.
+- Noted for clean-up, not changed: nine "Add New …" code pages under `Pages/Admin/Codes/*/AddNew*.cshtml`
+  aren't linked from anywhere (some are empty).
+
+Markup only: no permission, role, data or behaviour change.
 
 ## 📅 2026-10-15 — v1.44.0 (new look: items, templates, buyers, recurring, leads, assistant)
 
