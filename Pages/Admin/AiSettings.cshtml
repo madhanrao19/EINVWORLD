@@ -45,33 +45,33 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Provider</p>
+                <p class="mb-1 einv-label">Provider</p>
                 <p class="mb-0 fw-semibold">@Model.Provider</p>
             </div>
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Base URL</p>
+                <p class="mb-1 einv-label">Base URL</p>
                 <p class="mb-0"><code>@Model.BaseUrl</code></p>
             </div>
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Model</p>
+                <p class="mb-1 einv-label">Model</p>
                 <p class="mb-0"><code>@Model.Model</code></p>
             </div>
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Timeout</p>
+                <p class="mb-1 einv-label">Timeout</p>
                 <p class="mb-0">@Model.TimeoutSeconds s</p>
             </div>
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                <p class="mb-1 einv-label">
                     Keep Alive <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="How long Ollama keeps the model loaded in memory after a request. A larger value avoids repeated slow cold-loads between requests."></i>
                 </p>
                 <p class="mb-0">@Model.KeepAliveMinutes min</p>
             </div>
             <div class="col-md-6 mb-3">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Temperature</p>
+                <p class="mb-1 einv-label">Temperature</p>
                 <p class="mb-0">@Model.Temperature</p>
             </div>
             <div class="col-md-6 mb-0">
-                <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Max Tokens</p>
+                <p class="mb-1 einv-label">Max Tokens</p>
                 <p class="mb-0">@Model.MaxTokens</p>
             </div>
         </div>
