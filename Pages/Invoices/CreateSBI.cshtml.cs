@@ -363,6 +363,7 @@ namespace EINVWORLD.Pages.Invoices
                     LastUpdated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")), // Set current time as the last update
                     Currency = Invoice.Currency ?? "MYR", // Default currency if none provided
                     DocTypeCode = Invoice.DocTypeCode ?? "01", // Default document type code if none provided
+                    InvoicePeriod = Invoice.InvoicePeriod ?? eInvWorld.Models.InputModel.InvoicePeriodEnum.Not_Applicable,
                     StartDate = Invoice.StartDate,
                     EndDate = Invoice.EndDate,
                     TotalAmountExclTax = Invoice.TotalAmountExclTax,
