@@ -1,7 +1,7 @@
 @model EINVWORLD.Pages.Invoices.CreateInvoiceModel
 @using eInvWorld.Helpers
 <div class="card mb-3 d-none" id="step2">
-                <div class="card-header bg-success bg-opacity-10 border-0 d-flex align-items-center justify-content-between">
+                <div class="card-header einv-step-h d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <i class="ri-list-check-2 fs-4 text-success me-2"></i>
                         <div>
@@ -210,43 +210,39 @@
                     <!-- /main column -->
 
                     <!-- Sticky right panel: Invoice Summary + Validation Checklist (matches Step 1/Step 3) -->
-                    <div class="flex-shrink-0" style="width:100%; max-width:320px;">
-                    <div style="position:sticky; top:1rem;">
-                        <div class="card bg-primary text-white mb-3">
-                            <div class="card-body">
-                                <h6 class="text-uppercase mb-3 opacity-75" style="font-size:.7rem;letter-spacing:.05em;">Invoice Summary</h6>
-                                <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="step2SummarySubtotal">0.00</strong></div>
-                                <div class="d-flex justify-content-between mb-2"><span>Tax Amount</span><strong id="step2SummaryTaxAmount">0.00</strong></div>
-                                <hr class="border-white opacity-25" />
-                                <div class="d-flex justify-content-between align-items-end">
-                                    <span class="text-uppercase opacity-75" style="font-size:.7rem;">Total Payable</span>
-                                    <span class="fs-3 fw-bold" id="step2SummaryTotalAmount">0.00</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="einv-ci-side">
+                    <div class="einv-ci-sticky">
+                        <section class="einv-sum mb-3" aria-label="Invoice summary">
+                            <div class="einv-sum-h">Invoice summary</div>
+                            <dl class="einv-sum-rows">
+                                <dt>Subtotal</dt><dd id="step2SummarySubtotal">0.00</dd>
+                                <dt>Tax amount</dt><dd id="step2SummaryTaxAmount">0.00</dd>
+                            </dl>
+                            <div class="einv-sum-total"><span>Total payable</span><b id="step2SummaryTotalAmount">0.00</b></div>
+                        </section>
                         <div class="card">
                             <div class="card-body">
-                                <h6 class="text-uppercase text-muted mb-3" style="font-size:.7rem;letter-spacing:.05em;">Validation Checklist</h6>
+                                <h6 class="text-muted mb-3 einv-label">Validation Checklist</h6>
                                 <ul class="list-unstyled mb-0">
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-error-warning-fill text-danger" id="chkLineItemsIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkLineItemsText">No Items</div>
-                                            <div class="text-muted" style="font-size:.7rem;">At least one line item is required.</div>
+                                            <div class="text-muted">At least one line item is required.</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2 mb-3">
                                         <i class="ri-error-warning-fill text-danger" id="chkLineFieldsIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkLineFieldsText">Classification / Unit Incomplete</div>
-                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Classification and Unit.</div>
+                                            <div class="text-muted">Every line needs a Classification and Unit.</div>
                                         </div>
                                     </li>
                                     <li class="d-flex align-items-start gap-2">
                                         <i class="ri-error-warning-fill text-danger" id="chkQtyPriceIcon"></i>
                                         <div>
                                             <div class="fw-bold" id="chkQtyPriceText">Quantity / Price Incomplete</div>
-                                            <div class="text-muted" style="font-size:.7rem;">Every line needs a Quantity and Unit Price greater than 0.</div>
+                                            <div class="text-muted">Every line needs a Quantity and Unit Price greater than 0.</div>
                                         </div>
                                     </li>
                                 </ul>
@@ -277,12 +273,16 @@
                 </div> *@
 
                 <!-- Step Navigation -->
-                <div class="d-flex justify-content-between mt-4 pt-3 border-top">
+                <div class="einv-wiz-actions">
                     <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
-                        <i class="ri-arrow-left-line me-1"></i>Previous
+                        <i class="ri-arrow-left-line" aria-hidden="true"></i>Previous
                     </button>
+                    <span class="einv-wiz-spacer"></span>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                            <i class="ri-file-copy-line" aria-hidden="true"></i>Save as template
+                        </button>
                     <button type="button" class="btn btn-primary" onclick="nextStep()">
-                        Next: Review & Submit <i class="ri-arrow-right-line ms-1"></i>
+                        Next: review and submit <i class="ri-arrow-right-line" aria-hidden="true"></i>
                     </button>
                 </div>
                 </div>
