@@ -38,7 +38,8 @@
     <!-- Tabler CSS + brand tokens (tokens carry the auth-page shims) -->
     <link href="~/tabler/css/tabler.min.css" rel="stylesheet" type="text/css" asp-append-version="true">
     <link href="~/tabler/css/einvworld-tokens.css" rel="stylesheet" type="text/css" asp-append-version="true">
-    <link href="~/assets/css/icons.min.css" rel="stylesheet" type="text/css">
+    @* Remix icons only (Velzon's combined icon bundle is no longer loaded in the app). *@
+    <link href="~/tabler/css/remixicon.css" rel="stylesheet" type="text/css" asp-append-version="true">
 
     <!-- Auth page design: fonts and colours from the shared tokens (self-hosted, no font CDN). -->
     <link href="~/tabler/css/einvworld-auth.css" rel="stylesheet" type="text/css" asp-append-version="true">
@@ -101,7 +102,6 @@
 
     <!-- Core JS -->
     <script src="~/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="~/assets/js/pages/plugins/lord-icon-2.1.0.js"></script>
 
     <!-- password show/hide toggle + jQuery validation init (unchanged from _LoginLayout) -->
     <script src="/assets/js/pages/password-addon.init.js"></script>
