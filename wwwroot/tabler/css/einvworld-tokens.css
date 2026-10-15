@@ -1487,3 +1487,18 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 /* Link-style buttons use the brand green like every other link (Tabler's default is blue). */
 .btn-link { --tblr-btn-color: var(--einv-primary); --tblr-btn-hover-color: var(--einv-primary-hover); --tblr-btn-active-color: var(--einv-primary-hover); color: var(--einv-primary); }
 .btn-link:hover, .btn-link:focus-visible { color: var(--einv-primary-hover); }
+
+/* ── Ledger 3d-2: invoice details (mockup "Details": A4 viewer | status + actions) ─────────────── */
+.einv-det-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+@media (min-width: 1200px) { .einv-det-grid { grid-template-columns: minmax(0, 1fr) 18.75rem; } }
+.einv-det-main { min-width: 0; }
+.einv-det-side { display: flex; flex-direction: column; gap: var(--einv-space-4); min-width: 0; }
+@media (min-width: 768px) and (max-width: 1199.98px) { .einv-det-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .einv-det-side { position: sticky; top: var(--einv-space-4); } }
+.einv-det-side .einv-panel { height: auto; }
+.einv-det-status { display: flex; flex-direction: column; align-items: center; gap: var(--einv-space-3); text-align: center; }
+.einv-kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--einv-space-2) var(--einv-space-4); margin: 0; font-size: var(--einv-fs-sm); }
+.einv-kv dt { font-weight: 400; color: var(--einv-text-muted); }
+.einv-kv dd { margin: 0; overflow-wrap: anywhere; }
+.einv-pdf-card { overflow: hidden; }
+@media print { .einv-det-grid { display: block; } .einv-pdf-card { border: 0; overflow: visible; } }
