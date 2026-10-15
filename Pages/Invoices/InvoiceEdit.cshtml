@@ -710,7 +710,7 @@
                         <!-- Start Date -->
                         <div class="col-md-4">
                             <div class="form-floating">
-                                <input type="text" asp-for="Invoice.StartDate" class="form-control" id="startDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select start date" />
+                                <input type="text" asp-for="Invoice.StartDate" value="@Model.Invoice?.StartDate?.ToString("dd-MMM-yyyy", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" id="startDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select start date" />
                                 <label for="startDate">Start Date</label>
                             </div>
                         </div>
@@ -718,7 +718,7 @@
                         <!-- End Date -->
                         <div class="col-md-4">
                             <div class="form-floating">
-                                <input type="text" asp-for="Invoice.EndDate" class="form-control" id="endDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select end date" />
+                                <input type="text" asp-for="Invoice.EndDate" value="@Model.Invoice?.EndDate?.ToString("dd-MMM-yyyy", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" id="endDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select end date" />
                                 <label for="endDate">End Date</label>
                             </div>
                         </div>
