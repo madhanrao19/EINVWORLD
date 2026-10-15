@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.4`** (`AppInfo:Version` in `appsettings.json`). v1.46.4 is a **patch**
+> **Current version: `v1.46.5`** (`AppInfo:Version` in `appsettings.json`). v1.46.5 is a **patch**
+> release: removed three old invoice pages that were no longer built — see the dated entry below. v1.46.4 was a **patch**
 > release: saved billing dates no longer change when an invoice is reopened — see the dated entry below. v1.46.3 was a **patch**
 > release: drafts keep the Billing frequency you chose — see the dated entry below. v1.46.2 was a **patch**
 > release: Invoice Edit no longer opens with Billing frequency blank — see the dated entry below. v1.46.1 was a **patch**
@@ -365,6 +366,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.5 (clean-up: legacy credit-note / self-billed pages)
+
+- **Removed the old `CreateCN`, `CreateSBCN` and `CreateSBI` pages** and their `invoice-line-items.js`.
+  They were already excluded from the build (`EINVWORLD.csproj`) and nothing linked to them; credit notes,
+  self-billed invoices and self-billed credit notes are all created through Create Invoice
+  (`?type=CN`, `?type=SELF`, `?type=SELF-CN`, …).
+
+No behaviour, data or permission change.
 
 ## 📅 2026-10-15 — v1.46.4 (fix: billing dates changed when an invoice was reopened)
 
