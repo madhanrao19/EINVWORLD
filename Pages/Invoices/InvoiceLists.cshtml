@@ -243,6 +243,10 @@
     // tab has no bulk actions, so it renders without the checkbox column.
     var showSelection = !Model.IsViewOnly
                         && (invoiceDirection == "Draft" || invoiceDirection == "Sent" || invoiceDirection == "Received");
+    // Shared Columns menu (einvworld-table.js), saved to the account. Received shows the Supplier and
+    // the other tabs the Buyer, so they keep separate column sets (as the old Customize panel did).
+    var isReceivedTab = invoiceDirection == "Received";
+    var columnsKey = isReceivedTab ? "invoices-received" : "invoices";
 }
 
 <!-- Stitch page header: breadcrumb + title + description left, page actions right -->
@@ -286,12 +290,7 @@
                     <i class="ri-file-download-line"></i> Export
                 </a>
 
-                <!-- Customize Columns Button -->
-                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1"
-                        data-bs-toggle="modal" data-bs-target="#columnSettingsModal"
-                        title="Customize column display" id="columnSettingsBtnMoved">
-                    <i class="ri-settings-3-line"></i> Customize
-                </button>
+                <div data-einv-columns-for="@columnsKey" data-einv-columns-size="md"></div>
 
                 @if (showCreateAction)
                 {
@@ -325,67 +324,45 @@
     var kpiRejected = kpiCounts.TryGetValue("Invalid", out var kpiInvalidCount) ? kpiInvalidCount : 0;
     var kpiTotalLabel = invoiceDirection switch
     {
-        "Draft" => "TOTAL DRAFTS",
-        "Received" => "TOTAL RECEIVED",
-        "All" => "TOTAL DOCUMENTS",
-        _ => "TOTAL SENT"
+        "Draft" => "Total drafts",
+        "Received" => "Total received",
+        "All" => "Total documents",
+        _ => "Total sent"
     };
 }
 @if (kpiTotal > 0)
 {
-    <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-@(invoiceDirection == "Draft" ? "6" : "3")">
-            <div class="card mb-0 h-100">
-                <div class="card-body py-3">
-                    <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">@kpiTotalLabel</p>
-                    <h3 class="mb-0 fw-bold">@kpiTotal.ToString("N0")</h3>
-                </div>
-            </div>
+    <div class="einv-kpis" role="group" aria-label="Summary for this tab">
+        <div class="einv-kpi-cell">
+            <div class="einv-kpi-l">@kpiTotalLabel</div>
+            <div class="einv-kpi-v">@kpiTotal.ToString("N0")</div>
         </div>
         @if (invoiceDirection != "Draft")
         {
-            <div class="col-6 col-lg-3">
-                <div class="card mb-0 h-100">
-                    <div class="card-body py-3">
-                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">Validated (LHDN)</p>
-                        <h3 class="mb-0 fw-bold" style="color:var(--einv-success);">@kpiValid.ToString("N0")</h3>
-                    </div>
-                </div>
+            <div class="einv-kpi-cell">
+                <div class="einv-kpi-l"><span class="einv-dot einv-dot-valid"></span>Validated by LHDN</div>
+                <div class="einv-kpi-v">@kpiValid.ToString("N0")</div>
             </div>
         }
-        <div class="col-6 col-lg-3">
-            <div class="card mb-0 h-100" style="background:var(--einv-fill,#006948); color:#fff;">
-                <div class="card-body py-3">
-                    <p class="text-uppercase fw-semibold small mb-2 opacity-75" style="letter-spacing:.05em;">Total Value</p>
-                    <h3 class="mb-0 fw-bold">RM @Model.TabTotalAmount.ToString("N0")</h3>
-                </div>
-            </div>
+        <div class="einv-kpi-cell">
+            <div class="einv-kpi-l">Total value</div>
+            <div class="einv-kpi-v"><small>RM</small>@Model.TabTotalAmount.ToString("N0")</div>
         </div>
         @if (invoiceDirection != "Draft")
         {
-            <div class="col-6 col-lg-3">
-                <div class="card mb-0 h-100">
-                    <div class="card-body py-3">
-                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">Pending</p>
-                        <h3 class="mb-0 fw-bold" style="color:var(--einv-warning);">@kpiPending.ToString("N0")</h3>
-                    </div>
-                </div>
+            <div class="einv-kpi-cell">
+                <div class="einv-kpi-l"><span class="einv-dot einv-dot-submitted"></span>Pending</div>
+                <div class="einv-kpi-v">@kpiPending.ToString("N0")</div>
             </div>
+            @if (kpiRejected > 0)
+            {
+                <div class="einv-kpi-cell">
+                    <div class="einv-kpi-l"><span class="einv-dot einv-dot-invalid"></span>Rejected</div>
+                    <div class="einv-kpi-v">@kpiRejected.ToString("N0")</div>
+                </div>
+            }
         }
     </div>
-    @if (invoiceDirection != "Draft" && kpiRejected > 0)
-    {
-        <div class="row g-3 mb-3">
-            <div class="col-6 col-lg-3">
-                <div class="card mb-0 h-100">
-                    <div class="card-body py-3">
-                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">Rejected</p>
-                        <h3 class="mb-0 fw-bold" style="color:var(--einv-error);">@kpiRejected.ToString("N0")</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 }
 
 <!-- Main invoice tabs — single Stitch underline row (green underline on the active tab) -->
@@ -534,7 +511,7 @@
                                         <i class="ri-equalizer-line"></i> Advanced Filters
                                         @if (hasAdvancedFilters)
                                         {
-                                            <span class="rounded-circle bg-primary d-inline-block" style="width:6px;height:6px;"></span>
+                                            <span class="einv-dot einv-dot-brand" aria-label="Advanced filters in use"></span>
                                         }
                                         <i class="ri-arrow-down-s-line"></i>
                                     </button>
@@ -542,26 +519,26 @@
                                 <div class="col-12 collapse @(hasAdvancedFilters ? "show" : "")" id="advancedFiltersPanel">
                                     <div class="row g-3 pt-2 border-top mt-2">
                                         <div class="col-6 col-md-3">
-                                            <p class="text-uppercase text-muted small fw-semibold mb-2" style="letter-spacing:.05em;">Submission Date</p>
+                                            <p class="einv-filter-group">Submission date</p>
                                             <label for="submissionReceivedFrom" class="form-label mb-1 small">From</label>
                                             <input type="date" id="submissionReceivedFrom" name="submissionReceivedFrom" class="form-control form-control-sm mb-2" value="@Request.Query["submissionReceivedFrom"]" />
                                             <label for="submissionReceivedTo" class="form-label mb-1 small">To</label>
                                             <input type="date" id="submissionReceivedTo" name="submissionReceivedTo" class="form-control form-control-sm" value="@Request.Query["submissionReceivedTo"]" />
                                         </div>
                                         <div class="col-6 col-md-3">
-                                            <p class="text-uppercase text-muted small fw-semibold mb-2" style="letter-spacing:.05em;">Invoice Metadata</p>
+                                            <p class="einv-filter-group">Invoice details</p>
                                             <label for="createdByFilter" class="form-label mb-1 small">Created By</label>
                                             <input type="text" id="createdByFilter" name="createdBy" class="form-control form-control-sm" placeholder="Username" value="@Request.Query["createdBy"]" />
                                         </div>
                                         <div class="col-6 col-md-3">
-                                            <p class="text-uppercase text-muted small fw-semibold mb-2" style="letter-spacing:.05em;">Parties</p>
+                                            <p class="einv-filter-group">Parties</p>
                                             <label for="supplierFilterInput" class="form-label mb-1 small">Supplier Name/TIN</label>
                                             <input type="text" id="supplierFilterInput" name="supplierFilter" class="form-control form-control-sm mb-2" value="@Request.Query["supplierFilter"]" />
                                             <label for="buyerFilterInput" class="form-label mb-1 small">Buyer Name/TIN</label>
                                             <input type="text" id="buyerFilterInput" name="buyerFilter" class="form-control form-control-sm" value="@Request.Query["buyerFilter"]" />
                                         </div>
                                         <div class="col-6 col-md-3">
-                                            <p class="text-uppercase text-muted small fw-semibold mb-2" style="letter-spacing:.05em;">Financials</p>
+                                            <p class="einv-filter-group">Amount</p>
                                             <div class="d-flex gap-2 mb-2">
                                                 <input type="number" step="0.01" name="amountMin" class="form-control form-control-sm" placeholder="Min" value="@Request.Query["amountMin"]" />
                                                 <input type="number" step="0.01" name="amountMax" class="form-control form-control-sm" placeholder="Max" value="@Request.Query["amountMax"]" />
@@ -637,7 +614,7 @@
                                 <!-- Enhanced Scrollable Table Container -->
                                 <div class="table-scroll at-left">
                                     <div class="inner" style="overflow-x: auto; width: 100%;">
-                                        <table class="table table-nowrap align-middle table-hover mb-0" id="invoiceTable">
+                                        <table class="table table-nowrap align-middle table-hover mb-0" id="invoiceTable" data-einv-table="@columnsKey">
                                         <thead class="einv-table-head">
                                         <tr>
                                             @if (showSelection)
@@ -645,78 +622,78 @@
                                                 <th class="col-checkbox"><input type="checkbox" id="selectAll" aria-label="Select all invoices" /></th>
                                             }
 
-                                            <th class="col-invoice-no">
+                                            <th class="col-invoice-no" data-col-id="col-invoice-no" data-col-lock>
                                                 <a href="@SortUrl("InvoiceNo")" class="@(Model.SortBy == "InvoiceNo" ? "text-primary fw-semibold" : "")">
                                                     Invoice # <i class="@SortIcon("InvoiceNo") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-document-type">
+                                            <th class="col-document-type" data-col-id="col-document-type">
                                                 <a href="@SortUrl("DocumentType")" class="@(Model.SortBy == "DocumentType" ? "text-primary fw-semibold" : "")">
                                                     Type <i class="@SortIcon("DocumentType") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-supplier">
+                                            <th class="col-supplier" data-col-id="col-supplier" data-col-default="@(!isReceivedTab ? "hidden" : null)">
                                                 <a href="@SortUrl("SupplierName")" class="@(Model.SortBy == "SupplierName" ? "text-primary fw-semibold" : "")">
                                                     Supplier <i class="@SortIcon("SupplierName") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-buyer">
+                                            <th class="col-buyer" data-col-id="col-buyer" data-col-default="@(isReceivedTab ? "hidden" : null)">
                                                 <a href="@SortUrl("CustomerName")" class="@(Model.SortBy == "CustomerName" ? "text-primary fw-semibold" : "")">
                                                     Buyer <i class="@SortIcon("CustomerName") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-submitted-date">
+                                            <th class="col-submitted-date" data-col-id="col-submitted-date">
                                                 <a href="@SortUrl("IssueDate")" class="@(Model.SortBy == "IssueDate" ? "text-primary fw-semibold" : "")">
                                                     Date <i class="@SortIcon("IssueDate") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-total-amount text-end">
+                                            <th class="col-total-amount text-end" data-col-id="col-total-amount">
                                                 <a href="@SortUrl("TotalAmount")" class="@(Model.SortBy == "TotalAmount" ? "text-primary fw-semibold" : "")">
                                                     Total <i class="@SortIcon("TotalAmount") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-internal-status">
+                                            <th class="col-internal-status" data-col-id="col-internal-status">
                                                 <a href="@SortUrl("InternalStatus")" class="@(Model.SortBy == "InternalStatus" ? "text-primary fw-semibold" : "")">
                                                     Internal Status <i class="@SortIcon("InternalStatus") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-lhdn-status">
+                                            <th class="col-lhdn-status" data-col-id="col-lhdn-status">
                                                 <a href="@SortUrl("LHDNStatus")" class="@(Model.SortBy == "LHDNStatus" ? "text-primary fw-semibold" : "")">
                                                     LHDN Status <i class="@SortIcon("LHDNStatus") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-created-by">Created By</th>
+                                            <th class="col-created-by" data-col-id="col-created-by" data-col-default="@(isReceivedTab ? "hidden" : null)">Created By</th>
 
                                             @if (invoiceDirection != "Draft")
                                             {
                                                 @* Technical metadata — hidden by default, available via Customize *@
-                                                <th class="col-uuid">
+                                                <th class="col-uuid" data-col-id="col-uuid" data-col-default="hidden">
                                                     <a href="@SortUrl("UUID")" class="@(Model.SortBy == "UUID" ? "text-primary fw-semibold" : "")">
                                                         UUID <i class="@SortIcon("UUID") sort-indicator"></i>
                                                     </a>
                                                 </th>
-                                                <th class="col-submission-id">
+                                                <th class="col-submission-id" data-col-id="col-submission-id" data-col-default="hidden">
                                                     <a href="@SortUrl("SubmissionId")" class="@(Model.SortBy == "SubmissionId" ? "text-primary fw-semibold" : "")">
                                                         Submission ID <i class="@SortIcon("SubmissionId") sort-indicator"></i>
                                                     </a>
                                                 </th>
                                             }
 
-                                            <th class="col-rejected-date">
+                                            <th class="col-rejected-date" data-col-id="col-rejected-date" data-col-default="hidden">
                                                 <a href="@SortUrl("RejectedDate")" class="@(Model.SortBy == "RejectedDate" ? "text-primary fw-semibold" : "")">
                                                     Rejected Date <i class="@SortIcon("RejectedDate") sort-indicator"></i>
                                                 </a>
                                             </th>
 
-                                            <th class="col-last-updated">
+                                            <th class="col-last-updated" data-col-id="col-last-updated" data-col-default="hidden">
                                                 <a href="@SortUrl("UpdatedDate")" class="@(Model.SortBy == "UpdatedDate" ? "text-primary fw-semibold" : "")">
                                                     Last Updated <i class="@SortIcon("UpdatedDate") sort-indicator"></i>
                                                 </a>
@@ -796,7 +773,7 @@
                                                             }
                                                             @if (!string.IsNullOrWhiteSpace(invoice.RejectedReason))
                                                             {
-                                                                <div class="small text-danger mt-1 text-truncate" style="max-width:220px;" title="@invoice.RejectedReason">@invoice.RejectedReason</div>
+                                                                <div class="small text-danger mt-1 text-truncate einv-reason" title="@invoice.RejectedReason">@invoice.RejectedReason</div>
                                                             }
                                                         }
                                                         else
@@ -1013,7 +990,7 @@
                                         {
                                             <tr>
                                                 <td colspan="14" class="text-center py-5 text-muted">
-                                                    <i class="ri-file-list-3-line d-block mb-2" style="font-size:2rem;" aria-hidden="true"></i>
+                                                    <i class="ri-file-list-3-line d-block mb-2 fs-1" aria-hidden="true"></i>
                                                     No e-invoices found for the current filters.
                                                 </td>
                                             </tr>
@@ -1051,7 +1028,7 @@
                             </span>
                             <div class="d-flex align-items-center">
                                 <label for="pageSizeSelect" class="form-label me-2 mb-0 small text-muted">Show</label>
-                                <select id="pageSizeSelect" class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                                <select id="pageSizeSelect" class="form-select form-select-sm w-auto" onchange="changePageSize(this.value)">
                                     <option value="10" selected="@(Model.SearchInput?.pageSize == 10)">10</option>
                                     <option value="25" selected="@(Model.SearchInput?.pageSize == 25)">25</option>
                                     <option value="50" selected="@(Model.SearchInput?.pageSize == 50)">50</option>
@@ -1099,26 +1076,19 @@
                     }
                     @if (invoiceDirection != "Draft" && lhdnTotal2 > 0)
                     {
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-12">
-                                <div class="card mb-0 h-100">
-                                    <div class="card-body py-3">
-                                        <p class="text-muted text-uppercase fw-semibold small mb-2" style="letter-spacing:.05em;">LHDN Validation Rate</p>
-                                        <div class="d-flex align-items-center gap-3">
-                                            <h3 class="mb-0 fw-bold" style="color:@(lhdnValidRate >= 90 ? "var(--einv-success)" : lhdnValidRate >= 70 ? "var(--einv-warning)" : "var(--einv-error)");">@lhdnValidRate%</h3>
-                                            <div class="flex-grow-1">
-                                                <div class="progress" style="height:8px;">
-                                                    <div class="progress-bar bg-primary" role="progressbar" style="width:@lhdnValidRate%;"
-                                                         aria-valuenow="@lhdnValidRate" aria-valuemin="0" aria-valuemax="100"
-                                                         aria-label="LHDN validation success rate"></div>
-                                                </div>
-                                                <span class="small text-muted">@lhdnValid2.ToString("N0") of @lhdnTotal2.ToString("N0") documents validated successfully</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        var rateTone = lhdnValidRate >= 90 ? "success" : lhdnValidRate >= 70 ? "warning" : "danger";
+                        <section class="einv-panel mb-3">
+                            <div class="einv-panel-h"><h2>LHDN validation rate</h2></div>
+                            <div class="einv-panel-b">
+                                <ul class="einv-meters">
+                                    <li class="einv-meter-@rateTone">
+                                        <div class="einv-meter-top"><span>Validated successfully</span><span>@lhdnValidRate%</span></div>
+                                        <div class="einv-meter-bar" role="progressbar" aria-label="LHDN validation success rate" aria-valuenow="@lhdnValidRate" aria-valuemin="0" aria-valuemax="100"><span style="width: @(lhdnValidRate)%"></span></div>
+                                        <div class="einv-meter-meta"><span>@lhdnValid2.ToString("N0") of @lhdnTotal2.ToString("N0") documents</span></div>
+                                    </li>
+                                </ul>
                             </div>
-                        </div>
+                        </section>
                     }
 
                 </div>
@@ -1128,7 +1098,7 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-body p-5 text-center">
-                                <lord-icon src="https://cdn.lordicon.com/gsqxdxog.json" trigger="loop" colors="primary:#405189,secondary:#f06548" style="width:90px;height:90px"></lord-icon>
+                                <span class="einv-empty-icon einv-icon-danger" aria-hidden="true"><i class="ri-delete-bin-line"></i></span>
                                 <div class="mt-4 text-center">
                                     <h4 id="delete-message">Are you sure you want to delete this invoice?</h4>
                                     <p class="text-muted fs-15 mb-4">Deleting your order will remove all of your information from our database.</p>
@@ -1243,146 +1213,6 @@
                 <!--end modal -->
 
 
-                <!-- Column Settings Modal -->
-<div class="modal fade" id="columnSettingsModal" tabindex="-1" aria-labelledby="columnSettingsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header p-3" style="background: linear-gradient(135deg, rgba(58, 165, 100, 0.1) 0%, rgba(24, 116, 71, 0.1) 100%); border-bottom: 2px solid #006948;">
-                <h5 class="modal-title d-flex align-items-center" id="columnSettingsModalLabel" style="color: var(--einv-primary-hover); font-weight: 600;">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: linear-gradient(135deg, #006948, #187447); border-radius: 50%; color: white;">
-                        <i class="ri-settings-3-line" style="font-size: 1.2rem;"></i>
-                    </div>
-                    <div>
-                        <div style="font-size: 1.1rem;">Customize Your View</div>
-                        <small class="text-muted" style="font-weight: 400;">Personal column preferences</small>
-                    </div>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: none; opacity: 0.7;"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="d-flex align-items-center mb-3 p-3 rounded" style="background: rgba(58, 165, 100, 0.05); border-left: 4px solid #006948;">
-                    <i class="ri-information-line text-primary me-2" style="font-size: 1.2rem;"></i>
-                    <div>
-                        <strong>Personalized Display:</strong> Choose which columns to show, and drag <i class="ri-draggable"></i> to reorder them. Your preferences are saved automatically.
-                    </div>
-                </div>
-                <div id="columnOrderList" class="list-group">
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-invoice-no">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-invoice-no" id="toggle-invoice-no" checked disabled>
-                            <label class="form-check-label fw-medium ms-2 d-flex align-items-center flex-grow-1" for="toggle-invoice-no">
-                                e-Invoice No
-                                <span class="badge bg-warning ms-auto" style="font-size: 0.6rem;">Required</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-uuid">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-uuid" id="toggle-uuid" checked>
-                            <label class="form-check-label" for="toggle-uuid">UUID</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-submission-id">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-submission-id" id="toggle-submission-id" checked>
-                            <label class="form-check-label" for="toggle-submission-id">Submission ID</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-supplier">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-supplier" id="toggle-supplier" checked>
-                            <label class="form-check-label" for="toggle-supplier">Supplier Name</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-buyer">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-buyer" id="toggle-buyer" checked>
-                            <label class="form-check-label" for="toggle-buyer">Buyer Name</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-submitted-date">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-submitted-date" id="toggle-submitted-date" checked>
-                            <label class="form-check-label" for="toggle-submitted-date">Submitted Date</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-document-type">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-document-type" id="toggle-document-type" checked>
-                            <label class="form-check-label" for="toggle-document-type">Document Type</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-total-amount">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-total-amount" id="toggle-total-amount" checked>
-                            <label class="form-check-label" for="toggle-total-amount">Total Amount</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-lhdn-status">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-lhdn-status" id="toggle-lhdn-status" checked disabled>
-                            <label class="form-check-label fw-medium ms-2" for="toggle-lhdn-status">LHDN Status <small class="text-muted">(always visible)</small></label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-internal-status">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1 d-flex align-items-center">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-internal-status" id="toggle-internal-status" checked disabled>
-                            <label class="form-check-label fw-medium ms-2" for="toggle-internal-status">Internal Status <small class="text-muted">(always visible)</small></label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-rejected-date">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-rejected-date" id="toggle-rejected-date" checked>
-                            <label class="form-check-label" for="toggle-rejected-date">Rejected Date</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-last-updated">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-last-updated" id="toggle-last-updated" checked>
-                            <label class="form-check-label" for="toggle-last-updated">Last Updated</label>
-                        </div>
-                    </div>
-                    <div class="list-group-item d-flex align-items-center gap-2" draggable="true" data-column="col-created-by">
-                        <i class="ri-draggable text-muted" style="cursor: grab;"></i>
-                        <div class="form-check mb-0 flex-grow-1">
-                            <input class="form-check-input column-toggle" type="checkbox" value="col-created-by" id="toggle-created-by" checked>
-                            <label class="form-check-label" for="toggle-created-by">Created By</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 bg-light p-3 d-flex justify-content-between" style="background: linear-gradient(135deg, rgba(248, 249, 250, 0.8) 0%, rgba(233, 236, 239, 0.8) 100%) !important;">
-                <button type="button" class="btn btn-link text-decoration-none" onclick="loadDefaultColumnSettings()">
-                    <i class="ri-refresh-line me-1"></i>Reset to Default
-                </button>
-                <div>
-                <button type="button" class="btn btn-outline-secondary waves-effect me-2" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.5rem 1.5rem;">
-                    <i class="ri-close-line me-1"></i>Cancel
-                </button>
-                <button type="button" class="btn waves-effect waves-light position-relative" onclick="applyColumnSettings()" 
-                        style="background: linear-gradient(135deg, #006948 0%, #187447 100%); border: none; color: white; border-radius: 8px; padding: 0.5rem 2rem; font-weight: 500; box-shadow: 0 2px 8px rgba(58, 165, 100, 0.3);">
-                    <i class="ri-save-3-line me-2"></i>Save My Preferences
-                    <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="saveSpinner">
-                        <span class="visually-hidden">Loading...</span>
-                    </span>
-                </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
             </div>
         </div>
         <div class="modal fade" id="invalidReasonModal" tabindex="-1" aria-hidden="true">
@@ -1541,144 +1371,35 @@
             });
         });
     }
-    // Column Display Settings - Server-side User-specific Storage
-    async function loadColumnSettings() {
-        try {
-            const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
-            const headers = {};
-            
-            if (csrfToken) {
-                headers['RequestVerificationToken'] = csrfToken.value;
+    // Columns: the shared Columns menu (einvworld-table.js) now saves show/hide + order to the account.
+    // Once per user, adopt the choice saved by the old Customize panel (its handlers stay read-only for
+    // this). The old load handler answers with the direction defaults when nothing was saved, so those
+    // aren't copied over.
+    (function adoptOldColumnChoice() {
+        const table = document.getElementById('invoiceTable');
+        if (!table) return;
+        const direction = @Json.Serialize(invoiceDirection);
+        const defaultHidden = Array.from(table.querySelectorAll('th[data-col-default="hidden"]')).map(th => th.dataset.colId).sort().join(',');
+        // Users who never customised get null below; remember that so the old handlers aren't asked again.
+        const checkedKey = 'einv-cols-legacy-checked:' + (document.querySelector('meta[name="einv-uid"]')?.content || '') + ':' + table.dataset.einvTable;
+        try { if (localStorage.getItem(checkedKey)) return; } catch (e) { /* storage blocked: just check again */ }
+        table.einvLegacyColumns = async function () {
+            const q = 'invoiceDirection=' + encodeURIComponent(direction);
+            const [vis, ord] = await Promise.all([
+                fetch('?handler=LoadColumnPreferences&' + q).then(r => r.json()),
+                fetch('?handler=LoadColumnOrder&' + q).then(r => r.json())
+            ]);
+            const settings = (vis && vis.success && vis.data) || {};
+            const order = (ord && ord.success && Array.isArray(ord.data)) ? ord.data : [];
+            const hidden = Object.keys(settings).filter(k => settings[k] === false);
+            const present = id => !!table.querySelector('th[data-col-id="' + CSS.escape(String(id)) + '"]');
+            if (!order.length && hidden.filter(present).sort().join(',') === defaultHidden) {
+                try { localStorage.setItem(checkedKey, '1'); } catch (e) { }
+                return null; // nothing was customised
             }
-            
-            const response = await fetch('?handler=LoadColumnPreferences&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
-                method: 'GET',
-                headers: headers
-            });
-            
-            const result = await response.json();
-            
-            if (result.success && result.data) {
-                const settings = result.data;
-                
-                // Apply saved settings
-                Object.keys(settings).forEach(columnClass => {
-                    const isVisible = settings[columnClass];
-                    const toggleCheckbox = document.querySelector(`input[value="${columnClass}"]`);
-                    
-                    if (toggleCheckbox && !toggleCheckbox.disabled) {
-                        toggleCheckbox.checked = isVisible;
-                    }
-                    
-                    // Apply visibility to table columns
-                    const columns = document.querySelectorAll(`.${columnClass}`);
-                    columns.forEach(col => {
-                        if (isVisible) {
-                            col.style.removeProperty('display');
-                        } else {
-                            col.style.setProperty('display', 'none', 'important');
-                        }
-                    });
-                });
-            }
-        } catch (error) {
-            console.error('Error loading column preferences:', error);
-            // Fall back to default settings if loading fails
-            loadDefaultColumnSettings();
-        }
-    }
-
-    // Drag-to-reorder for the Customize Columns list (native HTML5 DnD — no new dependency).
-    // col-checkbox and col-action are structural (not in this list) and stay pinned first/last.
-    (function initColumnDragReorder() {
-        const list = document.getElementById('columnOrderList');
-        if (!list) return;
-        let dragged = null;
-
-        list.addEventListener('dragstart', (e) => {
-            dragged = e.target.closest('.list-group-item');
-            if (dragged) e.dataTransfer.effectAllowed = 'move';
-        });
-        list.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const target = e.target.closest('.list-group-item');
-            if (!target || target === dragged) return;
-            const rect = target.getBoundingClientRect();
-            const before = (e.clientY - rect.top) < rect.height / 2;
-            list.insertBefore(dragged, before ? target : target.nextSibling);
-        });
-        list.addEventListener('dragend', () => { dragged = null; });
+            return { hidden: hidden, order: order };
+        };
     })();
-
-    // Reorders the live table's <th>/<td> to match a saved column order. Columns not present in
-    // `order` (e.g. a new column added after the user last saved) keep their existing relative
-    // position at the end, just before the pinned col-action.
-    function applyColumnOrder(order) {
-        if (!order || !order.length) return;
-        const headerRow = document.querySelector('#invoiceTable thead tr');
-        if (!headerRow) return;
-
-        function reorderRow(row) {
-            const cellByColumn = {};
-            Array.from(row.children).forEach(cell => {
-                const match = Array.from(cell.classList).find(c => c.startsWith('col-'));
-                if (match) cellByColumn[match] = cell;
-            });
-            order.forEach(columnClass => {
-                const cell = cellByColumn[columnClass];
-                // Insert before the pinned last cell (col-action) if present, else append.
-                const actionCell = row.querySelector('.col-action');
-                if (cell && cell !== actionCell) {
-                    row.insertBefore(cell, actionCell || null);
-                }
-            });
-        }
-
-        reorderRow(headerRow);
-        document.querySelectorAll('#invoiceTable tbody tr').forEach(reorderRow);
-
-        // Reflect the loaded order in the modal's drag list too, so it matches what's on screen.
-        const list = document.getElementById('columnOrderList');
-        if (list) {
-            const itemByColumn = {};
-            Array.from(list.children).forEach(item => { itemByColumn[item.dataset.column] = item; });
-            order.forEach(columnClass => {
-                const item = itemByColumn[columnClass];
-                if (item) list.appendChild(item);
-            });
-        }
-    }
-
-    async function loadColumnOrder() {
-        try {
-            const response = await fetch('?handler=LoadColumnOrder&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', { method: 'GET' });
-            const result = await response.json();
-            if (result.success && result.data) {
-                applyColumnOrder(result.data);
-            }
-        } catch (error) {
-            console.error('Error loading column order:', error);
-        }
-    }
-
-    async function saveColumnOrder() {
-        const order = Array.from(document.querySelectorAll('#columnOrderList .list-group-item')).map(item => item.dataset.column);
-        try {
-            const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
-            const headers = { 'Content-Type': 'application/json' };
-            if (csrfToken) headers['RequestVerificationToken'] = csrfToken.value;
-            await fetch('?handler=SaveColumnOrder&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(order)
-            });
-            applyColumnOrder(order);
-        } catch (error) {
-            console.error('Error saving column order:', error);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadColumnOrder);
 
     // Saved Views: capture the current URL's filter params (excluding direction/sort/paging — those
     // come from the tab and live state, not the saved preset) and let the user name+save them.
@@ -1759,174 +1480,6 @@
         });
     })();
 
-    function loadDefaultColumnSettings() {
-        // Default settings — the lean Stitch column set. Technical metadata (UUID, Submission ID,
-        // Rejected Date, Last Updated) stays available via Customize; saved user preferences
-        // always override these defaults. The counterparty column is direction-aware: Received
-        // shows the Supplier, every other tab shows the Buyer.
-        const isReceived = @Json.Serialize(invoiceDirection == "Received");
-        const defaultSettings = {
-            'col-checkbox': true,
-            'col-invoice-no': true,
-            'col-uuid': false,
-            'col-submission-id': false,
-            'col-supplier': isReceived,
-            'col-buyer': !isReceived,
-            'col-submitted-date': true,
-            'col-document-type': true,
-            'col-total-amount': true,
-            'col-lhdn-status': true,
-            'col-internal-status': true,
-            'col-rejected-date': false,
-            'col-last-updated': false,
-            'col-created-by': !isReceived,
-            'col-action': true
-        };
-
-        // Reset drag order back to the original markup order (both the live table and the modal list).
-        applyColumnOrder(['col-invoice-no', 'col-uuid', 'col-submission-id', 'col-supplier', 'col-buyer',
-            'col-submitted-date', 'col-document-type', 'col-total-amount', 'col-lhdn-status',
-            'col-internal-status', 'col-rejected-date', 'col-last-updated', 'col-created-by']);
-
-        Object.keys(defaultSettings).forEach(columnClass => {
-            const isVisible = defaultSettings[columnClass];
-            const toggleCheckbox = document.querySelector(`input[value="${columnClass}"]`);
-            
-            if (toggleCheckbox && !toggleCheckbox.disabled) {
-                toggleCheckbox.checked = isVisible;
-            }
-            
-            const columns = document.querySelectorAll(`.${columnClass}`);
-            columns.forEach(col => {
-                if (isVisible) {
-                    col.style.removeProperty('display');
-                } else {
-                    col.style.setProperty('display', 'none', 'important');
-                }
-            });
-        });
-    }
-
-    async function applyColumnSettings() {
-        const settings = {};
-        const toggles = document.querySelectorAll('.column-toggle');
-        const saveButton = document.querySelector('#columnSettingsModal button[onclick="applyColumnSettings()"]') || 
-                          document.querySelector('#columnSettingsModal .btn-primary');
-        const saveSpinner = document.getElementById('saveSpinner');
-        
-        // Show loading state with null checks
-        if (saveButton) {
-            saveButton.disabled = true;
-            const buttonIcon = saveButton.querySelector('i');
-            if (buttonIcon) {
-                buttonIcon.classList.add('d-none');
-            }
-        }
-        
-        if (saveSpinner) {
-            saveSpinner.classList.remove('d-none');
-        }
-        
-        toggles.forEach(toggle => {
-            const columnClass = toggle.value;
-            const isVisible = toggle.checked;
-            settings[columnClass] = isVisible;
-            
-            // Apply visibility immediately
-            const columns = document.querySelectorAll(`.${columnClass}`);
-            columns.forEach(col => {
-                if (isVisible) {
-                    col.style.removeProperty('display');
-                } else {
-                    col.style.setProperty('display', 'none', 'important');
-                }
-            });
-        });
-        
-        // Save to server
-        try {
-            const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            
-            if (csrfToken) {
-                headers['RequestVerificationToken'] = csrfToken.value;
-            }
-            
-            const response = await fetch('?handler=SaveColumnPreferences&invoiceDirection=@Uri.EscapeDataString(invoiceDirection)', {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(settings)
-            });
-            
-            const result = await response.json();
-
-            if (result.success) {
-                await saveColumnOrder();
-
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('columnSettingsModal'));
-                modal.hide();
-                
-                // Show enhanced success message
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'Saved Successfully!',
-                        text: 'Your personalized column preferences have been saved.',
-                        icon: 'success',
-                        confirmButtonColor: '#006948',
-                        timer: 2500,
-                        timerProgressBar: true,
-                        showClass: {
-                            popup: 'animate__animated animate__fadeInDown'
-                        },
-                        hideClass: {
-                            popup: 'animate__animated animate__fadeOutUp'
-                        }
-                    });
-                } else {
-                    // Fallback to simple alert if SweetAlert2 is not loaded
-                    alert('Column preferences saved successfully!');
-                }
-            } else {
-                throw new Error(result.message || 'Failed to save preferences');
-            }
-        } catch (error) {
-            console.error('Error saving column preferences:', error);
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Oops! Something went wrong',
-                    text: 'Failed to save your column preferences. Please try again.',
-                    icon: 'error',
-                    confirmButtonColor: '#006948',
-                    confirmButtonText: 'Try Again'
-                });
-            } else {
-                // Fallback to simple alert if SweetAlert2 is not loaded
-                alert('Error: Failed to save column preferences. Please try again.');
-            }
-        } finally {
-            // Reset button state with null checks
-            if (saveButton) {
-                saveButton.disabled = false;
-                const buttonIcon = saveButton.querySelector('i');
-                if (buttonIcon) {
-                    buttonIcon.classList.remove('d-none');
-                }
-            }
-            
-            if (saveSpinner) {
-                saveSpinner.classList.add('d-none');
-            }
-        }
-    }
-
-    // Load settings on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        loadColumnSettings();
-        
-    });
 
     // LHDN error text echoes submitted values, so always escape it. Since SDK 25 Sep 2026 errors may
     // reference an SDK error page ("Please refer to https://sdk.myinvois.hasil.gov.my/...") — only

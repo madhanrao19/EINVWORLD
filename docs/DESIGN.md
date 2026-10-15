@@ -397,7 +397,9 @@ Support where applicable:
   it until the user turns it on; `data-sort="none"` turns sorting off for one column. Empty headers,
   "Action"/"Actions", `col-action` and `col-checkbox` are never sortable, hideable or movable. A column of
   form checkboxes whose header has text (e.g. "Select") needs `class="col-checkbox"`.
-- Invoice Lists keeps its own Customize panel (saved views). Don't add `data-einv-table` there.
+- Give a column `data-col-id` when its header text may change: saved choices follow the id. Tables
+  that share a key (Invoice Lists' All/Draft/Sent tabs) keep each other's choices for columns one
+  of them doesn't show. Invoice Lists uses this menu too (since v1.38.0); its saved views are separate.
 
 Header labels are sentence case, not all caps. A long list can wrap its table in `.einv-table-sticky`
 for a sticky header inside its own scroll box.

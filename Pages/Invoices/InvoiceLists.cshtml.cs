@@ -1930,47 +1930,14 @@ namespace eInvWorld.Pages.Invoices
                 ? "invoiceListColumns:Received"
                 : "invoiceListColumns";
 
-        // Separate key/endpoints for column ORDER (drag-to-reorder), independent of the visibility
-        // toggles above — same per-direction split, same JSON blob on the user record.
+        // The old Customize panel's column keys. Since v1.38.0 the shared Columns menu saves to
+        // api/table-preferences; the two Load handlers below stay (read-only) so the list page can adopt
+        // a user's earlier choice once (adoptOldColumnChoice in InvoiceLists.cshtml). Remove them, and
+        // these keys, once that migration has had time to run for everyone.
         private static string ColumnOrderPreferenceKey(string? invoiceDirection) =>
             string.Equals(invoiceDirection, "Received", StringComparison.OrdinalIgnoreCase)
                 ? "invoiceListColumnOrder:Received"
                 : "invoiceListColumnOrder";
-
-        public async Task<IActionResult> OnPostSaveColumnOrderAsync([FromBody] List<string> columnOrder, string? invoiceDirection = null)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                    return new JsonResult(new { success = false, message = "User not found" });
-
-                var preferences = new Dictionary<string, object>();
-                if (!string.IsNullOrEmpty(user.UserPreferences))
-                {
-                    try
-                    {
-                        preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences)
-                                    ?? new Dictionary<string, object>();
-                    }
-                    catch
-                    {
-                        preferences = new Dictionary<string, object>();
-                    }
-                }
-
-                preferences[ColumnOrderPreferenceKey(invoiceDirection)] = columnOrder ?? new List<string>();
-                user.UserPreferences = JsonConvert.SerializeObject(preferences);
-                var result = await _userManager.UpdateAsync(user);
-
-                return new JsonResult(new { success = result.Succeeded });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving column order");
-                return new JsonResult(new { success = false, message = "An error occurred while saving column order" });
-            }
-        }
 
         public async Task<IActionResult> OnGetLoadColumnOrderAsync(string? invoiceDirection = null)
         {
@@ -1994,59 +1961,6 @@ namespace eInvWorld.Pages.Invoices
             {
                 _logger.LogError(ex, "Error loading column order");
                 return new JsonResult(new { success = true, data = (List<string>?)null });
-            }
-        }
-
-        // API method to save user column preferences
-        public async Task<IActionResult> OnPostSaveColumnPreferencesAsync([FromBody] Dictionary<string, bool> columnSettings, string? invoiceDirection = null)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                {
-                    return new JsonResult(new { success = false, message = "User not found" });
-                }
-
-                // Create or update user preferences
-                var preferences = new Dictionary<string, object>();
-
-                // Load existing preferences if they exist
-                if (!string.IsNullOrEmpty(user.UserPreferences))
-                {
-                    try
-                    {
-                        preferences = JsonConvert.DeserializeObject<Dictionary<string, object>>(user.UserPreferences)
-                                    ?? new Dictionary<string, object>();
-                    }
-                    catch
-                    {
-                        preferences = new Dictionary<string, object>();
-                    }
-                }
-
-                // Update column preferences
-                preferences[ColumnPreferenceKey(invoiceDirection)] = columnSettings;
-
-                // Save back to user
-                user.UserPreferences = JsonConvert.SerializeObject(preferences);
-                var result = await _userManager.UpdateAsync(user);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation($"Column preferences saved for user {user.Id}");
-                    return new JsonResult(new { success = true, message = "Column preferences saved successfully" });
-                }
-                else
-                {
-                    _logger.LogError($"Failed to save column preferences for user {user.Id}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    return new JsonResult(new { success = false, message = "Failed to save preferences" });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error saving column preferences");
-                return new JsonResult(new { success = false, message = "An error occurred while saving preferences" });
             }
         }
 
