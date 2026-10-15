@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.40.0`** (`AppInfo:Version` in `appsettings.json`). v1.40.0 is a **minor**
+> **Current version: `v1.41.0`** (`AppInfo:Version` in `appsettings.json`). v1.41.0 is a **minor**
+> release: Invoice Edit gets the same new look and billing-period rule as Create Invoice — see the dated
+> entry below. v1.40.0 was a **minor**
 > release: Create Invoice gets the new look, Save as template on every step, and the billing-period rule —
 > see the dated entry below. v1.39.0 was a **minor**
 > release: Invoice Details gets the new layout — see the dated entry below. v1.38.0 was a **minor**
@@ -349,6 +351,24 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.41.0 (new look: Invoice Edit)
+
+Phase 3e-2 of the "Ledger" refresh: Invoice Edit (and Edit Template) now matches Create Invoice.
+- Same stepper segments, ruled step headers, white summary with the total in a green band, sentence-case
+  labels, SVDP notice, and the sticky action bar.
+- **Save as template** sits in the step 1 and step 2 action bars too (when editing an invoice; when
+  editing a template, the page saves the template itself as before).
+- **Billing period rule** from v1.40.0 applies here too (dates hidden while "Not applicable"; with a
+  frequency both required and in order; switching back clears them).
+- Internal: the page's own copy of the stepper styles is removed; it uses the shared ones.
+- **Tests:** `22-invoice-edit.spec.js` (opens the newest draft; skipped when there is none).
+
+Seen while testing, not changed here: a draft saved from "Create CN" opens in Invoice Edit with Billing
+frequency blank (the draft file says "Not applicable"), so it has to be picked again before Next.
+Flagged for a separate fix.
+
+No data, calculation, permission or migration change.
 
 ## 📅 2026-10-15 — v1.40.0 (new look: Create Invoice; billing period rule)
 
