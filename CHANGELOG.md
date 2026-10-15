@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.43.0`** (`AppInfo:Version` in `appsettings.json`). v1.43.0 is a **minor**
+> **Current version: `v1.44.0`** (`AppInfo:Version` in `appsettings.json`). v1.44.0 is a **minor**
+> release: Items, Templates, Buyers, Recurring, Leads and the Assistant get the new look — see the dated
+> entry below. v1.43.0 was a **minor**
 > release: My Account (profile) and the company workspace get the new look — see the dated entry below.
 > v1.42.0 was a **minor**
 > release: "Create from document" (Smart Capture) gets the new look — see the dated entry below.
@@ -355,6 +357,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.44.0 (new look: items, templates, buyers, recurring, leads, assistant)
+
+Phase 3h of the "Ledger" refresh.
+- **Summary bands:** Buyer Directory, Items & Services, Templates and Recurring Invoices show their
+  counts in the shared KPI band (one ruled strip with sentence-case labels and status dots) instead of
+  separate cards with coloured edges.
+- **Labels:** 46 all-caps micro labels on these pages (form section labels, buyer details, filters,
+  assistant) are sentence case.
+- **Tests:** CRUD specs for items and forms, the module smoke test and the table spec pass unchanged.
+
+Markup only: no data, permission or behaviour change.
 
 ## 📅 2026-10-15 — v1.43.0 (new look: My Account and company pages)
 
