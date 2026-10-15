@@ -134,24 +134,27 @@ The UI is **server-rendered Razor Pages** (no SPA framework). The authenticated 
 the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) theme; both are self-hosted
 (no CDN). Migration state and plan: `docs/TABLER-MIGRATION-AUDIT.md`; user-visible history: `CHANGELOG.md`.
 
-- **Velzon (legacy, still the fallback):** `_Layout` + `_Sidebar` + `_LoginLayout`, assets under
-  `wwwroot/assets/`.
+- **Velzon (legacy, unused by signed-in pages since v1.46.0):** `_Layout` + `_Sidebar` + `_LoginLayout` stay on
+  disk for rollback (set the root `Pages/_ViewStart` back to `_Layout`); the public `_HomeLayout` still loads
+  Velzon CSS from `wwwroot/assets/`.
 - **Tabler (new):** `_LayoutTabler` composed of `_TablerSidebar` (+ `_AdminNavigation`/
   `_SupplierNavigation`/`_BuyerNavigation`), `_TablerTopbar`, `_UserMenu`, `_Footer`, `_PageHeader`; and
   `_LoginLayoutTabler` for the Identity area. Assets under `wwwroot/tabler/` (Tabler v1.4.0 +
   `einvworld-tokens.css` brand tokens & Velzon-class compat shims + `einvworld-ui.js` route-highlighting
   and the desktop sidebar collapse-to-icons toggle, persisted via `localStorage`; mobile keeps Bootstrap's
   own auto-collapse below `lg`). `einvworld-ui.js` is cache-busted with `asp-append-version`.
-- **Switch mechanism:** a per-folder `Pages/<area>/_ViewStart.cshtml` sets `Layout = "_LayoutTabler"` for
-  **authenticated** users only, so anonymous/public pages keep the marketing layout. Delete that file to
-  revert an area to Velzon. Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
-  Toastr, Chart.js, TinyMCE, lord-icon) and behaviour (idle-timeout, app-search, Turnstile on auth) are
+- **Switch mechanism:** `Pages/_ViewStart.cshtml` (and the per-folder copies) give **authenticated** users
+  `_LayoutTabler`; public marketing pages (About, Contact, Our Services, Privacy, Terms, Resources) set
+  `Layout = "_HomeLayout"` themselves, so they look the same signed in or out. Icons: Remix only, from
+  `wwwroot/tabler/css/remixicon.css` (Velzon's `icons.min.css`, Font Awesome and lord-icon are not loaded). Functional plugins (jQuery, Bootstrap bundle, Select2, Flatpickr, SweetAlert2,
+  Toastr, Chart.js, TinyMCE) and behaviour (idle-timeout, app-search, Turnstile on auth) are
   identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
 - **Coverage:** as of 2026-07-27 **all authenticated pages render Tabler with no known remaining raw
-  Velzon markup** (deployed + Playwright-verified across Supplier/Buyer/Admin). Only public
-  marketing/Home/Resources (`_HomeLayout`) and Error pages (`Layout = null`) are intentionally non-Tabler.
-- **Not migrated / deferred (Phase 8):** removing Velzon and retiring the DB-backed global-theme system
-  (`/api/Theme/*`) — held until a fully-green re-verification. Two pre-existing (non-Tabler) app bugs were
+  Velzon markup** (deployed + Playwright-verified across Supplier/Buyer/Admin). Since v1.46.0 that
+  includes the root pages (`/Error` and the legacy `/Home/Index` when signed in). Only the public marketing
+  pages (`_HomeLayout`) and `Pages/Error/*` / PDF templates (`Layout = null`) are intentionally non-Tabler.
+- **Not migrated / deferred:** deleting the Velzon files/assets (still used by the public `_HomeLayout`) and
+  retiring the DB-backed global-theme system (`/api/Theme/*`). Two pre-existing (non-Tabler) app bugs were
   surfaced during QA and remain open: company logos emitted as `file:///` paths and 404 resource images.
 - **Install as app (PWA):** `wwwroot/favicon/manifest.json` (linked from `_Favicons`, shared by every
   layout) makes the site installable from Chrome/Edge/Android ("Install app") and iOS Safari ("Add to Home

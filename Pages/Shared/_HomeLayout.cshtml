@@ -93,9 +93,18 @@
                            href="/customer-info/submit">
                             <i class="ri-suitcase-fill align-bottom me-1"></i> Submit Company Info for e-Invoicing
                         </a>
-                        <a class="btn btn-soft-primary px-4 py-2" asp-area="Identity" asp-page="/Account/Login">
-                            <i class="ri-user-3-line align-bottom me-1"></i> Login
-                        </a>
+                        @if (Context.User.Identity?.IsAuthenticated == true)
+                        {
+                            <a class="btn btn-soft-primary px-4 py-2" asp-page="/Dashboard/Dashboard">
+                                <i class="ri-dashboard-line align-bottom me-1" aria-hidden="true"></i> Dashboard
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-soft-primary px-4 py-2" asp-area="Identity" asp-page="/Account/Login">
+                                <i class="ri-user-3-line align-bottom me-1"></i> Login
+                            </a>
+                        }
                     </div>
                 </div>
             </div>
