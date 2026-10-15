@@ -369,6 +369,15 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-15 — Deploy script checks the server's .NET runtime (no app change)
+
+- **`scripts\Deploy-Staging.ps1` now checks the server's .NET runtime before anything else.** If it is
+  older than the `Microsoft.AspNetCore.*` version the build references (10.0.13 since v1.46.7), it
+  downloads the latest Hosting Bundle from Microsoft, checks its SHA-512 against Microsoft's release feed,
+  and installs it silently on the server over PowerShell remoting. It never reboots the server and never
+  restarts IIS (Staging and Production share it). Any failure stops the deploy before backup, migrations or
+  copy. `-WhatIf` previews it; `-SkipRuntimeCheck` turns it off. See `DEPLOY-NOTES.md`.
+
 ## 📅 2026-10-15 — v1.46.7 (build warnings + vulnerable packages, issue #311)
 
 - **Release build and publish now have 0 warnings** (were 15). Nothing is suppressed.

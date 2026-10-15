@@ -68,6 +68,9 @@
     SQL Server to connect to. Defaults to the host of -DestAppPath plus the port from the target's
     connection string (web.config says "localhost,1433", which only works on the server itself).
 
+.PARAMETER SkipRuntimeCheck
+    Skip step 0, the server .NET runtime check (see the "Server .NET runtime" section in the script).
+
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
     Pending migrations are still listed (read-only query).
@@ -108,7 +111,9 @@ param(
 
     [pscredential]$MigrationCredential,
 
-    [string]$SqlServer
+    [string]$SqlServer,
+
+    [switch]$SkipRuntimeCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -136,6 +141,73 @@ if ((Test-Path $DestAppPath) -and ($DestAppPath -notlike '\\*') -and -not $SkipP
 
 if (-not (Test-Path $DestAppPath)) {
     throw "Destination path not reachable: $DestAppPath. Check network access / the share is up before retrying."
+}
+
+# -- 0. Server .NET runtime (Hosting Bundle) -------------------------------------------------------
+# The app is framework-dependent: runtime security fixes (e.g. System.Security.Cryptography.Pkcs,
+# v1.46.7) come from the server's Hosting Bundle, not the App folder. Require at least the
+# Microsoft.AspNetCore.* package version this build references; install the latest patch if older.
+if (-not $SkipRuntimeCheck) {
+    $csproj = Get-Content (Join-Path $repoRoot 'EINVWORLD.csproj') -Raw
+    $minRuntime = [regex]::Matches($csproj, 'Include="Microsoft\.AspNetCore\.[^"]+" Version="(\d+\.\d+\.\d+)"') |
+        ForEach-Object { [version]$_.Groups[1].Value } | Sort-Object | Select-Object -Last 1
+    $serverHost = if ($DestAppPath -like '\\*') { ($DestAppPath -split '\\')[2] } else { $null }
+    $sharedDir = if ($serverHost) { "\\$serverHost\c$\Program Files\dotnet\shared\Microsoft.AspNetCore.App" }
+                 else { Join-Path $env:ProgramFiles 'dotnet\shared\Microsoft.AspNetCore.App' }
+    function Get-ServerRuntimes {
+        if (-not (Test-Path $sharedDir)) { return @() }
+        @(Get-ChildItem $sharedDir -Directory | ForEach-Object { $v = $null; if ([version]::TryParse($_.Name, [ref]$v)) { $v } })
+    }
+
+    Write-Host "Checking server ASP.NET Core runtime (need >= $minRuntime) ..." -ForegroundColor Cyan
+    if ($serverHost -and -not (Test-Path "\\$serverHost\c$\Program Files")) {
+        throw "Can't read \\$serverHost\c$ to check the server's .NET runtime. Check it on the server (dotnet --list-runtimes: Microsoft.AspNetCore.App >= $minRuntime), then re-run with -SkipRuntimeCheck."
+    }
+    $current = Get-ServerRuntimes | Where-Object { $_.Major -eq $minRuntime.Major -and $_.Minor -eq $minRuntime.Minor } |
+        Sort-Object | Select-Object -Last 1
+    if ($current -and $current -ge $minRuntime) {
+        Write-Host "  Server has Microsoft.AspNetCore.App $current - OK." -ForegroundColor Green
+    }
+    else {
+        $channel = "$($minRuntime.Major).$($minRuntime.Minor)"
+        $feed = Invoke-RestMethod "https://builds.dotnet.microsoft.com/dotnet/release-metadata/$channel/releases.json" -UseBasicParsing
+        $latest = $feed.releases | Where-Object { $_.'aspnetcore-runtime' } | Select-Object -First 1
+        $bundle = $latest.'aspnetcore-runtime'.files | Where-Object { $_.name -eq 'dotnet-hosting-win.exe' }
+        if (-not $bundle -or [version]$latest.'aspnetcore-runtime'.version -lt $minRuntime) {
+            throw "No .NET $channel Hosting Bundle >= $minRuntime in Microsoft's release feed yet - install it on the server manually."
+        }
+        $target = $latest.'aspnetcore-runtime'.version
+        Write-Host "  Server has $(if ($current) { $current } else { "no $channel runtime" }) - Hosting Bundle $target needed." -ForegroundColor Yellow
+
+        if ($PSCmdlet.ShouldProcess($(if ($serverHost) { $serverHost } else { 'this machine' }), "install .NET Hosting Bundle $target")) {
+            $exe = Join-Path $env:TEMP "dotnet-hosting-$target-win.exe"
+            Invoke-WebRequest $bundle.url -OutFile $exe -UseBasicParsing
+            if ((Get-FileHash $exe -Algorithm SHA512).Hash -ne $bundle.hash) {
+                Remove-Item $exe -Force
+                throw "Hosting Bundle download failed its SHA-512 check against Microsoft's release feed - not installed."
+            }
+            # Silent install; /norestart = never reboot the server. Exit 3010 = success, reboot pending.
+            $install = { param($path) (Start-Process $path -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru).ExitCode }
+            if ($serverHost) {
+                $remoteExe = "\\$serverHost\c$\Windows\Temp\$(Split-Path $exe -Leaf)"
+                Copy-Item $exe $remoteExe -Force
+                try { $code = Invoke-Command -ComputerName $serverHost -ScriptBlock $install -ArgumentList "C:\Windows\Temp\$(Split-Path $exe -Leaf)" }
+                catch { throw "Couldn't run the installer on $serverHost (PowerShell remoting / WinRM): $($_.Exception.Message). Run $remoteExe on the server as admin (/install /quiet /norestart), then re-run this script." }
+                finally { Remove-Item $remoteExe -Force -ErrorAction SilentlyContinue }
+            }
+            else {
+                $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+                if (-not $isAdmin) { throw "Installing the Hosting Bundle needs an elevated (Run as administrator) PowerShell." }
+                $code = & $install $exe
+            }
+            Remove-Item $exe -Force -ErrorAction SilentlyContinue
+            if ($code -notin 0, 3010) { throw "Hosting Bundle installer exited with $code - nothing deployed. Install it on the server manually." }
+            $now = Get-ServerRuntimes | Sort-Object | Select-Object -Last 1
+            if (-not $now -or $now -lt $minRuntime) { throw "Installer finished but the server still has $now (< $minRuntime) - nothing deployed." }
+            Write-Host "  Hosting Bundle $target installed$(if ($code -eq 3010) { ' (Windows reports a reboot is pending - schedule one)' })." -ForegroundColor Green
+            Write-Host "  This site picks up the new runtime when this deploy restarts it; other sites on the server do at their next app-pool recycle." -ForegroundColor Yellow
+        }
+    }
 }
 
 # -- 1. Publish ----------------------------------------------------------------------------------
