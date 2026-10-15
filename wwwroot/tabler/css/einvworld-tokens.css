@@ -1398,7 +1398,9 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 .einv-dot-brand { color: var(--einv-primary); }
 
 /* Panels: a ruled card with a 16px heading row. */
-.einv-panel { background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); min-width: 0; height: 100%; }
+.einv-panel { background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); min-width: 0; }
+/* Panels side by side in a grid row share a height; stacked panels keep their own. */
+.row > [class*="col"] > .einv-panel:only-child { height: 100%; }
 .einv-panel-h {
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-2) var(--einv-space-3);
   padding: var(--einv-space-3) 1.25rem; min-height: 3.25rem; border-bottom: 1px solid var(--einv-border);
@@ -1573,4 +1575,24 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 @media (max-width: 575.98px) {
   .einv-ci .ci-step-node:not(.is-active) .ci-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .einv-ci .ci-stepper { display: flex; } .einv-ci .ci-step-node { flex: 0 0 auto; } .einv-ci .ci-step-node.is-active { flex: 1 1 auto; }
+}
+
+/* ── Ledger 3f: Create from document (Smart Capture) ──────────────────────────────────────── */
+.einv-dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: var(--einv-space-1); padding: var(--einv-space-6) var(--einv-space-4);
+  border: 2px dashed var(--einv-input-border, var(--einv-border)); border-radius: var(--einv-radius-md); background: var(--einv-surface-2);
+  text-align: center; cursor: pointer; color: var(--einv-text);
+}
+.einv-dropzone > i { font-size: 1.75rem; color: var(--einv-primary); }
+.einv-dropzone-title { font-weight: 600; }
+.einv-dropzone-file { font-size: var(--einv-fs-sm); color: var(--einv-text-muted); overflow-wrap: anywhere; }
+.einv-dropzone:hover, .einv-dropzone.is-dragover { border-color: var(--einv-primary); background: var(--einv-tone-success-bg); }
+.einv-dropzone:focus-within { outline: 2px solid var(--einv-focus, var(--einv-primary)); outline-offset: 2px; }
+.einv-checklist { list-style: none; margin: 0; display: flex; flex-direction: column; gap: var(--einv-space-2); font-size: var(--einv-fs-sm); }
+.einv-checklist li { display: flex; gap: var(--einv-space-2); align-items: flex-start; }
+.einv-checklist i { color: var(--einv-primary); margin-top: 2px; }
+.einv-badge-wrap { white-space: normal; text-align: left; }
+.einv-code {
+  max-height: 25rem; overflow: auto; padding: var(--einv-space-3); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-sm);
+  background: var(--einv-surface-2); color: var(--einv-text); font-size: var(--einv-fs-xs); white-space: pre-wrap;
 }

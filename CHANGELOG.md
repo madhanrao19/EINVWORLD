@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.41.0`** (`AppInfo:Version` in `appsettings.json`). v1.41.0 is a **minor**
+> **Current version: `v1.42.0`** (`AppInfo:Version` in `appsettings.json`). v1.42.0 is a **minor**
+> release: "Create from document" (Smart Capture) gets the new look — see the dated entry below.
+> v1.41.0 was a **minor**
 > release: Invoice Edit gets the same new look and billing-period rule as Create Invoice — see the dated
 > entry below. v1.40.0 was a **minor**
 > release: Create Invoice gets the new look, Save as template on every step, and the billing-period rule —
@@ -351,6 +353,24 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.42.0 (new look: Create from document)
+
+Phase 3f of the "Ledger" refresh: the Smart Capture upload and review pages.
+- The page is titled **Create from document**, as in the menu (Smart Capture is the feature name), with
+  a Beta badge and an "on/off" status.
+- Upload, "Privacy and checks", "Your uploads" and the review checklist / extracted data / confirm form
+  are ruled panels; the upload area is a dashed drop zone that highlights on hover and drag; status
+  labels are sentence case; the uploads list stacks as cards on phones and has the Columns menu.
+- Empty and "still reading" states use the shared empty state; review form fields have labels and help
+  text linked for screen readers; the file input can be reached with the keyboard.
+- **Fix (all pages using the new panels):** two panels stacked in one column (e.g. Upload + Privacy and
+  checks) — the first stretched to the full column height and pushed the second over the footer. Panels
+  only share a row's height when they're alone in their column.
+- **Tests:** `13-smart-capture.spec.js` checks the new title. (Its upload tests still fail on the Staging
+  demo company with "No documents could be uploaded", as before this release.)
+
+Markup and CSS only: no upload, validation, extraction, quota or auto-submit change.
 
 ## 📅 2026-10-15 — v1.41.0 (new look: Invoice Edit)
 
