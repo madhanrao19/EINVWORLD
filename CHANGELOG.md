@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.37.0`** (`AppInfo:Version` in `appsettings.json`). v1.37.0 is a **minor**
+> **Current version: `v1.38.0`** (`AppInfo:Version` in `appsettings.json`). v1.38.0 is a **minor**
+> release: Invoice Lists gets the new look and the shared Columns menu — see the dated entry below.
+> v1.37.0 was a **minor**
 > release: the Dashboard gets the new look from the approved mockup — see the dated entry below.
 > v1.36.0 was a **minor**
 > release: every list table gets a Columns menu to show, hide and drag-reorder columns, saved to your
@@ -344,6 +346,35 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.38.0 (new look: Invoice Lists; one Columns menu everywhere)
+
+Phase 3d-1 of the "Ledger" refresh.
+- **Invoice Lists uses the same Columns menu as every other table.** The old "Customize" dialog is gone.
+  You can now reorder columns by touch on a phone (the old dialog's drag only worked with a mouse) and
+  with the ↑/↓ keys. Choices still save to your account, still separately for the Received tab (which
+  shows the Supplier) and the other tabs (which show the Buyer).
+- **Your earlier choice carries over.** The first time you open Invoice Lists, a column layout you set
+  in the old dialog is copied to the new menu, once. If you never changed the old one, you get the
+  default columns, as before.
+- **Default columns are the lean set** the old dialog meant to use: UUID, Submission ID, Rejected date
+  and Last updated start hidden (turn them on from Columns). Invoice # is always shown.
+- **Summary band** at the top instead of separate cards (sentence-case labels, status dots); the LHDN
+  validation rate is a ruled panel with a meter; filter group labels are sentence case.
+- The delete confirmation's animated icon was loaded from an external site (lordicon); it's now a local
+  icon, in line with the self-hosted asset policy.
+- **All pages:** link-style buttons (e.g. "Advanced filters", "Reset") use the brand green instead of
+  Tabler's default blue.
+- **Shared Columns menu:** columns can carry a stable `data-col-id`; a page can hand over a choice saved
+  by an older system once (`table.einvLegacyColumns`); tables sharing a saved set (Invoice Lists' All /
+  Draft / Sent) keep choices for columns one of them doesn't show.
+- Server: the old dialog's two save handlers are removed; its two load handlers stay, read-only, for the
+  one-time carry-over.
+- **Tests:** `20-invoice-lists.spec.js` (lean defaults, per-direction sets, one-time carry-over, untouched
+  defaults not copied, Draft-tab change keeps UUID choices).
+
+No migration (the carry-over happens in the browser into the existing `UserPreferences` field).
+No data, permission or LHDN change; bulk actions, live sync, export, saved views unchanged.
 
 ## 📅 2026-10-15 — v1.37.0 (new look: Dashboard)
 
