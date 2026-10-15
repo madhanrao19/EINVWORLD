@@ -78,39 +78,39 @@ export async function handleSubmit(submitButton) {
                 html: `
                     <div class="text-start">
                         <div class="alert alert-success mb-3">
-                            <i class="fas fa-check-circle me-2"></i>
+                            <i class="ri-checkbox-circle-line me-2"></i>
                             Your invoice has been successfully submitted to LHDN (Lembaga Hasil Dalam Negeri Malaysia).
                         </div>
                         
                         <div class="row">
                             <div class="col-12 mb-2">
-                                <strong><i class="fas fa-receipt me-2"></i>Invoice Number:</strong> 
+                                <strong><i class="ri-bill-line me-2"></i>Invoice Number:</strong> 
                                 <span class="text-primary">${invoiceNo}</span>
                             </div>
                             
                             <div class="col-12 mb-2">
-                                <strong><i class="fas fa-fingerprint me-2"></i>Document UUID:</strong>
+                                <strong><i class="ri-fingerprint-line me-2"></i>Document UUID:</strong>
                                 <div class="input-group input-group-sm mt-1">
                                     <input type="text" class="form-control" id="uuidText" value="${json.uuid || "N/A"}" readonly>
                                     <button onclick="copyUUID()" class="btn btn-outline-primary" type="button">
-                                        <i class="fas fa-copy"></i> Copy
+                                        <i class="ri-file-copy-line"></i> Copy
                                     </button>
                                 </div>
                             </div>
                             
                             <div class="col-12 mb-2">
-                                <strong><i class="fas fa-paper-plane me-2"></i>Submission UID:</strong> 
+                                <strong><i class="ri-send-plane-line me-2"></i>Submission UID:</strong> 
                                 <span class="text-info">${json.submissionUid || "N/A"}</span>
                             </div>
                             
                             <div class="col-12 mb-2">
-                                <strong><i class="fas fa-clock me-2"></i>Submitted On:</strong> 
+                                <strong><i class="ri-time-line me-2"></i>Submitted On:</strong> 
                                 <span class="text-muted">${currentDateTime}</span>
                             </div>
                         </div>
                         
                         <div class="alert alert-info mt-3 mb-0">
-                            <small><i class="fas fa-info-circle me-2"></i>You will be redirected to the invoice list in a few seconds...</small>
+                            <small><i class="ri-information-line me-2"></i>You will be redirected to the invoice list in a few seconds...</small>
                         </div>
                     </div>
                 `,

@@ -12,7 +12,7 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
 
 - **.NET 10 (LTS)** — ASP.NET Core, Razor Pages + MVC API controllers
 - **UI:** server-rendered Bootstrap 5, self-hosted (no CDN). Authenticated theme migrated from Velzon
-  to the free MIT **Tabler** — markup migration complete; see `docs/TABLER-MIGRATION-AUDIT.md`.
+  to the free MIT **Tabler** — complete; since v1.46.0 no signed-in page loads Velzon (see `CHANGELOG.md`).
 - **EF Core 10** on **SQL Server**
 - **ASP.NET Core Identity** (core roles: Admin, Supplier, Buyer — Admins can add further assignable
   roles via **Admin → Role Management**)

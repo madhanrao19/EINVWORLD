@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.45.0`** (`AppInfo:Version` in `appsettings.json`). v1.45.0 is a **minor**
+> **Current version: `v1.46.0`** (`AppInfo:Version` in `appsettings.json`). v1.46.0 is a **minor**
+> release: the old Velzon layout is no longer used anywhere in the signed-in app — see the dated entry
+> below. v1.45.0 was a **minor**
 > release: the Admin pages get the new look; this completes Phase 3 of the "Ledger" refresh — see the
 > dated entry below. v1.44.0 was a **minor**
 > release: Items, Templates, Buyers, Recurring, Leads and the Assistant get the new look — see the dated
@@ -359,6 +361,29 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.0 (Ledger Phase 4: Velzon removed from the signed-in app)
+
+- **One app shell.** Signed-in users always get the Tabler app shell. Before, a few pages outside the
+  converted folders (for example the generic error page and the old `/Home/Index` dashboard) still opened
+  in the old Velzon layout with its own sidebar.
+- **Public pages stay public.** About, Contact, Our Services, Privacy, Terms and Resources keep the
+  marketing layout whether you're signed in or not (signed in, they used to open inside the old app
+  shell). When you're signed in, the header shows **Dashboard** instead of **Login**.
+- **Lighter pages.** The app no longer loads Velzon's combined icon file (five icon families), Font
+  Awesome or the animated-icon script. Icons come from one Remix-only stylesheet
+  (`wwwroot/tabler/css/remixicon.css`, Apache-2.0, using the font files already on the server).
+- The last seven Font Awesome icons (LHDN submission result dialog) are now Remix icons; one icon name that
+  doesn't exist in this Remix version (it showed blank on the "Review & Submit" heading of Create and Edit
+  Invoice) is replaced.
+- **Rollback:** the old `_Layout` / `_LoginLayout` files are kept; setting the root `Pages/_ViewStart` back
+  to `_Layout` restores the previous layout (the Tabler layouts no longer load Velzon's icon bundle or Font
+  Awesome either way). The public site still uses Velzon CSS.
+- **Tests:** `23-velzon-removal.spec.js` (no Velzon / Font Awesome / lord-icon requests on signed-in pages,
+  icons use the Remix font, public pages keep their layout with Dashboard/Login), `07-assets.spec.js`
+  checks the new stylesheet and font.
+
+No data, permission, LHDN or configuration change.
 
 ## 📅 2026-10-15 — v1.45.0 (new look: Admin; Phase 3 complete)
 

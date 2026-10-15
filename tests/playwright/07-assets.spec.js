@@ -14,6 +14,8 @@ const LOCAL_ASSETS = [
   '/assets/libs/chart.js/chart.umd.js',
   '/assets/libs/font-awesome/css/all.min.css',
   '/assets/libs/font-awesome/webfonts/fa-solid-900.woff2',
+  '/tabler/css/remixicon.css',                  // signed-in app icons (v1.46.0, replaces the Velzon icon bundle there)
+  '/assets/fonts/remixiconca45.woff2',
   '/assets/libs/jquery-validation/dist/jquery.validate.min.js',
   '/assets/libs/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js',
   '/assets/js/tinymce/skins/ui/oxide/skin.min.css',
