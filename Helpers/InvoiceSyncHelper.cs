@@ -411,7 +411,7 @@ namespace EINVWORLD.Helpers
             // the raw-document fetch, since /documents/search never carries line-item content.
             var uuidsInBatch = allSummaries.Select(s => s.uuid).ToList();
             var existingUuids = (await _context.InvoiceHeaders
-                .Where(i => uuidsInBatch.Contains(i.UUID))
+                .Where(i => uuidsInBatch.Contains(i.UUID!))
                 .Select(i => i.UUID)
                 .ToListAsync())
                 .ToHashSet();

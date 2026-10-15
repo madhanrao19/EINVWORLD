@@ -17,7 +17,6 @@ using System.Collections.Generic;
 using eInvWorld.Helpers;
 using Microsoft.EntityFrameworkCore;
 using eInvWorld.Services;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using Microsoft.AspNetCore.Authorization;
 
 namespace eInvWorld.Pages.Lead

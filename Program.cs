@@ -191,7 +191,7 @@ builder.Services.AddMemoryCache(); // Backs the LHDN token cache (TokenService)
 //     instead of treating it as http.
 //   • X-Forwarded-For   — so the app sees the REAL client IP instead of 127.0.0.1, which the per-IP rate
 //     limiter and the audit/log IP enrichment depend on.
-// Only headers from a trusted proxy (KnownProxies/KnownNetworks) are honoured, so this is safe to leave
+// Only headers from a trusted proxy (KnownProxies/KnownIPNetworks) are honoured, so this is safe to leave
 // on. Defaults: enabled, trusting loopback (cloudflared runs on the same host). Add more proxies or tune
 // the hop limit via the ForwardedHeaders config section. Disable with ForwardedHeaders:Enabled=false.
 var forwardedHeadersEnabled = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled", true);
@@ -218,7 +218,7 @@ if (forwardedHeadersEnabled)
 
         // Trust only the immediate proxy. cloudflared connects over loopback by default.
         options.KnownProxies.Clear();
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Add(System.Net.IPAddress.Loopback);     // 127.0.0.1
         options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback); // ::1
 
