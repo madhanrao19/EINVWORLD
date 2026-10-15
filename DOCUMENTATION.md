@@ -151,7 +151,7 @@ the commercial-look **Velzon** theme to the free MIT **Tabler** (Bootstrap 5) th
   identical across both layouts. **PDF/print templates (`Layout = null`) are theme-independent.**
 - **Coverage:** as of 2026-07-27 **all authenticated pages render Tabler with no known remaining raw
   Velzon markup** (deployed + Playwright-verified across Supplier/Buyer/Admin). Since v1.46.0 that
-  includes the root pages (`/Error` and the legacy `/Home/Index` when signed in). Only the public marketing
+  includes the root pages (`/Error` when signed in). Only the public marketing
   pages (`_HomeLayout`) and `Pages/Error/*` / PDF templates (`Layout = null`) are intentionally non-Tabler.
 - **Not migrated / deferred:** deleting the Velzon files/assets (still used by the public `_HomeLayout`) and
   retiring the DB-backed global-theme system (`/api/Theme/*`). Two pre-existing (non-Tabler) app bugs were
