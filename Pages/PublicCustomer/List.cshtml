@@ -73,31 +73,11 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-md-3">
-        <div class="card einv-kpi einv-kpi-primary p-3 h-100">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Total Buyers</p>
-            <h3 class="fw-bold mb-0">@Model.TotalBuyersCount</h3>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-3">
-        <div class="card einv-kpi p-3 h-100" style="border-left-color: var(--einv-success) !important;">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active</p>
-            <h3 class="fw-bold mb-0 text-success">@Model.ActiveBuyersCount</h3>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-3">
-        <div class="card einv-kpi p-3 h-100" style="border-left-color: var(--einv-warning) !important;">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Inactive</p>
-            <h3 class="fw-bold mb-0 text-warning">@(Model.TotalBuyersCount - Model.ActiveBuyersCount)</h3>
-        </div>
-    </div>
-    <div class="col-sm-6 col-md-3">
-        <div class="card einv-kpi einv-kpi-info p-3 h-100">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Added This Month</p>
-            <h3 class="fw-bold mb-0">@Model.AddedThisMonthCount</h3>
-        </div>
-    </div>
+<div class="einv-kpis" role="group" aria-label="Buyer summary">
+    <div class="einv-kpi-cell"><div class="einv-kpi-l">Total buyers</div><div class="einv-kpi-v">@Model.TotalBuyersCount</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-valid"></span>Active</div><div class="einv-kpi-v">@Model.ActiveBuyersCount</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-rejected"></span>Inactive</div><div class="einv-kpi-v">@(Model.TotalBuyersCount - Model.ActiveBuyersCount)</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l">Added this month</div><div class="einv-kpi-v">@Model.AddedThisMonthCount</div></div>
 </div>
 
 <div class="card border-0 shadow-sm">
