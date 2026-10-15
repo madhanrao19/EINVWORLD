@@ -69,31 +69,31 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Registration Type</label>
+                        <label class="einv-label">Registration Type</label>
                         <div>@(Model.PublicCustomer.RegType?.Name ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Registration Number</label>
+                        <label class="einv-label">Registration Number</label>
                         <div>@(Model.PublicCustomer.RegNo ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Old Registration Number</label>
+                        <label class="einv-label">Old Registration Number</label>
                         <div>@(Model.PublicCustomer.OldRegNo ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">MSIC Code</label>
+                        <label class="einv-label">MSIC Code</label>
                         <div>@(Model.PublicCustomer.IndustryClassificationCode ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">SST</label>
+                        <label class="einv-label">SST</label>
                         <div>@(Model.PublicCustomer.SST ?? "-")</div>
                     </div>
                     <div class="col-6 mb-0">
-                        <label class="fw-bold text-muted small text-uppercase">TTX</label>
+                        <label class="einv-label">TTX</label>
                         <div>@(Model.PublicCustomer.TTX ?? "-")</div>
                     </div>
                     <div class="col-12 mt-1">
-                        <label class="fw-bold text-muted small text-uppercase">Business Description</label>
+                        <label class="einv-label">Business Description</label>
                         <div>@(Model.PublicCustomer.BizDescription ?? "-")</div>
                     </div>
                 </div>
@@ -109,23 +109,23 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Email</label>
+                        <label class="einv-label">Email</label>
                         <div>@(Model.PublicCustomer.Email ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Phone</label>
+                        <label class="einv-label">Phone</label>
                         <div>@(Model.PublicCustomer.PhoneNo ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Fax</label>
+                        <label class="einv-label">Fax</label>
                         <div>@(Model.PublicCustomer.FaxNo ?? "-")</div>
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="fw-bold text-muted small text-uppercase">Attention</label>
+                        <label class="einv-label">Attention</label>
                         <div>@(Model.PublicCustomer.Attention ?? "-")</div>
                     </div>
                     <div class="col-12 mb-0">
-                        <label class="fw-bold text-muted small text-uppercase">Address</label>
+                        <label class="einv-label">Address</label>
                         <div>
                             @if (!string.IsNullOrEmpty(Model.PublicCustomer.Addr1))
                             {
@@ -153,11 +153,11 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6 mb-3 mb-md-0">
-                        <label class="fw-bold text-muted small text-uppercase">Payment Terms</label>
+                        <label class="einv-label">Payment Terms</label>
                         <div>@(Model.PublicCustomer.PaymentTerms ?? "-")</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="fw-bold text-muted small text-uppercase">Remarks</label>
+                        <label class="einv-label">Remarks</label>
                         <div>@(Model.PublicCustomer.Remarks ?? "-")</div>
                     </div>
                 </div>
