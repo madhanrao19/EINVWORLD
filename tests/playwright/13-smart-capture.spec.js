@@ -34,7 +34,7 @@ test.describe('Smart Capture', () => {
     test.setTimeout(240_000);
     await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('h1.einv-page-title')).toContainText('Smart Capture');
+    await expect(page.locator('h1.einv-page-title')).toContainText('Create from document'); // nav label (Smart Capture is the feature name)
 
     await page.locator('#scUpload').setInputFiles(path.join(FIXTURES, 'valid-invoice.pdf'));
     await page.click('#scUploadSubmit');
