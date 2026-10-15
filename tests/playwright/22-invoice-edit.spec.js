@@ -22,6 +22,9 @@ test('wizard look, Save as template on steps 1-3, billing period rule', async ({
   for (const step of ['#step1', '#step2', '#step3'])
     await expect(page.locator(`${step} button[data-bs-target="#saveTemplateModal"]`)).toHaveCount(1);
 
+  // A draft saved without a period (e.g. a credit note) opens as Not Applicable, like Create Invoice.
+  await expect(page.locator('select[name="Invoice.InvoicePeriod"]')).not.toHaveValue('');
+
   const freq = v => page.evaluate(v => window.jQuery('select[name="Invoice.InvoicePeriod"]').val(v).trigger('change'), v);
   const startCol = page.locator('#startDate-display').locator('xpath=ancestor::div[contains(@class,"col-md-4")][1]');
   await freq('Monthly');
