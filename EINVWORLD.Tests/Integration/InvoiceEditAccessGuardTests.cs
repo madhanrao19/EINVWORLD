@@ -17,8 +17,8 @@ namespace EINVWORLD.Tests.Integration
     /// route-value InvoiceNo string, so the parse always fails and it silently falls back to checking the
     /// CURRENT user's own company instead of the invoice actually being requested. The fix reuses
     /// EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync — the same helper already guarding
-    /// OnPostSubmitDocumentsAsync on the same page, and InvoiceDetails2/CreateInvoice/CreateCN/CreateSBCN/
-    /// CreateSBI/InvoiceLists elsewhere — so these tests exercise that shared helper directly against real
+    /// OnPostSubmitDocumentsAsync on the same page, and InvoiceDetails2/CreateInvoice/
+    /// InvoiceLists elsewhere — so these tests exercise that shared helper directly against real
     /// seeded cross-tenant data, which is exactly what InvoiceEdit's new guards now call.
     /// </summary>
     public class InvoiceEditAccessGuardTests : IClassFixture<SqlServerFixture>
