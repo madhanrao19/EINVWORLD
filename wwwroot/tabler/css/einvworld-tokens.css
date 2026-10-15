@@ -1502,3 +1502,75 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 .einv-kv dd { margin: 0; overflow-wrap: anywhere; }
 .einv-pdf-card { overflow: hidden; }
 @media print { .einv-det-grid { display: block; } .einv-pdf-card { border: 0; overflow: visible; } }
+
+/* ── Ledger 3e: Create Invoice (mockup "Create invoice") ─────────────────────────────────────── */
+/* Small sentence-case labels (were all-caps micro labels). */
+.einv-label { font-size: var(--einv-fs-xs); font-weight: 600; color: var(--einv-text-muted); letter-spacing: normal; text-transform: none; }
+/* Info notice (e.g. SVDP). */
+.einv-notice {
+  display: flex; gap: var(--einv-space-3); align-items: flex-start; padding: var(--einv-space-3) var(--einv-space-4);
+  border-radius: var(--einv-radius-md); background: var(--einv-tone-info-bg); color: var(--einv-tone-info-fg); font-size: var(--einv-fs-sm);
+}
+.einv-notice > i { font-size: 1.125rem; line-height: 1.2; }
+.einv-notice b { font-weight: 600; }
+
+/* Stepper (Create Invoice: .einv-ci wrapper; Invoice Edit moves over in 3e-2): three segments with a numbered dot; the active one tinted with an underline (classes set by create-invoice.js). */
+.einv-ci .ci-stepper {
+  position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); overflow: hidden;
+}
+.einv-ci .ci-step-node { display: flex; align-items: center; gap: var(--einv-space-3); padding: var(--einv-space-3) var(--einv-space-4); min-width: 0; color: var(--einv-text-muted); }
+.einv-ci .ci-step-node + .ci-step-node { border-left: 1px solid var(--einv-border); }
+.einv-ci .ci-step-circle {
+  flex: none; display: grid; place-items: center; width: 1.625rem; height: 1.625rem; border-radius: 50%;
+  border: 1.5px solid currentColor; font-size: var(--einv-fs-sm); font-weight: 600;
+}
+.einv-ci .ci-step-label { font-weight: 500; color: var(--einv-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.einv-ci .ci-step-node.is-active { background: var(--einv-tone-success-bg); color: var(--einv-primary); box-shadow: inset 0 -2px 0 var(--einv-fill); }
+.einv-ci .ci-step-node.is-active .ci-step-circle { background: var(--einv-fill); border-color: var(--einv-fill); color: #fff; }
+.einv-ci .ci-step-node.is-complete .ci-step-circle { background: var(--einv-tone-success-bg); color: var(--einv-primary); }
+.einv-ci .ci-step-track { display: none; } /* progress is shown by the active segment */
+@media (max-width: 575.98px) { .einv-ci .ci-step-node { padding: var(--einv-space-3) var(--einv-space-2); gap: var(--einv-space-2); font-size: var(--einv-fs-sm); } }
+.einv-ci .ci-summary-row { display: flex; justify-content: space-between; gap: var(--einv-space-4); padding: .4rem 0; border-bottom: 1px solid var(--einv-border); font-size: var(--einv-fs-sm); }
+.einv-ci .ci-summary-row:last-child { border-bottom: 0; }
+.einv-ci .ci-summary-row strong { font-weight: 600; text-align: right; }
+
+/* Step card headers: ruled, no tinted wash. */
+.card-header.einv-step-h { background: var(--einv-surface); border-bottom: 1px solid var(--einv-border); }
+
+/* Right-hand summary column. */
+.einv-ci-side { flex-shrink: 0; width: 100%; }
+@media (min-width: 992px) { .einv-ci-side { max-width: 20rem; } }
+.einv-ci-sticky { position: sticky; top: var(--einv-space-4); }
+.einv-sum { background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); overflow: hidden; }
+.einv-sum-h { padding: var(--einv-space-3) var(--einv-space-4); border-bottom: 1px solid var(--einv-border); font-weight: 600; }
+.einv-sum-rows { display: grid; grid-template-columns: 1fr auto; gap: var(--einv-space-2) var(--einv-space-4); margin: 0; padding: var(--einv-space-3) var(--einv-space-4); font-size: var(--einv-fs-sm); }
+.einv-sum-rows dt { font-weight: 400; color: var(--einv-text-muted); }
+.einv-sum-rows dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.einv-sum-total {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--einv-space-3);
+  padding: var(--einv-space-3) var(--einv-space-4); background: var(--einv-tone-success-bg); border-top: 1px solid var(--einv-border);
+}
+.einv-sum-total span { font-weight: 500; }
+.einv-sum-total b { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--einv-primary); }
+.einv-sum-note { padding: 0 var(--einv-space-4) var(--einv-space-3); background: var(--einv-tone-success-bg); font-size: var(--einv-fs-xs); color: var(--einv-text-muted); text-align: right; }
+
+/* Wizard actions: one bar that stays in reach at the bottom of the screen while a step scrolls. */
+.einv-wiz-actions {
+  position: sticky; bottom: var(--einv-space-3); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: var(--einv-space-2);
+  margin-top: var(--einv-space-5); padding: var(--einv-space-3) var(--einv-space-4);
+  background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); box-shadow: var(--einv-shadow-overlay);
+}
+.einv-wiz-spacer { margin-right: auto; }
+@media (max-width: 575.98px) {
+  .einv-wiz-actions { bottom: 0; border-radius: 0; margin-left: calc(var(--einv-space-4) * -1); margin-right: calc(var(--einv-space-4) * -1); padding-bottom: calc(var(--einv-space-3) + env(safe-area-inset-bottom, 0px)); }
+  .einv-wiz-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .einv-wiz-spacer { display: none; }
+}
+.einv-period-error[hidden] { display: none !important; }
+
+/* Phones: only the current step shows its name (the others were cut to "Basic Infor…"); screen readers still get all three. */
+@media (max-width: 575.98px) {
+  .einv-ci .ci-step-node:not(.is-active) .ci-step-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .einv-ci .ci-stepper { display: flex; } .einv-ci .ci-step-node { flex: 0 0 auto; } .einv-ci .ci-step-node.is-active { flex: 1 1 auto; }
+}

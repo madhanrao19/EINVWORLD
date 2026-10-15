@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.39.0`** (`AppInfo:Version` in `appsettings.json`). v1.39.0 is a **minor**
+> **Current version: `v1.40.0`** (`AppInfo:Version` in `appsettings.json`). v1.40.0 is a **minor**
+> release: Create Invoice gets the new look, Save as template on every step, and the billing-period rule —
+> see the dated entry below. v1.39.0 was a **minor**
 > release: Invoice Details gets the new layout — see the dated entry below. v1.38.0 was a **minor**
 > release: Invoice Lists gets the new look and the shared Columns menu — see the dated entry below.
 > v1.37.0 was a **minor**
@@ -347,6 +349,32 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.40.0 (new look: Create Invoice; billing period rule)
+
+Phase 3e-1 of the "Ledger" refresh. Every Create Invoice field is still there; calculation, tax,
+totals and LHDN submission are unchanged.
+- **Billing period (decided 2026-10-14):** Start and End date are hidden while Billing frequency is
+  "Not applicable". Choose a frequency and both appear and become required; the end date can't be before
+  the start date (an inline message under the dates when you click Next, and a warning if you try Submit
+  to LHDN). Switching back to "Not applicable" clears them. A draft, template or copy that already has
+  dates keeps them visible. The values sent to the server keep their format. This is a check in the
+  browser on this page: Submit to LHDN sends the saved draft, and bulk submit / CSV import don't apply
+  it; LHDN itself accepts a period without dates, so it's a data-quality rule, not a compliance gate.
+- **Save as template on every step:** the button now sits in the action bar of steps 1 and 2 as well as
+  step 3, and the dialog fills in its default name whichever button opens it.
+- **Action bar** (Discard / Previous, Save as template, Next) stays in reach at the bottom of the screen
+  while a step scrolls; on phones it spans the width.
+- **Stepper** is three ruled segments with the current one tinted (on phones only the current step shows
+  its name); step headers are ruled; the SVDP notice uses the shared notice style.
+- **Summary** is a white panel with the total in a green band (was a filled green card), on all three
+  steps; labels are sentence case, including the item-row field labels.
+- Internal: the stepper styles moved from the page into the design tokens (scoped to Create Invoice until
+  Invoice Edit is updated); a new `wwwroot/js/invoices/billing-period.js`.
+- **Tests:** `21-create-invoice.spec.js` (billing period: hidden / required / order / cleared / posted
+  format; Save as template on every step incl. the default name from step 3).
+
+No data, calculation, permission or migration change.
 
 ## 📅 2026-10-15 — v1.39.0 (new look: Invoice Details)
 
