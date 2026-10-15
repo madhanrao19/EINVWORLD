@@ -358,7 +358,7 @@ namespace eInvWorld.Pages.Invoices
                 OtherChargesDescription = existingInvoice.OtherChargesDescription,
                 StartDate = existingInvoice.StartDate,
                 EndDate = existingInvoice.EndDate,
-                InvoicePeriod = existingInvoice.InvoicePeriod,
+                InvoicePeriod = existingInvoice.InvoicePeriod ?? InvoicePeriodEnum.Not_Applicable, // same default as Create Invoice (credit-note drafts save no period)
                 TotalAmountExclTax = existingInvoice.TotalAmountExclTax,
                 TotalTaxAmount = existingInvoice.TotalTaxAmount,
                 TotalAmountIncTax = existingInvoice.TotalAmountIncTax,
