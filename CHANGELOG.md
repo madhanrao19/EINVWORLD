@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.0`** (`AppInfo:Version` in `appsettings.json`). v1.46.0 is a **minor**
+> **Current version: `v1.46.1`** (`AppInfo:Version` in `appsettings.json`). v1.46.1 is a **patch**
+> release: legacy pages and leftover demo code removed — see the dated entry below. v1.46.0 was a **minor**
 > release: the old Velzon layout is no longer used anywhere in the signed-in app — see the dated entry
 > below. v1.45.0 was a **minor**
 > release: the Admin pages get the new look; this completes Phase 3 of the "Ledger" refresh — see the
@@ -361,6 +362,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.1 (clean-up: legacy pages and demo code)
+
+- **Removed `/Home/Index`**, an old "E-Invoicing Dashboard" with hard-coded demo numbers that any
+  signed-in user could open by URL (only the retired Velzon sidebar linked to it; those links now point to
+  the real Dashboard).
+- **Removed nine "Add New …" code pages** under `Admin/Codes` (classification, country, currency,
+  e-invoice type, MSIC, payment mode, state, tax type, unit type). Nothing linked to them and several were
+  empty; codes are managed from their list pages.
+- **The Tabler layouts no longer load `sweetalerts.init.js`**, Velzon's SweetAlert demo script: its 20
+  handlers are bound to demo element ids that no page has. SweetAlert itself is unchanged. (The file stays
+  for the rollback Velzon layouts.)
+
+No data, permission or behaviour change for any page in use.
 
 ## 📅 2026-10-15 — v1.46.0 (Ledger Phase 4: Velzon removed from the signed-in app)
 
