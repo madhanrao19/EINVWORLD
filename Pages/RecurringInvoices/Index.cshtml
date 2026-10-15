@@ -18,37 +18,12 @@
     </div>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-lg col-md-4 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Active Profiles</p>
-            <h3 class="fw-bold mb-0">@Model.ActiveProfiles</h3>
-        </div>
-    </div>
-    <div class="col-lg col-md-4 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Due Next 7 Days</p>
-            <h3 class="fw-bold mb-0">@Model.DueNext7DaysCount</h3>
-        </div>
-    </div>
-    <div class="col-lg col-md-4 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Paused</p>
-            <h3 class="fw-bold mb-0">@Model.PausedProfiles</h3>
-        </div>
-    </div>
-    <div class="col-lg col-md-4 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm @(Model.FailedRunsLast30DaysCount > 0 ? "border-start border-danger border-4" : "")">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Failed Runs (30d)</p>
-            <h3 class="fw-bold mb-0 @(Model.FailedRunsLast30DaysCount > 0 ? "text-danger" : "")">@Model.FailedRunsLast30DaysCount</h3>
-        </div>
-    </div>
-    <div class="col-lg col-md-4 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="text-uppercase fw-semibold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.05em;">Generated This Month</p>
-            <h3 class="fw-bold mb-0">@Model.GeneratedThisMonthCount</h3>
-        </div>
-    </div>
+<div class="einv-kpis" role="group" aria-label="Recurring summary">
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-valid"></span>Active profiles</div><div class="einv-kpi-v">@Model.ActiveProfiles</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-submitted"></span>Due in the next 7 days</div><div class="einv-kpi-v">@Model.DueNext7DaysCount</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-draft"></span>Paused</div><div class="einv-kpi-v">@Model.PausedProfiles</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l"><span class="einv-dot einv-dot-invalid"></span>Failed runs (30 days)</div><div class="einv-kpi-v @(Model.FailedRunsLast30DaysCount > 0 ? "text-danger" : "")">@Model.FailedRunsLast30DaysCount</div></div>
+    <div class="einv-kpi-cell"><div class="einv-kpi-l">Generated this month</div><div class="einv-kpi-v">@Model.GeneratedThisMonthCount</div></div>
 </div>
 
 <div class="row">
