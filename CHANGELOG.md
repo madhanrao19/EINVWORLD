@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.35.0`** (`AppInfo:Version` in `appsettings.json`). v1.35.0 is a **minor**
+> **Current version: `v1.36.0`** (`AppInfo:Version` in `appsettings.json`). v1.36.0 is a **minor**
+> release: every list table gets a Columns menu to show, hide and drag-reorder columns, saved to your
+> account — see the dated entry below. v1.35.0 was a **minor**
 > release: one calendar for every date field, showing dates as "14 Oct 2026" — see the dated entry
 > below. v1.34.3 was a **patch**
 > release: removes a thin strip between the sidebar and the page on desktops — see the dated entry
@@ -340,6 +342,35 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-14 — v1.36.0 (tables: choose and reorder columns, saved to your account)
+
+- **Reorder columns.** The Columns menu on every list table now lets you drag columns into the order
+  you want (or use the ↑/↓ keys on a column's handle), as well as show or hide them. Reset puts the
+  table back to its default.
+- **Saved to your account.** Your choices follow you to any browser or phone. Before, every table except
+  Invoice Lists remembered them only in the browser you used. Choices you'd already made are moved to
+  your account the first time you open that page.
+- **More tables have the menu:** the Dashboard's Recent Invoices, Aging Drafts and Recent Incoming
+  Invoices; the e-Invoice Activity Log on Invoice Details; a recurring invoice's
+  run history; Assign Buyers (both lists); Company Details (users and buyers); Company Security activity.
+- **New table look** from the Ledger mockup: a ruled toolbar, 38px headers and 42px rows, a Columns
+  menu with drag handles and a "Saved to your account" note. On the Dashboard the Columns button sits
+  in each card's header.
+- Checkbox and Actions columns always stay where they are and can't be hidden. (The "Action" column
+  of an activity log is ordinary data, so it can.)
+- Invoice Lists keeps its own Customize panel and saved choices for now; it moves to this menu with the
+  invoice-list redesign.
+- How it works: new `api/table-preferences` endpoint (your own account only; saving needs the page's
+  antiforgery token; strict size limits). Stored in the existing `UserPreferences` field with a
+  compare-and-swap update of that one column, so a concurrent save is never silently lost and the rest of
+  the account record (including its concurrency stamp) is untouched. See
+  `docs/DESIGN.md` → Tables and `DOCUMENTATION.md` → HTTP endpoints.
+- **Tests:** `TablePreferencesTests` (validation, limits, keeps Invoice Lists' saved keys, damaged
+  data), `TablePreferencesIntegrationTests` (real SQL Server: column-only write, conflict guard), `15-tables.spec.js` (hide + reorder survive clearing the browser, drag, keyboard, utility
+  columns stay put, sort after reorder, rows added later, API security checks, phone menu).
+
+No migration (uses the existing `UserPreferences` column). No config change.
 
 ## 📅 2026-10-14 — v1.35.0 (one calendar everywhere)
 
