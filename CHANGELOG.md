@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.1`** (`AppInfo:Version` in `appsettings.json`). v1.46.1 is a **patch**
+> **Current version: `v1.46.2`** (`AppInfo:Version` in `appsettings.json`). v1.46.2 is a **patch**
+> release: Invoice Edit no longer opens with Billing frequency blank — see the dated entry below. v1.46.1 was a **patch**
 > release: legacy pages and leftover demo code removed — see the dated entry below. v1.46.0 was a **minor**
 > release: the old Velzon layout is no longer used anywhere in the signed-in app — see the dated entry
 > below. v1.45.0 was a **minor**
@@ -362,6 +363,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-15 — v1.46.2 (fix: blank Billing frequency in Invoice Edit)
+
+- **Invoice Edit now opens a draft saved without a billing frequency as "Not Applicable"**, the same
+  default Create Invoice uses. Credit-note (and other adjustment) drafts were saved with no frequency, so
+  Invoice Edit showed the field blank. Saving the draft again stores "Not Applicable".
+
+No database change; drafts that already have a frequency open unchanged.
 
 ## 📅 2026-10-15 — v1.46.1 (clean-up: legacy pages and demo code)
 
