@@ -11,7 +11,7 @@
   <ItemGroup>
     <!-- Lets restore prune the ASP.NET Core 2.2 packages NToastNotify pulls in (vulnerable System.Security.Cryptography.Xml 4.5.0); the app project gets this from the Web SDK. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
