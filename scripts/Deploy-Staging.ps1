@@ -188,15 +188,50 @@ if (-not $SkipRuntimeCheck) {
             }
             # Silent install; /norestart = never reboot the server. Exit 3010 = success, reboot pending.
             $install = { param($path) (Start-Process $path -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru).ExitCode }
+            $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
             if ($serverHost) {
+                $serverExe = "C:\Windows\Temp\$(Split-Path $exe -Leaf)"
                 $remoteExe = "\\$serverHost\c$\Windows\Temp\$(Split-Path $exe -Leaf)"
                 Copy-Item $exe $remoteExe -Force
-                try { $code = Invoke-Command -ComputerName $serverHost -ScriptBlock $install -ArgumentList "C:\Windows\Temp\$(Split-Path $exe -Leaf)" }
-                catch { throw "Couldn't run the installer on $serverHost (PowerShell remoting / WinRM): $($_.Exception.Message). Run $remoteExe on the server as admin (/install /quiet /norestart), then re-run this script." }
-                finally { Remove-Item $remoteExe -Force -ErrorAction SilentlyContinue }
+                $code = $null
+                # Try 1: remoting with this login (works on a domain). Try 2: a server admin login.
+                try { $code = Invoke-Command -ComputerName $serverHost -ScriptBlock $install -ArgumentList $serverExe }
+                catch {
+                    Write-Warning "Couldn't run the installer on $serverHost with your login (PowerShell remoting / WinRM): $($_.Exception.Message)"
+                    if ((Read-Host "  Retry with a $serverHost administrator login? [Y/n]") -notmatch '^[Nn]') {
+                        try {
+                            # A non-domain server reached by IP needs NTLM, which WinRM only allows for hosts in this PC's TrustedHosts.
+                            if ($isAdmin) {
+                                Start-Service WinRM
+                                $trusted = (Get-Item WSMan:\localhost\Client\TrustedHosts).Value
+                                if ($trusted -ne '*' -and ($trusted -split ',' | ForEach-Object { $_.Trim() }) -notcontains $serverHost -and
+                                    (Read-Host "  Add $serverHost to this PC's WinRM TrustedHosts (needed to sign in to a non-domain server)? [Y/n]") -notmatch '^[Nn]') {
+                                    Set-Item WSMan:\localhost\Client\TrustedHosts -Value $serverHost -Concatenate -Force
+                                }
+                            }
+                            else { Write-Warning "Not an elevated PowerShell, so $serverHost can't be added to this PC's WinRM TrustedHosts - this retry may fail the same way." }
+                            $cred = Get-Credential -Message "Administrator login for $serverHost (e.g. $serverHost\Administrator)"
+                            $code = Invoke-Command -ComputerName $serverHost -Credential $cred -ScriptBlock $install -ArgumentList $serverExe
+                        }
+                        catch { Write-Warning "That didn't work either: $($_.Exception.Message)" }
+                    }
+                }
+                if ($null -eq $code) {
+                    # Last resort: the operator runs it on the server while the deploy waits, then re-checks the runtime.
+                    Write-Host "  Install it on $serverHost by hand: sign in there (e.g. Remote Desktop), open PowerShell as administrator and run:" -ForegroundColor Yellow
+                    Write-Host "    Start-Process $serverExe -ArgumentList '/install','/quiet','/norestart' -Wait"
+                    do {
+                        if ((Read-Host "  Press Enter once it has finished (or type Q to stop the deploy)") -match '^[Qq]') {
+                            throw "Deploy stopped - $serverHost still needs Hosting Bundle $target (installer left at $serverExe). Nothing deployed."
+                        }
+                        $now = Get-ServerRuntimes | Sort-Object | Select-Object -Last 1
+                        if (-not $now -or $now -lt $minRuntime) { Write-Warning "$serverHost still has $now (< $minRuntime) - not installed yet." }
+                    } until ($now -and $now -ge $minRuntime)
+                    $code = 0
+                }
+                Remove-Item $remoteExe -Force -ErrorAction SilentlyContinue
             }
             else {
-                $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
                 if (-not $isAdmin) { throw "Installing the Hosting Bundle needs an elevated (Run as administrator) PowerShell." }
                 $code = & $install $exe
             }

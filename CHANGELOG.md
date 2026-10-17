@@ -369,6 +369,16 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-17 — Deploy script no longer stops when it can't install the .NET runtime remotely (no app change)
+
+- **`scripts\Deploy-Staging.ps1`: a failed remote Hosting Bundle install no longer ends the deploy.** Before,
+  if PowerShell remoting to the server failed, the script stopped and deleted the installer it had copied to
+  the server, even though its error message said to run that file. Now it offers to retry with a server
+  admin login (and, from an elevated PowerShell, to add the server to this PC's WinRM TrustedHosts, after
+  asking). If that fails too, it keeps the installer at `C:\Windows\Temp` on the server, shows the command to
+  run there, waits until you press Enter, checks that the runtime is installed and carries on with the
+  deploy. Type Q to stop instead. See `DEPLOY-NOTES.md`.
+
 ## 📅 2026-10-15 — Deploy script checks the server's .NET runtime (no app change)
 
 - **`scripts\Deploy-Staging.ps1` now checks the server's .NET runtime before anything else.** If it is
