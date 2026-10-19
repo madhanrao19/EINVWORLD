@@ -369,6 +369,17 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-19 — Deploy script `-WhatIf` warns about what would fail in a real run (no app change)
+
+- **`scripts\Deploy-Staging.ps1 -WhatIf` now runs read-only preflight checks.** Before, the preview skipped
+  every step that changes something, so problems in those steps only showed up in a real deploy. That's how a
+  blocked PowerShell remoting connection to the server passed the preview and then stopped the real
+  Hosting Bundle install. The preview now warns if it can't write to the backup or `App\` folder, if
+  PowerShell remoting to the server fails while the runtime needs installing, or if the migration SQL login
+  lacks `BACKUP DATABASE` / `CREATE TABLE` / `ALTER ANY SCHEMA` / INSERT on `__EFMigrationsHistory` while
+  migrations are pending. `DEPLOY-NOTES.md` now recommends a `db_owner` migration login: `db_ddladmin`
+  alone can't do the backup or the history insert.
+
 ## 📅 2026-10-17 — Deploy script no longer stops when it can't install the .NET runtime remotely (no app change)
 
 - **`scripts\Deploy-Staging.ps1`: a failed remote Hosting Bundle install no longer ends the deploy.** Before,
