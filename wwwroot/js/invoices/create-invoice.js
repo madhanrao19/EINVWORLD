@@ -481,7 +481,7 @@
         if (initialSupplierId) {
 
                // 1️⃣ Load supplier details
-               loadPartyDetails(initialSupplierId, 'PI', 'supplier');
+               loadPartyDetails(initialSupplierId, 'PI', 'supplier', true);
 
                // 2️⃣ 🔥 ALSO load customers for that supplier
                console.log("🔥 Loading customers on page load...");
@@ -3456,7 +3456,8 @@
 
 
         // Enhanced loadPartyDetails function with centralized error handling
-        function loadPartyDetails(partyId, entityType, role) {
+        // isInitial: page-load call (draft / template / clone) — keep a bank account the form already has.
+        function loadPartyDetails(partyId, entityType, role, isInitial) {
             console.log("🔎 loadPartyDetails called with:", { partyId, entityType, role });
 
             if (!partyId || !entityType) {
@@ -3488,12 +3489,16 @@
                     const getVal = (key) => data[key] || data[key.charAt(0).toUpperCase() + key.slice(1)] || '';
 
                     if (role === 'supplier') {
-                        $('#bankAccountNo').val(getVal('bankAccountNo'));
-                        $('#bankName').val(getVal('bankName'));
+                        const keepSaved = !!(isInitial && $('#bankAccountNo').val());
+                        if (!keepSaved) {
+                            $('#bankAccountNo').val(getVal('bankAccountNo'));
+                            $('#bankName').val(getVal('bankName'));
 
-                        // Visual feedback
-                        if(getVal('bankAccountNo')) showAutoPopulatedIndicator('bankAccountNo');
-                        if(getVal('bankName')) showAutoPopulatedIndicator('bankName');
+                            // Visual feedback
+                            if(getVal('bankAccountNo')) showAutoPopulatedIndicator('bankAccountNo');
+                            if(getVal('bankName')) showAutoPopulatedIndicator('bankName');
+                        }
+                        if (window.einvBankPicker) window.einvBankPicker.populate(data.bankAccounts || data.BankAccounts, keepSaved);
 
                         // Cache for the Step 3 review's Trading Parties card (see updateSummary()).
                         window.currentSupplierTIN = getVal('tin');

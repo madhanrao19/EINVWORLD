@@ -41,6 +41,7 @@ namespace eInvWorld.Services.Security
             ("PublicCustomers", "PublicCustomerId","Addr3"),
             ("PublicCustomers", "PublicCustomerId","BankAccountNo"),
             ("InvoiceTemplates","Id",              "BankAccountNo"),
+            ("SupplierBankAccounts","Id",          "BankAccountNo"),
         };
 
         public PiiEncryptionBackfillService(

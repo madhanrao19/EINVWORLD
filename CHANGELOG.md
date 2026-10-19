@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.14`** (`AppInfo:Version` in `appsettings.json`). v1.46.14 is a **patch**
+> **Current version: `v1.47.0`** (`AppInfo:Version` in `appsettings.json`). v1.47.0 is a **minor**
+> release: a company can keep several bank accounts and pick one on each invoice (database migration) —
+> see the dated entry below. v1.46.14 was a **patch**
 > release: tick rows and act on many at once on Items, Buyers, Recurring and Admin lists (plus two security fixes) — see the dated entry below. v1.46.13 was a **patch**
 > release: Create New Company uses the same form layout as Add Buyer — see the dated entry below. v1.46.12 was a **patch**
 > release: every sidebar menu item has its own icon — see the dated entry below. v1.46.11 was a **patch**
@@ -378,6 +380,29 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.47.0 (several bank accounts per company)
+
+- **A company can now keep several bank accounts and choose a default.** My Profile → Banking & Payment →
+  **Manage bank accounts** lists them (numbers masked) and lets company users with edit rights (Owner,
+  Admin, Editor) add, rename, change the number, make default, or delete. Admins reach the same page from
+  Company details / Edit Company ("All bank accounts"). Viewers can see the list but not change it.
+- **Create / Edit Invoice: pick the bank account from a dropdown.** "Saved bank account" lists the
+  supplier's accounts with the default pre-selected; choosing one fills Bank Name and Bank Account Number
+  (you can still type a different account). Opening a draft, template or clone keeps the account it was
+  saved with instead of switching back to the default.
+- Existing bank details become each company's default account automatically (database migration
+  `AddSupplierBankAccounts`, additive). The company's own Bank Name / Account Number fields now always
+  show the default account; Create / Edit / Import Company keep working and update the default.
+- **Security:** Create/Edit Invoice returned any company's or buyer's bank account number to anyone who
+  asked for its id. Bank details now come back only for your own companies (and buyers your company
+  created or is linked to); Admins unchanged.
+- **Security:** My Profile showed the full bank account number; it is now masked like everywhere else.
+- Account numbers are encrypted at rest like the other bank fields (the "Encrypt existing PII" backfill
+  covers the new table), and every change is written to the audit trail with the number masked.
+
+> Deploy: back up first; `Deploy-Staging.ps1` applies `Migrations/Apply_AddSupplierBankAccounts.sql` (see
+> DEPLOY-NOTES "v1.47.0 migration").
 
 ## 📅 2026-10-19 — v1.46.14 (bulk actions on list tables)
 

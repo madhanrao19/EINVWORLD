@@ -744,6 +744,14 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
+                                        <!-- Saved bank account (shown when the supplier has saved accounts; fills the two fields below) -->
+                                        <div class="col-12 d-none" id="bankAccountPickerWrap">
+                                            <div class="form-floating">
+                                                <select class="form-select" id="bankAccountSelect" aria-label="Saved bank account"></select>
+                                                <label for="bankAccountSelect">Saved bank account <span class="text-muted">(manage in My Profile → Bank Accounts)</span></label>
+                                            </div>
+                                        </div>
+
                                         <!-- Bank Account Number -->
                                         <div class="col-md-6">
                                             <div class="form-floating position-relative">
@@ -1613,6 +1621,7 @@
 
 
 @section Scripts {
+    <script src="~/js/invoices/bank-account-picker.js" asp-append-version="true"></script>
   
 
     <script>
@@ -2240,7 +2249,7 @@
             const initialSupplierId = supplierSelect?.value;
 
             if (initialSupplierId) {
-                loadPartyDetails(initialSupplierId, 'PI', 'supplier');
+                loadPartyDetails(initialSupplierId, 'PI', 'supplier', true);
             }
 
             const buyerSelect = document.getElementById('buyerSelect');
@@ -5167,7 +5176,8 @@
             }
         }
 
-        function loadPartyDetails(partyId, entityType, role) {
+        // isInitial: page-load call for the invoice's saved supplier — keep the invoice's own bank account.
+        function loadPartyDetails(partyId, entityType, role, isInitial) {
 
             if (!partyId || !entityType || !role) {
                 console.warn("⚠️ Invalid parameters:", { partyId, entityType, role });
@@ -5201,8 +5211,12 @@
 
                         if (role === 'supplier') {
 
-                            $('#bankAccountNo').val(data.bankAccountNo || '');
-                            $('#bankName').val(data.bankName || '');
+                            const keepSaved = !!(isInitial && $('#bankAccountNo').val());
+                            if (!keepSaved) {
+                                $('#bankAccountNo').val(data.bankAccountNo || '');
+                                $('#bankName').val(data.bankName || '');
+                            }
+                            if (window.einvBankPicker) window.einvBankPicker.populate(data.bankAccounts, keepSaved);
 
                         }
 

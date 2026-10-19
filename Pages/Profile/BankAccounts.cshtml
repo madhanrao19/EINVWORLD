@@ -1,0 +1,214 @@
+@page
+@model eInvWorld.Pages.Profile.BankAccountsModel
+@using EINVWORLD.Helpers
+@{
+    ViewData["Title"] = "Bank Accounts";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+                <h1 class="einv-page-title mb-1">Bank Accounts</h1>
+                <p class="text-muted mb-0">
+                    Accounts for <strong>@Model.Company?.CompanyName</strong> that you can choose from when creating an invoice.
+                    The default is pre-selected.
+                </p>
+            </div>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-page="/Suppliers/Details" asp-route-id="@Model.Company?.PartyInfoId" class="btn btn-outline-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Company
+                </a>
+            }
+            else
+            {
+                <a asp-page="/Profile/Index" class="btn btn-outline-secondary">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to My Profile
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="@(Model.CanEdit ? "col-lg-8" : "col-12")">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h6 class="mb-0 einv-label"><i class="ri-bank-line align-bottom me-1"></i> Saved accounts</h6>
+            </div>
+            <div class="card-body">
+                @if (!Model.Accounts.Any())
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="ri-bank-line fs-24 d-block mb-2"></i>
+                        No bank accounts yet.@(Model.CanEdit ? " Add one to show it on your invoices." : "")
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="einv-table-head">
+                                <tr>
+                                    <th>Bank</th>
+                                    <th>Account number</th>
+                                    <th>Status</th>
+                                    @if (Model.CanEdit)
+                                    {
+                                        <th class="col-action">Actions</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in Model.Accounts)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@(string.IsNullOrWhiteSpace(a.BankName) ? "—" : a.BankName)</td>
+                                        <td class="font-monospace">@MaskingHelper.MaskLast4(a.BankAccountNo)</td>
+                                        <td>
+                                            @if (a.IsDefault)
+                                            {
+                                                <span class="einv-badge einv-badge-success">Default</span>
+                                            }
+                                        </td>
+                                        @if (Model.CanEdit)
+                                        {
+                                            <td class="col-action">
+                                                <div class="dropdown d-inline-block">
+                                                    <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                        <i class="ri-more-fill align-middle"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        @if (!a.IsDefault)
+                                                        {
+                                                            <li>
+                                                                <form method="post" asp-page-handler="SetDefault" asp-route-accountId="@a.Id" asp-route-companyId="@Model.CompanyId">
+                                                                    <button type="submit" class="dropdown-item"><i class="ri-star-line align-bottom me-2 text-muted"></i> Make default</button>
+                                                                </form>
+                                                            </li>
+                                                        }
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editAccountModal"
+                                                                    data-account-id="@a.Id" data-bank-name="@a.BankName" data-masked="@MaskingHelper.MaskLast4(a.BankAccountNo)">
+                                                                <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit
+                                                            </button>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <form method="post" asp-page-handler="Delete" asp-route-accountId="@a.Id" asp-route-companyId="@Model.CompanyId"
+                                                                  onsubmit="return confirm('Delete this bank account? Invoices already created keep the account they were issued with.');">
+                                                                <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                @if (!Model.CanEdit)
+                {
+                    <p class="text-muted small mt-3 mb-0"><i class="ri-lock-line align-bottom me-1"></i> Your company role can view these accounts but not change them.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (Model.CanEdit)
+    {
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 pb-0">
+                    <h6 class="mb-0 einv-label"><i class="ri-add-circle-line align-bottom me-1"></i> Add an account</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="Add" asp-route-companyId="@Model.CompanyId">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                        <div class="mb-3">
+                            <label asp-for="Input.BankName" class="form-label">Bank Name</label>
+                            <input asp-for="Input.BankName" class="form-control" placeholder="e.g. Maybank" maxlength="100" required />
+                            <span asp-validation-for="Input.BankName" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Input.BankAccountNo" class="form-label">Bank Account Number</label>
+                            <input asp-for="Input.BankAccountNo" class="form-control" autocomplete="off" maxlength="150" required />
+                            <span asp-validation-for="Input.BankAccountNo" class="text-danger"></span>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.MakeDefault" class="form-check-input" />
+                            <label asp-for="Input.MakeDefault" class="form-check-label">Make this the default account</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="ri-save-line align-bottom me-1"></i> Add Account</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editAccountModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="post" asp-page-handler="Update" asp-route-companyId="@Model.CompanyId" id="editAccountForm">
+                        <input type="hidden" name="accountId" id="editAccountId" />
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editAccountModalLabel">Edit bank account</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="editBankName" class="form-label">Bank Name</label>
+                                <input name="Input.BankName" id="editBankName" class="form-control" maxlength="100" required />
+                            </div>
+                            <div class="mb-0">
+                                <label for="editBankAccountNo" class="form-label">Bank Account Number</label>
+                                <input name="Input.BankAccountNo" id="editBankAccountNo" class="form-control" autocomplete="off" maxlength="150" />
+                                <div class="form-text">Currently <span class="font-monospace" id="editMasked"></span>. Leave blank to keep it.</div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var modal = document.getElementById('editAccountModal');
+            if (!modal) return;
+            modal.addEventListener('show.bs.modal', function (e) {
+                var b = e.relatedTarget;
+                if (!b) return;
+                document.getElementById('editAccountId').value = b.dataset.accountId;
+                document.getElementById('editBankName').value = b.dataset.bankName || '';
+                document.getElementById('editBankAccountNo').value = '';
+                document.getElementById('editMasked').textContent = b.dataset.masked || '';
+            });
+        })();
+    </script>
+}

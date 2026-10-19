@@ -32,9 +32,11 @@ namespace eInvWorld.Pages.Suppliers
         private readonly IAuditService _auditService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ICompanyAuthorizationService _companyAuth;
+        private readonly EINVWORLD.Services.ISupplierBankAccountService _bankAccounts;
 
-        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig, IAuditService auditService, UserManager<ApplicationUser> userManager, ICompanyAuthorizationService companyAuth)
+        public EditModel(ApplicationDbContext context, IWebHostEnvironment env, DropdownHelper dropdownHelper, ILogger<EditModel> logger, IOptions<FilePathConfig> filePathConfig, IAuditService auditService, UserManager<ApplicationUser> userManager, ICompanyAuthorizationService companyAuth, EINVWORLD.Services.ISupplierBankAccountService bankAccounts)
         {
+            _bankAccounts = bankAccounts;
             _context = context;
             _env = env;
             _dropdownHelper = dropdownHelper;
@@ -241,6 +243,8 @@ namespace eInvWorld.Pages.Suppliers
             try
             {
                 await _context.SaveChangesAsync();
+                // Bank fields edited here update the company's default bank account (other accounts untouched).
+                await _bankAccounts.SyncDefaultFromCompanyAsync(existingParty.PartyInfoId, User.Identity?.Name);
                 _logger.LogInformation($"Successfully updated PartyInfo with ID {PartyInfo.PartyInfoId}.");
             }
             catch (Exception ex)
