@@ -49,7 +49,7 @@
                             <th>Items</th>
                             <th>Estimated Total</th>
                             <th>Recurring</th>
-                            <th class="sort" data-sort="action">Actions</th>
+                            <th class="col-action">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="list form-check-all">
@@ -94,30 +94,19 @@
                                     <span class="text-muted">&mdash;</span>
                                 }
                             </td>
-                            <td>
-                                <ul class="list-inline hstack gap-2 mb-0">
-                                    <li class="list-inline-item" title="Use Template">
-                                        <a href="/Invoices/CreateInvoice?templateId=@item.Id" class="text-success d-inline-block">
-                                            <i class="ri-play-circle-fill fs-16"></i>
-                                        </a>
-                                    </li>
-                                    <li class="list-inline-item edit" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Edit">
-                                        <a href="/Invoices/InvoiceEdit?templateId=@item.Id" class="text-primary d-inline-block">
-                                             <i class="ri-pencil-fill fs-16"></i>
-                                        </a>
-                                    </li>
-                                    <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
-                                        <a href="javascript:void(0);" class="text-danger d-inline-block remove-item-btn"
-                                           data-template-id="@item.Id" onclick="confirmDeleteSingle(@item.Id)">
-                                           <i class="ri-delete-bin-5-fill fs-16"></i>
-                                        </a>
-                                    </li>
-                                    <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Set Recurring">
-                                        <a href="/RecurringInvoices/Create?templateId=@item.Id" class="text-info d-inline-block">
-                                           <i class="ri-calendar-todo-line fs-16"></i>
-                                        </a>
-                                    </li>
-                                </ul>
+                            <td class="col-action">
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                        <i class="ri-more-fill align-middle"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a href="/Invoices/CreateInvoice?templateId=@item.Id" class="dropdown-item"><i class="ri-play-circle-fill align-bottom me-2 text-muted"></i> Use Template</a></li>
+                                        <li><a href="/Invoices/InvoiceEdit?templateId=@item.Id" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
+                                        <li><a href="/RecurringInvoices/Create?templateId=@item.Id" class="dropdown-item"><i class="ri-calendar-todo-line align-bottom me-2 text-muted"></i> Set Recurring</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a href="javascript:void(0);" class="dropdown-item text-danger remove-item-btn" data-template-id="@item.Id" onclick="confirmDeleteSingle(@item.Id)"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                    </ul>
+                                </div>
                             </td>
                         </tr>
                         }

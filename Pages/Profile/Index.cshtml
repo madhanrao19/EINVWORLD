@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model Profile.IndexModel
 @{
     ViewData["Title"] = "My Profile";
@@ -345,7 +345,7 @@
                                                         <span class="input-group-text">
                                                             <i class="ri-lock-password-line text-primary"></i>
                                                         </span>
-                                                        <input type="password" name="NewPassword" class="form-control" placeholder="Enter new" required />
+                                                        <input type="password" name="NewPassword" class="form-control" placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required />
                                                     </div>
                                                 </div>
                                             </div>
@@ -356,7 +356,7 @@
                                                         <span class="input-group-text">
                                                             <i class="ri-lock-password-line text-primary"></i>
                                                         </span>
-                                                        <input type="password" name="ConfirmPassword" class="form-control" placeholder="Confirm new" required />
+                                                        <input type="password" name="ConfirmPassword" class="form-control" placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required />
                                                     </div>
                                                 </div>
                                             </div>

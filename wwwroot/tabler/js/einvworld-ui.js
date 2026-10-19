@@ -98,14 +98,19 @@
   // ancestor instead of overlaying the page — it renders as an empty box near the toggle button
   // instead of showing its items. Explicitly initializing these dropdowns with Popper's `fixed`
   // strategy makes the menu position itself relative to the viewport, escaping the ancestor's
-  // overflow clipping. Must run before Bootstrap's own data-api lazily creates a default-config
-  // instance on first click, so this only helps dropdowns present at DOMContentLoaded time
-  // (matches every current usage — none of these tables add rows without a full page reload).
+  // overflow clipping. The instance must exist before Bootstrap's own data-api lazily creates a
+  // default-config one on first click.
   function initScrollableTableDropdowns() {
     if (!window.bootstrap || !window.bootstrap.Dropdown) return;
-    document.querySelectorAll('.einv-table-scroll-x [data-bs-toggle="dropdown"]').forEach(function (el) {
-      new window.bootstrap.Dropdown(el, { popperConfig: { strategy: "fixed" } });
-    });
+    // .table-responsive clips the same way, and every table's Actions column is now a "..." menu.
+    // Capture phase runs before Bootstrap's own click handler, so rows rendered later by JS are covered too.
+    document.addEventListener("click", function (e) {
+      var el = e.target.closest && e.target.closest('[data-bs-toggle="dropdown"]');
+      if (!el || !el.closest(".einv-table-scroll-x, .table-responsive")) return;
+      if (!window.bootstrap.Dropdown.getInstance(el)) {
+        new window.bootstrap.Dropdown(el, { popperConfig: { strategy: "fixed" } });
+      }
+    }, true);
   }
 
   // Dark mode toggle. The initial data-bs-theme attribute is already set before this script runs

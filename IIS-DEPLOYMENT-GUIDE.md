@@ -479,7 +479,7 @@ enrolling. **We strongly recommend turning enforcement on for Production** (see 
 2. **If enforcement is ON** (see below) and this is the account's first login: you'll be redirected to a
    **"Configure authenticator app"** page (this is expected, not an error). **If enforcement is OFF**
    (the shipped default), you land straight on the Dashboard — you can still enrol voluntarily any time
-   from **Profile & Settings → Security**.
+   from **My Profile → Security**.
 3. On your phone install **Google Authenticator** (or Microsoft Authenticator).
 4. **Scan the QR code** shown on screen, then type the **6-digit code** from the app and submit.
 5. **Save the recovery codes** it shows you somewhere safe — they're your backup if you lose the phone.

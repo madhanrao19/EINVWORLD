@@ -206,14 +206,24 @@
                                             }
                                         </td>
                                         <td data-label="Actions" class="col-action">
-                                            <a href="/Admin/Resources/Edit?id=@item.Id" class="btn btn-sm btn-outline-secondary me-2">Edit</a>
-                                            @if (!string.IsNullOrWhiteSpace(item.Slug))
-                                            {
-                                                <a href="/resources/article/@item.Slug" target="_blank" class="btn btn-sm btn-outline-primary me-2">Preview</a>
-                                            }
-                                            <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline delete-form">
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete(this)">Delete</button>
-                                            </form>
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a href="/Admin/Resources/Edit?id=@item.Id" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
+                                                    @if (!string.IsNullOrWhiteSpace(item.Slug))
+                                                    {
+                                                        <li><a href="/resources/article/@item.Slug" target="_blank" rel="noopener" class="dropdown-item"><i class="ri-external-link-line align-bottom me-2 text-muted"></i> Preview</a></li>
+                                                    }
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="delete-form">
+                                                            <button type="button" class="dropdown-item text-danger" onclick="confirmDelete(this)"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </td>
                                     </tr>
                                 }
