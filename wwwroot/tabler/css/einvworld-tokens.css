@@ -1630,3 +1630,17 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 .einv-avatar-initial-lg { color: var(--einv-primary-hover); font-size: 2rem; font-weight: 700; border: 3px solid rgba(255, 255, 255, .85); }
 .einv-w-40 { width: 40%; }
 .einv-w-30 { width: 30%; }
+
+/* Sidebar sub-menu icons (v1.46.12): every sub-item carries a Remix icon, sized and aligned like a list bullet. */
+/* Long labels wrap under their own text instead of widening the sidebar. */
+.navbar-vertical .dropdown-item:has(> .einv-nav-sub-icon) { display: flex; align-items: flex-start; white-space: normal; }
+.navbar-vertical .dropdown-item .einv-nav-sub-icon {
+  flex: 0 0 1.15rem;
+  margin: .1rem .55rem 0 0;
+  font-size: 1rem;
+  line-height: 1.2;
+  text-align: center;
+  opacity: .7;
+}
+.navbar-vertical .dropdown-item:hover .einv-nav-sub-icon,
+.navbar-vertical .dropdown-item.active .einv-nav-sub-icon { opacity: 1; }
