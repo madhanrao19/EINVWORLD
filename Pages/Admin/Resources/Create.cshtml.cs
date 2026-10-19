@@ -141,6 +141,7 @@ namespace EINVWORLD.Pages.Admin.Resources
                 Resource.Slug = slug;
             }
 
+            Resource.ContentHtml = ResourceHtmlSanitizer.Sanitize(Resource.ContentHtml);
             _context.Resources.Add(Resource);
             await _context.SaveChangesAsync();
 

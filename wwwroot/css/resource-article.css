@@ -1,0 +1,51 @@
+/* Resource article body — used by the public article page (Pages/Resources/Article.cshtml) and as the
+   TinyMCE content_css on Admin Resources Create/Edit, so the editor shows what visitors will see.
+   Pasted formatting (fonts, sizes, colours) is stripped on save by ResourceHtmlSanitizer; this file decides the look. */
+.article-body {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #212529;
+  overflow-wrap: break-word;
+}
+body.article-body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #fff;
+  margin: 1rem;
+}
+.article-body h1, .article-body h2, .article-body h3, .article-body h4, .article-body h5, .article-body h6 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.75rem 0 .75rem;
+  color: inherit;
+}
+.article-body h1 { font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.1rem); }
+.article-body h2 { font-size: clamp(1.4rem, 1.1rem + 1.1vw, 1.75rem); }
+.article-body h3 { font-size: clamp(1.2rem, 1.05rem + .6vw, 1.4rem); }
+.article-body h4 { font-size: 1.15rem; }
+.article-body h5, .article-body h6 { font-size: 1rem; }
+.article-body > :first-child { margin-top: 0; }
+.article-body p { margin: 0 0 1rem; }
+.article-body ul, .article-body ol { margin: 0 0 1rem; padding-left: 1.5rem; }
+.article-body li { margin-bottom: .35rem; }
+.article-body li > p { margin-bottom: .35rem; }
+.article-body a { color: #0a7d4f; text-decoration: underline; }
+.article-body img { max-width: 100%; height: auto; border-radius: .375rem; }
+.article-body blockquote {
+  margin: 1.25rem 0;
+  padding: .75rem 1rem;
+  border-left: 4px solid #0a7d4f;
+  background: #f4f8f6;
+}
+.article-body blockquote > :last-child { margin-bottom: 0; }
+.article-body pre { overflow-x: auto; padding: .75rem; background: #f6f8fa; border-radius: .375rem; }
+.article-body hr { margin: 2rem 0; }
+/* Wide tables scroll sideways on phones instead of pushing the page wider. */
+.article-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 1rem;
+}
+.article-body th, .article-body td { border: 1px solid #dee2e6; padding: .5rem .75rem; vertical-align: top; }
+.article-body th { background: #f8f9fa; font-weight: 600; }

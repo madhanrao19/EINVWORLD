@@ -59,7 +59,7 @@ namespace EINVWORLD.Pages.Admin.Resources
             existing.Title = Resource.Title;
             existing.Summary = Resource.Summary;
             existing.ResourceTypeCode = Resource.ResourceTypeCode;
-            existing.ContentHtml = Resource.ContentHtml;
+            existing.ContentHtml = ResourceHtmlSanitizer.Sanitize(Resource.ContentHtml);
             existing.Status = Resource.Status;
             existing.DatePublished = Resource.DatePublished == default ? DateTime.Now : Resource.DatePublished;
 

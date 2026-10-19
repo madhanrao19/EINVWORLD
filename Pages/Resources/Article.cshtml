@@ -45,6 +45,7 @@
             </figure>
         }
 
+        <link href="~/css/resource-article.css" rel="stylesheet" asp-append-version="true" />
         <div class="article-body text-dark">
             @Html.Raw(Model.Article?.ContentHtml ?? "")
         </div>
