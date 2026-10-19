@@ -77,8 +77,9 @@
                 stopLoading();
                 return;
             }
-            let invoiceDirection = getInvoiceDirection();
-            let exportUrl = `/Invoices/InvoiceLists?handler=Export&fileType=${fileType}&invoiceDirection=${encodeURIComponent(invoiceDirection)}&invoiceNos=${encodeURIComponent(invoiceNos.join(','))}`;
+            // "All": the ticked rows decide what is exported, not the Sent/Received radio (Drafts are
+            // neither, so that filter exported an empty file). The server still limits to the user's TINs.
+            let exportUrl = `/Invoices/InvoiceLists?handler=Export&fileType=${fileType}&invoiceDirection=All&invoiceNos=${encodeURIComponent(invoiceNos.join(','))}`;
             downloadExport(exportUrl, fileType);
             return;
         }
