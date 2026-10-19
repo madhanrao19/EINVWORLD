@@ -74,11 +74,6 @@
                         <table data-einv-table="suppliers" class="table align-middle table-nowrap mb-0" id="customerTable">
                             <thead class="einv-table-head">
                                 <tr>
-                                    <th scope="col" style="width: 50px;">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="checkAll" value="option">
-                                        </div>
-                                    </th>
                                     <th><a href="@GetSortUrl("name")" class="text-dark text-decoration-none">Company @GetSortIcon("name")</a></th>
                                     <th><a href="@GetSortUrl("tin")" class="text-dark text-decoration-none">TIN @GetSortIcon("tin")</a></th>
                                     <th><a href="@GetSortUrl("email")" class="text-dark text-decoration-none">Email @GetSortIcon("email")</a></th>
@@ -94,12 +89,6 @@
                                 @foreach (var item in Model.PartyInfo)
                                 {
                                     <tr>
-                                        <th scope="row">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="chk_child" value="option1">
-                                            </div>
-                                        </th>
-                                        <td class="id" style="display:none;"><a href="javascript:void(0);" class="fw-medium link-primary">#VZ001</a></td>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="flex-shrink-0">

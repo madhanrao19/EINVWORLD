@@ -30,20 +30,10 @@ namespace eInvWorld.Pages.Items
             var itemdescription = await _context.ItemDescriptions.FirstOrDefaultAsync(m => m.Id == id);
             if (itemdescription == null) return NotFound();
 
-            // Security check
-            if (!User.IsInRole("Admin"))
+            var (allowed, companyId) = await ManageScopeAsync(_context, User);
+            if (!allowed || (companyId.HasValue && itemdescription.CreatedByCompanyId != companyId))
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var userCompany = await _context.UserCompanies.Where(uc => uc.UserId == userId).OrderByDescending(uc => uc.IsPrimaryCompany).FirstOrDefaultAsync();
-
-                if (userCompany == null || itemdescription.CreatedByCompanyId != userCompany.PartyInfoId)
-                {
-                    return Redirect("/Identity/Account/AccessDenied");
-                }
-                if (!userCompany.HasCompanyAccess || userCompany.IsViewOnly)
-                {
-                    return Redirect("/Identity/Account/AccessDenied");
-                }
+                return Redirect("/Identity/Account/AccessDenied");
             }
 
             ItemDescription = itemdescription;
@@ -56,6 +46,14 @@ namespace eInvWorld.Pages.Items
 
             var itemdescription = await _context.ItemDescriptions.FindAsync(id);
 
+            // The confirmation page checks ownership on GET; the POST must too, or any supplier could
+            // delete another company's item by posting its id.
+            var (allowed, companyId) = await ManageScopeAsync(_context, User);
+            if (!allowed || (itemdescription != null && companyId.HasValue && itemdescription.CreatedByCompanyId != companyId))
+            {
+                return Redirect("/Identity/Account/AccessDenied");
+            }
+
             if (itemdescription != null)
             {
                 _context.ItemDescriptions.Remove(itemdescription);
@@ -63,6 +61,25 @@ namespace eInvWorld.Pages.Items
             }
 
             return RedirectToPage("./Index");
+        }
+
+        /// <summary>
+        /// Who may change or delete items: an Admin may manage every item (CompanyId null); a supplier user
+        /// with edit access to their primary company may manage that company's items; anyone else, none.
+        /// Shared by the row Delete page and the Items list bulk actions.
+        /// </summary>
+        internal static async Task<(bool Allowed, int? CompanyId)> ManageScopeAsync(ApplicationDbContext context, ClaimsPrincipal user)
+        {
+            if (user.IsInRole("Admin")) return (true, null);
+
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userCompany = await context.UserCompanies
+                .Where(uc => uc.UserId == userId)
+                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .FirstOrDefaultAsync();
+
+            if (userCompany == null || !userCompany.HasCompanyAccess || userCompany.IsViewOnly) return (false, null);
+            return (true, userCompany.PartyInfoId);
         }
     }
 }

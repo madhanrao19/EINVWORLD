@@ -43,6 +43,9 @@
                     <table data-einv-table="recurring" data-einv-sort="client" class="table align-middle table-nowrap mb-0" id="recurringProfilesTable">
                         <thead class="table-light text-muted" style="font-size: 0.75rem; text-transform: uppercase;">
                             <tr>
+                                <th scope="col" class="col-checkbox">
+                                    <input class="form-check-input einv-bulk-all" type="checkbox" data-einv-bulk-form="bulkForm" aria-label="Select all profiles">
+                                </th>
                                 <th>Profile</th>
                                 <th>Buyer</th>
                                 <th>Frequency</th>
@@ -63,6 +66,9 @@
                                     bool isDueSoon = item.Status == "Active" && item.NextRunDate.Date <= sevenDaysOut;
                                     bool lastRunFailed = lastRun != null && (lastRun.RunStatus.StartsWith("Failed") || lastRun.RunStatus == "LHDN_Failed");
                                     <tr data-status="@item.Status" data-due-soon="@isDueSoon.ToString().ToLower()" data-last-failed="@lastRunFailed.ToString().ToLower()">
+                                        <td class="col-checkbox">
+                                            <input class="form-check-input einv-bulk-row" type="checkbox" form="bulkForm" name="ids" value="@item.Id" aria-label="Select @item.ProfileName">
+                                        </td>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <i class="ri-refresh-line text-primary me-2"></i>
@@ -154,7 +160,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         <i class="ri-calendar-todo-line fs-24 d-block mb-2"></i>
                                         No recurring profiles found. Click "New Recurring Profile" to automate an invoice.
                                     </td>
@@ -167,6 +173,14 @@
         </div>
     </div>
 </div>
+
+<form method="post" asp-page-handler="Bulk" id="bulkForm" class="einv-bulk-bar d-none" data-einv-bulk role="toolbar" aria-label="Bulk actions for selected profiles">
+    <span class="einv-bulk-count"><span data-einv-bulk-count>0</span> selected</span>
+    <button type="submit" name="bulkAction" value="resume" class="btn btn-outline-primary btn-sm"><i class="ri-play-line"></i> Resume</button>
+    <button type="submit" name="bulkAction" value="pause" class="btn btn-outline-primary btn-sm"><i class="ri-pause-line"></i> Pause</button>
+    <button type="submit" name="bulkAction" value="delete" class="btn btn-danger btn-sm" data-confirm="Delete {count} recurring profile(s)? Their base templates are kept."><i class="ri-delete-bin-5-line"></i> Delete</button>
+    <button type="button" class="btn btn-link btn-sm" data-einv-bulk-clear>Clear</button>
+</form>
 
 @section Scripts {
     <script>

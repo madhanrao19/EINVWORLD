@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.13`** (`AppInfo:Version` in `appsettings.json`). v1.46.13 is a **patch**
+> **Current version: `v1.46.14`** (`AppInfo:Version` in `appsettings.json`). v1.46.14 is a **patch**
+> release: tick rows and act on many at once on Items, Buyers, Recurring and Admin lists (plus two security fixes) — see the dated entry below. v1.46.13 was a **patch**
 > release: Create New Company uses the same form layout as Add Buyer — see the dated entry below. v1.46.12 was a **patch**
 > release: every sidebar menu item has its own icon — see the dated entry below. v1.46.11 was a **patch**
 > release: Resource editor pastes cleanly from Word, and article HTML is sanitised (security) — see the dated
@@ -377,6 +378,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.14 (bulk actions on list tables)
+
+- **Tick rows and act on many at once.** A checkbox column and the same floating action bar as the invoice
+  list (count, actions, Clear) now appear on:
+  - **Items:** Activate, Deactivate, Delete (items still used elsewhere can't be deleted — nothing changes
+    and you're told to deactivate them instead).
+  - **Buyer Directory:** Export CSV of the ticked buyers; Remove (suppliers) — the same rules as the row
+    action: buyers on invoices or templates are skipped with the reason shown, shared buyers are only unlinked.
+  - **Recurring Invoices:** Resume, Pause, Delete.
+  - **Admin → User & Role Management:** Approve, Set Pending, Delete (your own account can't be ticked).
+  - **Admin → Customer Submissions:** Approve the ticked pending submissions (each one is activity-logged).
+  - **Admin → Email notification templates:** Activate, Deactivate, Delete.
+  Destructive actions ask for confirmation. Select-all only ticks rows currently shown. Every action re-checks
+  on the server that you may change each row; at most 500 rows per action.
+- **Security:** deleting an item checked ownership only on the confirmation page, not when the delete was
+  posted, so a supplier could delete another company's item by posting its id. The post now checks too.
+- **Security:** approving / un-approving a user was a plain link (GET), so a crafted link opened by a
+  signed-in Admin could approve an account. It is now a form post with anti-forgery protection.
+- Removed checkboxes on List of Companies that did nothing.
+- New shared script `wwwroot/js/einv-bulk-select.js` (loaded by the app layout) — any list opts in with a
+  `form[data-einv-bulk]` bar and `.einv-bulk-row` checkboxes.
 
 ## 📅 2026-10-19 — v1.46.13 (Create New Company form matches Add Buyer)
 
