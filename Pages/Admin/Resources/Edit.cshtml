@@ -113,7 +113,7 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header fw-semibold">Full Content</div>
                 <div class="card-body">
-                    <textarea asp-for="Resource.ContentHtml" class="form-control" rows="10"></textarea>
+                    <textarea asp-for="Resource.ContentHtml" class="form-control" rows="10" data-upload-url="/Admin/Resources/Edit?handler=UploadImage" data-content-css="@Url.Content("~/css/resource-article.css")"></textarea>
                     <span asp-validation-for="Resource.ContentHtml" class="text-danger"></span>
                 </div>
             </div>
@@ -235,107 +235,7 @@
     <script src="~/js/resource-seo.js"></script>
 
     <script src="~/assets/js/tinymce/tinymce.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Initializing TinyMCE for Edit page...');
-
-            if (typeof tinymce === 'undefined') {
-                console.error('TinyMCE not loaded! Check the script path.');
-                return;
-            }
-
-            tinymce.init({
-                selector: '#Resource_ContentHtml',
-                // Follow the app theme; both skins ship with the self-hosted TinyMCE. Editor chrome only —
-                // the saved article HTML is unaffected.
-                skin: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'oxide-dark' : 'oxide',
-                content_css: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'default',
-                height: 400,
-                menubar: false,
-                plugins: 'image link code lists autoresize autolink',
-                toolbar: 'undo redo | formatselect | bold italic underline | alignleft aligncenter alignright | bullist numlist | link unlink | image | code',
-                branding: false,
-                resize: true,
-
-                // Enhanced link options
-                link_title: false,
-                link_assume_external_targets: true,
-                link_context_toolbar: true,
-                autolink_pattern: /^https?:\/\/\S+$/,
-
-                // Link target options
-                target_list: [
-                    {title: 'Same window', value: ''},
-                    {title: 'New window', value: '_blank'},
-                    {title: 'Parent frame', value: '_parent'}
-                ],
-
-                // Custom link list for common internal pages
-                link_list: [
-                    {title: 'Home Page', value: '/'},
-                    {title: 'About Us', value: '/about'},
-                    {title: 'Contact Us', value: '/contact'},
-                    {title: 'Resources', value: '/resources'},
-                    {title: 'Invoice List', value: '/Invoices/InvoiceLists'},
-                    {title: 'Create Invoice', value: '/Invoices/CreateInvoice'}
-                ],
-
-                images_upload_url: '/Admin/Resources/Edit?handler=UploadImage',
-                automatic_uploads: true,
-                file_picker_types: 'image',
-                setup: function (editor) {
-                    editor.on('init', function () {
-                        console.log('TinyMCE initialized successfully on Edit page!');
-                    });
-                    editor.on('LoadContent', function () {
-                        console.log('TinyMCE content loaded on Edit page');
-                    });
-                },
-                images_upload_handler: function (blobInfo, success, failure) {
-                    const formData = new FormData();
-                    formData.append('image', blobInfo.blob(), blobInfo.filename());
-
-                    // Add CSRF token
-                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-                    if (token) {
-                        formData.append('__RequestVerificationToken', token);
-                    }
-
-                    fetch('/Admin/Resources/Edit?handler=UploadImage', {
-                        method: 'POST',
-                        body: formData
-                    })
-                        .then(res => {
-                            if (!res.ok) {
-                                throw new Error('Upload failed with status: ' + res.status);
-                            }
-                            return res.json();
-                        })
-                        .then(data => {
-                            if (data.location) {
-                                success(data.location);
-                            } else {
-                                failure('Server did not return image location.');
-                            }
-                        })
-                        .catch(err => {
-                            console.error('Image upload error:', err);
-                            failure('Image upload error: ' + err.message);
-                        });
-                }
-            }).then(function(editors) {
-                console.log('TinyMCE editors created on Edit page:', editors.length);
-            }).catch(function(error) {
-                console.error('TinyMCE initialization failed on Edit page:', error);
-            });
-
-            // Form submit handler
-            document.querySelector("form").addEventListener("submit", function () {
-                console.log('Form submitting, triggering TinyMCE save...');
-                tinymce.triggerSave();
-            });
-        });
-    </script>
+    <script src="~/js/resource-editor.js" asp-append-version="true"></script>
 
     <script>
         function compressAndPreviewImage(event) {

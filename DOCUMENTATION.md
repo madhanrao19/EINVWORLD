@@ -64,6 +64,7 @@ have to.
 | HTTP resilience | **Microsoft.Extensions.Http.Resilience** (token client) + custom rate-limit handler |
 | AI (optional) | Provider-agnostic (`IAiProvider`/`IAiService`); ships with **Ollama** local LLM (open-weight models) |
 | QR | **QRCoder** |
+| HTML sanitising | **HtmlSanitizer** (Ganss.Xss, MIT) — Resource article bodies cleaned on save |
 
 ---
 
