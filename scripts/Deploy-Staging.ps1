@@ -408,9 +408,12 @@ if (-not $SkipMigrations) {
             if (-not $PSCmdlet.ShouldProcess($p.Db, $label)) {
                 if ($WhatIfPreference) {
                     # Read-only: does the migration login hold what the real run needs (BACKUP first, then DDL)?
-                    $missingPerms = @(Invoke-Sqlcmd2 $p.Server $p.Db $p.Builder @('-Q', "SET NOCOUNT ON; " +
+                    # Built in a variable first: written inline as a multi-line "a" + "b" inside the command call,
+                    # PowerShell 5.1 passed each piece to sqlcmd as a separate argument ("Unexpected argument").
+                    $permSql = "SET NOCOUNT ON; " +
                         "SELECT v.p FROM (VALUES ('BACKUP DATABASE'), ('CREATE TABLE'), ('ALTER ANY SCHEMA')) v(p) WHERE ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', v.p), 0) <> 1 " +
-                        "UNION ALL SELECT 'INSERT on __EFMigrationsHistory' WHERE ISNULL(HAS_PERMS_BY_NAME(N'dbo.__EFMigrationsHistory', 'OBJECT', 'INSERT'), 0) <> 1"))
+                        "UNION ALL SELECT 'INSERT on __EFMigrationsHistory' WHERE ISNULL(HAS_PERMS_BY_NAME(N'dbo.__EFMigrationsHistory', 'OBJECT', 'INSERT'), 0) <> 1"
+                    $missingPerms = @(Invoke-Sqlcmd2 $p.Server $p.Db $p.Builder @('-Q', $permSql))
                     if ($missingPerms.Count) { Write-Warning "Preflight: [$($p.Db)] the migration login lacks $($missingPerms -join ', ') - the real run's backup/migration will fail. Use -MigrationCredential with a db_owner login." }
                     else { Write-Host "  Preflight: [$($p.Db)] migration login can back up and apply DDL - OK." -ForegroundColor Green }
                 }
