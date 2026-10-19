@@ -398,7 +398,7 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 ## 5. Security
 
 - **Admin 2FA is optional by default** (`Security:EnforceAdminMfa = false` in `appsettings.json`) —
-  Admins can self-enrol voluntarily from Profile & Settings, but are not forced. **Recommended: set
+  Admins can self-enrol voluntarily from My Profile, but are not forced. **Recommended: set
   `Security__EnforceAdminMfa = true` on Production** so an admin without 2FA is redirected to the
   authenticator-setup page until they enrol (no hard lockout either way — recovery codes always work).
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
