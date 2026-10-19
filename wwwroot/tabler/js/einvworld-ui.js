@@ -103,8 +103,9 @@
   function initScrollableTableDropdowns() {
     if (!window.bootstrap || !window.bootstrap.Dropdown) return;
     // .table-responsive clips the same way, and every table's Actions column is now a "..." menu.
-    // Capture phase runs before Bootstrap's own click handler, so rows rendered later by JS are covered too.
-    document.addEventListener("click", function (e) {
+    // Bootstrap's data-api handler is itself a capture listener on `document` (registered first), so ours
+    // must sit on `window` to run before it; otherwise Bootstrap creates a default absolute-positioned instance.
+    window.addEventListener("click", function (e) {
       var el = e.target.closest && e.target.closest('[data-bs-toggle="dropdown"]');
       if (!el || !el.closest(".einv-table-scroll-x, .table-responsive")) return;
       if (!window.bootstrap.Dropdown.getInstance(el)) {

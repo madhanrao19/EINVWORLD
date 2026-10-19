@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.9`** (`AppInfo:Version` in `appsettings.json`). v1.46.9 is a **patch**
+> **Current version: `v1.46.10`** (`AppInfo:Version` in `appsettings.json`). v1.46.10 is a **patch**
+> release: fixes from the v1.46.9 Staging test (row "⋯" menus clipped, duplicate Add Resource Type, export
+> selected Drafts) — see the dated entry below. v1.46.9 was a **patch**
 > release: fixes from the v1.46.8 Staging test (admin alert for new registrations, dark-mode dropdowns/toasts,
 > one "Actions" menu on every table) — see the dated entry below. v1.46.8 was a **patch**
 > release: fixes from the v1.45.0 Staging test (dark dropdowns, sign-in error, 8-character passwords) — see the dated entry below. v1.46.7 was a **patch**
@@ -371,6 +373,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.10 (fixes from the v1.46.9 Staging test)
+
+- **Row "⋯" Actions menus are no longer cut off inside tables** (e.g. Templates, last row of any list).
+  The v1.46.9 fix never ran: Bootstrap's own click handler is also a capture listener on `document` and is
+  registered first, so it created the menu with default positioning before ours could. Our listener now sits
+  on `window`, which runs before it (`wwwroot/tabler/js/einvworld-ui.js`).
+- **Manage Resources:** removed the duplicate "Add Resource Type" button and its pop-up (which also didn't
+  save — its fields never reached the handler). Resource types are added from Manage Resource Types, whose
+  button now reads "Add Resource Type".
+- **Export Invoices → Selected Items now includes Drafts.** Selected rows were matched by LHDN UUID, which
+  Drafts don't have yet, so they were silently left out; selection now uses the invoice number. The export
+  Status filter also gains a "Draft" option. Company/TIN scoping is unchanged.
 
 ## 📅 2026-10-19 — v1.46.9 (fixes from the v1.46.8 Staging test)
 

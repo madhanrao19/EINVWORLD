@@ -1246,7 +1246,7 @@ namespace eInvWorld.Pages.Invoices
         }
 
 
-        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "", string? uuids = null)
+        public async Task<IActionResult> OnGetExportAsync(string fileType, string invoiceDirection, string documentType = "", DateTime? submissionDateFrom = null, DateTime? submissionDateTo = null, string internalStatusId = "", string? uuids = null, string? invoiceNos = null)
         {
             try
             {
@@ -1303,6 +1303,16 @@ namespace eInvWorld.Pages.Invoices
                     if (uuidList.Count > 0)
                     {
                         query = query.Where(i => uuidList.Contains(i.UUID!));
+                    }
+                }
+
+                // Same, keyed on InvoiceNo (PK) so selected Drafts — which have no UUID yet — export too.
+                if (!string.IsNullOrEmpty(invoiceNos))
+                {
+                    var noList = invoiceNos.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(5000).ToList();
+                    if (noList.Count > 0)
+                    {
+                        query = query.Where(i => noList.Contains(i.InvoiceNo));
                     }
                 }
 

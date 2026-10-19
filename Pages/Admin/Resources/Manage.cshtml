@@ -37,10 +37,6 @@
                         <i class="ri-folder-settings-line me-1"></i> Manage Resource Types
                     </a>
 
-                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addTypeModal">
-                        <i class="ri-folder-add-line me-1"></i> Add Resource Type
-                    </button>
-
                     <form method="post" asp-page-handler="BackfillSlugs">
                         <button type="submit" class="btn btn-outline-warning">
                             <i class="ri-tools-line align-bottom me-1"></i> Generate Missing Slugs
@@ -50,33 +46,6 @@
             </div>
         </div>
 
-        <!-- Modal -->
-        <div class="modal fade" id="addTypeModal" tabindex="-1" aria-labelledby="addTypeModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <form method="post" asp-page-handler="AddType">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="addTypeModalLabel">Add Resource Type</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="code" class="form-label">Code</label>
-                                <input name="Code" id="code" class="form-control" maxlength="50" required />
-                            </div>
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Name</label>
-                                <input name="Name" id="name" class="form-control" maxlength="100" required />
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Type</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
 
 
