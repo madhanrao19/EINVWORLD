@@ -92,7 +92,13 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+       {
+           options.SignIn.RequireConfirmedAccount = true;
+           // Identity's default is 6. Enforced server-side for every password set (create user, register,
+           // reset, change); the forms' StringLength(MinimumLength = 8) shows the same rule client-side.
+           options.Password.RequiredLength = 8;
+       })
        .AddRoles<IdentityRole>()  // Adding roles
        .AddEntityFrameworkStores<ApplicationDbContext>();
 
