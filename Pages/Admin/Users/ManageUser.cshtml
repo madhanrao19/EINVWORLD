@@ -70,7 +70,10 @@
             <table data-einv-table="admin-users" class="table table-hover align-middle mb-0">
                 <thead class="einv-table-head">
                     <tr>
-                        <th class="ps-4"><a href="@GetSortUrl("name")" class="text-dark text-decoration-none">User @GetSortIcon("name")</a></th>
+                        <th scope="col" class="col-checkbox ps-4">
+                            <input class="form-check-input einv-bulk-all" type="checkbox" data-einv-bulk-form="bulkForm" aria-label="Select all users">
+                        </th>
+                        <th><a href="@GetSortUrl("name")" class="text-dark text-decoration-none">User @GetSortIcon("name")</a></th>
                         <th>Roles</th>
                         <th><a href="@GetSortUrl("status")" class="text-dark text-decoration-none">Approval Status @GetSortIcon("status")</a></th>
                         <th><a href="@GetSortUrl("updatedby")" class="text-dark text-decoration-none">Updated By @GetSortIcon("updatedby")</a></th>
@@ -84,7 +87,13 @@
                         @foreach (var user in Model.Users)
                         {
                             <tr>
-                                <td class="ps-4">
+                                <td class="col-checkbox ps-4">
+                                    @if (user.Id != Model.CurrentUserId)
+                                    {
+                                        <input class="form-check-input einv-bulk-row" type="checkbox" form="bulkForm" name="ids" value="@user.Id" aria-label="Select @user.FullName">
+                                    }
+                                </td>
+                                <td>
                                     <div class="fw-bold text-dark">@user.FullName</div>
                                     <div class="small text-muted">@user.Email</div>
                                 </td>
@@ -101,7 +110,8 @@
                                     <div class="d-flex align-items-center">
                                         <div class="form-check form-switch me-2">
                                             <input class="form-check-input" type="checkbox"
-                                                   onchange="confirmApprovalChange('@user.Id', '@user.IsApproved')"
+                                                   data-user-id="@user.Id" data-approved="@user.IsApproved.ToString().ToLowerInvariant()"
+                                                   onchange="confirmApprovalChange(this.dataset.userId, this.dataset.approved)"
                                                    @(user.IsApproved ? "checked" : "") />
                                         </div>
                                         <span class="small @(user.IsApproved ? "text-success" : "text-warning")">
@@ -143,7 +153,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">No users found.</td>
+                            <td colspan="7" class="text-center py-4 text-muted">No users found.</td>
                         </tr>
                     }
                 </tbody>
@@ -245,6 +255,28 @@
     </div>
 </div>
 
+<form method="post" id="approvalForm" class="d-none">
+    <input type="hidden" name="id" />
+    <input type="hidden" name="CurrentPage" value="@Model.CurrentPage" />
+    <input type="hidden" name="SortBy" value="@Model.SortBy" />
+    <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+    <input type="hidden" name="SearchName" value="@Model.SearchName" />
+    <input type="hidden" name="SearchEmail" value="@Model.SearchEmail" />
+</form>
+
+<form method="post" asp-page-handler="Bulk" id="bulkForm" class="einv-bulk-bar d-none" data-einv-bulk role="toolbar" aria-label="Bulk actions for selected users">
+    <input type="hidden" name="CurrentPage" value="@Model.CurrentPage" />
+    <input type="hidden" name="SortBy" value="@Model.SortBy" />
+    <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
+    <input type="hidden" name="SearchName" value="@Model.SearchName" />
+    <input type="hidden" name="SearchEmail" value="@Model.SearchEmail" />
+    <span class="einv-bulk-count"><span data-einv-bulk-count>0</span> selected</span>
+    <button type="submit" name="bulkAction" value="approve" class="btn btn-outline-primary btn-sm"><i class="ri-user-follow-line"></i> Approve</button>
+    <button type="submit" name="bulkAction" value="disapprove" class="btn btn-outline-primary btn-sm" data-confirm="Set {count} user(s) back to Pending? They will not be able to sign in until approved."><i class="ri-user-unfollow-line"></i> Set Pending</button>
+    <button type="submit" name="bulkAction" value="delete" class="btn btn-danger btn-sm" data-confirm="Permanently delete {count} user(s)? This cannot be undone."><i class="ri-delete-bin-5-line"></i> Delete</button>
+    <button type="button" class="btn btn-link btn-sm" data-einv-bulk-clear>Clear</button>
+</form>
+
 @section Scripts {
     <script>
         function openAddRoleModal(id, name) {
@@ -259,17 +291,12 @@
             new bootstrap.Modal(document.getElementById('removeRoleModal')).show();
         }
 
+        // POSTs (with the antiforgery token) so approval can't be triggered by a crafted link.
         function confirmApprovalChange(id, currentStatus) {
-            const handler = currentStatus.toLowerCase() === "true" ? "Disapprove" : "Approve";
-
-            // Pass all sorting/pagination values to maintain state after approval
-            const currentPage = '@Model.CurrentPage';
-            const sortBy = '@Model.SortBy';
-            const sortOrder = '@Model.SortOrder';
-            const searchName = '@(Model.SearchName ?? "")';
-            const searchEmail = '@(Model.SearchEmail ?? "")';
-
-            window.location.href = `?handler=${handler}&id=${id}&currentPage=${currentPage}&sortBy=${sortBy}&sortOrder=${sortOrder}&searchName=${searchName}&searchEmail=${searchEmail}`;
+            const form = document.getElementById('approvalForm');
+            form.action = '?handler=' + (currentStatus === "true" ? "Disapprove" : "Approve");
+            form.querySelector('[name="id"]').value = id;
+            form.submit();
         }
 
         function clearFilters() {

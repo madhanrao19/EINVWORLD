@@ -23,6 +23,9 @@
             <table data-einv-table="notifications" data-einv-sort="client" class="table align-middle mb-0" id="dataTable1">
                 <thead class="einv-table-head">
                     <tr>
+                        <th scope="col" class="col-checkbox">
+                            <input class="form-check-input einv-bulk-all" type="checkbox" data-einv-bulk-form="bulkForm" aria-label="Select all templates">
+                        </th>
                         <th>@Html.DisplayNameFor(model => model.Notification[0].TemplateName)</th>
                         <th>@Html.DisplayNameFor(model => model.Notification[0].Subject)</th>
                         <th>@Html.DisplayNameFor(model => model.Notification[0].Body)</th>
@@ -36,11 +39,14 @@
                 <tbody>
                     @if (Model.Notification.Count == 0)
                     {
-                        <tr><td colspan="8" class="text-center text-muted py-4">No notification templates found.</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted py-4">No notification templates found.</td></tr>
                     }
                     @foreach (var item in Model.Notification)
                     {
                         <tr>
+                            <td class="col-checkbox">
+                                <input class="form-check-input einv-bulk-row" type="checkbox" form="bulkForm" name="ids" value="@item.Id" aria-label="Select @item.TemplateName">
+                            </td>
                             <td>@Html.DisplayFor(modelItem => item.TemplateName)</td>
                             <td>@Html.DisplayFor(modelItem => item.Subject)</td>
                             <td class="text-truncate" style="max-width:280px;">@Html.DisplayFor(modelItem => item.Body)</td>
@@ -70,3 +76,11 @@
         </div>
     </div>
 </div>
+
+<form method="post" asp-page-handler="Bulk" id="bulkForm" class="einv-bulk-bar d-none" data-einv-bulk role="toolbar" aria-label="Bulk actions for selected templates">
+    <span class="einv-bulk-count"><span data-einv-bulk-count>0</span> selected</span>
+    <button type="submit" name="bulkAction" value="activate" class="btn btn-outline-primary btn-sm"><i class="ri-checkbox-circle-line"></i> Activate</button>
+    <button type="submit" name="bulkAction" value="deactivate" class="btn btn-outline-primary btn-sm" data-confirm="Deactivate {count} email template(s)? Emails that use them stop being sent."><i class="ri-forbid-line"></i> Deactivate</button>
+    <button type="submit" name="bulkAction" value="delete" class="btn btn-danger btn-sm" data-confirm="Delete {count} email template(s)? Emails that use them stop being sent. This cannot be undone."><i class="ri-delete-bin-5-line"></i> Delete</button>
+    <button type="button" class="btn btn-link btn-sm" data-einv-bulk-clear>Clear</button>
+</form>
