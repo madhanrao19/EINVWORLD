@@ -8,6 +8,7 @@
  * sheet — gets the light token values instead of inheriting the dark ones from <html>. */
 :root,
 [data-bs-theme="light"] {
+  color-scheme: light;
   /* Brand palette — "EinvWorld Professional" (Stitch design direction, 2026-07).
    * Deep compliance green; hover is one step darker, container one step lighter. */
   --einv-primary: #006948;
@@ -112,6 +113,9 @@
  * mode still reads as EinvWorld; Tabler's own dark surface tokens are pointed at the same ramp so its
  * built-in components (forms, dropdowns, modals) match instead of showing a second, grey palette. */
 [data-bs-theme="dark"] {
+  /* Native widgets (a <select>'s option list, date pickers, scrollbars) follow this, not the tokens:
+   * without it Chrome draws the option list white with the light dark-mode text on top. */
+  color-scheme: dark;
   --einv-page-bg: #0c1411;
   --einv-surface: #131d19;
   --einv-surface-2: #1a2621;
