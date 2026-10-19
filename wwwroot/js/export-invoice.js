@@ -19,6 +19,11 @@
         return Array.from(document.querySelectorAll(".invoice-checkbox:checked")).map(cb => cb.value).filter(Boolean);
     }
 
+    // CSV/XLSX export keys on InvoiceNo (the PK) so Drafts, which have no LHDN UUID yet, are included.
+    function selectedInvoiceNos() {
+        return Array.from(document.querySelectorAll(".invoice-checkbox:checked")).map(cb => cb.dataset.invoiceno).filter(Boolean);
+    }
+
     function isSelectedScope() {
         var radio = document.querySelector('input[name="exportScope"]:checked');
         return radio && radio.value === "selected";
@@ -26,7 +31,7 @@
 
     function refreshExportScopeUI() {
         var countEl = document.getElementById("exportSelectedCount");
-        var count = selectedInvoiceUuids().length;
+        var count = selectedInvoiceNos().length;
         if (countEl) countEl.textContent = count;
         var selectedScopeRadio = document.getElementById("exportScopeSelected");
         if (selectedScopeRadio) selectedScopeRadio.disabled = count === 0;
@@ -66,14 +71,14 @@
         // exactly the checked rows. Falls through to the same fetch/blob download logic below as
         // Current View, just with a different exportUrl.
         if (isSelectedScope()) {
-            let uuids = selectedInvoiceUuids();
-            if (uuids.length === 0) {
+            let invoiceNos = selectedInvoiceNos();
+            if (invoiceNos.length === 0) {
                 alert("No invoices selected. Check at least one row, or switch to Current View.");
                 stopLoading();
                 return;
             }
             let invoiceDirection = getInvoiceDirection();
-            let exportUrl = `/Invoices/InvoiceLists?handler=Export&fileType=${fileType}&invoiceDirection=${encodeURIComponent(invoiceDirection)}&uuids=${encodeURIComponent(uuids.join(','))}`;
+            let exportUrl = `/Invoices/InvoiceLists?handler=Export&fileType=${fileType}&invoiceDirection=${encodeURIComponent(invoiceDirection)}&invoiceNos=${encodeURIComponent(invoiceNos.join(','))}`;
             downloadExport(exportUrl, fileType);
             return;
         }
