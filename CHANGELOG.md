@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.12`** (`AppInfo:Version` in `appsettings.json`). v1.46.12 is a **patch**
+> **Current version: `v1.46.13`** (`AppInfo:Version` in `appsettings.json`). v1.46.13 is a **patch**
+> release: Create New Company uses the same form layout as Add Buyer — see the dated entry below. v1.46.12 was a **patch**
 > release: every sidebar menu item has its own icon — see the dated entry below. v1.46.11 was a **patch**
 > release: Resource editor pastes cleanly from Word, and article HTML is sanitised (security) — see the dated
 > entry below. v1.46.10 was a **patch**
@@ -376,6 +377,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.13 (Create New Company form matches Add Buyer)
+
+- **Create New Company now looks and works like Add Buyer:** page title with "Back to Companies", step tabs
+  with icons above the form, one card per section with an icon heading (Legal Identity, Tax & Industry,
+  Banking & Payment / Contact Details, Registered Address, Internal Notes), the logo picker, and "Validate
+  with LHDN" right next to the TIN.
+- **Banking & Payment keeps the same fields as before** (Bank Account Number, Bank Name, Default Payment
+  Terms, Attention To) and now sits in Step 1 like Add Buyer's banking card.
+- Unchanged on purpose: Email, Postal Code and State stay required for a company, and State stays a
+  dropdown for every country (a company's State must be an LHDN state code — foreign companies use "Not
+  Applicable"). No server-side change; the same fields are posted.
 
 ## 📅 2026-10-19 — v1.46.12 (sidebar icons)
 
