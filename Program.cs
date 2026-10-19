@@ -123,6 +123,7 @@ builder.Services.AddHttpClient(eInvWorld.Services.Webhooks.WebhookDeliveryJobHan
 
 // Tamper-evident, hash-chained audit trail.
 builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();
+builder.Services.AddScoped<EINVWORLD.Services.ISupplierBankAccountService, EINVWORLD.Services.SupplierBankAccountService>(); // company bank accounts (default mirrored to PartyInfo)
 
 // Company workspace (Roles & Permissions tab) authorization.
 builder.Services.AddScoped<EINVWORLD.Services.Authorization.ICompanyAuthorizationService, EINVWORLD.Services.Authorization.CompanyAuthorizationService>();

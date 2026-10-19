@@ -22,9 +22,11 @@ namespace eInvWorld.Pages.Suppliers
         private readonly ApplicationDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly EINVWORLD.Services.ISupplierBankAccountService _bankAccounts;
 
-        public ImportModel(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public ImportModel(ApplicationDbContext context, IHttpClientFactory httpClientFactory, IConfiguration configuration, EINVWORLD.Services.ISupplierBankAccountService bankAccounts)
         {
+            _bankAccounts = bankAccounts;
             _context = context;
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
@@ -241,6 +243,7 @@ namespace eInvWorld.Pages.Suppliers
             int successCount = 0;
             bool isAdmin = User.IsInRole("Admin");
 
+            var importedParties = new List<PartyInfo>();
             foreach (var record in records)
             {
                 var newParty = new PartyInfo
@@ -281,10 +284,16 @@ namespace eInvWorld.Pages.Suppliers
                 };
 
                 _context.PartyInfos.Add(newParty);
+                importedParties.Add(newParty);
                 successCount++;
             }
 
             await _context.SaveChangesAsync();
+            // Imported bank details become each company's default bank account.
+            foreach (var party in importedParties.Where(p => !string.IsNullOrWhiteSpace(p.BankAccountNo)))
+            {
+                await _bankAccounts.SyncDefaultFromCompanyAsync(party.PartyInfoId, User.Identity?.Name);
+            }
             TempData["SuccessMessage"] = $"Successfully imported {successCount} validated records!";
 
             if (From == "lead") return RedirectToPage("/Lead/List");

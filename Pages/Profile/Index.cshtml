@@ -511,25 +511,34 @@
                                             </div>
                                         </div>
                                     </div>
-                                    @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankAccountNo) || !string.IsNullOrEmpty(Model.PrimaryCompany.PaymentTerms))
+                                    @{ var canManageBanks = User.IsInRole("Supplier") || User.IsInRole("Admin"); }
+                                    @if (canManageBanks || !string.IsNullOrEmpty(Model.PrimaryCompany.BankAccountNo) || !string.IsNullOrEmpty(Model.PrimaryCompany.PaymentTerms))
                                     {
                                         <hr class="my-3" />
                                         <div class="row">
                                             <div class="col-md-12">
-                                                <h6 class="fw-semibold mb-3">Banking & Payment Information</h6>
+                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                                    <h6 class="fw-semibold mb-0">Banking & Payment Information</h6>
+                                                    @if (canManageBanks)
+                                                    {
+                                                        <a asp-page="/Profile/BankAccounts" asp-route-companyId="@Model.PrimaryCompany.PartyInfoId" class="btn btn-sm btn-outline-primary">
+                                                            <i class="ri-bank-line align-bottom me-1"></i> Manage bank accounts
+                                                        </a>
+                                                    }
+                                                </div>
                                                 <div class="row">
                                                     @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankName))
                                                     {
                                                         <div class="col-md-6">
-                                                            <small class="text-muted">Bank Name</small>
+                                                            <small class="text-muted">Default Bank</small>
                                                             <p class="mb-2 text-muted">@Model.PrimaryCompany.BankName</p>
                                                         </div>
                                                     }
                                                     @if (!string.IsNullOrEmpty(Model.PrimaryCompany.BankAccountNo))
                                                     {
                                                         <div class="col-md-6">
-                                                            <small class="text-muted">Account Number</small>
-                                                            <p class="mb-2 text-muted font-monospace">@Model.PrimaryCompany.BankAccountNo</p>
+                                                            <small class="text-muted">Default Account Number</small>
+                                                            <p class="mb-2 text-muted font-monospace">@EINVWORLD.Helpers.MaskingHelper.MaskLast4(Model.PrimaryCompany.BankAccountNo)</p>
                                                         </div>
                                                     }
                                                     @if (!string.IsNullOrEmpty(Model.PrimaryCompany.PaymentTerms))

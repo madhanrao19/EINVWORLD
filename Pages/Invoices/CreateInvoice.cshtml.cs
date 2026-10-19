@@ -1784,13 +1784,19 @@ namespace EINVWORLD.Pages.Invoices
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc), malaysiaTimeZone);
         }
 
-        public async Task<IActionResult> OnGetLoadPartyDetailsAsync(int partyId, string partyType)
+        public async Task<IActionResult> OnGetLoadPartyDetailsAsync(int partyId, string partyType, [FromServices] EINVWORLD.Services.ISupplierBankAccountService bankAccountService)
         {
             try
             {
                 _logger.LogDebug("OnGetLoadPartyDetailsAsync: PartyId={PartyId}, Type={PartyType}", partyId, partyType);
 
                 object? partyData = null;
+                // Bank details only for parties the caller belongs to / owns (was returned for any id).
+                // A company's saved accounts feed the Saved bank account picker; the default comes first.
+                bool canSeeBank = await EINVWORLD.Helpers.PartyBankAccess.CanSeeBankAsync(User, _context, partyType, partyId);
+                var bankAccounts = canSeeBank && partyType == "PI"
+                    ? (await bankAccountService.ListAsync(partyId)).Select(a => new { a.Id, a.BankName, a.BankAccountNo, a.IsDefault }).ToList<object>()
+                    : new List<object>();
 
                 // 1. Fetch from PartyInfo
                 if (partyType == "PI")
@@ -1822,8 +1828,11 @@ namespace EINVWORLD.Pages.Invoices
                         partyData = new
                         {
                             raw.PartyInfoId, raw.TIN, raw.RegTypeCode, raw.RegNo, raw.SST,
-                            raw.BankAccountNo, raw.BankName, raw.Attention, raw.PaymentTerms, raw.Email,
-                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? "")
+                            BankAccountNo = canSeeBank ? raw.BankAccountNo : null,
+                            BankName = canSeeBank ? raw.BankName : null,
+                            raw.Attention, raw.PaymentTerms, raw.Email,
+                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? ""),
+                            BankAccounts = bankAccounts
                         };
                     }
                 }
@@ -1854,8 +1863,11 @@ namespace EINVWORLD.Pages.Invoices
                         partyData = new
                         {
                             raw.PartyInfoId, raw.TIN, raw.RegTypeCode, raw.RegNo, raw.SST,
-                            raw.BankAccountNo, raw.BankName, raw.Attention, raw.PaymentTerms, raw.Email,
-                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? "")
+                            BankAccountNo = canSeeBank ? raw.BankAccountNo : null,
+                            BankName = canSeeBank ? raw.BankName : null,
+                            raw.Attention, raw.PaymentTerms, raw.Email,
+                            Address = raw.Addr1 + " " + (raw.Addr2 ?? "") + " " + (raw.CityName ?? ""),
+                            BankAccounts = bankAccounts
                         };
                     }
                 }
