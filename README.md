@@ -18,7 +18,7 @@ admins. It is designed to run **self-hosted on a single in-house Windows / IIS s
   roles via **Admin → Role Management**)
 - **Serilog** (file + SQL `SystemLogs`)
 - PDF: **DinkToPdf** (default) or **Puppeteer** (switchable)
-- Excel export: **ClosedXML**; images: **Magick.NET**
+- Excel export: **ClosedXML**; images: **Magick.NET**; HTML sanitising: **HtmlSanitizer**
 
 ## Key features
 
