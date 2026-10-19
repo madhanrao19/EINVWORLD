@@ -57,6 +57,8 @@
 
                 <div class="card-body p-4">
                     <form method="post">
+                        @* Identity's own errors (password rules, duplicate username) are model-level, not per-field. *@
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                         @if (!isNew)
                         {
                             <input type="hidden" asp-for="AppUser.Id" />
