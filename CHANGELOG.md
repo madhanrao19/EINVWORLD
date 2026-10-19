@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.11`** (`AppInfo:Version` in `appsettings.json`). v1.46.11 is a **patch**
+> **Current version: `v1.46.12`** (`AppInfo:Version` in `appsettings.json`). v1.46.12 is a **patch**
+> release: every sidebar menu item has its own icon — see the dated entry below. v1.46.11 was a **patch**
 > release: Resource editor pastes cleanly from Word, and article HTML is sanitised (security) — see the dated
 > entry below. v1.46.10 was a **patch**
 > release: fixes from the v1.46.9 Staging test (row "⋯" menus clipped, duplicate Add Resource Type, export
@@ -375,6 +376,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.12 (sidebar icons)
+
+- **Every sidebar sub-menu item now has an icon** (Admin, Supplier and Buyer menus), e.g. State Codes 📍,
+  Currency Codes, Tax Types %, Templates, Recurring Invoices, Audit Trail, System Health, Webhooks.
+- **Top-level icons no longer look alike:** Codes Management (code box), Item Management (shopping bag —
+  was almost the same icon as Invoice Management), Lead Management (starred user).
+- Long sub-menu names (e.g. "MSIC SubCategory Codes") wrap onto a second line instead of making the sidebar
+  scroll sideways.
 
 ## 📅 2026-10-19 — v1.46.11 (Resource editor: clean Word paste, sanitised article HTML)
 
