@@ -182,29 +182,6 @@ namespace EINVWORLD.Pages.Admin.Resources
             return RedirectToPage();
         }
 
-        [BindProperty]
-        public ResourceType NewType { get; set; } = new();
-
-        public async Task<IActionResult> OnPostAddTypeAsync()
-        {
-            if (string.IsNullOrWhiteSpace(NewType.Code) || string.IsNullOrWhiteSpace(NewType.Name))
-            {
-                TempData["Message"] = "❌ Type Code and Name are required.";
-                return RedirectToPage();
-            }
-
-            if (await _context.ResourceTypes.AnyAsync(rt => rt.Code == NewType.Code))
-            {
-                TempData["Message"] = "❌ Type Code already exists.";
-                return RedirectToPage();
-            }
-
-            _context.ResourceTypes.Add(NewType);
-            await _context.SaveChangesAsync();
-
-            TempData["Message"] = $"✅ Resource Type '{NewType.Name}' added.";
-            return RedirectToPage();
-        }
 
 
 
