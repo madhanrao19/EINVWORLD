@@ -61,7 +61,7 @@
     Skip the database-migration step entirely.
 
 .PARAMETER MigrationCredential
-    SQL login to run migrations with (e.g. a db_ddladmin login: -MigrationCredential (Get-Credential)).
+    SQL login to run migrations with (a db_owner login: -MigrationCredential (Get-Credential)).
     Defaults to the login in the target's web.config connection strings.
 
 .PARAMETER SqlServer
@@ -73,7 +73,10 @@
 
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
-    Pending migrations are still listed (read-only query).
+    Pending migrations are still listed (read-only query). Also runs read-only preflight checks and
+    warns about anything that would make the real run fail: write access to the backup/App folders,
+    PowerShell remoting to the server (if the Hosting Bundle needs installing), and the SQL login's
+    BACKUP/DDL/INSERT rights (if migrations are pending).
 
 .EXAMPLE
     # Standard staging deploy (one command - site goes offline only during the copy):
@@ -141,6 +144,16 @@ if ((Test-Path $DestAppPath) -and ($DestAppPath -notlike '\\*') -and -not $SkipP
 
 if (-not (Test-Path $DestAppPath)) {
     throw "Destination path not reachable: $DestAppPath. Check network access / the share is up before retrying."
+}
+
+if ($WhatIfPreference) {
+    # -WhatIf skips every write, so prove the real run can write where the backup and the copy go.
+    # [IO.File] because -WhatIf turns New-Item/Remove-Item into no-ops.
+    foreach ($dir in @((Split-Path $DestAppPath -Parent), $DestAppPath)) {
+        $probe = Join-Path $dir ".deploy-whatif-probe-$PID.tmp"
+        try { [IO.File]::WriteAllText($probe, 'probe'); [IO.File]::Delete($probe); Write-Host "Preflight: can write to $dir - OK." -ForegroundColor Green }
+        catch { Write-Warning "Preflight: can't write to $dir ($($_.Exception.Message)) - the real run's backup/copy will fail." }
+    }
 }
 
 # -- 0. Server .NET runtime (Hosting Bundle) -------------------------------------------------------
@@ -241,6 +254,14 @@ if (-not $SkipRuntimeCheck) {
             if (-not $now -or $now -lt $minRuntime) { throw "Installer finished but the server still has $now (< $minRuntime) - nothing deployed." }
             Write-Host "  Hosting Bundle $target installed$(if ($code -eq 3010) { ' (Windows reports a reboot is pending - schedule one)' })." -ForegroundColor Green
             Write-Host "  This site picks up the new runtime when this deploy restarts it; other sites on the server do at their next app-pool recycle." -ForegroundColor Yellow
+        }
+        elseif ($WhatIfPreference -and $serverHost) {
+            # Read-only: the same remoting call the real install makes, so -WhatIf flags a blocked WinRM up front.
+            try {
+                Invoke-Command -ComputerName $serverHost -ScriptBlock { $true } | Out-Null
+                Write-Host "  Preflight: PowerShell remoting to $serverHost with your login - OK, the install can run unattended." -ForegroundColor Green
+            }
+            catch { Write-Warning "Preflight: PowerShell remoting to $serverHost failed with your login ($($_.Exception.Message)). The real run will ask for a $serverHost admin login, or for you to install it on the server by hand." }
         }
     }
 }
@@ -384,7 +405,17 @@ if (-not $SkipMigrations) {
         foreach ($p in $plan) {
             $env:SQLCMDPASSWORD = $p.Password
             $label = "[$($p.Db)] backup + apply $($p.Pending.Count) migration(s)"
-            if (-not $PSCmdlet.ShouldProcess($p.Db, $label)) { continue }
+            if (-not $PSCmdlet.ShouldProcess($p.Db, $label)) {
+                if ($WhatIfPreference) {
+                    # Read-only: does the migration login hold what the real run needs (BACKUP first, then DDL)?
+                    $missingPerms = @(Invoke-Sqlcmd2 $p.Server $p.Db $p.Builder @('-Q', "SET NOCOUNT ON; " +
+                        "SELECT v.p FROM (VALUES ('BACKUP DATABASE'), ('CREATE TABLE'), ('ALTER ANY SCHEMA')) v(p) WHERE ISNULL(HAS_PERMS_BY_NAME(DB_NAME(), 'DATABASE', v.p), 0) <> 1 " +
+                        "UNION ALL SELECT 'INSERT on __EFMigrationsHistory' WHERE ISNULL(HAS_PERMS_BY_NAME(N'dbo.__EFMigrationsHistory', 'OBJECT', 'INSERT'), 0) <> 1"))
+                    if ($missingPerms.Count) { Write-Warning "Preflight: [$($p.Db)] the migration login lacks $($missingPerms -join ', ') - the real run's backup/migration will fail. Use -MigrationCredential with a db_owner login." }
+                    else { Write-Host "  Preflight: [$($p.Db)] migration login can back up and apply DDL - OK." -ForegroundColor Green }
+                }
+                continue
+            }
 
             $bak = "$($p.Db)_pre-deploy_$(Get-Date -Format 'yyyyMMdd_HHmmss').bak"
             # Instance default backup folder, falling back to its data folder when none is configured.
