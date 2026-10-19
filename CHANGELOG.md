@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.10`** (`AppInfo:Version` in `appsettings.json`). v1.46.10 is a **patch**
+> **Current version: `v1.46.11`** (`AppInfo:Version` in `appsettings.json`). v1.46.11 is a **patch**
+> release: Resource editor pastes cleanly from Word, and article HTML is sanitised (security) — see the dated
+> entry below. v1.46.10 was a **patch**
 > release: fixes from the v1.46.9 Staging test (row "⋯" menus clipped, duplicate Add Resource Type, export
 > selected Drafts) — see the dated entry below. v1.46.9 was a **patch**
 > release: fixes from the v1.46.8 Staging test (admin alert for new registrations, dark-mode dropdowns/toasts,
@@ -373,6 +375,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.11 (Resource editor: clean Word paste, sanitised article HTML)
+
+- **Pasting from Word, Google Docs or a web page into Create/Edit Resource → Full Content keeps the structure
+  and drops the formatting.** Headings, paragraphs, bold/italic, lists, links, tables and alignment stay;
+  fonts, sizes, colours, white backgrounds, Word classes and empty spacer paragraphs are removed. The editor
+  now previews with the public article stylesheet, gains a working paragraph/heading picker (the old
+  `formatselect` button didn't exist in TinyMCE 7), blockquote, table and "clear formatting" buttons, and
+  pasted/uploaded images upload properly (the upload callback used the old TinyMCE 5 style).
+- **Public articles get proper responsive typography** (`wwwroot/css/resource-article.css`): heading sizes,
+  spacing, lists, images that fit the screen, and wide tables that scroll sideways on phones.
+- **Security:** article HTML is now sanitised on save (`ResourceHtmlSanitizer`, new FOSS package
+  **HtmlSanitizer**, MIT). It was saved and shown on the public site exactly as posted, so a script in the
+  body would have run for every visitor. Existing articles are cleaned the next time they are saved.
+- The two copies of the editor set-up (Create, Edit) are now one file, `wwwroot/js/resource-editor.js`.
 
 ## 📅 2026-10-19 — v1.46.10 (fixes from the v1.46.9 Staging test)
 
