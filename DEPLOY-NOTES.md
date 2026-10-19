@@ -24,7 +24,10 @@ changes are additive and AI/features stay off unless already enabled.
    `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
    `<environmentVariables>` secrets live) and crash the app on next start
    (`ArgumentNullException: connectionString` from the Serilog SQL sink) until it's restored from a
-   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. It also covers step 2 itself: it drops
+   backup. Run `.\Deploy-Staging.ps1 -WhatIf` first to preview. The preview also runs read-only checks
+   for what a real run needs: write access to the backup and `App\` folders, PowerShell remoting to the
+   server (when the Hosting Bundle needs installing), and the SQL login's backup/DDL rights (when
+   migrations are pending). Any problem shows as a warning. It also covers step 2 itself: it drops
    `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
    you don't need to stop the site by hand.
    It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
@@ -135,8 +138,9 @@ folder. It then runs the matching `Migrations\Apply_<Name>.sql` scripts in order
 rows landed. Any failure (a backup error, a script error, a pending migration with no `Apply_*.sql`, or a
 database with no history at all) stops the deploy with the site untouched. Fix the cause and re-run; the
 scripts are idempotent. It uses the app's own SQL login by default: if that login lacks DDL/backup rights,
-pass `-MigrationCredential (Get-Credential)` with a `db_ddladmin` login. `-WhatIf` lists what is pending
-without changing anything, and `-SkipMigrations` turns the step off. The migrations
+pass `-MigrationCredential (Get-Credential)` with a `db_owner` login (`db_ddladmin` alone can't run
+`BACKUP DATABASE` or insert the history rows). `-WhatIf` lists what is pending without changing anything,
+and checks that the login has those rights, and `-SkipMigrations` turns the step off. The migrations
 in this release are **additive** (new tables/columns/indexes — no `Up()` drops data), so existing data is
 preserved regardless of which path you use. Before the first start on a version bump you MUST:
 
