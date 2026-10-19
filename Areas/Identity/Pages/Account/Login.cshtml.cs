@@ -136,6 +136,20 @@ namespace eInvWorld.Areas.Identity.Pages.Account
         public string access_token { get; set; }
 
 
+        /// <summary>
+        /// Undoes a sign-in that passed the password check but failed an account check, and re-shows the
+        /// form with <paramref name="error"/>. SignInManager sets HttpContext.User on sign-in and SignOutAsync
+        /// doesn't clear it, so without the reset the re-rendered form's antiforgery token would belong to
+        /// that user while the browser is anonymous again, and the next Sign In click fails with HTTP 400.
+        /// </summary>
+        private async Task<IActionResult> SignOutAndShowErrorAsync(string error)
+        {
+            await _signInManager.SignOutAsync();
+            HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
+            ModelState.AddModelError(string.Empty, error);
+            return Page();
+        }
+
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/Dashboard/Dashboard");
@@ -236,11 +250,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                     {
                         _logger.LogWarning("User {UserName} attempted login but has no roles assigned.", Input.UserName);
 
-                        // Immediately sign them out to invalidate the session
-                        await _signInManager.SignOutAsync();
-
-                        ModelState.AddModelError(string.Empty, "User Roles is missing. Please contact support.");
-                        return Page();
+                        return await SignOutAndShowErrorAsync("User Roles is missing. Please contact support.");
                     }
 
                     // ✅ Retrieve user's assigned TIN after successful login
@@ -263,10 +273,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                         if (string.IsNullOrEmpty(userTin))
                         {
                             _logger.LogError("No TIN found for user {UserName}.", Input.UserName);
-                            // Sign out if TIN is missing to prevent partial login
-                            await _signInManager.SignOutAsync();
-                            ModelState.AddModelError(string.Empty, "Your company TIN is missing. Please contact support.");
-                            return Page();
+                            return await SignOutAndShowErrorAsync("Your company TIN is missing. Please contact support.");
                         }
                         _logger.LogInformation("User {UserName} is assigned to TIN: {TIN}", Input.UserName, userTin);
                         HttpContext.Session.SetString("UserTIN", userTin);
