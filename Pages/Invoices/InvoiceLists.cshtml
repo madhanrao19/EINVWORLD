@@ -619,7 +619,7 @@
                                         <tr>
                                             @if (showSelection)
                                             {
-                                                <th class="col-checkbox"><input type="checkbox" id="selectAll" aria-label="Select all invoices" /></th>
+                                                <th class="col-checkbox"><input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all invoices" /></th>
                                             }
 
                                             <th class="col-invoice-no" data-col-id="col-invoice-no" data-col-lock>
@@ -722,7 +722,7 @@
                                                     @if (showSelection)
                                                     {
                                                         <td class="col-checkbox">
-                                                            <input type="checkbox" class="invoice-checkbox" value="@invoice.UUID" data-invoiceno="@invoice.InvoiceNo" data-tin="@submittingTin" data-amount="@invoice.TotalAmountIncTax" aria-label="Select invoice @invoice.InvoiceNo">
+                                                            <input type="checkbox" class="form-check-input invoice-checkbox" value="@invoice.UUID" data-invoiceno="@invoice.InvoiceNo" data-tin="@submittingTin" data-amount="@invoice.TotalAmountIncTax" aria-label="Select invoice @invoice.InvoiceNo">
                                                         </td>
                                                     }
                                                     <td class="col-invoice-no" data-label="Invoice #">

@@ -426,6 +426,12 @@ td .badge.bg-secondary { background-color: var(--einv-tone-neutral-bg) !importan
   body.einv-sidebar-collapsed .navbar-vertical .nav-link-icon { margin-right: 0; }
   /* Collapsed = icon-only; the expand chevron has nothing left to point at. */
   body.einv-sidebar-collapsed .navbar-vertical .dropdown-toggle::after { display: none; }
+  /* Open groups show their sub-items as centred icons too. font-size:0 hides the text node but keeps it
+   * as the link's accessible name; einvworld-ui.js copies it into a hover title. */
+  /* Selector out-ranks Tabler's .navbar-vertical.navbar-expand-lg .navbar-collapse .dropdown-menu .dropdown-item indent. */
+  body.einv-sidebar-collapsed .navbar-vertical.navbar-expand-lg .navbar-collapse .dropdown-menu .dropdown-item { font-size: 0; justify-content: center; padding: .5rem 0; }
+  body.einv-sidebar-collapsed .navbar-vertical .dropdown-item .einv-nav-sub-icon { font-size: 1rem; margin: 0; }
+  body.einv-sidebar-collapsed .navbar-vertical .dropdown-menu .badge { display: none; }
 }
 
 /* Long inline code / tokens (e.g. env-var names on AI Settings, the import-instructions block) and
