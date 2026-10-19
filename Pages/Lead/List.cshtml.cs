@@ -129,6 +129,28 @@ namespace eInvWorld.Pages.Lead
             if (party == null)
                 return NotFound();
 
+            MarkApproved(party);
+            await _context.SaveChangesAsync();
+            return new JsonResult(new { success = true });
+        }
+
+        // Bulk bar: approve every ticked submission that is still pending (one activity-log row each).
+        public async Task<IActionResult> OnPostBulkAsync(int[] ids, string bulkAction)
+        {
+            if (bulkAction != "approve") return BadRequest();
+
+            var selected = (ids ?? Array.Empty<int>()).Distinct().Take(500).ToList();
+            var parties = await _context.PartyInfos
+                .Where(p => selected.Contains(p.PartyInfoId) && !p.IsApproved)
+                .ToListAsync();
+
+            parties.ForEach(MarkApproved);
+            await _context.SaveChangesAsync();
+            return RedirectToPage();
+        }
+
+        private void MarkApproved(PartyInfo party)
+        {
             party.IsApproved = true;
             party.UpdatedDate = DateTime.Now;
             party.UpdatedBy = User.Identity?.Name ?? "System";
@@ -145,9 +167,6 @@ namespace eInvWorld.Pages.Lead
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
                 Timestamp = DateTime.Now
             });
-
-            await _context.SaveChangesAsync();
-            return new JsonResult(new { success = true });
         }
 
         public async Task<IActionResult> OnPostToggleAssignAsync(int buyerId)

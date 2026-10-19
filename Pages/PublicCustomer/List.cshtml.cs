@@ -206,7 +206,11 @@ namespace eInvWorld.Pages.PublicCustomer
         // scoping), but without pagination. Scoping mirrors OnGetAsync exactly — an Admin sees every
         // buyer, a Supplier only their own company's (CreatedByCompanyId == userCompany.PartyInfoId) —
         // so this can never leak another company's buyers the way the pre-v1.9.8 invoice export did.
-        public async Task<IActionResult> OnGetExportCsvAsync(string? searchTerm, string? statusFilter)
+        public Task<IActionResult> OnGetExportCsvAsync(string? searchTerm, string? statusFilter)
+            => ExportCsvAsync(searchTerm, statusFilter, null);
+
+        // ids (bulk "Export selected") narrows the same company-scoped query to the ticked rows.
+        private async Task<IActionResult> ExportCsvAsync(string? searchTerm, string? statusFilter, IReadOnlyCollection<int>? ids)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             bool isAdmin = User.IsInRole("Admin");
@@ -237,6 +241,11 @@ namespace eInvWorld.Pages.PublicCustomer
             else if (string.Equals(statusFilter, "inactive", StringComparison.OrdinalIgnoreCase))
             {
                 query = query.Where(q => !q.Customer.IsActive);
+            }
+
+            if (ids != null)
+            {
+                query = query.Where(q => ids.Contains(q.Customer.PublicCustomerId));
             }
 
             if (!isAdmin)
@@ -301,21 +310,52 @@ namespace eInvWorld.Pages.PublicCustomer
 
         public async Task<IActionResult> OnPostDeleteAsync(int buyerId)
         {
+            var (ok, message) = await RemoveBuyerAsync(buyerId);
+            if (message == null) return NotFound();
+            TempData[ok ? "SuccessMessage" : "ErrorMessage"] = message;
+            return RedirectToPage();
+        }
+
+        // Bulk bar: "export" downloads the ticked rows (same company scoping as Export CSV);
+        // "delete" runs the row Remove rules on each id and reports what was skipped and why.
+        public async Task<IActionResult> OnPostBulkAsync(int[] ids, string bulkAction)
+        {
+            var selected = (ids ?? Array.Empty<int>()).Distinct().Take(500).ToList();
+            if (bulkAction == "export") return await ExportCsvAsync(null, null, selected);
+            if (bulkAction != "delete") return BadRequest();
+
+            int removed = 0;
+            var reasons = new Dictionary<string, int>();
+            foreach (var id in selected)
+            {
+                var (ok, message) = await RemoveBuyerAsync(id);
+                if (ok) removed++;
+                else if (message != null) reasons[message] = reasons.GetValueOrDefault(message) + 1;
+            }
+
+            if (removed > 0) TempData["SuccessMessage"] = $"Removed {removed} buyer(s).";
+            if (reasons.Count > 0)
+                TempData["ErrorMessage"] = $"{reasons.Values.Sum()} buyer(s) not removed: " +
+                    string.Join(" ", reasons.Select(r => $"{r.Key.TrimEnd('.')} ({r.Value})."));
+            return RedirectToPage();
+        }
+
+        // Shared by the row "Remove" action and the bulk bar. Returns (false, null) when the buyer does not exist.
+        private async Task<(bool Ok, string? Message)> RemoveBuyerAsync(int buyerId)
+        {
             var entity = await _context.PublicCustomers.FindAsync(buyerId);
-            if (entity == null) return NotFound();
+            if (entity == null) return (false, null);
 
             bool hasLinkedInvoices = await _context.InvoiceHeaders.AnyAsync(inv => inv.PublicCustomerId == buyerId);
             if (hasLinkedInvoices)
             {
-                TempData["ErrorMessage"] = "Cannot delete this buyer because there are invoices linked to it.";
-                return RedirectToPage();
+                return (false, "Cannot delete this buyer because there are invoices linked to it.");
             }
 
             bool hasLinkedTemplates = await _context.InvoiceTemplates.AnyAsync(t => t.PublicCustomerId == buyerId);
             if (hasLinkedTemplates)
             {
-                TempData["ErrorMessage"] = "Cannot delete this buyer because there are invoice templates linked to it.";
-                return RedirectToPage();
+                return (false, "Cannot delete this buyer because there are invoice templates linked to it.");
             }
 
             int? supplierIdToCheck = null;
@@ -334,13 +374,11 @@ namespace eInvWorld.Pages.PublicCustomer
 
                 if (userCompany == null)
                 {
-                    TempData["ErrorMessage"] = "Your account is not linked to a company.";
-                    return RedirectToPage();
+                    return (false, "Your account is not linked to a company.");
                 }
                 if (entity.CreatedByCompanyId != userCompany.PartyInfoId)
                 {
-                    TempData["ErrorMessage"] = "You do not have permission to manage this buyer.";
-                    return RedirectToPage();
+                    return (false, "You do not have permission to manage this buyer.");
                 }
 
                 supplierIdToCheck = userCompany.PartyInfoId;
@@ -367,15 +405,13 @@ namespace eInvWorld.Pages.PublicCustomer
             if (hasOtherAssignments)
             {
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Buyer removed from your list.";
-                return RedirectToPage();
+                return (true, "Buyer removed from your list.");
             }
 
             _context.PublicCustomers.Remove(entity);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Buyer deleted and unassigned successfully.";
-            return RedirectToPage();
+            return (true, "Buyer deleted and unassigned successfully.");
         }
 
         public async Task<IActionResult> OnPostAddToBuyersAsync(int publicCustomerId)

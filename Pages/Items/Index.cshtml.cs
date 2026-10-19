@@ -56,6 +56,53 @@ namespace eInvWorld.Pages.Items
         public int TotalRecords { get; set; }
         public int PageSize { get; set; } = 10; // Change this to show more/less per page
 
+        // Bulk bar: activate / deactivate / delete the ticked items, limited to items the caller may manage.
+        public async Task<IActionResult> OnPostBulkAsync(int[] ids, string bulkAction)
+        {
+            var (allowed, companyId) = await DeleteModel.ManageScopeAsync(_context, User);
+            if (!allowed) return Redirect("/Identity/Account/AccessDenied");
+
+            var selected = (ids ?? Array.Empty<int>()).Distinct().Take(500).ToList();
+            var items = await _context.ItemDescriptions
+                .Where(i => selected.Contains(i.Id) && (!companyId.HasValue || i.CreatedByCompanyId == companyId))
+                .ToListAsync();
+
+            var userName = User.Identity?.Name ?? "System";
+            var malaysiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+            switch (bulkAction)
+            {
+                case "activate":
+                case "deactivate":
+                    var active = bulkAction == "activate";
+                    foreach (var item in items)
+                    {
+                        item.IsActive = active;
+                        item.UpdatedBy = userName;
+                        item.UpdatedDate = malaysiaTime;
+                    }
+                    TempData["SuccessMessage"] = $"{(active ? "Activated" : "Deactivated")} {items.Count} item(s).";
+                    break;
+                case "delete":
+                    _context.ItemDescriptions.RemoveRange(items);
+                    TempData["SuccessMessage"] = $"Deleted {items.Count} item(s).";
+                    break;
+                default:
+                    return BadRequest();
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                TempData.Remove("SuccessMessage");
+                TempData["ErrorMessage"] = "Nothing was changed: one or more of the selected items is still in use. Deactivate them instead.";
+            }
+
+            return RedirectToPage(new { SearchTerm, StatusFilter, SortBy, SortOrder, CurrentPage });
+        }
+
         public async Task OnGetAsync()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
