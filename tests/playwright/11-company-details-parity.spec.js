@@ -57,7 +57,9 @@ test('Company Details matches the screen.png layout', async ({ page }, testInfo)
   await expect(buyersCard.locator('th', { hasText: 'Buyer Entity' })).toBeVisible();
   await expect(buyersCard.locator('th', { hasText: /TIN \/ Registration/i })).toBeVisible();
   await expect(buyersCard.locator('th', { hasText: 'Industry' })).toBeVisible();
-  // Actions: Manage (mailto) + Unassign (calls existing unassignBuyer handler)
+  // Actions: the row's "..." menu holds Email Buyer (mailto) + Unassign (calls existing unassignBuyer handler)
+  await expect(buyersCard.locator('th', { hasText: 'Actions' })).toBeVisible();
+  await buyersCard.locator('tbody .einv-action-btn').first().click();
   await expect(buyersCard.getByRole('button', { name: 'Unassign' }).first()).toBeVisible(); // one per assigned buyer
 
   // --- Screenshot for visual diff against screen.png ---

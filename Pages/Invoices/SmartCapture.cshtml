@@ -120,7 +120,7 @@
                                 <th>File</th>
                                 <th>Uploaded</th>
                                 <th>Status</th>
-                                <th class="col-action"></th>
+                                <th class="col-action text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -150,15 +150,22 @@
                                         }
                                     </td>
                                     <td class="text-end col-action">
-                                        @if (pendingAutoSubmit)
-                                        {
-                                            <form method="post" asp-page-handler="CancelAutoSubmit" asp-route-documentId="@d.Id" class="d-inline">
-                                                <button type="submit" class="btn btn-sm btn-outline-warning me-1"><i class="ri-close-circle-line" aria-hidden="true"></i>Cancel auto-submit</button>
-                                            </form>
-                                        }
-                                        <a class="btn btn-sm btn-outline-secondary" asp-page="SmartCaptureReview" asp-route-id="@d.Id">
-                                            <i class="ri-eye-line" aria-hidden="true"></i>Open
-                                        </a>
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                <i class="ri-more-fill align-middle"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" asp-page="SmartCaptureReview" asp-route-id="@d.Id"><i class="ri-eye-fill align-bottom me-2 text-muted" aria-hidden="true"></i> Open</a></li>
+                                                @if (pendingAutoSubmit)
+                                                {
+                                                    <li>
+                                                        <form method="post" asp-page-handler="CancelAutoSubmit" asp-route-documentId="@d.Id">
+                                                            <button type="submit" class="dropdown-item text-warning"><i class="ri-close-circle-line align-bottom me-2" aria-hidden="true"></i> Cancel auto-submit</button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
                                     </td>
                                 </tr>
                             }

@@ -310,7 +310,7 @@ else if (isSupplier)
                         <th>Status</th>
                         <th>Last updated</th>
                         <th>Error / reason</th>
-                        <th class="text-end pe-4">Actions</th>
+                        <th class="col-action text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -326,12 +326,14 @@ else if (isSupplier)
                             <td data-label="Last updated" class="text-muted small">@item.CreatedDate.ToString("dd MMM yyyy, HH:mm")</td>
                             <td data-label="Error / reason" class="truncate small @(string.IsNullOrEmpty(item.RejectedReason) ? "text-muted" : "text-danger")" title="@item.RejectedReason">@(string.IsNullOrEmpty(item.RejectedReason) ? "-" : item.RejectedReason)</td>
                             <td class="text-end pe-4 col-action">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Action</button>
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                        <i class="ri-more-fill align-middle"></i>
+                                    </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)"><i class="ri-eye-line me-2" aria-hidden="true"></i>View document</a></li>
+                                        <li><a class="dropdown-item" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)"><i class="ri-eye-fill align-bottom me-2 text-muted" aria-hidden="true"></i> View document</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="/Invoices/CreateInvoice?refId=@item.InvoiceNo&type=CreditNote"><i class="ri-file-damage-line me-2" aria-hidden="true"></i>Issue CN / DN</a></li>
+                                        <li><a class="dropdown-item" href="/Invoices/CreateInvoice?refId=@item.InvoiceNo&type=CreditNote"><i class="ri-file-damage-line align-bottom me-2 text-muted" aria-hidden="true"></i> Issue CN / DN</a></li>
                                     </ul>
                                 </div>
                             </td>
@@ -356,7 +358,7 @@ else if (isSupplier)
                         <th>Buyer</th>
                         <th>Created</th>
                         <th>Days stuck</th>
-                        <th class="text-end pe-4">Action</th>
+                        <th class="col-action text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="agingDraftsTableBody">
@@ -457,7 +459,7 @@ else if (Model.UserType == "Buyer")
                         <th class="text-end">Total (MYR)</th>
                         <th>Status</th>
                         <th>Date</th>
-                        <th class="text-end pe-4">Action</th>
+                        <th class="col-action text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -490,9 +492,14 @@ else if (Model.UserType == "Buyer")
                                 </td>
                                 <td data-label="Date" class="text-muted small">@item.CreatedDate.ToString("dd MMM yyyy")</td>
                                 <td class="text-end pe-4 col-action">
-                                    <a class="btn btn-sm @(isHighRisk ? "btn-danger" : "btn-outline-secondary")" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)">
-                                        @(isHighRisk ? "View issue" : "Review")
-                                    </a>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item @(isHighRisk ? "text-danger" : "")" href="/Invoices/InvoiceDetails2/@(string.IsNullOrEmpty(item.UUID) ? item.InvoiceNo : item.UUID)"><i class="@(isHighRisk ? "ri-error-warning-line" : "ri-eye-fill text-muted") align-bottom me-2"></i> @(isHighRisk ? "View issue" : "Review")</a></li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         }

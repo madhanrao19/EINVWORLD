@@ -30,7 +30,7 @@
                         <th>@Html.DisplayNameFor(model => model.ResourceType[0].Name)</th>
                         <th>Code</th>
                         <th>SEO Prefix</th>
-                        <th>Actions</th>
+                        <th class="col-action">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,11 +44,17 @@
                             <td>@Html.DisplayFor(modelItem => item.Name)</td>
                             <td><span class="einv-code-chip">@item.Code</span></td>
                             <td><span class="text-muted font-monospace small">/@item.Code/</span></td>
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <a asp-page="./Edit" asp-route-id="@item.Code" class="btn btn-outline-secondary btn-sm">Edit</a>
-                                    <a asp-page="./Details" asp-route-id="@item.Code" class="btn btn-outline-secondary btn-sm">Details</a>
-                                    <a asp-page="./Delete" asp-route-id="@item.Code" class="btn btn-outline-danger btn-sm">Delete</a>
+                            <td class="col-action" data-label="Actions">
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                        <i class="ri-more-fill align-middle"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a asp-page="./Details" asp-route-id="@item.Code" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                                        <li><a asp-page="./Edit" asp-route-id="@item.Code" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a asp-page="./Delete" asp-route-id="@item.Code" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                    </ul>
                                 </div>
                             </td>
                         </tr>
