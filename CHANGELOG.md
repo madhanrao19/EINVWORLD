@@ -381,6 +381,13 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-19 — Deploy script `-WhatIf` permission check fixed (no app change)
+
+- `scripts/Deploy-Staging.ps1 -WhatIf` stopped with "sqlcmd ... Unexpected argument" when a migration was
+  pending: the migration-login permission query was written as a multi-line `"a" + "b"` inside the command
+  call, which Windows PowerShell 5.1 passed to sqlcmd as several arguments. The query is now built in a
+  variable first. The real deploy path was not affected (v1.47.0 reached Staging with it).
+
 ## 📅 2026-10-19 — v1.47.0 (several bank accounts per company)
 
 - **A company can now keep several bank accounts and choose a default.** My Profile → Banking & Payment →
