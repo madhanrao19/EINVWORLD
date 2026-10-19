@@ -108,6 +108,9 @@
             <table data-einv-table="buyers" class="table align-middle mb-0 einv-mobile-stack" id="buyerTable">
                 <thead class="einv-table-head">
                     <tr>
+                        <th scope="col" class="col-checkbox">
+                            <input class="form-check-input einv-bulk-all" type="checkbox" data-einv-bulk-form="bulkForm" aria-label="Select all buyers">
+                        </th>
                         <th scope="col" class="col-name">
                             <a href="@GetSortUrl("name")" class="text-dark text-decoration-none">
                                 Buyer @GetSortIcon("name")
@@ -142,6 +145,9 @@
                             var isAssignedByAnySupplier = Model.AssignedPublicCustomerIds.Contains(item.PublicCustomerId);
                             var invoiceCount = Model.InvoiceCountByBuyer.TryGetValue(item.PublicCustomerId, out var c) ? c : 0;
                             <tr>
+                                <td class="col-checkbox">
+                                    <input class="form-check-input einv-bulk-row" type="checkbox" form="bulkForm" name="ids" value="@item.PublicCustomerId" aria-label="Select @item.CompanyName">
+                                </td>
                                 <td class="col-name" data-label="Buyer">
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="einv-avatar-initials">@Initials(item.CompanyName)</span>
@@ -243,7 +249,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
+                            <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="ri-group-line fs-24 d-block mb-2"></i>
                                 No buyers found.
                                 @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.StatusFilter))
@@ -260,6 +266,16 @@
                 </tbody>
             </table>
         </div>
+
+        <form method="post" asp-page-handler="Bulk" id="bulkForm" class="einv-bulk-bar d-none" data-einv-bulk role="toolbar" aria-label="Bulk actions for selected buyers">
+            <span class="einv-bulk-count"><span data-einv-bulk-count>0</span> selected</span>
+            <button type="submit" name="bulkAction" value="export" class="btn btn-outline-primary btn-sm"><i class="ri-download-2-line"></i> Export CSV</button>
+            @if (!isAdmin)
+            {
+                <button type="submit" name="bulkAction" value="delete" class="btn btn-danger btn-sm" data-confirm="Remove {count} buyer(s)? Buyers used on invoices or templates are skipped; shared buyers are only unlinked from your account."><i class="ri-delete-bin-5-line"></i> Remove</button>
+            }
+            <button type="button" class="btn btn-link btn-sm" data-einv-bulk-clear>Clear</button>
+        </form>
 
                 @if (Model.TotalPages > 1)
                 {

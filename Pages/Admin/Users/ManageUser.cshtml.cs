@@ -17,6 +17,9 @@ namespace eInvWorld.Pages.Admin.Users
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
 
+        /// <summary>The signed-in admin; their own row gets no bulk checkbox.</summary>
+        public string? CurrentUserId => _userManager.GetUserId(User);
+
         public ManageUserModel(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
@@ -133,7 +136,7 @@ namespace eInvWorld.Pages.Admin.Users
             return RedirectToPage(new { CurrentPage, SortBy, SortOrder, SearchName, SearchEmail });
         }
 
-        public async Task<IActionResult> OnGetApproveAsync(string id, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
+        public async Task<IActionResult> OnPostApproveAsync(string id, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user != null)
@@ -146,7 +149,7 @@ namespace eInvWorld.Pages.Admin.Users
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
         }
 
-        public async Task<IActionResult> OnGetDisapproveAsync(string id, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
+        public async Task<IActionResult> OnPostDisapproveAsync(string id, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user != null)
@@ -156,6 +159,33 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
             }
+            return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
+        }
+
+        // Bulk bar: approve / disapprove / delete the ticked users. The signed-in admin is never changed
+        // by a bulk action, so an admin cannot lock themselves out or delete their own account by accident.
+        public async Task<IActionResult> OnPostBulkAsync(string[] ids, string bulkAction, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
+        {
+            if (bulkAction != "approve" && bulkAction != "disapprove" && bulkAction != "delete") return BadRequest();
+
+            var selfId = _userManager.GetUserId(User);
+            var selected = (ids ?? Array.Empty<string>()).Where(i => !string.IsNullOrEmpty(i) && i != selfId).Distinct().Take(500).ToList();
+            var users = await _userManager.Users.Where(u => selected.Contains(u.Id)).ToListAsync();
+            var actor = User.Identity?.Name ?? "Admin";
+
+            foreach (var user in users)
+            {
+                if (bulkAction == "delete")
+                {
+                    await _userManager.DeleteAsync(user);
+                    continue;
+                }
+                user.IsApproved = bulkAction == "approve";
+                user.UpdatedBy = actor;
+                user.UpdatedDate = DateTime.Now;
+                await _userManager.UpdateAsync(user);
+            }
+
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
         }
 

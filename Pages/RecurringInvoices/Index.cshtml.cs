@@ -116,6 +116,27 @@ namespace eInvWorld.Pages.RecurringInvoices
             return RedirectToPage();
         }
 
+        // Bulk bar: pause / resume / delete the selected profiles. Same ownership rule as the row actions.
+        public async Task<IActionResult> OnPostBulkAsync(int[] ids, string bulkAction)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var selected = (ids ?? Array.Empty<int>()).Distinct().Take(500).ToList();
+            var profiles = await _context.RecurringProfiles
+                .Where(p => selected.Contains(p.Id) && p.CreatedByUserId == userId)
+                .ToListAsync();
+
+            switch (bulkAction)
+            {
+                case "pause": profiles.ForEach(p => p.Status = "Paused"); break;
+                case "resume": profiles.ForEach(p => p.Status = "Active"); break;
+                case "delete": _context.RecurringProfiles.RemoveRange(profiles); break;
+                default: return BadRequest();
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToPage();
+        }
+
         // Action handler for the Delete button
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
