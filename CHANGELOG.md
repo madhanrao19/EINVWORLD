@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.0`** (`AppInfo:Version` in `appsettings.json`). v1.47.0 is a **minor**
+> **Current version: `v1.47.1`** (`AppInfo:Version` in `appsettings.json`). v1.47.1 is a **patch**
+> release: fixes from the v1.47.0 Staging test (empty Draft export, dark-mode ticked rows and editor menu, duplicate Validate button, collapsed sidebar) — see the dated entry below. v1.47.0 was a **minor**
 > release: a company can keep several bank accounts and pick one on each invoice (database migration) —
 > see the dated entry below. v1.46.14 was a **patch**
 > release: tick rows and act on many at once on Items, Buyers, Recurring and Admin lists (plus two security fixes) — see the dated entry below. v1.46.13 was a **patch**
@@ -380,6 +381,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.47.1 (fixes from the v1.47.0 Staging test)
+
+- **Export Invoices → Selected Items exported an empty file for Drafts.** The export still filtered by the
+  dialog's Sent/Received choice, and a Draft is neither. Selected-row exports now take exactly the ticked
+  rows (still limited to your own companies).
+- **Invoice list in dark mode:** ticked rows turned light grey and hid their text; they now get a light
+  brand tint that works in both themes, and the row checkboxes use the themed style like every other list.
+- **Resource editor in dark mode:** the Paragraph / Heading menu drew its options in dark text on the dark
+  menu. Options keep their size and weight but use the menu's text colour.
+- **Add Buyer and Create New Company:** removed the second "Validate with LHDN" button at the end of Step 2;
+  the one beside the TIN stays.
+- **Collapsed sidebar:** an opened group's sub-items were indented off-centre with clipped labels (and a
+  sideways scrollbar). They now show as centred icons with their name on hover.
 
 ## 📅 2026-10-19 — Deploy script `-WhatIf` permission check fixed (no app change)
 

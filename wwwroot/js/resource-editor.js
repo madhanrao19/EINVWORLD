@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", function () {
         plugins: "image link code lists advlist autoresize autolink table",
         toolbar: "undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist blockquote | link unlink | image table | removeformat code",
         block_formats: "Paragraph=p; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 1=h1",
+        // Menu previews keep size/weight but not the article's dark text colour, which was unreadable on the dark skin.
+        preview_styles: "font-family font-size font-weight font-style text-decoration",
         branding: false,
         resize: true,
         min_height: 400,

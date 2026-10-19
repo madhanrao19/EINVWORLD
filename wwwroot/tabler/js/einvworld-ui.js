@@ -82,6 +82,8 @@
     var STORAGE_KEY = "einv-sidebar-collapsed";
     var btn = document.getElementById("einv-sidebar-collapse-toggle");
     if (!btn) return;
+    // Collapsed sub-items are icon-only, so give each its label as a hover title (top-level links already have one).
+    document.querySelectorAll(".navbar-vertical .dropdown-item:not([title])").forEach(function (a) { a.title = a.textContent.trim(); });
     btn.setAttribute("aria-pressed", String(document.body.classList.contains("einv-sidebar-collapsed")));
     btn.addEventListener("click", function () {
       var collapsed = document.body.classList.toggle("einv-sidebar-collapsed");

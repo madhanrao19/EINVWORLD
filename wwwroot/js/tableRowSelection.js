@@ -6,7 +6,8 @@
         const style = document.createElement("style");
         style.innerHTML = `
             .selected-row {
-                background-color: #e0e0e0 !important; /* Light grey highlight */
+                /* Brand tint from the theme tokens — a fixed light grey hid the row text in dark mode. */
+                background-color: rgba(var(--einv-primary-rgb), .12) !important;
             }
         `;
         document.head.appendChild(style);
