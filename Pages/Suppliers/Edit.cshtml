@@ -197,13 +197,16 @@
             </div>
 
             <div class="card mb-4">
-                <div class="card-header">
-                    <h3 class="card-title">Banking &amp; Payment</h3>
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <h3 class="card-title mb-0">Banking &amp; Payment</h3>
+                    <a asp-page="/Profile/BankAccounts" asp-route-companyId="@Model.PartyInfo.PartyInfoId" class="btn btn-sm btn-outline-primary">
+                        <i class="ri-bank-line align-bottom me-1"></i> All bank accounts
+                    </a>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="PartyInfo.BankAccountNo" class="form-label">Bank Account Number</label>
+                            <label asp-for="PartyInfo.BankAccountNo" class="form-label">Default Bank Account Number</label>
                             <input asp-for="PartyInfo.BankAccountNo" class="form-control" autocomplete="off"
                                    placeholder="@(string.IsNullOrEmpty(Model.MaskedBankAccountNo) ? "Bank account number for payments" : Model.MaskedBankAccountNo)" />
                             @if (!string.IsNullOrEmpty(Model.MaskedBankAccountNo))

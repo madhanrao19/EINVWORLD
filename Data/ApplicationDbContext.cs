@@ -64,6 +64,7 @@ namespace eInvWorld.Data
 
         public DbSet<ActivityLog> ActivityLogs { get; set; }
         public DbSet<PartyInfo> PartyInfos { get; set; } = default!;
+        public DbSet<SupplierBankAccount> SupplierBankAccounts { get; set; } = default!;
         public DbSet<PublicCustomer> PublicCustomers { get; set; }
 
         public DbSet<SupplierBuyer> SupplierBuyers { get; set; }
@@ -396,6 +397,18 @@ namespace eInvWorld.Data
                 .HasForeignKey(t => t.InvoiceTemplateLineId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // A company's bank accounts go with the company. "Exactly one default" is kept by
+            // SupplierBankAccountService rather than a filtered unique index, so switching the default can
+            // be saved in one SaveChanges without depending on update-statement order.
+            modelBuilder.Entity<SupplierBankAccount>(b =>
+            {
+                b.HasOne(a => a.PartyInfo)
+                    .WithMany()
+                    .HasForeignKey(a => a.PartyInfoId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasIndex(a => a.PartyInfoId);
+            });
+
             ConfigureEncryptedPii(modelBuilder);
         }
 
@@ -434,6 +447,7 @@ namespace eInvWorld.Data
             Encrypt<PartyInfo>(p => p.Addr2);
             Encrypt<PartyInfo>(p => p.Addr3);
             Encrypt<PartyInfo>(p => p.BankAccountNo);
+            Encrypt<SupplierBankAccount>(a => a.BankAccountNo);
 
             Encrypt<PublicCustomer>(c => c.Addr2);
             Encrypt<PublicCustomer>(c => c.Addr3);

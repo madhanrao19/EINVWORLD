@@ -339,6 +339,29 @@ SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
 -- last row should be 20260902010000_AddLineTariffOriginAndHeaderShippingCustoms
 ```
 
+### v1.47.0 migration — company bank accounts
+
+`scripts\Deploy-Staging.ps1` applies this automatically (backup first). Manual equivalent:
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddSupplierBankAccounts.sql"
+```
+
+> **`AddSupplierBankAccounts`** creates `SupplierBankAccounts` (Id, PartyInfoId → PartyInfos ON DELETE
+> CASCADE, BankName nvarchar(100), BankAccountNo nvarchar(max) — encrypted by the app, IsDefault,
+> Created/Updated by/date) with `IX_SupplierBankAccounts_PartyInfoId`, then copies every company's existing
+> `PartyInfos.BankName`/`BankAccountNo` in as its **default** account (value copied as stored; legacy
+> plaintext is encrypted later by Admin → System Health → "Encrypt existing PII", which now covers this
+> table). `PartyInfos` is not changed and keeps mirroring the default account. Additive; safe to re-run.
+
+Verify:
+```sql
+SELECT COUNT(*) AS Accounts, SUM(CAST(IsDefault AS int)) AS Defaults FROM SupplierBankAccounts;
+-- Defaults = number of companies that had a bank account number
+SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;
+-- last row should be 20261019092452_AddSupplierBankAccounts
+```
+
 ### v1.29.0 migration — Needs Attention resolution
 
 `scripts\Deploy-Staging.ps1` applies this automatically (backup first). Manual equivalent:
