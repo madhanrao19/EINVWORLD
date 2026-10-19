@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.7`** (`AppInfo:Version` in `appsettings.json`). v1.46.7 is a **patch**
+> **Current version: `v1.46.8`** (`AppInfo:Version` in `appsettings.json`). v1.46.8 is a **patch**
+> release: fixes from the v1.45.0 Staging test (dark dropdowns, sign-in error, 8-character passwords) — see the dated entry below. v1.46.7 was a **patch**
 > release: build warnings fixed and vulnerable packages patched — see the dated entry below. v1.46.6 was a **patch**
 > release: the shipping recipient's TIN field now matches the other fields — see the dated entry below. v1.46.5 was a **patch**
 > release: removed three old invoice pages that were no longer built — see the dated entry below. v1.46.4 was a **patch**
@@ -368,6 +369,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.8 (fixes from the v1.45.0 Staging test)
+
+- **Dark mode: dropdown lists are dark too.** Opening a dropdown (e.g. User Management → Assigned
+  System Role) showed a white list with pale, hard-to-read text. Native controls (dropdown lists, date
+  pickers, scrollbars) now follow the dark theme on every page.
+- **No more "HTTP ERROR 400" when signing in again.** If a user's account had no role or no company
+  assigned, sign-in showed the right message. But pressing Sign In again (for example after an admin had fixed
+  the account) failed with a blank HTTP 400 page instead of signing in. It now works.
+- **Passwords must be at least 8 characters** (was 6), wherever a password is set: Add/Edit User, Register,
+  Reset/Change/Set Password and supplier invites. Existing passwords keep working; the rule applies the
+  next time one is set. Add/Edit User now also shows why a password or user was rejected. Before, the page
+  just reloaded without saying anything.
 
 ## 📅 2026-10-19 — Deploy script `-WhatIf` warns about what would fail in a real run (no app change)
 
