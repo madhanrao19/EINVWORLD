@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Identity;
 using eInvWorld.Models;
@@ -198,9 +198,10 @@ namespace eInvWorld.Pages.Profile
                 return RedirectToPage();
             }
 
-            if (NewPassword.Length < 6)
+            var minLength = _userManager.Options.Password.RequiredLength;
+            if (NewPassword.Length < minLength)
             {
-                TempData["ErrorMessage"] = "Password must be at least 6 characters long.";
+                TempData["ErrorMessage"] = $"Password must be at least {minLength} characters long.";
                 return RedirectToPage();
             }
 

@@ -149,6 +149,7 @@ Most behaviour is driven by `appsettings.json`. Highlights:
 | `Api:Key` | **Secret** — enables `POST /api/import/validate` for an external ERP (header `X-Api-Key`). Blank = disabled. |
 | `InvoiceStatusUpdaterSettings` | Background status-sync polling cadence & UI cooldowns. `BackgroundImportLookbackDays` (default `7`) controls how far back the automatic LHDN `documents/search` import looks — this is what catches invoices an external ERP submitted directly to LHDN, not through EINVWORLD. Runs for every company registered in EINVWORLD (all distinct `UserCompanies` TINs), not just one. |
 | `EmailConfiguration:NewInvoiceReceivedEmailSettings` | "New e-Invoice Received" notification (buyer-side, for invoices synced in from an external ERP) — `Subject`, `MaxAgeDaysForNotification` (default `7`, avoids emailing about invoices merely new to EINVWORLD's database from a large historical import). Kill switch: `EmailConfiguration:Notifications:EnableNewInvoiceReceivedEmails`. |
+| `EmailConfiguration:NewUserRegistrationEmailSettings` | Admin alert when a self-registered user confirms their email (account waiting for approval) — `ReceiverEmail` (comma-separated; approved Admin-role users are always added as BCC), `Subject`. |
 
 > **PDF engine note.** The default `DinkToPdf` (wkhtmltopdf) engine is **unmaintained / end-of-life**
 > upstream, but it is kept as the default because it renders fully **offline** — the right choice for an

@@ -48,7 +48,7 @@
                         <th scope="col">Company Role</th>
                         @if (Model.CanManageUsers)
                         {
-                            <th scope="col" class="col-action">Action</th>
+                            <th scope="col" class="col-action">Actions</th>
                         }
                     </tr>
                 </thead>
@@ -80,7 +80,7 @@
                                 </td>
                                 @if (Model.CanManageUsers)
                                 {
-                                    <td class="col-action" data-label="Action">
+                                    <td class="col-action" data-label="Actions">
                                         <form method="post" asp-page-handler="AssignRole" class="d-flex gap-2">
                                             <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
                                             <input type="hidden" name="userCompanyId" value="@m.Id" />
@@ -127,7 +127,7 @@
                         <th class="text-center">View Audit</th>
                         @if (Model.CanManageUsers)
                         {
-                            <th class="col-action">Action</th>
+                            <th class="col-action">Actions</th>
                         }
                     </tr>
                 </thead>
@@ -151,11 +151,21 @@
                                 <td class="col-action">
                                     @if (!role.IsSystemDefined && role.PartyInfoId == Model.PartyInfo.PartyInfoId)
                                     {
-                                        <form method="post" asp-page-handler="DeleteRole" onsubmit="return confirm('Delete the &quot;@role.Name&quot; role? Members holding it will fall back to no role.');">
-                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
-                                            <input type="hidden" name="companyRoleId" value="@role.CompanyRoleId" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                        </form>
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                <i class="ri-more-fill align-middle"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    @* Name goes through data-confirm, not a JS string literal: a ' in a role name must not break out of it. *@
+                                                    <form method="post" asp-page-handler="DeleteRole" data-confirm="Delete the &quot;@role.Name&quot; role? Members holding it will fall back to no role." onsubmit="return confirm(this.dataset.confirm);">
+                                                        <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                                        <input type="hidden" name="companyRoleId" value="@role.CompanyRoleId" />
+                                                        <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     }
                                 </td>
                             }

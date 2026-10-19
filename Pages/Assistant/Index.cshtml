@@ -189,7 +189,7 @@
 <style>
     .assistant-mode-btn.active {
         background-color: var(--primary-soft, #e9f5ee);
-        color: var(--primary-text, #0c5434);
+        color: var(--primary-text, var(--einv-primary, #0c5434));
         font-weight: 600;
     }
 
@@ -243,20 +243,20 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--primary-soft, #e9f5ee);
-        color: var(--primary-text, #0c5434);
+        background: var(--primary-soft, rgba(var(--einv-primary-rgb, 0, 105, 72), .12));
+        color: var(--primary-text, var(--einv-primary, #0c5434));
     }
 
     .einv-chat-bubble {
         white-space: pre-wrap;
         padding: 0.65rem 0.9rem;
         border-radius: 0.9rem;
-        background: #f4f6f8;
+        background: var(--einv-surface-2, #f4f6f8);
     }
 
     .einv-chat-msg-user .einv-chat-bubble {
-        background: var(--primary-soft, #e9f5ee);
-        color: var(--primary-text, #0c5434);
+        background: var(--primary-soft, rgba(var(--einv-primary-rgb, 0, 105, 72), .12));
+        color: var(--primary-text, var(--einv-primary, #0c5434));
     }
 
     .einv-chat-composer {

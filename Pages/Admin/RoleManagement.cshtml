@@ -37,7 +37,7 @@
                 <thead class="einv-table-head">
                     <tr>
                         <th scope="col">Role</th>
-                        <th scope="col" class="col-action">Action</th>
+                        <th scope="col" class="col-action">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -52,13 +52,22 @@
                                     <span class="einv-badge einv-badge-neutral ms-1">Core</span>
                                 }
                             </td>
-                            <td class="col-action" data-label="Action">
+                            <td class="col-action" data-label="Actions">
                                 @if (!isCore)
                                 {
-                                    <form method="post" asp-page-handler="DeleteIdentityRole" onsubmit="return confirm('Delete the &quot;@role.Name&quot; role?');">
-                                        <input type="hidden" name="roleId" value="@role.Id" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                    </form>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <form method="post" asp-page-handler="DeleteIdentityRole" data-confirm="Delete the &quot;@role.Name&quot; role?" onsubmit="return confirm(this.dataset.confirm);">
+                                                    <input type="hidden" name="roleId" value="@role.Id" />
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 }
                             </td>
                         </tr>

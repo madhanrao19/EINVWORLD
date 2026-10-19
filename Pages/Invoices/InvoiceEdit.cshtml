@@ -28,7 +28,7 @@
             padding: .35rem .75rem;
             font-size: .7rem;
             text-transform: none; /* Ledger: sentence-case labels */
-            color: var(--einv-muted, #6c757d);
+            color: var(--einv-text-muted, #6c757d);
             border-bottom: 1px solid var(--einv-border, #e9ecef);
             margin-bottom: .25rem;
         }
@@ -47,7 +47,7 @@
         padding: .5rem .75rem;
     }
     .irow-num,
-    .irow-head-num { flex: 0 0 24px; padding-top: .4rem; color: var(--einv-muted, #6c757d); font-size: .8rem; }
+    .irow-head-num { flex: 0 0 24px; padding-top: .4rem; color: var(--einv-text-muted, #6c757d); font-size: .8rem; }
     .irow-desc,
     .irow-head-desc { flex: 1 1 280px; min-width: 260px; }
     .irow-qty,
@@ -61,7 +61,7 @@
     .irow-mlabel {
         font-size: .65rem;
         text-transform: none; /* Ledger: sentence-case labels */
-        color: var(--einv-muted, #6c757d);
+        color: var(--einv-text-muted, #6c757d);
         margin-bottom: .15rem;
     }
     @@media (min-width: 992px) {
@@ -72,7 +72,7 @@
     .irow-desc .irow-mlabel-always {
         font-size: .65rem;
         text-transform: none; /* Ledger: sentence-case labels */
-        color: var(--einv-muted, #6c757d);
+        color: var(--einv-text-muted, #6c757d);
         margin-bottom: .15rem;
     }
     .irow-desc .item-code { margin-top: .25rem; }
@@ -83,7 +83,7 @@
     }
     .irow-num-val.irow-total-val { color: var(--einv-primary, #006948); }
     .item-row {
-        background: #fff;
+        background: var(--einv-surface, #fff);
     }
 
     /* Phase 4: purpose-built mobile layout for item rows (<992px), matching CreateInvoice.cshtml. */
@@ -147,7 +147,7 @@
     .irow-extras-toggle {
         border: 1px solid var(--einv-border, #e9ecef);
         background: var(--einv-page-bg, #f8f9fa);
-        color: var(--einv-muted, #6c757d);
+        color: var(--einv-text-muted, #6c757d);
         border-radius: 999px;
         font-size: .72rem;
         padding: .2rem .65rem;
@@ -171,7 +171,7 @@
     .swal-submission-success .detail-item {
         margin-bottom: 12px;
         padding: 8px;
-        background: white;
+        background: var(--einv-surface, #fff);
         border-radius: 5px;
         border-left: 3px solid #006948;  /* eInvWorld brand primary green */
     }
@@ -202,11 +202,11 @@
     
     /* Copy button styling to match CreateInvoice template exactly */
     .swal-submission-success .copy-btn {
-        background: #f8f9fa;
+        background: var(--einv-surface-2, #f8f9fa);
         border: 1px solid #dee2e6;
         border-radius: 4px;
         padding: 2px 6px;
-        color: #6c757d;
+        color: var(--einv-text-muted, #6c757d);
         font-size: 12px;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -215,7 +215,7 @@
     
     .swal-submission-success .copy-btn:hover {
         background: #e9ecef;
-        color: #495057;
+        color: var(--einv-text, #495057);
         border-color: #adb5bd;
     }
     
@@ -252,7 +252,7 @@
 
     /* 1. Fix Select2 for Floating Labels (Step 1) ONLY */
     .form-floating .select2-container .select2-selection--single .select2-selection__rendered {
-        color: #212529 !important;
+        color: var(--einv-text, #212529) !important;
         opacity: 1 !important;
         width: calc(100% - 30px) !important;
         text-overflow: ellipsis !important;
@@ -263,7 +263,7 @@
     }
 
     .form-floating .select2-container .select2-selection--single {
-        background-color: #fff !important;
+        background-color: var(--einv-surface, #fff) !important;
         height: calc(3.5rem + 2px) !important;
         min-height: calc(3.5rem + 2px) !important;
     }
@@ -282,7 +282,7 @@
     #lineItemsTable .select2-container .select2-selection--single {
         height: 31px !important;
         min-height: 31px !important;
-        background-color: #fff !important;
+        background-color: var(--einv-surface, #fff) !important;
     }
 
     #lineItemsTable .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
@@ -3513,7 +3513,7 @@
 
                     // Visual + interaction handling
                     if (lockDropdown) {
-                        select.style.backgroundColor = '#f8f9fa';
+                        select.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                         select.style.cursor = 'not-allowed';
                         select.style.pointerEvents = 'none';
                         select.setAttribute('data-locked', 'true');
@@ -4134,7 +4134,7 @@
                 console.log('✅ Setting tax percentage to 0 and making read-only');
                 taxPercentageInput.value = '0';
                 taxPercentageInput.readOnly = true;
-                taxPercentageInput.style.backgroundColor = '#f8f9fa';
+                taxPercentageInput.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                 // Remove required attribute and validation styling
                 taxPercentageInput.removeAttribute('required');
                 taxPercentageInput.classList.remove('is-invalid');
@@ -4527,7 +4527,7 @@
                                 newClassificationSelect.value = '004';
 
                                 // Lock the dropdown for self-billed documents but allow form submission
-                                newClassificationSelect.style.backgroundColor = '#f8f9fa';
+                                newClassificationSelect.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                                 newClassificationSelect.style.cursor = 'not-allowed';
                                 newClassificationSelect.style.pointerEvents = 'none';
                                 newClassificationSelect.title = 'Classification code is locked to "004" for self-billed documents';
@@ -4833,7 +4833,7 @@
 
                         if (isSelfBilled && classificationSelect) {
                             classificationSelect.value = '004';
-                            classificationSelect.style.backgroundColor = '#f8f9fa';
+                            classificationSelect.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                             classificationSelect.style.cursor = 'not-allowed';
                             classificationSelect.style.pointerEvents = 'none';
                             classificationSelect.title = 'Classification code is locked to "004" for self-billed documents';

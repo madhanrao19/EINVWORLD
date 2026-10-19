@@ -88,7 +88,7 @@
                             <th scope="col">Expires</th>
                             @if (Model.CanManageUsers)
                             {
-                                <th scope="col" class="col-action">Action</th>
+                                <th scope="col" class="col-action">Actions</th>
                             }
                         </tr>
                     </thead>
@@ -101,12 +101,21 @@
                                 <td data-label="Expires">@invite.ExpiresAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                                 @if (Model.CanManageUsers)
                                 {
-                                    <td class="col-action" data-label="Action">
-                                        <form method="post" asp-page-handler="RevokeInvite" onsubmit="return confirm('Revoke this invitation?');">
-                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
-                                            <input type="hidden" name="invitationId" value="@invite.CompanyInvitationId" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
-                                        </form>
+                                    <td class="col-action" data-label="Actions">
+                                        <div class="dropdown d-inline-block">
+                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                <i class="ri-more-fill align-middle"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    <form method="post" asp-page-handler="RevokeInvite" onsubmit="return confirm('Revoke this invitation?');">
+                                                        <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                                        <input type="hidden" name="invitationId" value="@invite.CompanyInvitationId" />
+                                                        <button type="submit" class="dropdown-item text-danger"><i class="ri-close-circle-line align-bottom me-2"></i> Revoke</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </td>
                                 }
                             </tr>
@@ -132,7 +141,7 @@
                         <th scope="col" class="text-center">Primary</th>
                         @if (Model.CanManageUsers)
                         {
-                            <th scope="col" class="col-action">Action</th>
+                            <th scope="col" class="col-action">Actions</th>
                         }
                     </tr>
                 </thead>
@@ -159,14 +168,24 @@
                                 <td class="text-center" data-label="Primary">@(m.IsPrimaryCompany ? "✓" : "—")</td>
                                 @if (Model.CanManageUsers)
                                 {
-                                    <td class="col-action" data-label="Action">
+                                    <td class="col-action" data-label="Actions">
                                         @if (m.UserId != Model.CurrentUserId)
                                         {
-                                            <form method="post" asp-page-handler="RemoveMember" onsubmit="return confirm('Remove @m.User.FullName from this company?');">
-                                                <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
-                                                <input type="hidden" name="userCompanyId" value="@m.Id" />
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                                            </form>
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        @* Name goes through data-confirm, not a JS string literal: a ' in a user's name must not break out of it. *@
+                                                        <form method="post" asp-page-handler="RemoveMember" data-confirm="Remove @m.User.FullName from this company?" onsubmit="return confirm(this.dataset.confirm);">
+                                                            <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
+                                                            <input type="hidden" name="userCompanyId" value="@m.Id" />
+                                                            <button type="submit" class="dropdown-item text-danger"><i class="ri-user-unfollow-line align-bottom me-2"></i> Remove</button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         }
                                     </td>
                                 }

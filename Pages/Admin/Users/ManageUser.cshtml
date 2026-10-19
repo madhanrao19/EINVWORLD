@@ -75,7 +75,7 @@
                         <th><a href="@GetSortUrl("status")" class="text-dark text-decoration-none">Approval Status @GetSortIcon("status")</a></th>
                         <th><a href="@GetSortUrl("updatedby")" class="text-dark text-decoration-none">Updated By @GetSortIcon("updatedby")</a></th>
                         <th><a href="@GetSortUrl("updateddate")" class="text-dark text-decoration-none">Updated Date @GetSortIcon("updateddate")</a></th>
-                        <th class="text-end pe-4">Actions</th>
+                        <th class="col-action text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,19 +111,19 @@
                                 </td>
                                 <td>@(string.IsNullOrEmpty(user.UpdatedBy) ? "-" : user.UpdatedBy)</td>
                                 <td>@(user.UpdatedDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")</td>
-                                <td class="text-end pe-4">
-                                    <div class="dropdown">
-                                        <button class="btn btn-link text-muted p-0 shadow-none" type="button" data-bs-toggle="dropdown">
-                                            <i class="ri-more-2-fill fs-4"></i>
+                                <td class="col-action text-end pe-4">
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <ul class="dropdown-menu dropdown-menu-end">
                                             <li>
-                                                <a class="dropdown-item" href="javascript:void(0);" onclick="openAddRoleModal('@user.Id', '@user.FullName')">
-                                                    <i class="ri-shield-user-line me-2 text-primary"></i>Change Role
+                                                <a class="dropdown-item" href="javascript:void(0);" data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openAddRoleModal(this.dataset.userId, this.dataset.userName)">
+                                                    <i class="ri-shield-user-line align-bottom me-2 text-muted"></i> Change Role
                                                 </a>
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item" asp-page="/Admin/Users/AddEditUser" asp-route-id="@user.Id"><i class="ri-edit-line me-2"></i>Edit User</a></li>
+                                            <li><a class="dropdown-item" asp-page="/Admin/Users/AddEditUser" asp-route-id="@user.Id"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit User</a></li>
                                             <li>
                                                 <form method="post" asp-page-handler="Delete" asp-route-id="@user.Id" class="d-inline" onsubmit="return confirm('Permanently delete this user?');">
                                                     <input type="hidden" name="CurrentPage" value="@Model.CurrentPage" />
@@ -131,7 +131,7 @@
                                                     <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
                                                     <input type="hidden" name="SearchName" value="@Model.SearchName" />
                                                     <input type="hidden" name="SearchEmail" value="@Model.SearchEmail" />
-                                                    <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-line me-2"></i>Delete</button>
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
                                                 </form>
                                             </li>
                                         </ul>
