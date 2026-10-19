@@ -1,6 +1,8 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.46.8`** (`AppInfo:Version` in `appsettings.json`). v1.46.8 is a **patch**
+> **Current version: `v1.46.9`** (`AppInfo:Version` in `appsettings.json`). v1.46.9 is a **patch**
+> release: fixes from the v1.46.8 Staging test (admin alert for new registrations, dark-mode dropdowns/toasts,
+> one "Actions" menu on every table) — see the dated entry below. v1.46.8 was a **patch**
 > release: fixes from the v1.45.0 Staging test (dark dropdowns, sign-in error, 8-character passwords) — see the dated entry below. v1.46.7 was a **patch**
 > release: build warnings fixed and vulnerable packages patched — see the dated entry below. v1.46.6 was a **patch**
 > release: the shipping recipient's TIN field now matches the other fields — see the dated entry below. v1.46.5 was a **patch**
@@ -369,6 +371,33 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.46.9 (fixes from the v1.46.8 Staging test)
+
+- **Admins are emailed when a new user confirms their email.** A self-registered account waits for approval
+  in User & Role Management, but nobody was told about it. When the user confirms their email (first time
+  only), an email goes to `EmailConfiguration:NewUserRegistrationEmailSettings:ReceiverEmail` (default
+  dm_it@datamationgroup.com) plus every approved Admin, with a link to User & Role Management.
+- **BCC copies are actually sent.** `EmailService.SendEmail` accepted BCC addresses but never added them,
+  so the `GlobalBccEmail` copy (Contact Us, customer submissions) silently never went out. It does now.
+- **My Profile → Change Password needs 8 characters too** (it still checked for 6). The check now reads the
+  same Identity setting as every other password screen.
+- **"Profile & Settings" is now "My Profile"** in the sidebar, the same name as the user menu (same page).
+- **Dark mode fixes:** dropdown option lists get explicit dark colours (Chrome on Windows still drew them
+  white); "Copied" and other SweetAlert toasts are dark instead of white with unreadable text; Create/Edit
+  Invoice dropdowns (e-Invoice type, currency, supplier, buyer, billing frequency, and their search box) are
+  dark; the Bulk Import / Item Import drop zone no longer turns white on mouse-over; read-only selects and
+  the Assistant chat bubbles follow the theme.
+- **Every table's action column is called "Actions" and uses the same "⋯" menu** (as on Buyer Directory):
+  Admin (Users, Roles, Notifications, Resources, Resource Types, Sync Jobs, Webhooks, System Logs),
+  Dashboard, Sent/Received invoices, Items, Leads, Companies, Company details, Templates, Recurring,
+  Smart Capture, duplicate buyers, company Users and Roles. Row menus inside scrolling tables are no longer
+  clipped, including rows added by scripts.
+- **Security:** user and role names are no longer placed inside inline JavaScript strings (Change Role on
+  User & Role Management and Company details, Remove member, Delete role). A name containing an apostrophe
+  could break out of the string and run script in the viewer's browser; the name now travels in a `data-`
+  attribute.
+- Audit-trail tables keep "Action" as a normal (hideable, sortable) data column.
 
 ## 📅 2026-10-19 — v1.46.8 (fixes from the v1.45.0 Staging test)
 
