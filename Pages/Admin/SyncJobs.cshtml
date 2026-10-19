@@ -89,7 +89,7 @@
                         <th>Duration</th>
                         <th>Result</th>
                         <th>By</th>
-                        <th>Actions</th>
+                        <th class="col-action">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,20 +113,38 @@
                             <td>@Dur(j)</td>
                             <td style="max-width:480px;"><small>@j.Message</small></td>
                             <td><small>@j.TriggeredBy</small></td>
-                            <td>
+                            <td class="col-action">
                                 @if (j.Status == SyncJobStatus.Failed)
                                 {
-                                    <form method="post" asp-page-handler="Retry" class="d-inline">
-                                        <input type="hidden" name="id" value="@j.Id" />
-                                        <button type="submit" class="btn btn-outline-primary btn-sm">Retry</button>
-                                    </form>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <form method="post" asp-page-handler="Retry">
+                                                    <input type="hidden" name="id" value="@j.Id" />
+                                                    <button type="submit" class="dropdown-item"><i class="ri-restart-line align-bottom me-2 text-muted"></i> Retry</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 }
                                 else if (j.Status == SyncJobStatus.Queued)
                                 {
-                                    <form method="post" asp-page-handler="Cancel" class="d-inline">
-                                        <input type="hidden" name="id" value="@j.Id" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">Cancel</button>
-                                    </form>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <form method="post" asp-page-handler="Cancel">
+                                                    <input type="hidden" name="id" value="@j.Id" />
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="ri-close-circle-line align-bottom me-2"></i> Cancel</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 }
                             </td>
                         </tr>

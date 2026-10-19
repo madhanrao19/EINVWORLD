@@ -50,7 +50,7 @@ else
                             <th>TIN / Registration</th>
                             <th>Location</th>
                             <th>Created</th>
-                            <th class="col-action">Action</th>
+                            <th class="col-action">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -70,10 +70,15 @@ else
                                 </td>
                                 <td data-label="Location">@buyer.CityName, @(Model.StateNames.TryGetValue(buyer.StateCode, out var buyerStateName) ? buyerStateName : buyer.StateCode)</td>
                                 <td data-label="Created">@buyer.CreatedDate.ToString("yyyy-MM-dd")</td>
-                                <td class="col-action" data-label="Action">
-                                    <a asp-page="./Details" asp-route-id="@buyer.PublicCustomerId" class="btn btn-sm einv-action-btn">
-                                        <i class="ri-eye-fill align-bottom me-1"></i> View
-                                    </a>
+                                <td class="col-action" data-label="Actions">
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                            <i class="ri-more-fill align-middle"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a asp-page="./Details" asp-route-id="@buyer.PublicCustomerId" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                         }

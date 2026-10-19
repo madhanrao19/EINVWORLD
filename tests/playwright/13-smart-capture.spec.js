@@ -40,8 +40,9 @@ test.describe('Smart Capture', () => {
     await page.click('#scUploadSubmit');
 
     await expect(page.locator('table tbody tr').first()).toContainText('valid-invoice.pdf', { timeout: 15000 });
-    const openLink = page.locator('table tbody tr').first().locator('a', { hasText: 'Open' });
-    await openLink.click();
+    const firstRow = page.locator('table tbody tr').first();
+    await firstRow.locator('.einv-action-btn').click(); // Open lives in the row's "..." Actions menu
+    await firstRow.locator('a', { hasText: 'Open' }).click();
 
     // Must reach a real terminal state within a reasonable time — proves the durable job actually ran
     // end-to-end (upload -> SafePath storage -> SyncJobs enqueue -> DurableSyncJobWorker claim ->
@@ -92,7 +93,7 @@ test.describe('Smart Capture', () => {
     await page.locator('#scUpload').setInputFiles(path.join(FIXTURES, 'valid-invoice.pdf'));
     await page.click('#scUploadSubmit');
     const openLink = page.locator('table tbody tr').first().locator('a', { hasText: 'Open' });
-    await expect(openLink).toBeVisible({ timeout: 15000 });
+    await expect(openLink).toBeAttached({ timeout: 15000 }); // inside the row's "..." menu, so not visible
     const href = await openLink.getAttribute('href');
     expect(href).toMatch(/\/Invoices\/SmartCaptureReview\/\d+/);
     const documentId = href.match(/\/SmartCaptureReview\/(\d+)/)[1];

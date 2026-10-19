@@ -152,6 +152,14 @@ namespace eInvWorld.Services
                         return false;
                     }
 
+                    foreach (var bcc in bccEmails ?? Enumerable.Empty<string>())
+                    {
+                        if (!string.IsNullOrWhiteSpace(bcc) && !mailMessage.To.Any(t => t.Address.Equals(bcc.Trim(), StringComparison.OrdinalIgnoreCase)))
+                        {
+                            mailMessage.Bcc.Add(bcc.Trim());
+                        }
+                    }
+
 
                     // Logo inline
                     string logoCid = "einvworld-logo";

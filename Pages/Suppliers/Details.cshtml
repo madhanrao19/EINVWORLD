@@ -206,7 +206,7 @@
                                                 <th class="text-center" style="width: 10%;">View Only</th>
                                             }
                                             <th class="text-center" style="width: 15%;">Role</th>
-                                            <th class="text-center" style="width: 10%;">Action</th>
+                                            <th class="col-action text-center" style="width: 10%;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -273,14 +273,19 @@
                                                             @userRole
                                                         </span>
                                                         <button type="button" class="btn btn-sm btn-link text-decoration-none shadow-none p-0 ms-1"
-                                                                onclick="openChangeRoleModal('@user.Id', '@user.FullName')" title="Change Role">
+                                                                data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openChangeRoleModal(this.dataset.userId, this.dataset.userName)" title="Change Role">
                                                             <i class="ri-edit-line fs-14"></i>
                                                         </button>
                                                     </td>
-                                                    <td class="text-center">
-                                                        <button class="btn btn-danger btn-sm w-100" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')">
-                                                            <i class="ri-delete-bin-line"></i> Unassign
-                                                        </button>
+                                                    <td class="col-action text-center">
+                                                        <div class="dropdown d-inline-block">
+                                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                                <i class="ri-more-fill align-middle"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                                <li><button type="button" class="dropdown-item text-danger" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                            </ul>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             }
@@ -331,7 +336,7 @@
                                                     <th>Buyer Entity</th>
                                                     <th>TIN / Registration</th>
                                                     <th>Industry</th>
-                                                    <th class="text-end">Actions</th>
+                                                    <th class="col-action text-end">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -348,12 +353,19 @@
                                                         </td>
                                                         <td>@buyer.TIN</td>
                                                         <td>@buyer.IndustryClassificationCode</td>
-                                                        <td class="text-end white-space-nowrap">
-                                                            @if (!string.IsNullOrEmpty(buyer.Email))
-                                                            {
-                                                                <a href="mailto:@buyer.Email" class="btn btn-link btn-sm text-decoration-none text-success p-0 shadow-none">Manage</a>
-                                                            }
-                                                            <button class="btn btn-link btn-sm text-decoration-none text-danger p-0 shadow-none" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')">Unassign</button>
+                                                        <td class="col-action text-end">
+                                                            <div class="dropdown d-inline-block">
+                                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                                    <i class="ri-more-fill align-middle"></i>
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                                    @if (!string.IsNullOrEmpty(buyer.Email))
+                                                                    {
+                                                                        <li><a href="mailto:@buyer.Email" class="dropdown-item"><i class="ri-mail-line align-bottom me-2 text-muted"></i> Email Buyer</a></li>
+                                                                    }
+                                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                                </ul>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 }

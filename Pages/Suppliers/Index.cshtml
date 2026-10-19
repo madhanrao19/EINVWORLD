@@ -86,7 +86,7 @@
                                     <th><a href="@GetSortUrl("updatedby")" class="text-dark text-decoration-none">Updated By @GetSortIcon("updatedby")</a></th>
                                     <th><a href="@GetSortUrl("updateddate")" class="text-dark text-decoration-none">Updated Date @GetSortIcon("updateddate")</a></th>
                                     <th><a href="@GetSortUrl("isactive")" class="text-dark text-decoration-none">IsActive @GetSortIcon("isactive")</a></th>
-                                    <th scope="col">Action</th>
+                                    <th scope="col" class="col-action">Actions</th>
                                 </tr>
                             </thead>
 
@@ -121,24 +121,18 @@
                                                 @(item.IsActive ? "Active" : "Inactive")
                                             </span>
                                         </td>
-                                        <td>
-                                            <ul class="list-inline hstack gap-2 mb-0">
-                                                <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="View">
-                                                    <a asp-page="./Details" asp-route-id="@item.PartyInfoId" class="text-primary d-inline-block">
-                                                        <i class="ri-eye-fill fs-16"></i>
-                                                    </a>
-                                                </li>
-                                                <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Edit">
-                                                    <a asp-page="./Edit" asp-route-id="@item.PartyInfoId" class="text-primary d-inline-block">
-                                                        <i class="ri-pencil-fill fs-16"></i>
-                                                    </a>
-                                                </li>
-                                                <li class="list-inline-item" data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Delete">
-                                                    <a href="javascript:void(0);" class="text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName">
-                                                        <i class="ri-delete-bin-fill fs-16"></i>
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                        <td class="col-action">
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a asp-page="./Details" asp-route-id="@item.PartyInfoId" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
+                                                    <li><a asp-page="./Edit" asp-route-id="@item.PartyInfoId" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a href="javascript:void(0);" class="dropdown-item text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                                </ul>
+                                            </div>
                                         </td>
                                     </tr>
                                 }

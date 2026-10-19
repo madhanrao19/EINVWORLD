@@ -909,10 +909,11 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .select2-results__option {
   color: var(--einv-text) !important;
 }
-[data-bs-theme="dark"] .select2-container--default .select2-search--dropdown .select2-search__field {
-  background-color: var(--einv-page-bg);
-  border-color: var(--einv-border);
-  color: var(--einv-text);
+/* Any Select2 theme (Create/Edit Invoice use bootstrap-5, which pins a white search box). */
+[data-bs-theme="dark"] .select2-container .select2-search__field {
+  background-color: var(--einv-page-bg) !important;
+  border-color: var(--einv-border) !important;
+  color: var(--einv-text) !important;
 }
 [data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected],
 [data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
@@ -994,6 +995,25 @@ button.einv-badge { cursor: pointer; }
 [data-bs-theme="dark"] .swal2-validation-message { background: rgba(239, 68, 68, .14); color: #fca5a5; }
 [data-bs-theme="dark"] .swal2-icon.swal2-success [class^="swal2-success-circular-line"],
 [data-bs-theme="dark"] .swal2-icon.swal2-success .swal2-success-fix { background-color: var(--einv-surface) !important; }
+/* Toasts ("Copied: ...", UUID copied): sweetalert2.min.css loads after this file and its
+ * .swal2-popup.swal2-toast { background: #fff } ties the rule above, so the toast stayed white with the
+ * light dark-mode text on it (and the surface-coloured success-icon masks showed as a dark crescent). */
+[data-bs-theme="dark"] .swal2-popup.swal2-toast {
+  background: var(--einv-surface);
+  color: var(--einv-text);
+  border: 1px solid var(--einv-border);
+  box-shadow: var(--einv-shadow-overlay);
+}
+[data-bs-theme="dark"] .swal2-popup.swal2-toast .swal2-title,
+[data-bs-theme="dark"] .swal2-popup.swal2-toast .swal2-html-container { color: var(--einv-text); }
+
+/* Native <select> option lists: color-scheme alone still leaves Chrome on Windows drawing the popup
+ * white under the inherited light text (Staging, v1.46.8). Give the options explicit colours. */
+[data-bs-theme="dark"] select:not([data-bs-theme="light"] *) option,
+[data-bs-theme="dark"] select:not([data-bs-theme="light"] *) optgroup {
+  background-color: var(--einv-surface);
+  color: var(--einv-text);
+}
 
 /* Flatpickr date picker (invoice dates, dashboard/list filters). */
 [data-bs-theme="dark"] .flatpickr-calendar { background: var(--einv-surface); box-shadow: 0 6px 24px rgba(0, 0, 0, .5); }
