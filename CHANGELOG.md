@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.1`** (`AppInfo:Version` in `appsettings.json`). v1.47.1 is a **patch**
+> **Current version: `v1.47.2`** (`AppInfo:Version` in `appsettings.json`). v1.47.2 is a **patch**
+> release: browsers load the new scripts straight after a deploy (22 script tags were never cache-busted) — see the dated entry below. v1.47.1 was a **patch**
 > release: fixes from the v1.47.0 Staging test (empty Draft export, dark-mode ticked rows and editor menu, duplicate Validate button, collapsed sidebar) — see the dated entry below. v1.47.0 was a **minor**
 > release: a company can keep several bank accounts and pick one on each invoice (database migration) —
 > see the dated entry below. v1.46.14 was a **patch**
@@ -381,6 +382,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-19 — v1.47.2 (browsers pick up script fixes straight after a deploy)
+
+- **Script fixes now reach users right after a deploy.** 22 of the app's own script tags (invoice list:
+  row selection, export, bulk submit/validate/send; dashboards; Create/Edit Invoice templates; Create
+  Company / Add Buyer; Resource SEO; invoice details actions) were loaded without a version stamp, so
+  browsers kept running their cached old copy — e.g. after v1.47.1 the invoice list still showed ticked rows
+  in light grey and the Selected-Items export still used the old script until the cache expired. They now
+  carry `asp-append-version` like the rest of the app, so each deploy changes the URL.
 
 ## 📅 2026-10-19 — v1.47.1 (fixes from the v1.47.0 Staging test)
 
