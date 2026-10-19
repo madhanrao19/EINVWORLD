@@ -50,9 +50,9 @@
             <span class="nav-link-title">Create</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-create">
-            <a class="dropdown-item" href="/Invoices/CreateInvoice">Invoice</a>
-            <a class="dropdown-item" href="/Invoices/CreateInvoice?type=SELF">Self-Billed Invoice</a>
-            <a class="dropdown-item" href="/Invoices/InvoiceLists?intent=cndn" title="Select the invoice to issue it against">Credit / Debit / Refund Note</a>
+            <a class="dropdown-item" href="/Invoices/CreateInvoice"><i class="ri-file-add-line einv-nav-sub-icon" aria-hidden="true"></i>Invoice</a>
+            <a class="dropdown-item" href="/Invoices/CreateInvoice?type=SELF"><i class="ri-file-user-line einv-nav-sub-icon" aria-hidden="true"></i>Self-Billed Invoice</a>
+            <a class="dropdown-item" href="/Invoices/InvoiceLists?intent=cndn" title="Select the invoice to issue it against"><i class="ri-exchange-funds-line einv-nav-sub-icon" aria-hidden="true"></i>Credit / Debit / Refund Note</a>
         </div>
     </li>
     <li class="nav-item dropdown" role="none">
@@ -61,10 +61,10 @@
             <span class="nav-link-title">Invoice Management</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-invoices">
-            <a class="dropdown-item" href="/Invoices/InvoiceLists">View All e-Invoices</a>
-            <a class="dropdown-item" href="/Invoices/ImportCsv">Bulk Invoice Import</a>
-            <a class="dropdown-item" href="/Templates/TemplateLists">Templates</a>
-            <a class="dropdown-item" href="/RecurringInvoices/Index">Recurring Invoices</a>
+            <a class="dropdown-item" href="/Invoices/InvoiceLists"><i class="ri-file-list-3-line einv-nav-sub-icon" aria-hidden="true"></i>View All e-Invoices</a>
+            <a class="dropdown-item" href="/Invoices/ImportCsv"><i class="ri-upload-cloud-2-line einv-nav-sub-icon" aria-hidden="true"></i>Bulk Invoice Import</a>
+            <a class="dropdown-item" href="/Templates/TemplateLists"><i class="ri-file-copy-2-line einv-nav-sub-icon" aria-hidden="true"></i>Templates</a>
+            <a class="dropdown-item" href="/RecurringInvoices/Index"><i class="ri-repeat-2-line einv-nav-sub-icon" aria-hidden="true"></i>Recurring Invoices</a>
         </div>
     </li>
     <li class="nav-item dropdown" role="none">
@@ -73,9 +73,9 @@
             <span class="nav-link-title">AI Tools</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-aitools">
-            <a class="dropdown-item" href="/Assistant">E-Invoice Assistant</a>
-            <a class="dropdown-item" href="/Invoices/SmartCapture">Create from Document <span class="badge bg-primary-soft text-primary einv-badge-beta">Beta</span></a>
-            <a class="dropdown-item" href="/Assistant/ProcessingHistory">AI Processing History</a>
+            <a class="dropdown-item" href="/Assistant"><i class="ri-chat-smile-2-line einv-nav-sub-icon" aria-hidden="true"></i>E-Invoice Assistant</a>
+            <a class="dropdown-item" href="/Invoices/SmartCapture"><i class="ri-scan-2-line einv-nav-sub-icon" aria-hidden="true"></i>Create from Document <span class="badge bg-primary-soft text-primary einv-badge-beta">Beta</span></a>
+            <a class="dropdown-item" href="/Assistant/ProcessingHistory"><i class="ri-file-search-line einv-nav-sub-icon" aria-hidden="true"></i>AI Processing History</a>
         </div>
     </li>
 
@@ -84,12 +84,12 @@
     </li>
     <li class="nav-item dropdown" role="none">
         <a class="nav-link dropdown-toggle" role="menuitem" href="#einv-supplier-items" data-bs-toggle="dropdown" data-bs-auto-close="false" aria-expanded="false" title="Item Management">
-            <span class="nav-link-icon" aria-hidden="true"><i class="ri-file-list-line"></i></span>
+            <span class="nav-link-icon" aria-hidden="true"><i class="ri-shopping-bag-3-line"></i></span>
             <span class="nav-link-title">Item Management</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-items">
-            <a class="dropdown-item" href="/Items/Index">Items</a>
-            <a class="dropdown-item" href="/Items/Create">Create Item</a>
+            <a class="dropdown-item" href="/Items/Index"><i class="ri-list-unordered einv-nav-sub-icon" aria-hidden="true"></i>Items</a>
+            <a class="dropdown-item" href="/Items/Create"><i class="ri-add-box-line einv-nav-sub-icon" aria-hidden="true"></i>Create Item</a>
         </div>
     </li>
     <li class="nav-item dropdown" role="none">
@@ -98,7 +98,7 @@
             <span class="nav-link-title">Buyers Management</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-buyers">
-            <a class="dropdown-item" href="/PublicCustomer/List">Buyer Directory</a>
+            <a class="dropdown-item" href="/PublicCustomer/List"><i class="ri-contacts-book-line einv-nav-sub-icon" aria-hidden="true"></i>Buyer Directory</a>
         </div>
     </li>
 
@@ -111,7 +111,7 @@
             <span class="nav-link-title">Company Management</span>
         </a>
         <div class="dropdown-menu" id="einv-supplier-company">
-            <a class="dropdown-item" href="/Suppliers/Details?id=@companyId">My Company</a>
+            <a class="dropdown-item" href="/Suppliers/Details?id=@companyId"><i class="ri-building-line einv-nav-sub-icon" aria-hidden="true"></i>My Company</a>
         </div>
     </li>
 </ul>
