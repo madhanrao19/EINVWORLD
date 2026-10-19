@@ -1862,7 +1862,7 @@
 
                     // Visual + interaction handling
                     if (lockDropdown) {
-                        select.style.backgroundColor = '#f8f9fa';
+                        select.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                         select.style.cursor = 'not-allowed';
                         select.style.pointerEvents = 'none';
                         select.setAttribute('data-locked', 'true');
@@ -2475,7 +2475,7 @@
                 console.log('✅ Setting tax percentage to 0 and making read-only');
                 taxPercentageInput.value = '0';
                 taxPercentageInput.readOnly = true;
-                taxPercentageInput.style.backgroundColor = '#f8f9fa';
+                taxPercentageInput.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                 // Remove required attribute and validation styling
                 taxPercentageInput.removeAttribute('required');
                 taxPercentageInput.classList.remove('is-invalid');
@@ -2873,7 +2873,7 @@
                                 newClassificationSelect.value = '004';
 
                                 // Lock the dropdown for self-billed documents but allow form submission
-                                newClassificationSelect.style.backgroundColor = '#f8f9fa';
+                                newClassificationSelect.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                                 newClassificationSelect.style.cursor = 'not-allowed';
                                 newClassificationSelect.style.pointerEvents = 'none';
                                 newClassificationSelect.title = 'Classification code is locked to "004" for self-billed documents';
@@ -3177,7 +3177,7 @@
 
                 if (isSelfBilled && classificationSelect) {
                     classificationSelect.value = '004';
-                    classificationSelect.style.backgroundColor = '#f8f9fa';
+                    classificationSelect.style.backgroundColor = 'var(--einv-surface-2, #f8f9fa)';
                     classificationSelect.style.cursor = 'not-allowed';
                     classificationSelect.style.pointerEvents = 'none';
                     classificationSelect.title = 'Classification code is locked to "004" for self-billed documents';
@@ -3943,19 +3943,19 @@
                                 if (existingOption) {
                                     // This UUID exists - show with highlighting and "Already exists" indicator
                                     return $(
-                                        '<div style="padding: 6px 12px; background-color: #f0f8f4; border-left: 3px solid #006948;">' +
-                                        '<div style="font-weight: 600; color: #006948; margin-bottom: 2px;">' +
-                                        '<i class="ri-checkbox-circle-line me-1"></i>' + option.text + '</div>' +
-                                        '<div style="font-size: 0.8em; color: #666;">✓ Exists in your invoices</div>' +
+                                        '<div class="einv-refuuid-opt is-existing">' +
+                                        '<div class="einv-refuuid-title">' +
+                                        '<i class="ri-checkbox-circle-line me-1"></i>' + $('<span>').text(option.text).html() + '</div>' +
+                                        '<div class="einv-refuuid-hint">✓ Exists in your invoices</div>' +
                                         '</div>'
                                     );
                                 } else {
                                     // New UUID - show with different styling
                                     return $(
-                                        '<div style="padding: 6px 12px; background-color: #fff8f0; border-left: 3px solid #f59e0b;">' +
-                                        '<div style="font-weight: 500; color: #f59e0b; margin-bottom: 2px;">' +
-                                        '<i class="ri-add-circle-line me-1"></i>' + option.text + '</div>' +
-                                        '<div style="font-size: 0.8em; color: #666;">New RefUUID entry</div>' +
+                                        '<div class="einv-refuuid-opt is-new">' +
+                                        '<div class="einv-refuuid-title">' +
+                                        '<i class="ri-add-circle-line me-1"></i>' + $('<span>').text(option.text).html() + '</div>' +
+                                        '<div class="einv-refuuid-hint">New RefUUID entry</div>' +
                                         '</div>'
                                     );
                                 }
