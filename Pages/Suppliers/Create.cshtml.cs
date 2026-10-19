@@ -33,6 +33,7 @@ namespace eInvWorld.Pages.Suppliers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<CreateModel> _logger;
+        private readonly EINVWORLD.Services.ISupplierBankAccountService _bankAccounts;
 
         public CreateModel(
             ApplicationDbContext context,
@@ -41,8 +42,10 @@ namespace eInvWorld.Pages.Suppliers
             IOptions<FilePathConfig> filePathConfig,
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            ILogger<CreateModel> logger)
+            ILogger<CreateModel> logger,
+            EINVWORLD.Services.ISupplierBankAccountService bankAccounts)
         {
+            _bankAccounts = bankAccounts;
             _context = context;
             _environment = environment;
             _dropdownHelper = dropdownHelper;
@@ -207,6 +210,8 @@ namespace eInvWorld.Pages.Suppliers
 
             _context.PartyInfos.Add(partyInfo);
             await _context.SaveChangesAsync();
+            // The bank details entered here become the company's first (default) bank account.
+            await _bankAccounts.SyncDefaultFromCompanyAsync(partyInfo.PartyInfoId, User.Identity?.Name);
 
             TempData["SuccessMessage"] = "Company successfully created!";
 

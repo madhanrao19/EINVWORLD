@@ -110,8 +110,8 @@
                                 <tbody>
                                     <tr><td class="fw-medium text-muted">Phone Number</td><td>@Model.PartyInfo.PhoneNo</td></tr>
                                     <tr><td class="fw-medium text-muted">Fax Number</td><td>@Model.PartyInfo.FaxNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Bank Account Number</td><td>@Model.PartyInfo.BankAccountNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Bank Name</td><td>@Model.PartyInfo.BankName</td></tr>
+                                    <tr><td class="fw-medium text-muted">Default Bank Account</td><td>@Model.PartyInfo.BankAccountNo</td></tr>
+                                    <tr><td class="fw-medium text-muted">Bank Name</td><td>@Model.PartyInfo.BankName <a asp-page="/Profile/BankAccounts" asp-route-companyId="@Model.PartyInfo.PartyInfoId" class="ms-2 small">All bank accounts</a></td></tr>
                                     <tr><td class="fw-medium text-muted">Attention</td><td>@Model.PartyInfo.Attention</td></tr>
                                     <tr>
                                         <td class="fw-medium text-muted align-top">Location</td>

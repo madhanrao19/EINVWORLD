@@ -17,7 +17,7 @@ namespace eInvWorld.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -2007,6 +2007,50 @@ namespace eInvWorld.Migrations
                     b.ToTable("Suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBankAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BankAccountNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PartyInfoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartyInfoId");
+
+                    b.ToTable("SupplierBankAccounts");
+                });
+
             modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBuyer", b =>
                 {
                     b.Property<int>("Id")
@@ -3538,6 +3582,17 @@ namespace eInvWorld.Migrations
                     b.Navigation("Country");
 
                     b.Navigation("RegType");
+                });
+
+            modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBankAccount", b =>
+                {
+                    b.HasOne("eInvWorld.Models.InputModel.PartyInfo", "PartyInfo")
+                        .WithMany()
+                        .HasForeignKey("PartyInfoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PartyInfo");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.SupplierBuyer", b =>

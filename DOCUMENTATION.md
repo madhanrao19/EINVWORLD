@@ -175,6 +175,13 @@ Persisted via `ApplicationDbContext` (database `EINVWORLD`). Key entities:
   internal + LHDN status, QR/LongId, the `SubmissionClaimedAtUtc` concurrency claim).
 - `InvoiceLine` / `InvoiceTax` — line items and their taxes.
 - `InvoiceHistory` — per-invoice audit of state changes.
+- `SupplierBankAccount` (v1.47.0) — a company's bank accounts, one marked default. Managed at
+  `/Profile/BankAccounts` (My Profile → Manage bank accounts; Admins via Company details/edit) through
+  `SupplierBankAccountService`, the only writer, which keeps exactly one default and mirrors it into
+  `PartyInfo.BankName`/`BankAccountNo`. Create/Edit Invoice show a "Saved bank account" picker (default
+  pre-selected) that fills the invoice's own bank fields; the invoice keeps that snapshot, so PDF/UBL paths
+  are unchanged. Bank details reach the invoice screens only for the caller's own companies
+  (`PartyBankAccess`).
 - `PartyInfo` — a company/taxpayer (TIN, registration, MSIC, SST, address, bank). Suppliers and buyers
   are `PartyInfo`. `Supplier`, `Buyer`, `SupplierBuyer`, `PublicCustomer`, `UserCompany` model the
   relationships (who can invoice whom; which TINs a user owns).
