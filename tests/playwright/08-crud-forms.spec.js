@@ -3,12 +3,13 @@ const { login, watchPage } = require('./helpers/auth');
 
 // Create-form integrity for the complex, FK-dependent entities. Full submit-create is
 // covered end-to-end by the Items lifecycle (06-crud-items); these entities either have
-// no UI delete (PublicCustomer) or require pre-existing related records (Templates), so
+// no UI delete (PublicCustomer) or require pre-existing related records, so
 // here we assert the create page loads for an authorised user, renders its key field,
 // and accepts input — without writing un-cleanable staging data.
 const FORMS = [
   { name: 'PublicCustomer', url: '/PublicCustomer/Create', field: '#PublicCustomer_CompanyName' },
-  { name: 'Templates', url: '/Templates/Create', field: '#InvoiceTemplate_TemplateName' },
+  // Templates: the scaffolded /Templates/Create page was removed in v1.47.13 (templates are made with
+  // Save as template on the invoice form), so it has no create page to check here.
   // Suppliers create is reachable by a Supplier only via the lead-conversion flow (by design;
   // direct access is AccessDenied). Use that legitimate entry path.
   { name: 'Suppliers', url: '/Suppliers/Create?from=lead', field: '#PartyInfo_CompanyName' },
