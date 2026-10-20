@@ -1181,33 +1181,38 @@ namespace EINVWORLD.Pages.Invoices
                     _context.InvoiceHeaders.Add(draftInvoice);
                 }
 
-                _context.SaveChanges();
-
-                _invoiceHistoryService.Log(draftInvoice.InvoiceNo, isUpdate ? "Updated" : "Created",
-                    isUpdate ? "Invoice draft updated" : "Invoice draft created");
-
-
-
-                // Step 3: Save the JSON file to the drafts folder on another server
-                var draftsFolder = _filePathConfig.DraftFolder;  // Directly from config (supports network path)
-
-                _logger.LogInformation("Drafts folder path: {DraftsFolder}", draftsFolder);
-
-                // Ensure the drafts folder exists
+                // Step 3: the JSON file in the drafts folder (may be a network path)
+                var draftsFolder = _filePathConfig.DraftFolder;
                 if (!Directory.Exists(draftsFolder))
                 {
                     _logger.LogInformation("Drafts folder does not exist. Creating it...");
                     Directory.CreateDirectory(draftsFolder);
                 }
 
-                // Generate the file path for the draft
                 var fileName = $"{Invoice.InvoiceNo}.json";
-                var filePath = Path.Combine(draftsFolder, fileName);
+                // InvoiceWriteGuard already refuses unsafe numbers at the start of the POST; this is the check at the
+                // file write itself (the number becomes the file name).
+                if (!EINVWORLD.Helpers.SafePath.TryResolve(draftsFolder, out var filePath, fileName))
+                    throw new InvalidOperationException($"Invalid draft file name for invoice {Invoice.InvoiceNo}.");
+                var tmpPath = filePath + ".tmp";
 
-                _logger.LogInformation("Saving draft to: {FilePath}", filePath);
+                // Submission sends this file, so it must match the saved row: write it to a temp file first,
+                // commit the DB, then rename it into place (atomic on the same volume). A failed save leaves the
+                // old file untouched, and a crash can't leave a half-written one.
+                System.IO.File.WriteAllText(tmpPath, invoiceJson);
+                try
+                {
+                    _context.SaveChanges();
+                }
+                catch
+                {
+                    System.IO.File.Delete(tmpPath);
+                    throw;
+                }
+                System.IO.File.Move(tmpPath, filePath, overwrite: true);
 
-                // Write the JSON content to the file
-                System.IO.File.WriteAllText(filePath, invoiceJson);
+                _invoiceHistoryService.Log(draftInvoice.InvoiceNo, isUpdate ? "Updated" : "Created",
+                    isUpdate ? "Invoice draft updated" : "Invoice draft created");
 
                 // Save the draft path in session and view data
                 HttpContext.Session.SetString("DraftFilePath", filePath);

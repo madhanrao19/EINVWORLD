@@ -163,8 +163,11 @@ namespace eInvWorld.Services.Webhooks
                     $"Webhook callback URL resolves to a private/reserved address: '{url}' (set Webhooks:BlockPrivateNetworks=false to allow).");
         }
 
-        private static bool IsPrivate(System.Net.IPAddress ip)
+        // shortcut: the host is resolved here and again by HttpClient (DNS rebinding could swap the IP in
+        // between); upgrade to a SocketsHttpHandler.ConnectCallback IP check if webhooks go multi-tenant self-service.
+        internal static bool IsPrivate(System.Net.IPAddress ip)
         {
+            if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4(); // ::ffff:10.0.0.1 is 10.0.0.1
             if (System.Net.IPAddress.IsLoopback(ip)) return true;
 
             if (ip.AddressFamily == AddressFamily.InterNetwork)
@@ -174,7 +177,9 @@ namespace eInvWorld.Services.Webhooks
                     || (b[0] == 172 && b[1] >= 16 && b[1] <= 31)    // 172.16.0.0/12
                     || (b[0] == 192 && b[1] == 168)                 // 192.168.0.0/16
                     || (b[0] == 169 && b[1] == 254)                 // 169.254.0.0/16 link-local
-                    || b[0] == 127;                                 // 127.0.0.0/8
+                    || b[0] == 127                                  // 127.0.0.0/8
+                    || b[0] == 0                                    // 0.0.0.0/8 ("this host")
+                    || (b[0] == 100 && b[1] >= 64 && b[1] <= 127);  // 100.64.0.0/10 carrier-grade NAT
             }
 
             if (ip.AddressFamily == AddressFamily.InterNetworkV6)

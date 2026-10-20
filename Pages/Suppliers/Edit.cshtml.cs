@@ -192,9 +192,17 @@ namespace eInvWorld.Pages.Suppliers
             // Handle logo update
             if (LogoFile != null && LogoFile.Length > 0)
             {
+                string? logoExt;
+                using (var probe = LogoFile.OpenReadStream()) logoExt = EINVWORLD.Helpers.LogoImage.DetectExtension(probe);
+                if (logoExt == null)
+                {
+                    ModelState.AddModelError(nameof(LogoFile), "The logo must be a PNG or JPG image.");
+                    return Page();
+                }
+
                 var uploadsFolder = _filePathConfig.CompanyLogosFolder;
                 Directory.CreateDirectory(uploadsFolder);
-                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(LogoFile.FileName)}";
+                var fileName = $"{Guid.NewGuid()}{logoExt}";
                 var filePath = Path.Combine(uploadsFolder, fileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
