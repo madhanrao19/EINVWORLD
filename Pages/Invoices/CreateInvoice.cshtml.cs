@@ -390,11 +390,11 @@ namespace EINVWORLD.Pages.Invoices
                     }
                 }
 
-                Customers = _context.PartyInfos
-                    .Where(p => _context.SupplierBuyers.Any(sb => sb.SupplierId == Invoice!.SupplierId && sb.BuyerId == p.PartyInfoId)
-                             || p.TIN == "EI00000000010" || p.TIN == "EI00000000020" || p.TIN == "EI00000000040")
-                    .Select(p => new SelectListItem { Value = p.PartyInfoId.ToString(), Text = p.CompanyName })
-                    .ToList();
+                // Same PI_/PC_ values as SelectedBuyerId and the LoadCustomers handler, so a saved buyer
+                // (resend / template / failed POST) is actually pre-selected.
+                Customers = new[] { "11", "12", "13", "14" }.Contains(Invoice!.DocTypeCode)
+                    ? userCompanies.Select(uc => new SelectListItem { Value = $"PI_{uc.PartyInfoId}", Text = uc.PartyInfo.CompanyName }).ToList()
+                    : await _buyerService.GetCombinedBuyersBySupplierAsync(Invoice.SupplierId);
             }
             else
             {

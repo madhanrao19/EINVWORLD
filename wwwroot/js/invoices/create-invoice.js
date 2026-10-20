@@ -2,6 +2,9 @@
 
         // Track the last selected buyer
         let lastSelectedBuyerId = null;
+        // Buyer the page was rendered with (draft / template / resend). While it is still the selected
+        // buyer, loading its details keeps the form's own Attention / Payment Terms instead of the buyer master's.
+        let savedBuyerId = document.getElementById('buyerSelect')?.value || null;
 
         // Escapes user-entered text before it's interpolated into innerHTML (Review step item
         // summary etc.) - an item description/tariff code/country is free text a user controls.
@@ -499,7 +502,7 @@
                     const type = parts[0];   // "PI" or "PC"
                     const id = parts[1];     // numeric id
 
-                    loadPartyDetails(id, type, 'buyer');
+                    loadPartyDetails(id, type, 'buyer', true);
                 } else {
                     console.warn("⚠️ Invalid buyer value format:", buyerValue);
                 }
@@ -1077,7 +1080,9 @@
                         if (parts.length === 2) {
                             const type = parts[0];   // PI or PC
                             const id = parts[1];
-                            loadPartyDetails(id, type, 'buyer');
+                            const isSavedBuyer = lastSelectedBuyerId === savedBuyerId;
+                            if (!isSavedBuyer) savedBuyerId = null;
+                            loadPartyDetails(id, type, 'buyer', isSavedBuyer);
                         } else {
                             console.warn("⚠️ Invalid buyer format:", lastSelectedBuyerId);
                         }
@@ -1298,6 +1303,10 @@
 
                 // Issue date picker
                 if (issueDateInput) {
+                    // flatpickr silently drops a defaultDate below minDate, so a saved draft older than
+                    // 3 days would lose its Issue Date; the server-side LHDN date check still applies.
+                    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+                    const savedIssueDate = issueDateInput.value ? flatpickr.parseDate(issueDateInput.value, "Y-m-d H:i") : null;
                     flatpickr(issueDateInput, {
                         dateFormat: "Y-m-d H:i",
                         altFormat: "j M Y, h:i K", // display only; the posted value keeps dateFormat
@@ -1305,7 +1314,7 @@
                         time_24hr: false,
                         defaultDate: issueDateInput.value || new Date(),
                         maxDate: new Date(), // today
-                        minDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+                        minDate: savedIssueDate && savedIssueDate < threeDaysAgo ? savedIssueDate : threeDaysAgo,
                         onChange: function (selectedDates) {
                             if (selectedDates.length > 0) {
                                 updateSummary();
@@ -1336,7 +1345,8 @@
                     flatpickr(endInput, {
                         dateFormat: "d-M-Y",
                         defaultDate: endInput.value || null,
-                        minDate: startInput?.value || new Date()
+                        // No start date: don't let the "not in the past" default drop a saved End Date.
+                        minDate: startInput?.value || (endInput.value ? null : new Date())
                     });
                 }
             },
@@ -1398,12 +1408,10 @@
                     foreignCurrency.value = currency;
                 }
 
-                if (currency && currency !== 'MYR') {
-                    // You can implement API call to get real exchange rates here
-                    document.getElementById('exchangeRate').value = '1.00';
-                } else {
-                    document.getElementById('exchangeRate').value = '1.00';
-                }
+                // MYR is always 1.00; a foreign-currency rate (typed or saved on a draft) is never overwritten.
+                const rateInput = document.getElementById('exchangeRate');
+                if (rateInput && (!currency || currency === 'MYR' || !rateInput.value)) rateInput.value = '1.00';
+                if (typeof refreshCurrencyLabels === 'function') refreshCurrencyLabels();
             },
 
             updateSummary() {
@@ -1897,7 +1905,8 @@
                         console.log(`✅ Option "022" found: "${option022.text}"`);
                         
                         const oldValue = select.value;
-                        select.value = '022';
+                        // Page load keeps a saved line's code; only a real doc-type change resets it to 022.
+                        if (!isInitializing || !select.value) select.value = '022';
                         
                         // Re-enable all classification options for regular documents
                         Array.from(select.options).forEach(opt => { opt.disabled = false; });
@@ -2238,6 +2247,17 @@
             });
         }
 
+        // Every summary card shows the invoice's own currency (never a hard-coded RM). Called from
+        // calculateTotals() and updateExchangeRate() (the #currency change handler).
+        function refreshCurrencyLabels() {
+            const sel = document.getElementById('currency');
+            const code = (sel && sel.value) || 'MYR';
+            const label = sel && sel.selectedIndex > 0 ? sel.options[sel.selectedIndex].text.trim() : code;
+            document.querySelectorAll('.js-sum-currency').forEach(el => { el.textContent = label; });
+            const kpi = document.getElementById('kpiRunningTotal');
+            if (kpi) kpi.textContent = code + ' ' + (kpi.dataset.total || '0.00');
+        }
+
         function calculateTotals() {
             let subtotal = 0;      // gross Sum(Qty*UnitPrice) - shown as "Subtotal" (pre-discount/fee)
             let exclTaxTotal = 0;  // Sum(Subtotal - Discount + Fee/Charge) - the true taxable-base total
@@ -2299,8 +2319,8 @@
             const summaryTotalAmount = document.getElementById('summaryTotalAmount');
 
             if (summarySubtotal) {
-                summarySubtotal.textContent = subtotal.toFixed(2);
-                console.log(`✅ Updated summarySubtotal to ${subtotal.toFixed(2)}`);
+                summarySubtotal.textContent = exclTaxTotal.toFixed(2);
+                console.log(`✅ Updated summarySubtotal to ${exclTaxTotal.toFixed(2)}`);
             } else {
                 console.warn(`⚠️ summarySubtotal element not found`);
             }
@@ -2323,7 +2343,7 @@
             const step2Subtotal = document.getElementById('step2SummarySubtotal');
             const step2TaxAmount = document.getElementById('step2SummaryTaxAmount');
             const step2TotalAmount = document.getElementById('step2SummaryTotalAmount');
-            if (step2Subtotal) step2Subtotal.textContent = subtotal.toFixed(2);
+            if (step2Subtotal) step2Subtotal.textContent = exclTaxTotal.toFixed(2);
             if (step2TaxAmount) step2TaxAmount.textContent = taxAmount.toFixed(2);
             if (step2TotalAmount) step2TotalAmount.textContent = totalAmount.toFixed(2);
 
@@ -2367,7 +2387,8 @@
             // already update, so it stayed frozen at its initial "RM 0.00" no matter how many items
             // were added on Step 2.
             const kpiRunningTotal = document.getElementById('kpiRunningTotal');
-            if (kpiRunningTotal) kpiRunningTotal.textContent = 'RM ' + totalAmount.toFixed(2);
+            if (kpiRunningTotal) kpiRunningTotal.dataset.total = totalAmount.toFixed(2);
+            refreshCurrencyLabels();
 
             // Step 1 sticky "Invoice Summary" sidebar card — was never wired up, so it stayed frozen at
             // its initial "RM 0.00" no matter how many items/totals were entered on Step 2 (visible as
@@ -2375,8 +2396,8 @@
             const step1SummarySubtotal = document.getElementById('step1SummarySubtotal');
             const step1SummaryTax = document.getElementById('step1SummaryTax');
             const step1SummaryTotal = document.getElementById('step1SummaryTotal');
-            if (step1SummarySubtotal) step1SummarySubtotal.textContent = 'RM ' + subtotal.toFixed(2);
-            if (step1SummaryTax) step1SummaryTax.textContent = 'RM ' + taxAmount.toFixed(2);
+            if (step1SummarySubtotal) step1SummarySubtotal.textContent = exclTaxTotal.toFixed(2);
+            if (step1SummaryTax) step1SummaryTax.textContent = taxAmount.toFixed(2);
             if (step1SummaryTotal) step1SummaryTotal.textContent = totalAmount.toFixed(2);
 
             // Update hidden fields
@@ -3514,12 +3535,12 @@
                         console.log("📌 Attention found:", attention);
                         console.log("📌 PaymentTerms found:", paymentTerms);
 
-                        // Populate Attention
-                        $('#attention').val(attention);
-                        if (attention) showAutoPopulatedIndicator('attention');
-
-                        // Populate Payment Terms
-                        $('#paymentTerms').val(paymentTerms);
+                        // isInitial (saved buyer on page load): keep the form's own non-empty values.
+                        if (!isInitial || !$('#attention').val()) {
+                            $('#attention').val(attention);
+                            if (attention) showAutoPopulatedIndicator('attention');
+                        }
+                        if (!isInitial || !$('#paymentTerms').val()) $('#paymentTerms').val(paymentTerms);
                         // Optional: show indicator
                         // if (paymentTerms) showAutoPopulatedIndicator('paymentTerms');
 
@@ -3584,12 +3605,10 @@
                 foreignCurrency.value = currency;
             }
 
-            if (currency && currency !== 'MYR') {
-                // You can implement API call to get real exchange rates here
-                document.getElementById('exchangeRate').value = '1.00';
-            } else {
-                document.getElementById('exchangeRate').value = '1.00';
-            }
+            // MYR is always 1.00; a foreign-currency rate (typed or saved on a draft) is never overwritten.
+            const rateInput = document.getElementById('exchangeRate');
+            if (rateInput && (!currency || currency === 'MYR' || !rateInput.value)) rateInput.value = '1.00';
+            if (typeof refreshCurrencyLabels === 'function') refreshCurrencyLabels();
         }
 
         // Step 1 KPI tiles + validation checklist — purely derived from existing form fields, no fabricated status.

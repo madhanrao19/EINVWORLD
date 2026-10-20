@@ -7,6 +7,20 @@ namespace EINVWORLD.Tests
 {
     public class HelperTests
     {
+        // ── InvoiceFormatting.FmtRate (exchange rate keeps every stored digit) ───────────────
+        [Theory]
+        [InlineData("4.567", "4.567")]
+        [InlineData("4.123456", "4.123456")]
+        [InlineData("1.000000", "1.00")]
+        [InlineData("4.500000", "4.50")]
+        public void FmtRate_KeepsStoredPrecision(string stored, string expected)
+        {
+            Assert.Equal(expected, InvoiceFormatting.FmtRate(decimal.Parse(stored, System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        [Fact]
+        public void FmtRate_Null_IsEmpty() => Assert.Equal("", InvoiceFormatting.FmtRate(null));
+
         // ── GeneralTINHelper.IsGeneralTIN ─────────────────────────────────────────────────────
         [Theory]
         [InlineData("EI00000000010")] // General Public / Self-Billed Buyer
