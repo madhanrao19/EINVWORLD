@@ -1321,7 +1321,7 @@ namespace eInvWorld.Pages.Invoices
             {
                 // Release the claim so the user can retry; LHDN's DS302 duplicate detection backstops the
                 // rare "accepted then errored" case.
-                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAfterFailureAsync(_context, invoiceNo, ex); // keeps it if LHDN may have accepted
                 _logger.LogError(ex, $"[Error] Exception during submission of Invoice: {invoiceNo}");
 
                 // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't

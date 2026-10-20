@@ -70,6 +70,23 @@ WHERE [InvoiceNo] = {invoiceNo}
         /// Releases the claim so the invoice can be submitted again — but only while it is still
         /// unsubmitted (no UUID). Call on any failure path after a successful claim. Best-effort.
         /// </summary>
+        /// <summary>
+        /// True when a submit failed without a clear answer from LHDN — timeout, dropped connection, or a
+        /// gateway 502/504 — so the document may already have been accepted. Such a claim is kept (it goes
+        /// stale after <see cref="StaleAfter"/>) instead of being released for an immediate resubmit.
+        /// shortcut: a retry after StaleAfter still resubmits and relies on LHDN's DS302 duplicate check;
+        /// upgrade by searching LHDN for the codeNumber before resubmitting if duplicates are ever seen.
+        /// </summary>
+        public static bool OutcomeUnknown(Exception ex) =>
+            ex is OperationCanceledException or TimeoutException
+            || (ex is HttpRequestException h &&
+                (h.InnerException is System.IO.IOException or System.Net.Sockets.SocketException
+                 || h.StatusCode is System.Net.HttpStatusCode.BadGateway or System.Net.HttpStatusCode.GatewayTimeout));
+
+        /// <summary>Failure-path release: releases unless <see cref="OutcomeUnknown"/>.</summary>
+        public static Task ReleaseAfterFailureAsync(ApplicationDbContext db, string invoiceNo, Exception ex, CancellationToken ct = default) =>
+            OutcomeUnknown(ex) ? Task.CompletedTask : ReleaseAsync(db, invoiceNo, ct);
+
         public static async Task ReleaseAsync(ApplicationDbContext db, string invoiceNo, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(invoiceNo)) return;

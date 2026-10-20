@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.13`** (`AppInfo:Version` in `appsettings.json`). v1.47.13 is a **patch**
+> **Current version: `v1.47.14`** (`AppInfo:Version` in `appsettings.json`). v1.47.14 is a **patch**
+> release: LHDN reliability — status polling, recurring auto-submit and duplicate submissions — see the dated entry below. v1.47.13 was a **patch**
 > release: security fixes for templates, recurring invoices, invoice PDFs and buyer names — see the dated entry below. v1.47.12 was a **patch**
 > release: security checks when saving an invoice — see the dated entry below. v1.47.11 was a **patch**
 > release: security fixes for company membership, user roles, Lead pages and invoice delete — see the dated entry below. v1.47.10 was a **patch**
@@ -393,6 +394,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.14 (LHDN reliability)
+
+- **Status updates no longer stall.** The background status check picked the 10 oldest unfinished invoices,
+  which included drafts it then skipped, so 10 old drafts could stop status updates (Valid / Invalid) for
+  everyone. It now only looks at documents already sent to LHDN.
+- **Recurring invoices with auto-submit** are saved as a draft first and then submitted through the normal
+  background submission (the same one used for retries), instead of being sent to LHDN before the invoice
+  was saved. Recurring invoices now also use the standard invoice numbering (the old one could repeat a number
+  once numbers passed EINV99999). Run history shows `Success_SubmitQueued` for these runs.
+- **Duplicate submissions:** the background submission now takes the same "one submission at a time" lock as
+  the Submit button. If a submission times out or the connection drops (LHDN may have accepted it), the lock is
+  kept for a few minutes instead of being released for an immediate resubmit.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.13 (security: templates, recurring, PDFs, buyer names)
 
