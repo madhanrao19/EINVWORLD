@@ -279,6 +279,56 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task InvoiceWriteGuard_Refuses_Foreign_Ids_And_Allows_The_Users_Own_Draft()
+        {
+            // Create e-Invoice / Invoice Edit POSTs used to trust the posted InvoiceNo (Save Draft overwrote
+            // any invoice with that number), SupplierId and buyer id. InvoiceWriteGuard checks all three.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var own = await CreateValidPartyInfoAsync(ctx, "Guard Own Co");
+            var other = await CreateValidPartyInfoAsync(ctx, "Guard Other Co");
+            var linkedBuyer = await CreateValidPartyInfoAsync(ctx, "Guard Linked Buyer");
+            var strangerBuyer = await CreateValidPartyInfoAsync(ctx, "Guard Stranger Buyer");
+            ctx.PartyInfos.AddRange(own, other, linkedBuyer, strangerBuyer);
+            await ctx.SaveChangesAsync();
+            ctx.SupplierBuyers.Add(new SupplierBuyer { SupplierId = own.PartyInfoId, BuyerId = linkedBuyer.PartyInfoId });
+
+            var userId = await CreateUserAsync(ctx, "guard-user");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = own.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            if (!await ctx.Set<Status>().AnyAsync(s => s.StatusCode == "Draft"))
+                ctx.Set<Status>().Add(new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft" });
+            if (!await ctx.Set<Status>().AnyAsync(s => s.StatusCode == "Submitted"))
+                ctx.Set<Status>().Add(new Status { StatusCode = "Submitted", StatusType = "Internal", Name = "Submitted" });
+            await ctx.SaveChangesAsync();
+
+            string NewNo() => $"GRD{Guid.NewGuid():N}"[..18];
+            var ownDraft = NewNo(); var ownSubmitted = NewNo(); var otherDraft = NewNo();
+            foreach (var (no, supplier, status) in new[] { (ownDraft, own, "Draft"), (ownSubmitted, own, "Submitted"), (otherDraft, other, "Draft") })
+                ctx.InvoiceHeaders.Add(new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = "01", Currency = "MYR", CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "integration-test", InternalStatusId = status, SupplierId = supplier.PartyInfoId,
+                });
+            await ctx.SaveChangesAsync();
+
+            var user = PrincipalFor(userId, "guard-user");
+            var buyers = new eInvWorld.Services.BuyerService(ctx);
+            Task<string?> Check(string? no, int supplierId, int? customerId) =>
+                InvoiceWriteGuard.CheckAsync(user, ctx, buyers, no, "01", supplierId, customerId, null);
+
+            Assert.Null(await Check(ownDraft, own.PartyInfoId, linkedBuyer.PartyInfoId));          // own draft, linked buyer
+            Assert.Null(await Check(NewNo(), own.PartyInfoId, linkedBuyer.PartyInfoId));           // brand-new number
+            Assert.NotNull(await Check(otherDraft, own.PartyInfoId, linkedBuyer.PartyInfoId));     // another company's invoice
+            Assert.NotNull(await Check(ownSubmitted, own.PartyInfoId, linkedBuyer.PartyInfoId));   // own, but no longer a draft
+            Assert.NotNull(await Check(@"..\..\x", own.PartyInfoId, linkedBuyer.PartyInfoId));     // path traversal
+            Assert.NotNull(await Check(NewNo(), other.PartyInfoId, linkedBuyer.PartyInfoId));      // someone else's supplier
+            Assert.NotNull(await Check(NewNo(), own.PartyInfoId, strangerBuyer.PartyInfoId));      // buyer not linked
+        }
+
+        [Fact]
         public async Task CompanyAuthorization_Refuses_ManageUsers_On_A_Company_The_User_Is_Not_In()
         {
             // Suppliers/Details write handlers now call this with the POSTED company id; before, a supplier
