@@ -397,8 +397,10 @@ setting is blank/wrong (connection string, key ring, signing cert, localhost URL
 
 - Install the latest **.NET Hosting Bundle** (patch monthly; restart IIS after a runtime update). **Minimum 10.0.13** since v1.46.7 — the security fixes for `System.Security.Cryptography.Pkcs` come from the runtime, not the app folder. `scripts\Deploy-Staging.ps1` checks this first (via `\\server\c$`) and, if the server is older than the `Microsoft.AspNetCore.*` version the build references, installs the latest Hosting Bundle (SHA-512 checked, silent, no reboot, no IIS restart) over PowerShell remoting — needs WinRM + admin on the server. If remoting with your login fails (typical for a non-domain server reached by IP), it offers to retry with a server admin login (from an elevated PowerShell it can also add the server to this PC's WinRM TrustedHosts, after asking). If that fails too, it leaves the installer at `C:\Windows\Temp` on the server, shows the command to run there (e.g. over Remote Desktop), and waits; press Enter once it's installed and the deploy continues. `-WhatIf` previews it; `-SkipRuntimeCheck` turns it off.
 - App Pool: **No Managed Code**, **Start Mode = AlwaysRunning**, **Idle Time-out = 0**,
-  **Regular Time Interval (recycle) = 0** or scheduled at a low-traffic hour. Enable
-  **Preload** on the site. (The durable SQL queue does not *depend* on always-running, but it avoids
+  **Regular Time Interval (recycle) = 0** or scheduled at a low-traffic hour, **Disable Overlapped
+  Recycle = True** (IIS defaults to overlapping, which briefly runs two copies of the background workers —
+  duplicate recurring runs and re-queued submissions; existing pools: `%windir%\system32\inetsrvppcmd set
+  apppool EINVWORLD /recycling.disallowOverlappingRotation:true`). Enable **Preload** on the site. (The durable SQL queue does not *depend* on always-running, but it avoids
   needless cold starts.)
 - App Pool identity: a dedicated least-privilege account (or `ApplicationPoolIdentity`) with:
   - `App\` Read/Execute

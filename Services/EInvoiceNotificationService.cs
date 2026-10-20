@@ -487,24 +487,25 @@ namespace eInvWorld.Services
         {
             foreach (var placeholder in placeholders)
             {
-                template = template.Replace($"{{{{{placeholder.Key}}}}}", placeholder.Value ?? "");
+                // Encoded: names and the buyer's free-text rejection reason are user input going into HTML mail.
+                template = template.Replace($"{{{{{placeholder.Key}}}}}", System.Net.WebUtility.HtmlEncode(placeholder.Value ?? ""));
             }
             return template;
         }
 
-        private string ReplaceTemplatePlaceholders(string template, EInvoiceNotificationModel model)
-        {
-            return template
-                .Replace("{{RecipientName}}", model.RecipientName ?? "")
-                .Replace("{{DocumentId}}", model.DocumentId ?? "")
-                .Replace("{{RejectionReason}}", model.RejectionReason ?? "")
-                .Replace("{{RejectedTimestamp}}", model.RejectedTimestamp ?? "")
-                .Replace("{{InvoiceLink}}", model.InvoiceLink ?? "#")
-                .Replace("{{AccountLink}}", model.AccountLink ?? "#")
-                .Replace("{{CancelLink}}", model.CancelLink ?? "#")
-                .Replace("{{ContactLink}}", model.ContactLink ?? "#")
-                .Replace("{{Year}}", model.Year ?? "#");
-        }
+        private string ReplaceTemplatePlaceholders(string template, EInvoiceNotificationModel model) =>
+            ReplaceTemplatePlaceholders(template, new Dictionary<string, string>
+            {
+                ["RecipientName"] = model.RecipientName ?? "",
+                ["DocumentId"] = model.DocumentId ?? "",
+                ["RejectionReason"] = model.RejectionReason ?? "",
+                ["RejectedTimestamp"] = model.RejectedTimestamp ?? "",
+                ["InvoiceLink"] = model.InvoiceLink ?? "#",
+                ["AccountLink"] = model.AccountLink ?? "#",
+                ["CancelLink"] = model.CancelLink ?? "#",
+                ["ContactLink"] = model.ContactLink ?? "#",
+                ["Year"] = model.Year ?? "#",
+            });
 
         private string LoadEmailTemplate(string templateName)
         {

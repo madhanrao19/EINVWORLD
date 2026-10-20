@@ -119,7 +119,9 @@ var webhookTimeout = builder.Configuration.GetValue<int>("Webhooks:DeliveryTimeo
 builder.Services.AddHttpClient(eInvWorld.Services.Webhooks.WebhookDeliveryJobHandler.HttpClientName, c =>
 {
     c.Timeout = TimeSpan.FromSeconds(webhookTimeout > 0 ? webhookTimeout : 15);
-});
+})
+// No redirects: ValidateCallbackUrl checks the configured host only, so a 302 to an internal address would bypass it.
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 
 // Tamper-evident, hash-chained audit trail.
 builder.Services.AddScoped<EINVWORLD.Services.Audit.IAuditService, EINVWORLD.Services.Audit.AuditService>();

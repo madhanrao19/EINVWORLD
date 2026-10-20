@@ -43,7 +43,8 @@ namespace eInvWorld.Services
         {
             foreach (var placeholder in placeholders)
             {
-                template = template.Replace($"{{{{{placeholder.Key}}}}}", placeholder.Value ?? "N/A");
+                // Encoded here once for every caller: values are user input (contact form, names) going into HTML mail.
+                template = template.Replace($"{{{{{placeholder.Key}}}}}", System.Net.WebUtility.HtmlEncode(placeholder.Value ?? "N/A"));
             }
             return template;
         }
