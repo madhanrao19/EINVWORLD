@@ -243,6 +243,42 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task CanManageInvoiceAsync_Never_Grants_Write_Through_A_Shared_General_TIN_Party()
+        {
+            // General TIN parties (e.g. EI00000000030 Foreign Supplier) are shared by every tenant. A user who
+            // happens to be linked to one must not gain write access to every invoice issued under it.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var general = await ctx.PartyInfos.FirstOrDefaultAsync(p => p.TIN == "EI00000000030");
+            if (general == null)
+            {
+                general = await CreateValidPartyInfoAsync(ctx, "Foreign Supplier (general)");
+                general.TIN = "EI00000000030";
+                ctx.PartyInfos.Add(general);
+                await ctx.SaveChangesAsync();
+            }
+            var userId = await CreateUserAsync(ctx, "general-member");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = general.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-GEN-{Guid.NewGuid():N}"[..20];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR",
+                CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                SupplierId = general.PartyInfoId,
+            });
+            await ctx.SaveChangesAsync();
+
+            var member = PrincipalFor(userId, "general-member");
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(member, ctx, invoiceNo));
+            Assert.False(await UserExtensions.CanAccessInvoiceAsync(member, ctx, invoiceNo)); // nor read it
+            Assert.False(await UserExtensions.OwnsTinAsync(member, ctx, "EI00000000030"));     // nor submit as it
+        }
+
+        [Fact]
         public async Task CompanyAuthorization_Refuses_ManageUsers_On_A_Company_The_User_Is_Not_In()
         {
             // Suppliers/Details write handlers now call this with the POSTED company id; before, a supplier

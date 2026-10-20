@@ -59,7 +59,9 @@ namespace eInvWorld.Services
             // ✅ Seed Default Users with Assigned Companies. Admins are still forced to enrol 2FA on first
             // login by AdminMfaEnforcementMiddleware, so a seeded admin can't be used without MFA.
             await SeedUserAsync("admin@einvworld.com", adminPwd, "Admin", null);
-            await SeedUserAsync("supplier@einvworld.com", supplierPwd, "Supplier", new List<int> { 1, 2 });
+            // Not PartyInfoId 2 (General Public, EI00000000010): a member of a general-TIN party would match
+            // every tenant's invoices issued to General Public.
+            await SeedUserAsync("supplier@einvworld.com", supplierPwd, "Supplier", new List<int> { 1 });
             // PartyInfoId 3 (the LHDN generic "Foreign Buyer / Shipping Recipient" placeholder TIN
             // EI00000000020) can never complete LHDN's intermediary OAuth token exchange - it's not a
             // real onboarded company, so login succeeds past the TIN check and then fails at token

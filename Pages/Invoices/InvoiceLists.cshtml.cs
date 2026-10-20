@@ -450,6 +450,8 @@ namespace eInvWorld.Pages.Invoices
                     .Select(uc => uc.PartyInfo.TIN)
                     .Distinct()
                     .ToListAsync();
+                // General TINs (General Public etc.) appear on every tenant's invoices — never list by them.
+                userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN);
 
                 UserTINs = userTINs;
 

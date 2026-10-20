@@ -335,6 +335,12 @@ namespace eInvWorld.Pages.Suppliers
         {
             if (!await MayAsync(supplierId, CompanyPermission.ManageUsers)) return Denied(supplierId);
 
+            // A general-TIN party (General Public, Foreign Buyer...) is shared by every tenant; a member of it
+            // would match every company's invoices issued to it.
+            var targetTin = await _context.PartyInfos.Where(p => p.PartyInfoId == supplierId).Select(p => p.TIN).FirstOrDefaultAsync();
+            if (GeneralTINHelper.IsGeneralTIN(targetTin))
+                return new JsonResult(new { success = false, message = "Users can't be assigned to a general (LHDN placeholder) TIN." });
+
             _logger.LogDebug("Assign user: SupplierId={SupplierId}, SelectedUserId={SelectedUserId}, UserEmail={UserEmail}", supplierId, SelectedUserId, UserEmail);
 
             bool isAdmin = User.IsInRole("Admin");

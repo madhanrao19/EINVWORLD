@@ -403,6 +403,11 @@
   any signed-in user (including Buyers) could open them, and Lead Create was public.
 - **Delete invoice from the list:** only the issuing company can delete a draft now (the supplier, or the buyer
   for self-billed invoices). Before, the invoice's buyer could delete the supplier's draft.
+- **General TINs** (General Public, Foreign Buyer, Foreign Supplier, Government) no longer give access to anything.
+  A user linked to one of these shared placeholder companies used to see every company's invoices issued to it.
+  Users can no longer be assigned to them. The demo supplier is no longer seeded into General Public.
+  **Operator step:** run `scripts/Remove-GeneralTinMemberships.sql` (preview first, after a backup) to remove
+  any such links that already exist.
 - No database change.
 
 ## 📅 2026-10-20 — v1.47.10 (Reference UUID on Invoice Edit)
