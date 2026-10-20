@@ -935,7 +935,10 @@ namespace eInvWorld.Pages.Invoices
                     draftInvoice.CustomsFormNo2Reference = Invoice.CustomsFormNo2Reference;
                     draftInvoice.OtherChargesAmount = Invoice.OtherChargesAmount;
                     draftInvoice.OtherChargesDescription = Invoice.OtherChargesDescription;
-                    draftInvoice.IsSvdp = Invoice.IsSvdp;
+                    // The SVDP checkbox only renders when SVDP is enabled; otherwise nothing is posted,
+                    // so keep the saved flag instead of clearing it.
+                    if (_configuration.GetValue<bool>("LHDNApiConfig:SvdpEnabled", false))
+                        draftInvoice.IsSvdp = Invoice.IsSvdp;
 
                     // ✅ Correct buyer relationship handling
                     if (customer != null)
