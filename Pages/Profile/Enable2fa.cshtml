@@ -9,21 +9,21 @@
     <div class="col-md-8 col-lg-6 col-xl-5">
 
         <div class="text-center mb-4">
-            <h3 class="einv-page-title">Security Settings</h3>
-            <p class="text-muted">Manage your Two-Factor Authentication</p>
+            <h1 class="einv-page-title">Two-Factor Authentication</h1>
+            <p class="text-muted">A code from your authenticator app is asked for at sign-in, as well as your password.</p>
         </div>
 
         @if (Model.Is2faEnabled)
         {
             <div class="card border-0 shadow-lg card-bg-fill">
-                <div class="card-header bg-success-subtle border-bottom-0 pt-4 pb-3">
+                <div class="card-header bg-success-subtle border-bottom-0 pt-4 pb-3 flex-column">
                     <div class="text-center">
                         <div class="avatar-md mx-auto mb-3">
                             <div class="avatar-title bg-success rounded-circle text-white fs-24">
                                 <i class="ri-shield-check-fill"></i>
                             </div>
                         </div>
-                        <h5 class="text-success fw-bold">2FA is Currently Active</h5>
+                        <h2 class="fs-16 text-success fw-bold">2FA is on</h2>
                         <p class="text-muted mb-0 small">Your account is protected.</p>
                     </div>
                 </div>
@@ -34,10 +34,10 @@
                         <div class="alert alert-warning border-0 mb-4">
                             <h6 class="alert-heading fw-bold"><i class="ri-error-warning-line me-1"></i> Save these codes!</h6>
                             <p class="small mb-2">If you lose your device, these codes are the only way to recover your account.</p>
-                            <div class="bg-white p-3 rounded font-monospace text-dark shadow-sm">
+                            <div class="bg-body-tertiary border p-3 rounded font-monospace">
                                 @foreach (var code in Model.RecoveryCodes)
                                 {
-                                    <div class="d-inline-block w-50 mb-1">@code</div>
+                                    <div class="d-inline-block w-50 mb-1 text-body">@code</div>
                                 }
                             </div>
                         </div>
@@ -50,28 +50,28 @@
                     }
                     else
                     {
-                        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-body-tertiary border rounded">
                             <div>
-                                <h6 class="mb-0 text-dark">Recovery Codes</h6>
+                                <h6 class="mb-0">Recovery Codes</h6>
                                 <small class="text-muted">You have <strong>@Model.RecoveryCodesLeft</strong> codes remaining.</small>
                             </div>
                         </div>
                     }
 
                     <div class="d-grid gap-3">
-                        <form method="post" asp-page-handler="GenerateCodes">
+                        <form method="post" asp-page-handler="GenerateCodes" asp-route-returnUrl="@Model.ReturnUrl">
                             <button type="submit" class="btn btn-outline-primary w-100">
                                 <i class="ri-refresh-line me-1"></i> Regenerate Recovery Codes
                             </button>
                         </form>
 
-                        <form method="post" asp-page-handler="Disable" onsubmit="return confirm('Are you sure you want to disable 2FA? Your account will be less secure.');">
+                        <form method="post" asp-page-handler="Disable" asp-route-returnUrl="@Model.ReturnUrl" onsubmit="return confirm('Are you sure you want to disable 2FA? Your account will be less secure.');">
                             <button type="submit" class="btn btn-outline-danger w-100">
                                 <i class="ri-lock-unlock-line me-1"></i> Disable 2FA
                             </button>
                         </form>
 
-                        <a asp-page="/Profile/Index" class="btn btn-light mt-2">Back to Profile</a>
+                        <a href="@Model.BackUrl" class="btn btn-light mt-2">Back</a>
                     </div>
                 </div>
             </div>
@@ -79,13 +79,13 @@
         else
         {
             <div class="card border-0 shadow-lg card-bg-fill">
-                <div class="card-header bg-transparent text-center border-bottom-0 pt-4">
+                <div class="card-header bg-transparent text-center border-bottom-0 pt-4 flex-column">
                     <div class="avatar-md mx-auto mb-3">
-                        <div class="avatar-title bg-light rounded-circle text-primary fs-24">
+                        <div class="avatar-title bg-primary-lt rounded-circle text-primary fs-24">
                             <i class="ri-qr-code-line text-primary" aria-hidden="true"></i>
                         </div>
                     </div>
-                    <h5 class="fs-16">Scan & Verify</h5>
+                    <h2 class="fs-16 mb-0">Set up your authenticator app</h2>
                 </div>
 
                 <div class="card-body p-4">
@@ -103,21 +103,21 @@
                             Can't scan? Enter key manually
                         </a>
                         <div class="collapse mt-2" id="manualKey">
-                            <div class="alert alert-light border border-dashed text-center mb-0">
-                                <code class="fs-16 fw-bold text-dark user-select-all">@Model.SharedKey</code>
+                            <div class="bg-body-tertiary border border-dashed rounded p-2 text-center mb-0">
+                                <code class="fs-16 fw-bold user-select-all">@Model.SharedKey</code>
                             </div>
                         </div>
                     </div>
 
                     <hr class="my-4 border-dashed" />
 
-                    <form method="post">
+                    <form method="post" asp-route-returnUrl="@Model.ReturnUrl">
                         <div class="text-center mb-3">
                             <p class="text-muted mb-2">2. Enter the 6-digit code from your app:</p>
                         </div>
 
                         <div class="form-floating mb-3">
-                            <input asp-for="Input.Code" class="form-control text-center fs-18 fw-bold letter-spacing-2" placeholder="000000" autocomplete="off" />
+                            <input asp-for="Input.Code" class="form-control text-center fs-18 fw-bold letter-spacing-2" placeholder="000000" autocomplete="one-time-code" inputmode="numeric" />
                             <label asp-for="Input.Code" class="text-center w-100">Verification Code</label>
                             <span asp-validation-for="Input.Code" class="text-danger d-block text-center mt-1"></span>
                         </div>
@@ -126,7 +126,7 @@
                             <button type="submit" class="btn btn-primary btn-lg">
                                 Verify & Enable
                             </button>
-                            <a asp-page="/Profile/Index" class="btn btn-light">Cancel</a>
+                            <a href="@Model.BackUrl" class="btn btn-light">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -138,7 +138,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="/assets/libs/qrcodejs/qrcode.min.js"></script>
+    <script src="~/assets/libs/qrcodejs/qrcode.min.js"></script>
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
             var qrData = document.getElementById("qrCodeData");
