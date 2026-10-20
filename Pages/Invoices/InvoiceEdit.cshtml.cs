@@ -1101,7 +1101,10 @@ namespace eInvWorld.Pages.Invoices
                     Directory.CreateDirectory(draftsFolder);
 
                 var fileName = $"{Invoice.InvoiceNo}.json";
-                var filePath = Path.Combine(draftsFolder, fileName);
+                // InvoiceWriteGuard already refuses unsafe numbers at the start of the POST; this is the check at the
+                // file write itself (the number becomes the file name).
+                if (!EINVWORLD.Helpers.SafePath.TryResolve(draftsFolder, out var filePath, fileName))
+                    throw new InvalidOperationException($"Invalid draft file name for invoice {Invoice.InvoiceNo}.");
                 var tmpPath = filePath + ".tmp";
 
                 // Submission sends this file, so it must match the saved row: write it to a temp file first,
