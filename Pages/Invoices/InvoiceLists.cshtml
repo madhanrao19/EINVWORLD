@@ -628,6 +628,12 @@
                                                 </a>
                                             </th>
 
+                                            <th class="col-ref-doc-no" data-col-id="col-ref-doc-no">
+                                                <a href="@SortUrl("RefDocumentNo")" class="@(Model.SortBy == "RefDocumentNo" ? "text-primary fw-semibold" : "")">
+                                                    Reference Document No. <i class="@SortIcon("RefDocumentNo") sort-indicator"></i>
+                                                </a>
+                                            </th>
+
                                             <th class="col-document-type" data-col-id="col-document-type">
                                                 <a href="@SortUrl("DocumentType")" class="@(Model.SortBy == "DocumentType" ? "text-primary fw-semibold" : "")">
                                                     Type <i class="@SortIcon("DocumentType") sort-indicator"></i>
@@ -731,6 +737,16 @@
                                                            class="fw-semibold link-primary">
                                                             @invoice.InvoiceNo
                                                         </a>
+                                                    </td>
+                                                    <td class="col-ref-doc-no truncate" data-label="Reference Document No." title="@invoice.RefDocumentNo">
+                                                        @if (string.IsNullOrWhiteSpace(invoice.RefDocumentNo))
+                                                        {
+                                                            <span class="text-muted" aria-label="No reference document">&mdash;</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            @invoice.RefDocumentNo
+                                                        }
                                                     </td>
                                                     <td class="col-document-type" data-label="Type">
                                                         @(DocumentTypeDisplay.GetDisplayNames()
