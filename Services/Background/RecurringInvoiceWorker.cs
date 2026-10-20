@@ -3,6 +3,7 @@ using eInvWorld.Models;
 using eInvWorld.Models.Audit;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.Recurring;
+using eInvWorld.Models.Background;
 using eInvWorld.Services.Extensions;
 using eInvWorld.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -53,7 +53,7 @@ namespace eInvWorld.Services.Background
         {
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var lhdnApiService = scope.ServiceProvider.GetRequiredService<LHDNApiService>();
+            var invoiceService = scope.ServiceProvider.GetRequiredService<InvoiceService>();
             var filePathConfig = scope.ServiceProvider.GetRequiredService<IOptions<FilePathConfig>>().Value;
             var statusMappingService = scope.ServiceProvider.GetRequiredService<IStatusMappingService>();
             var signingService = scope.ServiceProvider.GetRequiredService<eInvWorld.Services.IDocumentSigningService>();
@@ -95,7 +95,9 @@ namespace eInvWorld.Services.Background
                     if (profile.InvoiceTemplate == null)
                         throw new Exception("Base Invoice Template is missing or was deleted.");
 
-                    string newInvoiceNo = await GenerateInvoiceNumberAsync(context);
+                    // Shared generator: numeric max over InvoiceHeaders + InvoiceHistories with collision retry
+                    // (the old local one sorted numbers as text, so EINV99999 > EINV100000 and numbers repeated).
+                    string newInvoiceNo = invoiceService.GenerateNextInvoiceNumber();
 
                     var newInvoice = new InvoiceHeader
                     {
@@ -196,64 +198,23 @@ namespace eInvWorld.Services.Background
                         Remarks = "Invoice draft created via Recurring Profile"
                     });
 
-                    // 7. Handle LHDN Auto-Submission if toggled ON
+                    // 7. Auto-submit: queue the standard SubmitDocument job instead of calling LHDN here. The draft
+                    //    row is saved in the same SaveChanges below, so LHDN never holds a document we have no row
+                    //    for, and submission goes through the one pipeline that has the atomic claim, retry and audit.
                     if (profile.AutoSubmitToMyInvois)
                     {
-                        try
+                        context.SyncJobs.Add(new SyncJob
                         {
-                            // ✅ 7a. Get the correct TIN from the Database objects (Bypasses Session)
-                            string? tin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(newInvoice);
-
-                            if (string.IsNullOrWhiteSpace(tin))
-                            {
-                                throw new Exception($"Missing TIN for document type {newInvoice.DocTypeCode}. Cannot auto-submit.");
-                            }
-
-                            var documentPayload = new eInvWorld.Models.JsonModels.Documents
-                            {
-                                Format = "JSON",
-                                DocumentHash = lhdnApiService.ComputeSHA256Hash(invoiceJson),
-                                CodeNumber = newInvoice.InvoiceNo,
-                                Document = lhdnApiService.Base64Encode(invoiceJson)
-                            };
-
-                            var payloadList = new System.Collections.Generic.List<eInvWorld.Models.JsonModels.Documents> { documentPayload };
-
-                            // ✅ 7b. Pass the TIN into the API Service
-                            var responseJson = await lhdnApiService.SubmitDocumentsAsync(payloadList, tin);
-
-                            // 🚀 NEW FIX: Parse the LHDN JSON response to extract UUID and SubmissionID
-                            var apiResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<eInvWorld.Models.Document.SuccessSubmit>(responseJson);
-                            var acceptedDoc = apiResponse?.acceptedDocuments?.FirstOrDefault();
-
-                            if (acceptedDoc != null && !string.IsNullOrEmpty(acceptedDoc.uuid))
-                            {
-                                newInvoice.UUID = acceptedDoc.uuid;
-                                newInvoice.SubmissionID = apiResponse?.submissionUID;
-                                _logger.LogInformation($"✅ Captured UUID: {newInvoice.UUID} and SubmissionID: {newInvoice.SubmissionID} for {newInvoice.InvoiceNo}");
-                            }
-
-                            newInvoice.InternalStatusId = statusMappingService.GetStatusIdByCode("Submitted") ?? "Submitted";
-                            newInvoice.LHDNStatusId = "Submitted";
-                            historyLog.RunStatus = "Success_Submitted";
-
-                            // Log Submission
-                            context.InvoiceHistories.Add(new InvoiceHistory
-                            {
-                                InvoiceNo = newInvoiceNo,
-                                Action = "Submitted",
-                                Timestamp = utcNow,
-                                PerformedBy = "System_Automation",
-                                Remarks = $"Auto-submitted to LHDN by Recurring worker. UUID: {newInvoice.UUID}"
-                            });
-                        }
-                        catch (Exception apiEx)
-                        {
-                            newInvoice.InternalStatusId = statusMappingService.GetStatusIdByCode("Draft") ?? "Draft";
-                            historyLog.RunStatus = "LHDN_Failed";
-                            historyLog.ErrorMessage = apiEx.Message;
-                            _logger.LogWarning($"LHDN Auto-Submit failed for {newInvoiceNo}: {apiEx.Message}");
-                        }
+                            Tin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(newInvoice) ?? string.Empty,
+                            JobType = SyncJobType.SubmitDocument,
+                            Status = SyncJobStatus.Queued,
+                            QueuedAtUtc = utcNow,
+                            NextRunAtUtc = utcNow,
+                            MaxAttempts = 3,
+                            TriggeredBy = "System (Recurring Invoice)",
+                            PayloadJson = EINVWORLD.Services.Background.SyncJobPayload.CreateForInvoice(newInvoiceNo),
+                        });
+                        historyLog.RunStatus = "Success_SubmitQueued";
                     }
                     else
                     {
@@ -295,28 +256,6 @@ namespace eInvWorld.Services.Background
                     _logger.LogError($"❌ Failed to process Recurring Profile ID {profile.Id}. Reason: {exactErrorMessage}");
                 }
             }
-        }
-
-        private async Task<string> GenerateInvoiceNumberAsync(ApplicationDbContext context)
-        {
-            var latestInvoice = await context.InvoiceHeaders
-                .Where(i => i.InvoiceNo.StartsWith("EINV"))
-                .OrderByDescending(i => i.InvoiceNo)
-                .Select(i => i.InvoiceNo)
-                .FirstOrDefaultAsync();
-
-            int nextSequence = 1;
-
-            if (!string.IsNullOrEmpty(latestInvoice))
-            {
-                var match = Regex.Match(latestInvoice, @"\d+");
-                if (match.Success && int.TryParse(match.Value, out int currentSequence))
-                {
-                    nextSequence = currentSequence + 1;
-                }
-            }
-
-            return $"EINV{nextSequence:D5}";
         }
 
         private DateTime CalculateNextRunDate(DateTime currentRunDate, string frequency, DateTime today)
