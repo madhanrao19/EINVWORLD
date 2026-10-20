@@ -1884,7 +1884,7 @@ namespace eInvWorld.Pages.Invoices
             }
             catch (Exception ex)
             {
-                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo);
+                await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAfterFailureAsync(_context, invoiceNo, ex); // keeps it if LHDN may have accepted
                 _logger.LogError(ex, $"❌ Error submitting invoice {invoiceNo} from list.");
 
                 // Mark the failure with a direct UPDATE too — the tracked entity's rowversion is stale
