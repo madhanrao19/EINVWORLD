@@ -66,11 +66,11 @@
                                         </div>
                                         <div class="irow-qty">
                                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@eInvWorld.Helpers.InvoiceFormatting.FmtNum(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                                         </div>
                                         <div class="irow-price">
                                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@eInvWorld.Helpers.InvoiceFormatting.FmtNum(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                                         </div>
                                         <div class="irow-total">
                                             <div class="irow-mlabel">Subtotal</div>

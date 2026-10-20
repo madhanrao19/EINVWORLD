@@ -18,6 +18,16 @@ namespace EINVWORLD.Tests
             Assert.Equal(expected, InvoiceFormatting.FmtRate(decimal.Parse(stored, System.Globalization.CultureInfo.InvariantCulture)));
         }
 
+        [Theory]
+        [InlineData("1500.0000", "1500.00")]
+        [InlineData("1.2345", "1.2345")]
+        [InlineData("2.500000", "2.50")]
+        [InlineData("0.123456", "0.123456")]
+        public void FmtNum_KeepsStoredPrecision(string stored, string expected)
+        {
+            Assert.Equal(expected, InvoiceFormatting.FmtNum(decimal.Parse(stored, System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
         [Fact]
         public void FmtRate_Null_IsEmpty() => Assert.Equal("", InvoiceFormatting.FmtRate(null));
 

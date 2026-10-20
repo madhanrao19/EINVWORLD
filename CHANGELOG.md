@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.8`** (`AppInfo:Version` in `appsettings.json`). v1.47.8 is a **patch**
+> **Current version: `v1.47.9`** (`AppInfo:Version` in `appsettings.json`). v1.47.9 is a **patch**
+> release: line Quantity and Unit Price keep all their decimals when an invoice is reopened — see the dated entry below. v1.47.8 was a **patch**
 > release: reopened invoices keep their saved values (Exchange Rate and more) and the totals cards match on all three steps — see the dated entry below. v1.47.7 was a **patch**
 > release: a "Reference Document No." column on the Invoices lists and in CSV/XLSX export — see the dated entry below. v1.47.6 was a **patch**
 > release: fixes and polish from the v1.47.4 Staging review (CN from link, Draft PDF export, 2FA messages, phone cards, tabs, address, old articles) — see the dated entry below. v1.47.5 was a **patch**
@@ -388,6 +389,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.9 (line Quantity / Unit Price keep their decimals)
+
+- **Invoice items (Create e-Invoice and Invoice Edit):** a line's Quantity (up to 6 decimals) and Unit Price
+  (up to 4 decimals) now reopen exactly as saved. Before, they were shown rounded to 2 decimals, so opening
+  and saving an invoice from import or Smart Capture with, for example, a unit price of 1.2345 changed it to
+  1.23. These fields also accept more than 2 decimals when typed.
+- Tax % is unchanged (it is stored with 2 decimals).
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.8 (reopened invoices keep saved values; one totals card on all steps)
 
