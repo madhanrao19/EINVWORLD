@@ -50,6 +50,16 @@ namespace eInvWorld.Controllers
                     return BadRequest(new { success = false, message = "Only .pdf files are allowed." });
                 }
 
+                // Only the timestamped copy PdfTemplate uploads ({InvoiceNo}_{ddMMyyyy_HHmmss}.pdf), and only for an
+                // invoice the caller issues. The canonical {InvoiceNo}.pdf — the file downloads and emails use —
+                // can never be replaced from the browser.
+                var match = System.Text.RegularExpressions.Regex.Match(safeName, @"^(?<no>[A-Za-z0-9\-]+)_\d{8}_\d{6}\.pdf$");
+                if (!match.Success || !await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _dbContext, match.Groups["no"].Value))
+                {
+                    _logger.LogWarning("save-pdf refused for {User}: {FileName}", User?.Identity?.Name, safeName);
+                    return StatusCode(403, new { success = false, message = "You can't save a PDF for this invoice." });
+                }
+
                 if (!Directory.Exists(pdfFolderPath))
                     Directory.CreateDirectory(pdfFolderPath);
 

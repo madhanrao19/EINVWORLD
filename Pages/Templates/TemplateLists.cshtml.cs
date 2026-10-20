@@ -41,7 +41,9 @@ namespace eInvWorld.Pages.Templates
 
         public async Task<IActionResult> OnPostToggleFavoriteAsync(int templateId)
         {
-            var template = await _context.InvoiceTemplates.FindAsync(templateId);
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var template = await _context.InvoiceTemplates
+                .FirstOrDefaultAsync(t => t.Id == templateId && t.CreatedByUserId == userId); // own templates only
             if (template == null)
             {
                 return NotFound();

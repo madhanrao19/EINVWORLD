@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.12`** (`AppInfo:Version` in `appsettings.json`). v1.47.12 is a **patch**
+> **Current version: `v1.47.13`** (`AppInfo:Version` in `appsettings.json`). v1.47.13 is a **patch**
+> release: security fixes for templates, recurring invoices, invoice PDFs and buyer names — see the dated entry below. v1.47.12 was a **patch**
 > release: security checks when saving an invoice — see the dated entry below. v1.47.11 was a **patch**
 > release: security fixes for company membership, user roles, Lead pages and invoice delete — see the dated entry below. v1.47.10 was a **patch**
 > release: Invoice Edit shows and keeps the Reference UUID of credit, debit and refund notes — see the dated entry below. v1.47.9 was a **patch**
@@ -392,6 +393,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.13 (security: templates, recurring, PDFs, buyer names)
+
+- **Recurring invoices:** a new recurring profile must use one of **your** templates. Before, a changed template
+  id could make the scheduler issue and submit invoices from another user's template, under that company's TIN.
+- **Templates:** opening a template in Create e-Invoice or Invoice Edit, and marking one as a favourite, only works
+  on your own templates.
+- **Removed** the unused Templates Create / Edit / Details / Delete pages (the Templates list and Save as template
+  are unchanged). They had no ownership checks.
+- **Saving an invoice PDF to the server** (the old print page) only accepts the timestamped copy for an invoice your
+  company issued. It can no longer replace the PDF that downloads and emails use.
+- **Buyer names** in the buyer dropdown and the reference-invoice picker are shown as plain text. Before, a company
+  name containing HTML could run script in another user's browser.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.12 (security: saving an invoice)
 
