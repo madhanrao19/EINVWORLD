@@ -15,6 +15,8 @@ using Microsoft.Extensions.Logging;
 namespace eInvWorld.Pages.Profile
 {
     [Authorize]
+    // Shows the authenticator key and freshly generated recovery codes: never cache this response.
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public class Enable2faModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
