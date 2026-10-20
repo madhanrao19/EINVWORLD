@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.6`** (`AppInfo:Version` in `appsettings.json`). v1.47.6 is a **patch**
+> **Current version: `v1.47.7`** (`AppInfo:Version` in `appsettings.json`). v1.47.7 is a **patch**
+> release: a "Reference Document No." column on the Invoices lists and in CSV/XLSX export — see the dated entry below. v1.47.6 was a **patch**
 > release: fixes and polish from the v1.47.4 Staging review (CN from link, Draft PDF export, 2FA messages, phone cards, tabs, address, old articles) — see the dated entry below. v1.47.5 was a **patch**
 > release: security fixes for invoice party details and 2FA sign-in — see the dated entry below. v1.47.4 was a **patch**
 > release: company logos load again; My Company tidy on phones; tablet top bar no longer overlaps — see the dated entry below. v1.47.3 was a **patch**
@@ -386,6 +387,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.7 (Reference Document No. column on the Invoices lists)
+
+- **Invoices → All / Draft / Sent / Received:** new "Reference Document No." column next to "Invoice #"
+  (shows — when empty). It can be sorted, hidden and dragged to a new position from the Columns menu like
+  the other columns, and it shows on the phone card view too. If you already saved your own column order,
+  the new column appears after your saved columns; drag it once to where you want it.
+- **Export → CSV / XLSX:** a `RefDocumentNo` column now follows `InvoiceNo`. Import reads columns by
+  name, so exported files still import as before (the new column is ignored on import).
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.6 (fixes and polish from the v1.47.4 Staging review)
 
