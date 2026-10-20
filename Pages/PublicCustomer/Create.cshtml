@@ -59,8 +59,8 @@
                             <div class="avatar-title bg-light rounded-circle">
                                 <img id="companylogo-img"
                                      class="avatar-md rounded-circle object-fit-cover"
-                                     src="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? Url.Content("~/assets/images/users/multi-user.jpg") : Url.Content(Model.PublicCustomer.LogoPath))"
-                                     data-saved="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? "" : Url.Content(Model.PublicCustomer.LogoPath))" />
+                                     src="@Url.Content(EINVWORLD.Helpers.LogoUrl.For(Model.PublicCustomer.LogoPath))"
+                                     data-saved="@(string.IsNullOrEmpty(Model.PublicCustomer.LogoPath) ? "" : Url.Content(EINVWORLD.Helpers.LogoUrl.For(Model.PublicCustomer.LogoPath)))" />
                             </div>
                         </div>
                     </div>
