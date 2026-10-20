@@ -46,6 +46,28 @@ namespace EINVWORLD.Tests
             Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new InvalidOperationException("no TIN")));
         }
 
+        // ── Webhook SSRF private-address check ───────────────────────────────────────────────
+        [Theory]
+        [InlineData("10.1.2.3", true)]
+        [InlineData("::ffff:10.1.2.3", true)]   // IPv4-mapped IPv6 used to slip through
+        [InlineData("0.0.0.0", true)]
+        [InlineData("100.64.0.1", true)]
+        [InlineData("169.254.169.254", true)]
+        [InlineData("8.8.8.8", false)]
+        public void Webhook_IsPrivate(string ip, bool expected) =>
+            Assert.Equal(expected, eInvWorld.Services.Webhooks.WebhookDeliveryJobHandler.IsPrivate(System.Net.IPAddress.Parse(ip)));
+
+        // ── LogoImage.DetectExtension (PNG/JPEG only, by content) ────────────────────────────
+        [Fact]
+        public void LogoImage_Accepts_Png_And_Jpeg_Only_By_Content()
+        {
+            static string? Detect(params byte[] b) => LogoImage.DetectExtension(new System.IO.MemoryStream(b));
+            Assert.Equal(".png", Detect(0x89, 0x50, 0x4E, 0x47, 0x0D));
+            Assert.Equal(".jpg", Detect(0xFF, 0xD8, 0xFF, 0xE0));
+            Assert.Null(Detect(System.Text.Encoding.UTF8.GetBytes("<svg onload=alert(1)>")));
+            Assert.Null(Detect(0x47, 0x49, 0x46, 0x38)); // GIF not allowed
+        }
+
         // ── GeneralTINHelper.IsGeneralTIN ─────────────────────────────────────────────────────
         [Theory]
         [InlineData("EI00000000010")] // General Public / Self-Billed Buyer

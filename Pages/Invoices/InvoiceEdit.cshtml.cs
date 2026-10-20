@@ -1096,23 +1096,36 @@ namespace eInvWorld.Pages.Invoices
                     _context.InvoiceHeaders.Add(draftInvoice);
                 }
 
-                _context.SaveChanges();
+                var draftsFolder = _filePathConfig.DraftFolder;
+                if (!Directory.Exists(draftsFolder))
+                    Directory.CreateDirectory(draftsFolder);
+
+                var fileName = $"{Invoice.InvoiceNo}.json";
+                // InvoiceWriteGuard already refuses unsafe numbers at the start of the POST; this is the check at the
+                // file write itself (the number becomes the file name).
+                if (!EINVWORLD.Helpers.SafePath.TryResolve(draftsFolder, out var filePath, fileName))
+                    throw new InvalidOperationException($"Invalid draft file name for invoice {Invoice.InvoiceNo}.");
+                var tmpPath = filePath + ".tmp";
+
+                // Submission sends this file, so it must match the saved row: write it to a temp file first,
+                // commit the DB, then rename it into place (atomic on the same volume). A failed save leaves the
+                // old file untouched, and a crash can't leave a half-written one.
+                System.IO.File.WriteAllText(tmpPath, invoiceJson);
+                try
+                {
+                    _context.SaveChanges();
+                }
+                catch
+                {
+                    System.IO.File.Delete(tmpPath);
+                    throw;
+                }
+                System.IO.File.Move(tmpPath, filePath, overwrite: true);
 
                 _invoiceHistoryService.Log(
                     draftInvoice.InvoiceNo,
                     isUpdate ? "Updated" : "Created",
                     isUpdate ? "Invoice draft updated" : "Invoice draft created");
-
-                // File save logic (unchanged)
-                var draftsFolder = _filePathConfig.DraftFolder;
-
-                if (!Directory.Exists(draftsFolder))
-                    Directory.CreateDirectory(draftsFolder);
-
-                var fileName = $"{Invoice.InvoiceNo}.json";
-                var filePath = Path.Combine(draftsFolder, fileName);
-
-                System.IO.File.WriteAllText(filePath, invoiceJson);
 
                 HttpContext.Session.SetString("DraftFilePath", filePath);
                 ViewData["DraftFilePath"] = filePath;

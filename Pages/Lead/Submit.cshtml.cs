@@ -275,28 +275,30 @@ namespace eInvWorld.Pages.Lead
         {
             string template = System.IO.File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "EmailTemplates", "CustomerSubmissionEmailTemplate.html"));
 
+            // Anonymous public input going into the admin's HTML email — encode every value.
+            static string Enc(string? v) => System.Net.WebUtility.HtmlEncode(v ?? "");
             return template
                 .Replace("{{LogoUrl}}", "cid:einvworld-logo")
-                .Replace("{{CompanyName}}", input.CompanyName ?? "-")
-                .Replace("{{TIN}}", input.TIN ?? "-")
-                .Replace("{{BRNOld}}", input.OldRegNo ?? "-")
-                .Replace("{{BRNNew}}", input.RegNo ?? "-")
-                .Replace("{{SSTNumber}}", input.SST ?? "-")
-                .Replace("{{TourismTax}}", input.TTX ?? "-")
-                .Replace("{{RegistrationType}}", input.RegTypeCode ?? "-")
-                .Replace("{{MSICCode}}", input.IndustryClassificationCode ?? "-")
-                .Replace("{{BusinessDescription}}", input.BizDescription ?? "-")
+                .Replace("{{CompanyName}}", Enc(input.CompanyName ?? "-"))
+                .Replace("{{TIN}}", Enc(input.TIN ?? "-"))
+                .Replace("{{BRNOld}}", Enc(input.OldRegNo ?? "-"))
+                .Replace("{{BRNNew}}", Enc(input.RegNo ?? "-"))
+                .Replace("{{SSTNumber}}", Enc(input.SST ?? "-"))
+                .Replace("{{TourismTax}}", Enc(input.TTX ?? "-"))
+                .Replace("{{RegistrationType}}", Enc(input.RegTypeCode ?? "-"))
+                .Replace("{{MSICCode}}", Enc(input.IndustryClassificationCode ?? "-"))
+                .Replace("{{BusinessDescription}}", Enc(input.BizDescription ?? "-"))
 
-                .Replace("{{Email}}", input.Email ?? "-")
-                .Replace("{{Phone}}", input.PhoneNo ?? "-")
-                .Replace("{{Address1}}", input.Addr1 ?? "-")
-                .Replace("{{Address2}}", input.Addr2 ?? "-")
-                .Replace("{{City}}", input.CityName ?? "-")
-                .Replace("{{State}}", input.StateCode ?? "-")
-                .Replace("{{Postcode}}", input.PostalCode ?? "-")
-                .Replace("{{Country}}", input.CountryCode ?? "-")
+                .Replace("{{Email}}", Enc(input.Email ?? "-"))
+                .Replace("{{Phone}}", Enc(input.PhoneNo ?? "-"))
+                .Replace("{{Address1}}", Enc(input.Addr1 ?? "-"))
+                .Replace("{{Address2}}", Enc(input.Addr2 ?? "-"))
+                .Replace("{{City}}", Enc(input.CityName ?? "-"))
+                .Replace("{{State}}", Enc(input.StateCode ?? "-"))
+                .Replace("{{Postcode}}", Enc(input.PostalCode ?? "-"))
+                .Replace("{{Country}}", Enc(input.CountryCode ?? "-"))
 
-                .Replace("{{Timestamp}}", DateTime.Now.ToString("f"))
+                .Replace("{{Timestamp}}", Enc(DateTime.Now.ToString("f")))
                 .Replace("{{Year}}", DateTime.Now.Year.ToString());
         }
 

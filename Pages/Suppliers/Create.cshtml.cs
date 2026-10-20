@@ -157,10 +157,18 @@ namespace eInvWorld.Pages.Suppliers
             string logoRelativePath = "/assets/images/users/multi-user.jpg";
             if (LogoFile != null && LogoFile.Length > 0)
             {
+                string? logoExt;
+                using (var probe = LogoFile.OpenReadStream()) logoExt = EINVWORLD.Helpers.LogoImage.DetectExtension(probe);
+                if (logoExt == null)
+                {
+                    ModelState.AddModelError(nameof(LogoFile), "The logo must be a PNG or JPG image.");
+                    return Page();
+                }
+
                 var uploadsFolder = _filePathConfig.CompanyLogosFolder;
                 Directory.CreateDirectory(uploadsFolder);
 
-                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(LogoFile.FileName)}";
+                var uniqueFileName = $"{Guid.NewGuid()}{logoExt}";
                 var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
                 using (var fileStream = new FileStream(filePath, FileMode.Create))

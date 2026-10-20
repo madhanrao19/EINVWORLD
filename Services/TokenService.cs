@@ -28,8 +28,10 @@ namespace eInvWorld.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IMemoryCache _cache;
 
-        // Serializes token acquisition so concurrent callers don't all hit /connect/token at once.
-        private static readonly SemaphoreSlim _tokenLock = new SemaphoreSlim(1, 1);
+        // One lock per TIN: concurrent callers for the same taxpayer don't all hit /connect/token, but a TIN
+        // stuck in 429 retry waits no longer blocks token access for every other company.
+        // shortcut: entries are never removed (one small semaphore per TIN ever seen); fine for hundreds of TINs.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _tokenLocks = new();
 
         // In-memory token cache. IMemoryCache auto-evicts entries at their absolute expiry, so it
         // cannot leak or de-sync the way the previous pair of static Dictionaries could.
@@ -66,7 +68,7 @@ namespace eInvWorld.Services
         /// <summary>
         /// Returns a valid access token for the TIN, using (in order): the in-memory cache,
         /// the durable LHDNTokens DB row, or a freshly requested token. Token acquisition is
-        /// serialized via <see cref="_tokenLock"/> with a double-check so concurrent callers for
+        /// serialized per TIN via <see cref="_tokenLocks"/> with a double-check so concurrent callers for
         /// the same TIN don't each hit /connect/token.
         /// </summary>
         private async Task<string> GetOrFetchTokenAsync(string tin)
@@ -78,7 +80,8 @@ namespace eInvWorld.Services
                 return cached!;
             }
 
-            await _tokenLock.WaitAsync();
+            var tokenLock = _tokenLocks.GetOrAdd(tin, _ => new SemaphoreSlim(1, 1));
+            await tokenLock.WaitAsync();
             try
             {
                 // Re-check after acquiring the lock — another caller may have populated it.
@@ -99,7 +102,7 @@ namespace eInvWorld.Services
             }
             finally
             {
-                _tokenLock.Release();
+                tokenLock.Release();
             }
         }
 

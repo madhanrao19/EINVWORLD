@@ -252,6 +252,7 @@ The "Application Pool" is the Windows process that runs the app.
    | **Maximum Worker Processes** | `1` | a single process (don't use a "web garden") |
    | **Load User Profile** | `True` | needed for some libraries / temp files |
    | **Regular Time Interval (recycle, minutes)** | `0` | or schedule a recycle at night, not during work hours |
+   | **Disable Overlapped Recycle** | `True` | otherwise a recycle briefly runs two copies of the background workers (two recurring runs, re-queued submissions) |
 
    Click **OK**.
 
@@ -715,7 +716,7 @@ Tick each before declaring "done":
 - [ ] Databases `EINVWORLD` (+ `EINVWORLDWEBSITE`) exist; login `einvworldusr` mapped with
       `db_datareader/writer/ddladmin`
 - [ ] App files copied to `App\` (incl. **`web.config`**, `wwwroot\`)
-- [ ] App Pool `EINVWORLD`: **No Managed Code**, **AlwaysRunning**, Idle **0**, **1** worker process
+- [ ] App Pool `EINVWORLD`: **No Managed Code**, **AlwaysRunning**, Idle **0**, **1** worker process, **Disable Overlapped Recycle = True**
 - [ ] Website bound to **https** + correct host + SSL certificate
 - [ ] `IIS AppPool\EINVWORLD` has **Modify** on `E:\EINVWORLD`
 - [ ] Environment variables set (**`ASPNETCORE_ENVIRONMENT`**, connection strings, LHDN secrets, SMTP,
