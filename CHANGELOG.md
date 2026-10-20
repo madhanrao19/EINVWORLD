@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.9`** (`AppInfo:Version` in `appsettings.json`). v1.47.9 is a **patch**
+> **Current version: `v1.47.10`** (`AppInfo:Version` in `appsettings.json`). v1.47.10 is a **patch**
+> release: Invoice Edit shows and keeps the Reference UUID of credit, debit and refund notes — see the dated entry below. v1.47.9 was a **patch**
 > release: line Quantity and Unit Price keep all their decimals when an invoice is reopened — see the dated entry below. v1.47.8 was a **patch**
 > release: reopened invoices keep their saved values (Exchange Rate and more) and the totals cards match on all three steps — see the dated entry below. v1.47.7 was a **patch**
 > release: a "Reference Document No." column on the Invoices lists and in CSV/XLSX export — see the dated entry below. v1.47.6 was a **patch**
@@ -389,6 +390,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.10 (Reference UUID on Invoice Edit)
+
+- **Invoice Edit** now has a **Reference UUID** field for Credit, Debit and Refund Notes (and their
+  self-billed versions). It shows the saved UUID of the original invoice and can be changed. It is
+  required for these document types and hidden for others.
+- **Fix:** before this, saving one of these notes in Invoice Edit wrote `"NA"` as the referenced UUID into the
+  document sent to LHDN, because the page had no such field. Notes saved in Invoice Edit before v1.47.10 should be
+  opened and saved again before they are submitted.
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.9 (line Quantity / Unit Price keep their decimals)
 
