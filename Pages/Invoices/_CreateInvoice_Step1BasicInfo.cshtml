@@ -99,7 +99,7 @@
                             <!-- Auto-selected UUID display (when creating adjustment document from existing invoice) -->
                             <div id="refUUIDDisplayMode" style="display: @(showDisplayMode ? "block" : "none");">
                                 <div class="form-floating">
-                                    <input type="text" asp-for="Invoice.RefUUID" class="form-control" id="refUUIDDisplay" readonly placeholder="Reference UUID" style="background-color: #f8f9fa; padding-top: 1.75rem; padding-bottom: 0.625rem;">
+                                    <input type="text" asp-for="Invoice.RefUUID" class="form-control" id="refUUIDDisplay" readonly placeholder="Reference UUID">
                                     <label for="refUUIDDisplay">
                                         Reference UUID <span class="text-danger">*</span>
                                         <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="UUID of the original invoice that this adjustment document references"></i>

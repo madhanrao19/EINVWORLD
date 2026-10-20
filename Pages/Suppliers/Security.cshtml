@@ -20,22 +20,7 @@
 }
 <partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header">
-        <h3 class="card-title">Your Account</h3>
-    </div>
-    <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div>
-            <span class="einv-badge @(Model.CurrentUserTwoFactorEnabled ? "einv-badge-success" : "einv-badge-warning")">
-                <i class="ri-shield-@(Model.CurrentUserTwoFactorEnabled ? "check" : "keyhole")-line"></i>
-                Two-Factor Authentication: @(Model.CurrentUserTwoFactorEnabled ? "Enabled" : "Not Enabled")
-            </span>
-        </div>
-        <a asp-area="Identity" asp-page="/Account/Manage/TwoFactorAuthentication" class="btn btn-outline-primary btn-sm">
-            Manage Two-Factor Authentication
-        </a>
-    </div>
-</div>
+<partial name="_TwoFactorCard" model="Model.CurrentUserTwoFactorEnabled" />
 
 @if (Model.CanViewTeamSecurity)
 {

@@ -1,0 +1,26 @@
+@model bool
+@*
+    Two-factor card shared by My Profile → Security and Company → Security. Model = the signed-in user's
+    2FA state. Both link to the one 2FA page (/Profile/Enable2fa), which returns to the page it came from.
+*@
+@{
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h3 class="card-title mb-0"><i class="ri-shield-check-line me-2" aria-hidden="true"></i>Two-Factor Authentication (2FA)</h3>
+        <span class="einv-badge @(Model ? "einv-badge-success" : "einv-badge-warning")">
+            <i class="ri-shield-@(Model ? "check" : "keyhole")-line" aria-hidden="true"></i> @(Model ? "On" : "Off")
+        </span>
+    </div>
+    <div class="card-body d-flex flex-column flex-sm-row align-items-sm-center gap-3">
+        <p class="text-muted mb-0 flex-grow-1">
+            @(Model
+                ? "Signing in needs your password and a code from your authenticator app."
+                : "Protect your account by also asking for a code from your authenticator app when you sign in.")
+        </p>
+        <a asp-page="/Profile/Enable2fa" asp-route-returnUrl="@returnUrl" class="btn @(Model ? "btn-outline-primary" : "btn-primary") flex-shrink-0">
+            <i class="ri-shield-check-line me-1" aria-hidden="true"></i> @(Model ? "Manage 2FA" : "Turn on 2FA")
+        </a>
+    </div>
+</div>

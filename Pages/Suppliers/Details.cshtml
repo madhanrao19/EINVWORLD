@@ -16,9 +16,16 @@
                     @((Model.From == "lead") ? "Lead Details" : "Company Details")
                 </p>
             </div>
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="btn btn-outline-secondary" asp-page="@(Model.From == "lead" ? "/Lead/List" : "./Index")">
+                    <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                </a>
+            }
         </div>
     </div>
 </div>
+<!-- End Page Title -->
 
 @if (Model.From != "lead")
 {
@@ -26,365 +33,343 @@
     <partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
 }
 
-<div class="row g-3 mb-3">
-    <div class="col-md-3 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="einv-label mb-1">Users</p>
-            <h3 class="fw-bold mb-0">@(Model.AssignedUsers.Count + 1)</h3>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="einv-label mb-1">Buyers</p>
-            <h3 class="fw-bold mb-0">@Model.AssignedBuyers.Count</h3>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="einv-label mb-1">Suppliers</p>
-            <h3 class="fw-bold mb-0">@Model.AssignedSuppliers.Count</h3>
-        </div>
-    </div>
-    <div class="col-md-3 col-6">
-        <div class="card p-3 h-100 border-0 shadow-sm">
-            <p class="einv-label mb-1">Verification</p>
-            <h3 class="fw-bold mb-0 @(Model.PartyInfo.IsApproved ? "text-success" : "text-warning")">@(Model.PartyInfo.IsApproved ? "Verified" : "Pending")</h3>
-        </div>
-    </div>
-</div>
-<!-- End Page Title -->
-
-<div class="row">
-    <!-- Left Column: Company Details -->
-    <div class="col-xxl-4">
-        <div class="card" id="company-view-detail">
-            <div class="card-body text-center">
-                <div class="position-relative d-inline-block mb-2">
-                    <div class="avatar-md mx-auto">
-                        <div class="avatar-title bg-light rounded-circle material-shadow overflow-hidden">
-                            <img src="@Url.Content(string.IsNullOrEmpty(Model.PartyInfo.LogoPath)
-            ? "~/assets/images/users/multi-user.jpg"
-            : Model.PartyInfo.LogoPath)"
-                                 alt="Company Logo"
-                                 class="avatar-sm rounded-circle object-fit-cover w-100 h-100">
-                        </div>
-                    </div>
-
-                </div>
-                <h5 class="mt-3 mb-1">@Model.PartyInfo.CompanyName</h5>
-                <p class="text-muted">@Model.PartyInfo.Email</p>
-
-                <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
-                    <span class="badge bg-soft-success text-success border">
-                        <i class="ri-verified-badge-line me-1"></i>@(Model.PartyInfo.IsApproved ? "Verified" : "Unverified")
-                    </span>
-                    <span class="badge bg-soft-success text-success border">
-                        <i class="ri-checkbox-circle-line me-1"></i>@(Model.PartyInfo.IsActive ? "Active" : "Inactive")
-                    </span>
-                    <span class="badge bg-soft-secondary text-secondary border">
-                        <i class="ri-building-line me-1"></i>Supplier
-                    </span>
-                </div>
-
-                <div class="table-responsive table-card">
-                    <div class="row g-0">
-                        <div class="col-md-6 pe-md-3">
-                            <h6 class="text-uppercase text-muted fs-12 mb-2"><i class="ri-file-list-3-line me-1"></i>Legal &amp; Registration</h6>
-                            <table class="table table-borderless mb-0">
-                                <tbody>
-                                    <tr><td class="fw-medium text-muted">Registration Type</td><td>@Model.PartyInfo.RegTypeCode</td></tr>
-                                    <tr><td class="fw-medium text-muted">Tax ID</td><td>@Model.PartyInfo.TIN</td></tr>
-                                    <tr><td class="fw-medium text-muted">Registration Number</td><td>@Model.PartyInfo.RegNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Old Registration Number</td><td>@Model.PartyInfo.OldRegNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Industry Classification</td><td>@Model.PartyInfo.IndustryClassificationCode</td></tr>
-                                    <tr><td class="fw-medium text-muted">Business Description</td><td>@Model.PartyInfo.BizDescription</td></tr>
-                                    <tr><td class="fw-medium text-muted">SST Registration</td><td>@Model.PartyInfo.SST</td></tr>
-                                    <tr><td class="fw-medium text-muted">Tourism Tax (TTX)</td><td>@Model.PartyInfo.TTX</td></tr>
-                                    <tr><td class="fw-medium text-muted">Remarks</td><td>@Model.PartyInfo.Remarks</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="col-md-6 ps-md-3 border-md-start">
-                            <h6 class="text-uppercase text-muted fs-12 mb-2"><i class="ri-bank-card-line me-1"></i>Contact &amp; Finance</h6>
-                            <table class="table table-borderless mb-0">
-                                <tbody>
-                                    <tr><td class="fw-medium text-muted">Phone Number</td><td>@Model.PartyInfo.PhoneNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Fax Number</td><td>@Model.PartyInfo.FaxNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Default Bank Account</td><td>@Model.PartyInfo.BankAccountNo</td></tr>
-                                    <tr><td class="fw-medium text-muted">Bank Name</td><td>@Model.PartyInfo.BankName <a asp-page="/Profile/BankAccounts" asp-route-companyId="@Model.PartyInfo.PartyInfoId" class="ms-2 small">All bank accounts</a></td></tr>
-                                    <tr><td class="fw-medium text-muted">Attention</td><td>@Model.PartyInfo.Attention</td></tr>
-                                    <tr>
-                                        <td class="fw-medium text-muted align-top">Location</td>
-                                        <td>
-                                            @{
-                                                var addressParts = new[]
-                                                {
-                                                    Model.PartyInfo.Addr1,
-                                                    Model.PartyInfo.Addr2,
-                                                    Model.PartyInfo.Addr3,
-                                                    Model.PartyInfo.PostalCode,
-                                                    Model.PartyInfo.CityName,
-                                                    Model.StateName,
-                                                    Model.CountryName
-                                                }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
-
-                                                var addressDisplay = string.Join(", ", addressParts);
-                                                var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
-                                            }
-                                            @addressDisplay
-                                            <div class="mt-2">
-                                                <a href="@googleMapsUrl" target="_blank" class="btn btn-primary btn-sm">
-                                                    <i class="ri-map-pin-fill fs-16"></i> View on Maps
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3 d-flex justify-content-center gap-2">
-                    @if (User.IsInRole("Admin"))
-                    {
-                    <a asp-page="/Suppliers/Edit"
-                       asp-route-id="@Model.PartyInfo.PartyInfoId"
-                       asp-route-from="@(Model.From == "lead" ? "lead" : null)"
-                       class="btn btn-warning btn-sm">
-                        <i class="ri-pencil-fill fs-16" title="Edit"></i> Edit
-                    </a>
-                    }
-                    @if (User.IsInRole("Admin"))
-                    {
-                    <a class="btn btn-secondary btn-sm"
-                       asp-page="@(Model.From == "lead" ? "/Lead/List" : "./Index")">
-                        <i class="ri-arrow-left-fill fs-16" title="Back"></i> Back to List
-                    </a>
-                    }
-                </div>
-
-            </div>
-        </div>
-    </div>
-    <!-- Conditionally Render Right Section -->
-    @if (Model.From != "lead")
+@{
+    var kpis = new[]
     {
+        (Label: "Users", Value: (Model.AssignedUsers.Count + 1).ToString(), Note: "Members of this company", Icon: "ri-user-3-line", Tone: "primary"),
+        (Label: "Buyers", Value: Model.AssignedBuyers.Count.ToString(), Note: "Buyers you invoice", Icon: "ri-team-line", Tone: "info"),
+        (Label: "Suppliers", Value: Model.AssignedSuppliers.Count.ToString(), Note: "Suppliers linked to you", Icon: "ri-truck-line", Tone: "orange"),
+        (Label: "Verification", Value: Model.PartyInfo.IsApproved ? "Verified" : "Pending", Note: "Company status", Icon: Model.PartyInfo.IsApproved ? "ri-shield-check-line" : "ri-time-line", Tone: Model.PartyInfo.IsApproved ? "success" : "warning"),
+    };
 
-        <!-- Right Column: Assigned Users & Assigned Buyers -->
-        <div class="col-xxl-8">
-            <div class="row">
-                <!-- Assigned Users Section -->
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <div class="d-flex mb-3">
-                                <h6 class="card-title mb-0 flex-grow-1">Assigned Users</h6>
-                                <div class="d-flex gap-2">
-                                    <a asp-page="/Suppliers/Users" asp-route-id="@Model.PartyInfo.PartyInfoId" class="btn btn-soft-success btn-sm">
-                                        <i class="ri-mail-send-line me-1 align-bottom"></i> Invite User
-                                    </a>
+    var addressParts = new[]
+    {
+        Model.PartyInfo.Addr1, Model.PartyInfo.Addr2, Model.PartyInfo.Addr3,
+        Model.PartyInfo.PostalCode, Model.PartyInfo.CityName, Model.StateName, Model.CountryName
+    }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+    var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
 
-                                    <button type="button" class="btn btn-soft-danger btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
-                                        <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
-                                    </button>
-                                </div>
-                            </div>
+    string Show(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
+}
 
-                            <div class="table-responsive">
-                                <table data-einv-table="company-detail-users" class="table table-bordered table-hover table-sm align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col">Name</th>
-                                            @if (User.IsInRole("Admin"))
-                                            {
-                                                <th class="text-center" style="width: 10%;">Primary</th>
-                                            }
-                                            else
-                                            {
-                                                <th class="text-center" style="width: 15%;">Company Access</th>
-                                                <th class="text-center" style="width: 10%;">View Only</th>
-                                            }
-                                            <th class="text-center" style="width: 15%;">Role</th>
-                                            <th class="col-action text-center" style="width: 10%;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if (Model.AssignedUsers.Any())
-                                        {
-                                            @foreach (var user in Model.AssignedUsers)
-                                            {
-                                                var userCompany = Model.AssignedUserCompanies.FirstOrDefault(uc => uc.UserId == user.Id);
-                                                var userRole = Model.UserRoles.GetValueOrDefault(user.Id, "User"); // Fetch the role
-
-                                                <tr>
-                                                    <td style="max-width: 150px;">
-                                                        <div class="d-flex flex-column">
-                                                            <span class="fw-medium text-truncate" title="@user.FullName">@user.FullName</span>
-                                                            <small class="text-muted text-truncate" title="@user.Email">@user.Email</small>
-                                                        </div>
-                                                    </td>
-
-                                                    @if (User.IsInRole("Admin"))
-                                                    {
-                                                        <td class="text-center">
-                                                            @if (userRole == "Supplier")
-                                                            {
-                                                                <input type="checkbox" class="primary-checkbox form-check-input"
-                                                                       data-userid="@user.Id"
-                                                                       data-companyid="@Model.PartyInfo.PartyInfoId"
-                                                                       @(userCompany?.IsPrimaryCompany == true ? "checked" : "") />
-                                                            }
-                                                            else
-                                                            {
-                                                                <span class="text-muted">-</span>
-                                                            }
-                                                        </td>
-                                                    }
-                                                    else
-                                                    {
-                                                        @if (userRole == "Supplier")
-                                                        {
-                                                            <td class="text-center">
-                                                                <input type="radio" class="form-check-input permission-radio"
-                                                                       name="permission_@user.Id"
-                                                                       data-userid="@user.Id"
-                                                                       data-type="access"
-                                                                       @(userCompany?.HasCompanyAccess == true ? "checked" : "")
-                                                                       onchange="updatePermission('@user.Id', 'access', true)">
-                                                            </td>
-                                                            <td class="text-center">
-                                                                <input type="radio" class="form-check-input permission-radio"
-                                                                       name="permission_@user.Id"
-                                                                       data-userid="@user.Id"
-                                                                       data-type="view"
-                                                                       @(userCompany?.IsViewOnly == true ? "checked" : "")
-                                                                       onchange="updatePermission('@user.Id', 'view', true)">
-                                                            </td>
-                                                        }
-                                                        else
-                                                        {
-                                                            <td class="text-center text-muted">-</td>
-                                                            <td class="text-center text-muted">-</td>
-                                                        }
-                                                    }
-                                                    <td class="text-center">
-                                                        <span class="badge @(userRole == "Admin" ? "bg-danger" : userRole == "Supplier" ? "bg-primary" : "bg-success")">
-                                                            @userRole
-                                                        </span>
-                                                        <button type="button" class="btn btn-sm btn-link text-decoration-none shadow-none p-0 ms-1"
-                                                                data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openChangeRoleModal(this.dataset.userId, this.dataset.userName)" title="Change Role">
-                                                            <i class="ri-edit-line fs-14"></i>
-                                                        </button>
-                                                    </td>
-                                                    <td class="col-action text-center">
-                                                        <div class="dropdown d-inline-block">
-                                                            <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-                                                                <i class="ri-more-fill align-middle"></i>
-                                                            </button>
-                                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                                <li><button type="button" class="dropdown-item text-danger" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <tr>
-                                                <td colspan="@(User.IsInRole("Admin") ? "3" : "4")" class="text-center text-muted">
-                                                    No users assigned.
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Assigned Buyers Section -->
-                <div class="col-md-6">
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <div class="d-flex mb-3">
-                                <div class="flex-grow-1">
-                                    <h6 class="card-title mb-0">Assigned Buyers</h6>
-                                    <small class="text-muted">Total @Model.AssignedBuyers.Count buyer@(Model.AssignedBuyers.Count == 1 ? "" : "s") currently managed</small>
-                                </div>
-                                <!-- NEW -->
-                                    @if (User.IsInRole("Admin"))
-                                    {
-                                        <button type="button" class="btn btn-soft-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignBuyersModal">
-                                            <i class="ri-building-line me-1 align-bottom"></i> From Company List
-                                        </button>
-                                    }
-                                    <button type="button" class="btn btn-soft-success btn-sm" data-bs-toggle="modal" data-bs-target="#assignPublicBuyersModal">
-                                        <i class="ri-user-add-line me-1 align-bottom"></i> From Suppliers
-                                    </button>
-                            </div>
-
-
-                                @if (Model.AssignedBuyers.Any())
-                                {
-                                    <div class="table-responsive">
-                                        <table data-einv-table="company-detail-buyers" class="table table-hover table-sm align-middle mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Buyer Entity</th>
-                                                    <th>TIN / Registration</th>
-                                                    <th>Industry</th>
-                                                    <th class="col-action text-end">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach (var buyer in Model.AssignedBuyers)
-                                                {
-                                                    var isPublic = buyer.CompanyName.EndsWith("(Buyers) ");
-
-                                                    <tr>
-                                                        <td>
-                                                            <div class="d-flex flex-column">
-                                                                <span class="fw-medium">@buyer.CompanyName</span>
-                                                                <small class="text-muted">@buyer.Email</small>
-                                                            </div>
-                                                        </td>
-                                                        <td>@buyer.TIN</td>
-                                                        <td>@buyer.IndustryClassificationCode</td>
-                                                        <td class="col-action text-end">
-                                                            <div class="dropdown d-inline-block">
-                                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-                                                                    <i class="ri-more-fill align-middle"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                                    @if (!string.IsNullOrEmpty(buyer.Email))
-                                                                    {
-                                                                        <li><a href="mailto:@buyer.Email" class="dropdown-item"><i class="ri-mail-line align-bottom me-2 text-muted"></i> Email Buyer</a></li>
-                                                                    }
-                                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <p class="text-muted">No buyers assigned.</p>
-                                }
-                           
-                        </div>
+<div class="row g-3 mb-3">
+    @foreach (var k in kpis)
+    {
+        <div class="col-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center gap-3 p-3">
+                    <span class="avatar avatar-md bg-@(k.Tone)-lt flex-shrink-0" aria-hidden="true"><i class="@k.Icon fs-2"></i></span>
+                    <div class="min-w-0">
+                        <div class="text-muted small">@k.Label</div>
+                        <div class="fs-3 fw-bold lh-sm @(k.Label == "Verification" ? $"text-{k.Tone}" : "")">@k.Value</div>
+                        <div class="text-muted small d-none d-sm-block text-truncate">@k.Note</div>
                     </div>
                 </div>
             </div>
         </div>
     }
 </div>
+
+<!-- Company details: summary row, then two panels that collapse to tap-to-open sections on phones. -->
+<div class="card border-0 shadow-sm mb-3" id="company-view-detail">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h2 class="card-title mb-0">Company Details</h2>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-page="/Suppliers/Edit" asp-route-id="@Model.PartyInfo.PartyInfoId" asp-route-from="@(Model.From == "lead" ? "lead" : null)" class="btn btn-primary btn-sm">
+                <i class="ri-pencil-line align-bottom me-1"></i> Edit Company
+            </a>
+        }
+    </div>
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <span class="avatar avatar-xl rounded-3 bg-white border flex-shrink-0 overflow-hidden">
+                <img src="@Url.Content(string.IsNullOrEmpty(Model.PartyInfo.LogoPath) ? "~/assets/images/users/multi-user.jpg" : Model.PartyInfo.LogoPath)"
+                     alt="@Model.PartyInfo.CompanyName logo" class="w-100 h-100 object-fit-contain p-1" />
+            </span>
+            <div class="min-w-0">
+                <h3 class="mb-1 text-break">@Model.PartyInfo.CompanyName</h3>
+                <div class="text-muted small text-break mb-2">@Model.PartyInfo.Email</div>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="einv-badge @(Model.PartyInfo.IsApproved ? "einv-badge-success" : "einv-badge-warning")">
+                        <i class="ri-verified-badge-line" aria-hidden="true"></i> @(Model.PartyInfo.IsApproved ? "Verified" : "Unverified")
+                    </span>
+                    <span class="einv-badge @(Model.PartyInfo.IsActive ? "einv-badge-success" : "einv-badge-neutral")">
+                        <i class="ri-checkbox-circle-line" aria-hidden="true"></i> @(Model.PartyInfo.IsActive ? "Active" : "Inactive")
+                    </span>
+                    <span class="einv-badge einv-badge-neutral"><i class="ri-building-line" aria-hidden="true"></i> Supplier</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded-3 h-100">
+                    <button class="btn btn-link w-100 d-flex align-items-center justify-content-between text-reset text-decoration-none px-3 py-2 border-bottom" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#companyLegal" aria-expanded="true" aria-controls="companyLegal">
+                        <span class="fw-semibold"><i class="ri-file-list-3-line me-2" aria-hidden="true"></i>Legal &amp; Registration</span>
+                        <i class="ri-arrow-down-s-line d-md-none" aria-hidden="true"></i>
+                    </button>
+                    @* d-md-block keeps it open on tablet/desktop; only phones toggle. *@
+                    <div class="collapse show d-md-block" id="companyLegal">
+                        <dl class="row mb-0 px-3 py-2 small">
+                            <dt class="col-5 fw-normal text-muted">Registration Type</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.RegTypeCode)</dd>
+                            <dt class="col-5 fw-normal text-muted">Tax ID (TIN)</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.TIN)</dd>
+                            <dt class="col-5 fw-normal text-muted">Registration Number</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.RegNo)</dd>
+                            <dt class="col-5 fw-normal text-muted">Old Registration Number</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.OldRegNo)</dd>
+                            <dt class="col-5 fw-normal text-muted">Industry (MSIC)</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.IndustryClassificationCode)</dd>
+                            <dt class="col-5 fw-normal text-muted">Business Description</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.BizDescription)</dd>
+                            <dt class="col-5 fw-normal text-muted">SST Registration</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.SST)</dd>
+                            <dt class="col-5 fw-normal text-muted">Tourism Tax (TTx)</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.TTX)</dd>
+                            <dt class="col-5 fw-normal text-muted">Remarks</dt><dd class="col-7 mb-0 text-break">@Show(Model.PartyInfo.Remarks)</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded-3 h-100">
+                    <button class="btn btn-link w-100 d-flex align-items-center justify-content-between text-reset text-decoration-none px-3 py-2 border-bottom" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#companyContact" aria-expanded="true" aria-controls="companyContact">
+                        <span class="fw-semibold"><i class="ri-bank-card-line me-2" aria-hidden="true"></i>Contact &amp; Finance</span>
+                        <i class="ri-arrow-down-s-line d-md-none" aria-hidden="true"></i>
+                    </button>
+                    <div class="collapse show d-md-block" id="companyContact">
+                        <dl class="row mb-0 px-3 py-2 small">
+                            <dt class="col-5 fw-normal text-muted">Phone Number</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.PhoneNo)</dd>
+                            <dt class="col-5 fw-normal text-muted">Fax Number</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.FaxNo)</dd>
+                            <dt class="col-5 fw-normal text-muted">Default Bank Account</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.BankAccountNo)</dd>
+                            <dt class="col-5 fw-normal text-muted">Bank Name</dt>
+                            <dd class="col-7 mb-2 text-break">
+                                @Show(Model.PartyInfo.BankName)
+                                <a asp-page="/Profile/BankAccounts" asp-route-companyId="@Model.PartyInfo.PartyInfoId" class="d-block small">All bank accounts</a>
+                            </dd>
+                            <dt class="col-5 fw-normal text-muted">Attention</dt><dd class="col-7 mb-2 text-break">@Show(Model.PartyInfo.Attention)</dd>
+                            <dt class="col-5 fw-normal text-muted">Location</dt>
+                            <dd class="col-7 mb-0 text-break">
+                                @Show(string.Join(", ", addressParts))
+                                @if (addressParts.Any())
+                                {
+                                    <a href="@googleMapsUrl" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2 d-inline-flex align-items-center gap-1">
+                                        <i class="ri-map-pin-line" aria-hidden="true"></i> View on Map
+                                    </a>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.From != "lead")
+{
+    <div class="row g-3">
+        <!-- Assigned Users -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <h2 class="card-title mb-0">Assigned Users</h2>
+                        <div class="text-muted small">@Model.AssignedUsers.Count user@(Model.AssignedUsers.Count == 1 ? "" : "s") assigned</div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a asp-page="/Suppliers/Users" asp-route-id="@Model.PartyInfo.PartyInfoId" class="btn btn-primary btn-sm">
+                            <i class="ri-mail-send-line me-1 align-bottom"></i> Invite User
+                        </a>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
+                            <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive einv-table-scroll-x">
+                    <table data-einv-table="company-detail-users" class="table table-hover align-middle mb-0 einv-mobile-stack">
+                        <thead class="einv-table-head">
+                            <tr>
+                                <th scope="col">Name</th>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <th class="text-center">Primary</th>
+                                }
+                                else
+                                {
+                                    <th class="text-center">Company Access</th>
+                                    <th class="text-center">View Only</th>
+                                }
+                                <th class="text-center">Role</th>
+                                <th class="col-action text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.AssignedUsers.Any())
+                            {
+                                @foreach (var user in Model.AssignedUsers)
+                                {
+                                    var userCompany = Model.AssignedUserCompanies.FirstOrDefault(uc => uc.UserId == user.Id);
+                                    var userRole = Model.UserRoles.GetValueOrDefault(user.Id, "User");
+
+                                    <tr>
+                                        <td data-label="Name" style="max-width: 220px;">
+                                            <div class="d-flex flex-column min-w-0">
+                                                <span class="fw-medium text-truncate" title="@user.FullName">@user.FullName</span>
+                                                <small class="text-muted text-truncate" title="@user.Email">@user.Email</small>
+                                            </div>
+                                        </td>
+
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <td class="text-center" data-label="Primary">
+                                                @if (userRole == "Supplier")
+                                                {
+                                                    <input type="checkbox" class="primary-checkbox form-check-input"
+                                                           data-userid="@user.Id"
+                                                           data-companyid="@Model.PartyInfo.PartyInfoId"
+                                                           aria-label="Primary company for @user.FullName"
+                                                           @(userCompany?.IsPrimaryCompany == true ? "checked" : "") />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            @if (userRole == "Supplier")
+                                            {
+                                                <td class="text-center" data-label="Company Access">
+                                                    <input type="radio" class="form-check-input permission-radio"
+                                                           name="permission_@user.Id"
+                                                           data-userid="@user.Id"
+                                                           data-type="access"
+                                                           aria-label="Company access for @user.FullName"
+                                                           @(userCompany?.HasCompanyAccess == true ? "checked" : "")
+                                                           onchange="updatePermission('@user.Id', 'access', true)">
+                                                </td>
+                                                <td class="text-center" data-label="View Only">
+                                                    <input type="radio" class="form-check-input permission-radio"
+                                                           name="permission_@user.Id"
+                                                           data-userid="@user.Id"
+                                                           data-type="view"
+                                                           aria-label="View only for @user.FullName"
+                                                           @(userCompany?.IsViewOnly == true ? "checked" : "")
+                                                           onchange="updatePermission('@user.Id', 'view', true)">
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td class="text-center text-muted" data-label="Company Access">—</td>
+                                                <td class="text-center text-muted" data-label="View Only">—</td>
+                                            }
+                                        }
+                                        <td class="text-center" data-label="Role">
+                                            <span class="einv-badge @(userRole == "Admin" ? "einv-badge-danger" : userRole == "Supplier" ? "einv-badge-success" : "einv-badge-neutral")">@userRole</span>
+                                            <button type="button" class="btn btn-sm btn-link text-decoration-none shadow-none p-0 ms-1"
+                                                    data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openChangeRoleModal(this.dataset.userId, this.dataset.userName)" title="Change Role" aria-label="Change role for @user.FullName">
+                                                <i class="ri-edit-line fs-14" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                        <td class="col-action text-center" data-label="Actions">
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(User.IsInRole("Admin") ? "4" : "5")" class="text-center text-muted py-4">
+                                        No users assigned yet. Invite someone to start working together.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned Buyers -->
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <h2 class="card-title mb-0">Assigned Buyers</h2>
+                        <div class="text-muted small">@Model.AssignedBuyers.Count buyer@(Model.AssignedBuyers.Count == 1 ? "" : "s") managed</div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#assignBuyersModal">
+                                <i class="ri-building-line me-1 align-bottom"></i> From Company List
+                            </button>
+                        }
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assignPublicBuyersModal">
+                            <i class="ri-user-add-line me-1 align-bottom"></i> Add from Suppliers
+                        </button>
+                    </div>
+                </div>
+                @if (Model.AssignedBuyers.Any())
+                {
+                    <div class="table-responsive einv-table-scroll-x">
+                        <table data-einv-table="company-detail-buyers" class="table table-hover align-middle mb-0 einv-mobile-stack">
+                            <thead class="einv-table-head">
+                                <tr>
+                                    <th>Buyer</th>
+                                    <th>TIN / Registration</th>
+                                    <th>Industry</th>
+                                    <th class="col-action text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var buyer in Model.AssignedBuyers)
+                                {
+                                    var isPublic = buyer.CompanyName.EndsWith("(Buyers) ");
+
+                                    <tr>
+                                        <td data-label="Buyer">
+                                            <div class="d-flex flex-column min-w-0">
+                                                <span class="fw-medium">@buyer.CompanyName</span>
+                                                <small class="text-muted text-break">@buyer.Email</small>
+                                            </div>
+                                        </td>
+                                        <td data-label="TIN / Registration">@buyer.TIN</td>
+                                        <td data-label="Industry">@buyer.IndustryClassificationCode</td>
+                                        <td class="col-action text-end" data-label="Actions">
+                                            <div class="dropdown d-inline-block">
+                                                <button class="btn btn-sm einv-action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    @if (!string.IsNullOrEmpty(buyer.Email))
+                                                    {
+                                                        <li><a href="mailto:@buyer.Email" class="dropdown-item"><i class="ri-mail-line align-bottom me-2 text-muted"></i> Email Buyer</a></li>
+                                                    }
+                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="card-body text-center text-muted py-4">No buyers assigned yet. Add one from your suppliers' buyers.</div>
+                }
+            </div>
+        </div>
+    </div>
+}
 
 <!-- Assign User Modal -->
 <div class="modal fade" id="assignUsersModal" tabindex="-1" aria-labelledby="assignUsersLabel" aria-hidden="true">
