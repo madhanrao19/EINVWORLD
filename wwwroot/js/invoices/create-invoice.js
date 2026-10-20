@@ -3435,7 +3435,7 @@
                     buyerSelect.innerHTML = '<option value="">Select Buyer</option>';
 
                     response.forEach(c => {
-                        buyerSelect.innerHTML += `<option value="${c.value}">${c.text}</option>`;
+                        buyerSelect.add(new Option(c.text, c.value)); // text node, not HTML: buyer names are user-controlled
                     });
 
                     const isSelfBilled = ['11', '12', '13', '14'].includes(docTypeCode);
@@ -3992,15 +3992,16 @@
                                 if (parts.length >= 5) {
                                     const $option = $(
                                         '<div style="padding: 8px 0;">' +
-                                        '<div style="font-weight: 600; color: #006948; margin-bottom: 4px;">' + parts[0] + '</div>' +
+                                        // Every part is escaped: customer names and invoice numbers are user-controlled.
+                                        '<div style="font-weight: 600; color: #006948; margin-bottom: 4px;">' + escapeHtml(parts[0]) + '</div>' +
                                         '<div style="color: #666; font-size: 0.9em; margin-bottom: 2px;">' +
-                                        '<i class="ri-building-2-line me-1"></i>' + parts[1] + '</div>' +
+                                        '<i class="ri-building-2-line me-1"></i>' + escapeHtml(parts[1]) + '</div>' +
                                         '<div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #888;">' +
-                                        '<span><i class="ri-money-dollar-circle-line me-1"></i>' + parts[2] + '</span>' +
-                                        '<span>' + parts[3] + '</span>' +
-                                        '<span><i class="ri-calendar-line me-1"></i>' + parts[4] + '</span>' +
+                                        '<span><i class="ri-money-dollar-circle-line me-1"></i>' + escapeHtml(parts[2]) + '</span>' +
+                                        '<span>' + escapeHtml(parts[3]) + '</span>' +
+                                        '<span><i class="ri-calendar-line me-1"></i>' + escapeHtml(parts[4]) + '</span>' +
                                         '</div>' +
-                                        '<div style="margin-top: 4px; font-size: 0.8em; color: #aaa;">UUID: ' + option.text + '</div>' +
+                                        '<div style="margin-top: 4px; font-size: 0.8em; color: #aaa;">UUID: ' + escapeHtml(option.text) + '</div>' +
                                         '</div>'
                                     );
                                     return $option;
