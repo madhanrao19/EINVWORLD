@@ -192,6 +192,19 @@ namespace EINVWORLD.Tests.Integration
 
             Assert.True(await PartyBankAccess.CanSeeBankAsync(user, ctx, "PI", mine.PartyInfoId));
             Assert.False(await PartyBankAccess.CanSeeBankAsync(user, ctx, "PI", theirs.PartyInfoId));
+
+            // Party details: own company, a linked buyer and a general-TIN party yes; an unrelated company no.
+            var buyer = await CreatePartyAsync(ctx);
+            var general = await CreatePartyAsync(ctx);
+            general.TIN = "EI00000000010";
+            ctx.SupplierBuyers.Add(new SupplierBuyer { SupplierId = mine.PartyInfoId, BuyerId = buyer.PartyInfoId });
+            await ctx.SaveChangesAsync();
+
+            Assert.True(await PartyBankAccess.CanViewPartyAsync(user, ctx, "PI", mine.PartyInfoId));
+            Assert.True(await PartyBankAccess.CanViewPartyAsync(user, ctx, "PI", buyer.PartyInfoId));
+            Assert.True(await PartyBankAccess.CanViewPartyAsync(user, ctx, "PI", general.PartyInfoId));
+            Assert.False(await PartyBankAccess.CanViewPartyAsync(user, ctx, "PI", theirs.PartyInfoId));
+            Assert.False(await PartyBankAccess.CanSeeBankAsync(user, ctx, "PI", buyer.PartyInfoId)); // buyer's bank stays private
         }
     }
 }

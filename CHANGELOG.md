@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.4`** (`AppInfo:Version` in `appsettings.json`). v1.47.4 is a **patch**
+> **Current version: `v1.47.5`** (`AppInfo:Version` in `appsettings.json`). v1.47.5 is a **patch**
+> release: security fixes for invoice party details and 2FA sign-in — see the dated entry below. v1.47.4 was a **patch**
 > release: company logos load again; My Company tidy on phones; tablet top bar no longer overlaps — see the dated entry below. v1.47.3 was a **patch**
 > release: My Company overview redesigned, one 2FA screen (backup codes now shown), dark-mode fixes — see the dated entry below. v1.47.2 was a **patch**
 > release: browsers load the new scripts straight after a deploy (22 script tags were never cache-busted) — see the dated entry below. v1.47.1 was a **patch**
@@ -384,6 +385,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.5 (security: party details, 2FA sign-in checks)
+
+- **Security:** Create / Edit Invoice could return any company's or buyer's details (email, address,
+  attention, payment terms) to anyone who asked for its id. They now answer only for parties you can pick
+  on that screen — your own companies, buyers linked to them, buyers your company created, and the shared
+  general-TIN parties (General Public, Foreign Buyer/Supplier, Government). Bank details stay limited to
+  your own companies.
+- **Security:** signing in with 2FA skipped the "no role" and "no company TIN" checks that a normal sign-in
+  runs, so such an account could get in just by having 2FA on. Both the authenticator-code and the
+  recovery-code sign-in now run the same checks.
+- **Fixed:** signing in with a 2FA recovery code didn't set up the session (company TIN, LHDN token), so
+  submitting an invoice afterwards failed with "TIN not found in session".
+- **Sign-in:** when the e-invoice service can't be reached at sign-in, users see a plain "try again in a few
+  minutes" message (no technical error text) and are signed out cleanly instead of being left half signed in.
 
 ## 📅 2026-10-20 — v1.47.4 (company logos show again; My Company on phones and tablets)
 

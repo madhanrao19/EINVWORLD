@@ -5,7 +5,9 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
+using eInvWorld.Data;
 using eInvWorld.Models;
+using eInvWorld.Services;
 using Microsoft.AspNetCore.Authorization; // 👈 Required
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,15 +23,21 @@ namespace eInvWorld.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginWithRecoveryCodeModel> _logger;
+        private readonly ApplicationDbContext _context;
+        private readonly ITokenService _tokenService;
 
         public LoginWithRecoveryCodeModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            ILogger<LoginWithRecoveryCodeModel> logger)
+            ILogger<LoginWithRecoveryCodeModel> logger,
+            ApplicationDbContext context,
+            ITokenService tokenService)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _logger = logger;
+            _context = context;
+            _tokenService = tokenService;
         }
 
         [BindProperty]
@@ -82,6 +90,13 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 _logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", user.Id);
+                var blocked = await SecondFactorSignIn.CompleteAsync(HttpContext, _userManager, _context, _tokenService, _logger, user);
+                if (blocked != null)
+                {
+                    await _signInManager.SignOutAsync();
+                    ModelState.AddModelError(string.Empty, blocked);
+                    return Page();
+                }
                 return LocalRedirect(returnUrl ?? Url.Content("~/"));
             }
             if (result.IsLockedOut)
