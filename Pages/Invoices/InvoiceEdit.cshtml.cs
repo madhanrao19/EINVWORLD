@@ -1906,7 +1906,7 @@ namespace eInvWorld.Pages.Invoices
                 var existingTemplate = await _context.InvoiceTemplates
                     .Include(t => t.InvoiceLines)
                     .ThenInclude(l => l.Taxes)
-                    .FirstOrDefaultAsync(t => t.Id == templateId);
+                    .FirstOrDefaultAsync(t => t.Id == templateId && t.CreatedByUserId == User.FindFirstValue(ClaimTypes.NameIdentifier)); // own only
 
                 if (existingTemplate == null)
                 {

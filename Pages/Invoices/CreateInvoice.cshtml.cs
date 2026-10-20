@@ -292,7 +292,8 @@ namespace EINVWORLD.Pages.Invoices
                 var template = _context.InvoiceTemplates
                     .Include(t => t.InvoiceLines)
                     .ThenInclude(l => l.Taxes)
-                    .FirstOrDefault(t => t.Id == templateId.Value);
+                    // Own templates only: templateId comes from the query string.
+                    .FirstOrDefault(t => t.Id == templateId.Value && t.CreatedByUserId == User.FindFirstValue(ClaimTypes.NameIdentifier));
 
                 if (template != null)
                 {

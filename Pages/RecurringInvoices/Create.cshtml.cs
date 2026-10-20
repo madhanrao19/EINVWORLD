@@ -90,7 +90,13 @@ namespace eInvWorld.Pages.RecurringInvoices
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+            // The template id is a posted hidden field: re-check ownership, or the worker would issue and
+            // auto-submit invoices from another user's template (under that company's TIN).
+            if (!await _context.InvoiceTemplates.AnyAsync(t => t.Id == Input.InvoiceTemplateId && t.CreatedByUserId == userId))
+                return Forbid();
+
             // Apply system-controlled fields
+            Input.Id = 0;
             Input.CreatedByUserId = userId ?? "";
             Input.CreatedAt = DateTime.UtcNow;
             Input.Status = "Active";
