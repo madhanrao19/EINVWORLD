@@ -667,6 +667,7 @@ namespace eInvWorld.Pages.Invoices
                 query = sortBy switch
                 {
                     "InvoiceNo" => isDescending ? query.OrderByDescending(i => i.InvoiceNo) : query.OrderBy(i => i.InvoiceNo),
+                    "RefDocumentNo" => isDescending ? query.OrderByDescending(i => i.RefDocumentNo) : query.OrderBy(i => i.RefDocumentNo),
                     "IssueDate" => isDescending ? query.OrderByDescending(i => i.IssueDate) : query.OrderBy(i => i.IssueDate),
                     "SubmissionDate" => isDescending ? query.OrderByDescending(i => i.IssueDate) : query.OrderBy(i => i.IssueDate),
                     "SupplierName" => isDescending ? query.OrderByDescending(i => i.Supplier.CompanyName) : query.OrderBy(i => i.Supplier.CompanyName),
@@ -1357,7 +1358,7 @@ namespace eInvWorld.Pages.Invoices
         {
             var builder = new StringBuilder();
 
-            builder.AppendLine("InvoiceNo,IssueDate,PoDoNo,DocTypeCode,Currency,ExchangeRate,BillingFrequency,StartDate,EndDate,BankAccountNumber,BankName,AttentionTo,PaymentTerms,CounterpartyTIN,ItemDescription,Quantity,UnitPrice,DiscountAmount,UnitOfMeasure,ClassificationCode,TaxCategory,TaxPercentage,UUID,SubmissionID,Supplier,Customer,Status");
+            builder.AppendLine("InvoiceNo,RefDocumentNo,IssueDate,PoDoNo,DocTypeCode,Currency,ExchangeRate,BillingFrequency,StartDate,EndDate,BankAccountNumber,BankName,AttentionTo,PaymentTerms,CounterpartyTIN,ItemDescription,Quantity,UnitPrice,DiscountAmount,UnitOfMeasure,ClassificationCode,TaxCategory,TaxPercentage,UUID,SubmissionID,Supplier,Customer,Status");
 
             foreach (var invoice in invoices)
             {
@@ -1371,7 +1372,7 @@ namespace eInvWorld.Pages.Invoices
                 string startDateStr = invoice.StartDate?.ToString("yyyy-MM-dd") ?? "";
                 string endDateStr = invoice.EndDate?.ToString("yyyy-MM-dd") ?? "";
 
-                string commonData = $"{CsvExportHelper.EscapeCsv(invoice.InvoiceNo)},{issueDateStr},{CsvExportHelper.EscapeCsv(invoice.PoDoNo)},{CsvExportHelper.EscapeCsv(invoice.DocTypeCode)},{CsvExportHelper.EscapeCsv(invoice.Currency)},{invoice.ExchangeRate},{CsvExportHelper.EscapeCsv(invoice.InvoicePeriod.ToString())},{startDateStr},{endDateStr},{CsvExportHelper.EscapeCsv(invoice.BankAccountNo)},{CsvExportHelper.EscapeCsv(invoice.BankName)},{CsvExportHelper.EscapeCsv(invoice.Attention)},{CsvExportHelper.EscapeCsv(invoice.PaymentTerms)},{counterpartyTIN}";
+                string commonData = $"{CsvExportHelper.EscapeCsv(invoice.InvoiceNo)},{CsvExportHelper.EscapeCsv(invoice.RefDocumentNo)},{issueDateStr},{CsvExportHelper.EscapeCsv(invoice.PoDoNo)},{CsvExportHelper.EscapeCsv(invoice.DocTypeCode)},{CsvExportHelper.EscapeCsv(invoice.Currency)},{invoice.ExchangeRate},{CsvExportHelper.EscapeCsv(invoice.InvoicePeriod.ToString())},{startDateStr},{endDateStr},{CsvExportHelper.EscapeCsv(invoice.BankAccountNo)},{CsvExportHelper.EscapeCsv(invoice.BankName)},{CsvExportHelper.EscapeCsv(invoice.Attention)},{CsvExportHelper.EscapeCsv(invoice.PaymentTerms)},{counterpartyTIN}";
                 string extraData = $"{CsvExportHelper.EscapeCsv(invoice.UUID)},{CsvExportHelper.EscapeCsv(invoice.SubmissionID)},{supplierName},{customerName},{CsvExportHelper.EscapeCsv(invoice.InternalStatusId)}";
 
                 if (invoice.InvoiceLines != null && invoice.InvoiceLines.Any())
@@ -1417,7 +1418,7 @@ namespace eInvWorld.Pages.Invoices
                 var worksheet = workbook.Worksheets.Add("Invoices");
 
                 string[] headers = {
-            "InvoiceNo", "IssueDate", "PoDoNo", "DocTypeCode", "Currency", "ExchangeRate", "BillingFrequency", "StartDate", "EndDate", "BankAccountNumber",
+            "InvoiceNo", "RefDocumentNo", "IssueDate", "PoDoNo", "DocTypeCode", "Currency", "ExchangeRate", "BillingFrequency", "StartDate", "EndDate", "BankAccountNumber",
             "BankName", "AttentionTo", "PaymentTerms", "CounterpartyTIN", "ItemDescription", "Quantity", "UnitPrice",
             "DiscountAmount", "UnitOfMeasure", "ClassificationCode", "TaxCategory", "TaxPercentage",
             "UUID", "SubmissionID", "Supplier", "Customer", "Status"
@@ -1443,35 +1444,36 @@ namespace eInvWorld.Pages.Invoices
                             var tax = line.InvoiceTaxes?.FirstOrDefault();
 
                             SetCell(worksheet, row, 1, invoice.InvoiceNo);
+                            SetCell(worksheet, row, 2, invoice.RefDocumentNo);
                             // Safely handle nullable DateTimes to ensure formatting never crashes
-                            SetCell(worksheet, row, 2, invoice.IssueDate?.ToString("yyyy-MM-dd") ?? "");
-                            SetCell(worksheet, row, 3, invoice.PoDoNo);
-                            SetCell(worksheet, row, 4, invoice.DocTypeCode);
-                            SetCell(worksheet, row, 5, invoice.Currency);
-                            SetCell(worksheet, row, 6, invoice.ExchangeRate);
-                            SetCell(worksheet, row, 7, invoice.InvoicePeriod.ToString());
-                            SetCell(worksheet, row, 8, invoice.StartDate?.ToString("yyyy-MM-dd") ?? "");
-                            SetCell(worksheet, row, 9, invoice.EndDate?.ToString("yyyy-MM-dd") ?? "");
-                            SetCell(worksheet, row, 10, invoice.BankAccountNo);
-                            SetCell(worksheet, row, 11, invoice.BankName);
-                            SetCell(worksheet, row, 12, invoice.Attention);
-                            SetCell(worksheet, row, 13, invoice.PaymentTerms);
-                            SetCell(worksheet, row, 14, counterpartyTIN);
+                            SetCell(worksheet, row, 3, invoice.IssueDate?.ToString("yyyy-MM-dd") ?? "");
+                            SetCell(worksheet, row, 4, invoice.PoDoNo);
+                            SetCell(worksheet, row, 5, invoice.DocTypeCode);
+                            SetCell(worksheet, row, 6, invoice.Currency);
+                            SetCell(worksheet, row, 7, invoice.ExchangeRate);
+                            SetCell(worksheet, row, 8, invoice.InvoicePeriod.ToString());
+                            SetCell(worksheet, row, 9, invoice.StartDate?.ToString("yyyy-MM-dd") ?? "");
+                            SetCell(worksheet, row, 10, invoice.EndDate?.ToString("yyyy-MM-dd") ?? "");
+                            SetCell(worksheet, row, 11, invoice.BankAccountNo);
+                            SetCell(worksheet, row, 12, invoice.BankName);
+                            SetCell(worksheet, row, 13, invoice.Attention);
+                            SetCell(worksheet, row, 14, invoice.PaymentTerms);
+                            SetCell(worksheet, row, 15, counterpartyTIN);
 
-                            SetCell(worksheet, row, 15, line.ItemDescription);
-                            SetCell(worksheet, row, 16, line.Quantity);
-                            SetCell(worksheet, row, 17, line.UnitPrice);
-                            SetCell(worksheet, row, 18, line.DiscountAmount);
-                            SetCell(worksheet, row, 19, line.UnitOfMeasure);
-                            SetCell(worksheet, row, 20, line.ClassificationCode);
-                            SetCell(worksheet, row, 21, tax?.TaxCategory);
-                            SetCell(worksheet, row, 22, tax?.TaxPercentage);
+                            SetCell(worksheet, row, 16, line.ItemDescription);
+                            SetCell(worksheet, row, 17, line.Quantity);
+                            SetCell(worksheet, row, 18, line.UnitPrice);
+                            SetCell(worksheet, row, 19, line.DiscountAmount);
+                            SetCell(worksheet, row, 20, line.UnitOfMeasure);
+                            SetCell(worksheet, row, 21, line.ClassificationCode);
+                            SetCell(worksheet, row, 22, tax?.TaxCategory);
+                            SetCell(worksheet, row, 23, tax?.TaxPercentage);
 
-                            SetCell(worksheet, row, 23, invoice.UUID);
-                            SetCell(worksheet, row, 24, invoice.SubmissionID);
-                            SetCell(worksheet, row, 25, supplierName);
-                            SetCell(worksheet, row, 26, customerName);
-                            SetCell(worksheet, row, 27, invoice.InternalStatusId);
+                            SetCell(worksheet, row, 24, invoice.UUID);
+                            SetCell(worksheet, row, 25, invoice.SubmissionID);
+                            SetCell(worksheet, row, 26, supplierName);
+                            SetCell(worksheet, row, 27, customerName);
+                            SetCell(worksheet, row, 28, invoice.InternalStatusId);
 
                             row++;
                         }
@@ -1479,25 +1481,26 @@ namespace eInvWorld.Pages.Invoices
                     else
                     {
                         SetCell(worksheet, row, 1, invoice.InvoiceNo);
-                        SetCell(worksheet, row, 2, invoice.IssueDate?.ToString("yyyy-MM-dd") ?? "");
-                        SetCell(worksheet, row, 3, invoice.PoDoNo);
-                        SetCell(worksheet, row, 4, invoice.DocTypeCode);
-                        SetCell(worksheet, row, 5, invoice.Currency);
-                        SetCell(worksheet, row, 6, invoice.ExchangeRate);
-                        SetCell(worksheet, row, 7, invoice.InvoicePeriod.ToString());
-                        SetCell(worksheet, row, 8, invoice.StartDate?.ToString("yyyy-MM-dd") ?? "");
-                        SetCell(worksheet, row, 9, invoice.EndDate?.ToString("yyyy-MM-dd") ?? "");
-                        SetCell(worksheet, row, 10, invoice.BankAccountNo);
-                        SetCell(worksheet, row, 11, invoice.BankName);
-                        SetCell(worksheet, row, 12, invoice.Attention);
-                        SetCell(worksheet, row, 13, invoice.PaymentTerms);
-                        SetCell(worksheet, row, 14, counterpartyTIN);
+                        SetCell(worksheet, row, 2, invoice.RefDocumentNo);
+                        SetCell(worksheet, row, 3, invoice.IssueDate?.ToString("yyyy-MM-dd") ?? "");
+                        SetCell(worksheet, row, 4, invoice.PoDoNo);
+                        SetCell(worksheet, row, 5, invoice.DocTypeCode);
+                        SetCell(worksheet, row, 6, invoice.Currency);
+                        SetCell(worksheet, row, 7, invoice.ExchangeRate);
+                        SetCell(worksheet, row, 8, invoice.InvoicePeriod.ToString());
+                        SetCell(worksheet, row, 9, invoice.StartDate?.ToString("yyyy-MM-dd") ?? "");
+                        SetCell(worksheet, row, 10, invoice.EndDate?.ToString("yyyy-MM-dd") ?? "");
+                        SetCell(worksheet, row, 11, invoice.BankAccountNo);
+                        SetCell(worksheet, row, 12, invoice.BankName);
+                        SetCell(worksheet, row, 13, invoice.Attention);
+                        SetCell(worksheet, row, 14, invoice.PaymentTerms);
+                        SetCell(worksheet, row, 15, counterpartyTIN);
 
-                        SetCell(worksheet, row, 23, invoice.UUID);
-                        SetCell(worksheet, row, 24, invoice.SubmissionID);
-                        SetCell(worksheet, row, 25, supplierName);
-                        SetCell(worksheet, row, 26, customerName);
-                        SetCell(worksheet, row, 27, invoice.InternalStatusId);
+                        SetCell(worksheet, row, 24, invoice.UUID);
+                        SetCell(worksheet, row, 25, invoice.SubmissionID);
+                        SetCell(worksheet, row, 26, supplierName);
+                        SetCell(worksheet, row, 27, customerName);
+                        SetCell(worksheet, row, 28, invoice.InternalStatusId);
 
                         row++;
                     }
