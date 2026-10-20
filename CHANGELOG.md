@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.15`** (`AppInfo:Version` in `appsettings.json`). v1.47.15 is a **patch**
+> **Current version: `v1.47.16`** (`AppInfo:Version` in `appsettings.json`). v1.47.16 is a **patch**
+> release: invoice form tidy-up — see the dated entry below. v1.47.15 was a **patch**
 > release: hardening — draft files, sign-in lockout, emails, logos, webhooks, LHDN tokens — see the dated entry below. v1.47.14 was a **patch**
 > release: LHDN reliability — status polling, recurring auto-submit and duplicate submissions — see the dated entry below. v1.47.13 was a **patch**
 > release: security fixes for templates, recurring invoices, invoice PDFs and buyer names — see the dated entry below. v1.47.12 was a **patch**
@@ -395,6 +396,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.16 (invoice form tidy-up)
+
+- **Billing Frequency** reads "Not Applicable" instead of "Not_Applicable" (the dropdown and the Review step).
+- Removed a hidden **debug panel** and debug comments that wrote internal values into the page source
+  (Create e-Invoice and Invoice Edit).
+- **Accessibility:** the item row's Duplicate / Remove buttons and the "remove tax" control have screen-reader
+  names, and "remove tax" is now a real button you can reach with the keyboard.
+- **Submit to LHDN** on Create e-Invoice is green like on Invoice Edit (it was red, which looks like "delete").
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.15 (hardening)
 

@@ -2547,7 +2547,7 @@
                         <input name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                     </div>
                     <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                        <i class="ri-close-circle-line text-danger" onclick="removeTaxRow(this)" title="Remove Tax" style="cursor: pointer; font-size: 16px; padding: 2px;"></i>
+                        <button type="button" class="btn btn-link text-danger p-0 lh-1" onclick="removeTaxRow(this)" title="Remove tax" aria-label="Remove tax" style="font-size: 16px;"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="mt-2 tax-exemption-reason" style="display: none;">
@@ -2683,11 +2683,11 @@
                             <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
                         </div>
                         <div class="irow-actions">
-                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate">
-                                <i class="ri-file-copy-line"></i>
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate" aria-label="Duplicate item">
+                                <i class="ri-file-copy-line" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
-                                <i class="ri-delete-bin-line"></i>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove" aria-label="Remove item">
+                                <i class="ri-delete-bin-line" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
@@ -3040,11 +3040,11 @@
                             <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
                         </div>
                         <div class="irow-actions">
-                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate">
-                                <i class="ri-file-copy-line"></i>
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate" aria-label="Duplicate item">
+                                <i class="ri-file-copy-line" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove">
-                                <i class="ri-delete-bin-line"></i>
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove" aria-label="Remove item">
+                                <i class="ri-delete-bin-line" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
