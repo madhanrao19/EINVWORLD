@@ -5153,7 +5153,7 @@
                                 if (buyerSelect) {
                                     buyerSelect.innerHTML = '<option value="">Select Buyer</option>';
                                     filteredCustomers.forEach(c => {
-                                        buyerSelect.innerHTML += `<option value="${c.value}">${c.text}</option>`;
+                                        buyerSelect.add(new Option(c.text, c.value)); // text node, not HTML: buyer names are user-controlled
                                     });
 
                                     // Auto-select primary company if it's a Self-billed document
