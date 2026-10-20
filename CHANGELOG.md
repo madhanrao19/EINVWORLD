@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.7`** (`AppInfo:Version` in `appsettings.json`). v1.47.7 is a **patch**
+> **Current version: `v1.47.8`** (`AppInfo:Version` in `appsettings.json`). v1.47.8 is a **patch**
+> release: reopened invoices keep their saved values (Exchange Rate and more) and the totals cards match on all three steps — see the dated entry below. v1.47.7 was a **patch**
 > release: a "Reference Document No." column on the Invoices lists and in CSV/XLSX export — see the dated entry below. v1.47.6 was a **patch**
 > release: fixes and polish from the v1.47.4 Staging review (CN from link, Draft PDF export, 2FA messages, phone cards, tabs, address, old articles) — see the dated entry below. v1.47.5 was a **patch**
 > release: security fixes for invoice party details and 2FA sign-in — see the dated entry below. v1.47.4 was a **patch**
@@ -387,6 +388,26 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.8 (reopened invoices keep saved values; one totals card on all steps)
+
+- **Exchange Rate** is no longer reset to 1.00 when an invoice is opened, and it keeps every decimal
+  (4.567 stays 4.567, not 4.57). Choosing MYR still sets it to 1.00.
+- **Other saved values that were lost when an invoice was reopened:**
+  - Attention and Payment Terms: these were replaced by the buyer's master data.
+  - Supplier: the primary company could replace a saved supplier.
+  - Currency (Create e-Invoice): MYR could replace a saved currency.
+  - Buyer (Create e-Invoice): a resent or template invoice now opens with its buyer selected.
+  - Issue Date: lost on drafts older than 3 days.
+  - End Date: lost when no Start Date was set.
+  - Line classification codes: reset to 022.
+  - SVDP flag (Invoice Edit): cleared on save when SVDP is switched off.
+- **Totals on Steps 1, 2 and 3** (Create e-Invoice and Invoice Edit) now all read *Subtotal (excl. tax) /
+  Tax amount / Total payable*. Subtotal is now the amount after discounts and charges, so Subtotal + Tax always
+  equals Total payable. Every card names the invoice's own currency; "RM" and "MYR - Malaysian Ringgit" are no
+  longer hard-coded.
+- **Running Total** on Step 1 shows the selected currency code (for example `USD 100.00`), not `RM`.
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.7 (Reference Document No. column on the Invoices lists)
 
