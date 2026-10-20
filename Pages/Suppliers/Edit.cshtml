@@ -37,8 +37,8 @@
                         <div class="avatar avatar-xl rounded mb-3" style="width:140px;height:140px;">
                             <img id="companylogo-img"
                                  class="rounded w-100 h-100 object-fit-cover"
-                                 src="@(string.IsNullOrEmpty(Model.PartyInfo.LogoPath) ? Url.Content("~/assets/images/users/multi-user.jpg") : Url.Content(Model.PartyInfo.LogoPath))"
-                                 data-saved="@(string.IsNullOrEmpty(Model.PartyInfo.LogoPath) ? "" : Url.Content(Model.PartyInfo.LogoPath))" />
+                                 src="@Url.Content(EINVWORLD.Helpers.LogoUrl.For(Model.PartyInfo.LogoPath))"
+                                 data-saved="@(string.IsNullOrEmpty(Model.PartyInfo.LogoPath) ? "" : Url.Content(EINVWORLD.Helpers.LogoUrl.For(Model.PartyInfo.LogoPath)))" />
                         </div>
                     </div>
                     <div class="text-muted small mb-3">PNG, JPG or GIF. Square images look best.</div>

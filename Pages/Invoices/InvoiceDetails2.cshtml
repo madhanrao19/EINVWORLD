@@ -497,7 +497,7 @@
                                     <td style="width:15%; vertical-align:top;padding-left:20px;">
                                         @if (!string.IsNullOrEmpty(invoice.Supplier?.LogoPath))
                                         {
-                                            <img src="@invoice.Supplier.LogoPath"
+                                            <img src="@Url.Content(EINVWORLD.Helpers.LogoUrl.For(invoice.Supplier.LogoPath))"
                                                  alt="@invoice.Supplier?.CompanyName Logo"
                                                  style="width:90px; height:96px; object-fit:contain; display:block;" />
                                         }
