@@ -201,6 +201,9 @@ public class InvoiceStatusUpdater : BackgroundService
     {
         var invoicesToProcess = await dbContext.InvoiceHeaders
             .Include(i => i.Customer).Include(i => i.Supplier)
+            // Only documents LHDN knows about. Drafts (no UUID / SubmissionID) are skipped below without
+            // touching LastUpdated, so they stayed the "oldest 10" forever and blocked polling for everyone.
+            .Where(i => i.UUID != null || i.SubmissionID != null)
             .Where(i =>
                 // 1. Keep checking if it hasn't reached a final status yet
                 (i.LHDNStatusId != "Valid" && i.LHDNStatusId != "Rejected" && i.LHDNStatusId != "Cancelled" && i.LHDNStatusId != "Invalid")

@@ -69,17 +69,36 @@ namespace EINVWORLD.Helpers
             if (string.IsNullOrWhiteSpace(tin))
                 return (false, "Unable to determine taxpayer TIN.");
 
-            string accessToken = await _tokenService.GetAccessTokenForTIN(tin);
-            // tin must be passed here: this helper runs from a background job with no HTTP session,
-            // and SubmitDocumentsAsync falls back to a session-based token lookup when tin is omitted.
-            var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, tin);
-            _logger.LogInformation("📨 API response: {Response}", apiResponseJson);
+
+            // Same atomic claim the Submit buttons take, so a queued retry / auto-submit can't race a user's
+            // submit of the same invoice. (A winning claim reloads the tracked invoice — nothing is mutated yet.)
+            if (!await InvoiceSubmissionGuard.TryClaimAsync(_context, invoiceNo))
+                return (false, $"Invoice {invoiceNo} is already being submitted or was submitted.");
+
+            string accessToken;
+            string apiResponseJson;
+            try
+            {
+                accessToken = await _tokenService.GetAccessTokenForTIN(tin);
+                // tin must be passed here: this helper runs from a background job with no HTTP session,
+                // and SubmitDocumentsAsync falls back to a session-based token lookup when tin is omitted.
+                apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, tin);
+            }
+            catch (Exception ex)
+            {
+                await InvoiceSubmissionGuard.ReleaseAfterFailureAsync(_context, invoiceNo, ex);
+                throw;
+            }
+            _logger.LogInformation("📨 Submission response received for {InvoiceNo}.", invoiceNo);
 
             var apiResponse = JsonSerializer.Deserialize<SuccessSubmit>(apiResponseJson);
             var accepted = apiResponse?.acceptedDocuments?.FirstOrDefault();
 
             if (accepted == null || string.IsNullOrEmpty(accepted.uuid))
+            {
+                await InvoiceSubmissionGuard.ReleaseAsync(_context, invoiceNo); // LHDN answered without accepting it
                 return (false, $"Submission accepted but UUID missing for invoice {invoiceNo}.");
+            }
 
             // ✅ Save to DB
             invoice.UUID = accepted.uuid;

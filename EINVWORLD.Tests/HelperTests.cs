@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using eInvWorld.Helpers;          // DateTimeHelper
 using EINVWORLD.Helpers;          // GeneralTINHelper, AmountInWordsHelper
 using Xunit;
@@ -30,6 +31,20 @@ namespace EINVWORLD.Tests
 
         [Fact]
         public void FmtRate_Null_IsEmpty() => Assert.Equal("", InvoiceFormatting.FmtRate(null));
+
+        // ── InvoiceSubmissionGuard.OutcomeUnknown (keep the claim when LHDN may have accepted) ──
+        [Fact]
+        public void OutcomeUnknown_Only_For_Timeouts_Dropped_Connections_And_Gateway_Errors()
+        {
+            Assert.True(InvoiceSubmissionGuard.OutcomeUnknown(new TaskCanceledException("timeout")));
+            Assert.True(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("reset", new System.IO.IOException("conn reset"))));
+            Assert.True(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("gw", null, System.Net.HttpStatusCode.GatewayTimeout)));
+
+            // LHDN answered: rejected / validation / rate limited / unavailable — safe to release and retry.
+            Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("❌ Error submitting document: BadRequest")));
+            Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("down", null, System.Net.HttpStatusCode.ServiceUnavailable)));
+            Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new InvalidOperationException("no TIN")));
+        }
 
         // ── GeneralTINHelper.IsGeneralTIN ─────────────────────────────────────────────────────
         [Theory]
