@@ -398,6 +398,7 @@
   its heading) and works in dark mode.
 - **Fixed: new 2FA backup codes were never shown.** Turning 2FA on or regenerating codes created the codes
   and then reloaded the page, which threw them away. They are now displayed right away.
+  The 2FA page is marked never-cache, since it shows the authenticator key and these codes.
 - **Credit / Debit / Refund Note from the invoice list:** the read-only Reference UUID box was light grey
   in dark mode (text nearly invisible); it now follows the theme. When picking the Reference UUID from the
   dropdown, the value now sits under its label like the other fields.
