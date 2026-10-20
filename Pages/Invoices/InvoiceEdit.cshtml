@@ -214,15 +214,15 @@
     }
     
     .swal-submission-success .copy-btn:hover {
-        background: #e9ecef;
+        background: var(--einv-surface-2, #e9ecef);
         color: var(--einv-text, #495057);
         border-color: #adb5bd;
     }
     
     .swal-submission-success .copy-btn.copied {
-        background: #d1edff;
-        color: #0c63e4;
-        border-color: #0c63e4;
+        background: rgba(var(--einv-primary-rgb, 0, 105, 72), .14);
+            color: var(--einv-primary, #006948);
+            border-color: var(--einv-primary, #006948);
     }
     
     .swal-submission-success .copy-btn.copied i:before {
@@ -4056,7 +4056,7 @@
                     const fee = parseFloat(row.querySelector('.fee-amount-input')?.value) || 0;
                     const tariff = escapeHtml(row.querySelector('input[name*=".ProductTariffCode"]')?.value || '');
                     const countrySelect = row.querySelector('select[name*=".CountryOfOrigin"]');
-                    const country = escapeHtml(countrySelect?.selectedOptions?.[0]?.text || '');
+                    const country = countrySelect?.value ? escapeHtml(countrySelect.selectedOptions[0]?.text || '') : ''; // no choice = no note (not "-- Select --")
                     const notes = [];
                     if (discount) notes.push(`Discount: ${discount.toFixed(2)}`);
                     if (fee) notes.push(`Fee/Charge: ${fee.toFixed(2)}`);

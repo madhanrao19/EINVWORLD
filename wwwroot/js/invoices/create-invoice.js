@@ -1452,7 +1452,7 @@
                         const fee = parseFloat(row.querySelector('.fee-amount-input')?.value) || 0;
                         const tariff = escapeHtml(row.querySelector('input[name*=".ProductTariffCode"]')?.value || '');
                         const countrySelect = row.querySelector('select[name*=".CountryOfOrigin"]');
-                        const country = escapeHtml(countrySelect?.selectedOptions?.[0]?.text || '');
+                        const country = countrySelect?.value ? escapeHtml(countrySelect.selectedOptions[0]?.text || '') : ''; // no choice = no note (not "-- Select --")
                         const notes = [];
                         if (discount) notes.push(`Discount: ${discount.toFixed(2)}`);
                         if (fee) notes.push(`Fee/Charge: ${fee.toFixed(2)}`);
