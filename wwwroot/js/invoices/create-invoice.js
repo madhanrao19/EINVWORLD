@@ -2670,11 +2670,11 @@
                         </div>
                         <div class="irow-qty">
                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                         </div>
                         <div class="irow-price">
                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                         </div>
                         <div class="irow-total">
                             <div class="irow-mlabel">Subtotal</div>
@@ -3027,11 +3027,11 @@
                         </div>
                         <div class="irow-qty">
                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                            <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                         </div>
                         <div class="irow-price">
                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                            <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                         </div>
                         <div class="irow-total">
                             <div class="irow-mlabel">Subtotal</div>
