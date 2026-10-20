@@ -10,7 +10,8 @@
 *@
 @model eInvWorld.Pages.Suppliers.CompanyWorkspaceTabsModel
 
-<ul class="nav nav-tabs mb-4" role="tablist">
+@* One row that scrolls sideways on narrow screens instead of wrapping onto three lines. *@
+<ul class="nav nav-tabs mb-4 flex-nowrap overflow-x-auto overflow-y-hidden text-nowrap" role="tablist">
     <li class="nav-item" role="presentation">
         <a class="nav-link @(Model.Active == "overview" ? "active" : "")"
            asp-page="/Suppliers/Details" asp-route-id="@Model.PartyInfoId" asp-route-from="@Model.From">

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.3`** (`AppInfo:Version` in `appsettings.json`). v1.47.3 is a **patch**
+> **Current version: `v1.47.4`** (`AppInfo:Version` in `appsettings.json`). v1.47.4 is a **patch**
+> release: company logos load again; My Company tidy on phones; tablet top bar no longer overlaps — see the dated entry below. v1.47.3 was a **patch**
 > release: My Company overview redesigned, one 2FA screen (backup codes now shown), dark-mode fixes — see the dated entry below. v1.47.2 was a **patch**
 > release: browsers load the new scripts straight after a deploy (22 script tags were never cache-busted) — see the dated entry below. v1.47.1 was a **patch**
 > release: fixes from the v1.47.0 Staging test (empty Draft export, dark-mode ticked rows and editor menu, duplicate Validate button, collapsed sidebar) — see the dated entry below. v1.47.0 was a **minor**
@@ -383,6 +384,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.4 (company logos show again; My Company on phones and tablets)
+
+- **Company logos now load in the app.** Logos are stored outside the website folder, but pages put the
+  server file path (e.g. `E:\...\Logos\x.png`) straight into the image, so browsers showed a broken image
+  (on My Company it appeared as large alt text). My Company, Edit Company, List of Companies, Customer
+  Submissions, Add Buyer / Create Company and the invoice view now load logos through the existing
+  sign-in-protected `/api/Image/logo` link (new `LogoUrl` helper, with tests). PDFs are unchanged.
+- **My Company on phones:** the four stat tiles fit two per row without breaking words; Legal &
+  Registration and Contact & Finance start closed (tap to open) like the mockup; the workspace tabs stay
+  on one line and scroll sideways instead of wrapping onto three rows (all company workspace pages).
+- **Tablet top bar (768–991px wide, every page):** the search box was drawn over the menu button and logo.
+  Tablets now use the phone pattern — a search button that opens the search box under the bar.
 
 ## 📅 2026-10-20 — v1.47.3 (My Company overview, one 2FA screen, dark-mode fixes)
 
