@@ -758,6 +758,22 @@ namespace EINVWORLD.Pages.Invoices
                     Invoice.ResentFromInvoiceNo = null;
                 }
 
+                // Never trust posted ids (supplier, buyer, invoice number) — see InvoiceWriteGuard.
+                if (Invoice != null)
+                {
+                    var denied = await EINVWORLD.Helpers.InvoiceWriteGuard.CheckAsync(User, _context, _buyerService,
+                        Invoice.InvoiceNo, Invoice.DocTypeCode, Invoice.SupplierId, Invoice.CustomerId, Invoice.PublicCustomerId,
+                        checkInvoiceNo: action is "saveDraft" or "saveAndSubmit");
+                    if (denied != null)
+                    {
+                        _logger.LogWarning("Invoice save refused for {User} on {InvoiceNo}: {Reason}", User.Identity?.Name, Invoice.InvoiceNo, denied);
+                        if (isAjax) return new JsonResult(new { success = false, message = denied }) { StatusCode = 403 };
+                        ModelState.AddModelError("", denied);
+                        await OnGetAsync();
+                        return Page();
+                    }
+                }
+
                 // NOW safe to save template (buyer IDs already populated)
                 if (action == "saveAsTemplate")
                 {
