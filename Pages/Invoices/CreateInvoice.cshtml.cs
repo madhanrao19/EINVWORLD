@@ -237,7 +237,14 @@ namespace EINVWORLD.Pages.Invoices
                     InvoiceNo = GenerateNextInvoiceNumber(),
                     InvoicePeriod = InvoicePeriodEnum.Not_Applicable,
                     RefDocumentNo = "NA",
-                    DocTypeCode = string.Equals(type, "SELF", StringComparison.OrdinalIgnoreCase) ? "11" : "01",
+                    // ?type= picks the document type even without a source invoice (e.g. ?type=CN then choose
+                    // the Reference UUID), so the type always matches the Reference UUID section shown.
+                    DocTypeCode = type?.ToUpperInvariant() switch
+                    {
+                        "SELF" => "11", "CN" => "02", "DN" => "03", "RN" => "04",
+                        "SELF-CN" => "12", "SELF-DN" => "13", "SELF-RN" => "14",
+                        _ => "01"
+                    },
                     IssueDate = malaysiaTime,
                     InvoiceLines = new List<InvoiceLineView>
             {

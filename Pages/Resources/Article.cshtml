@@ -47,7 +47,8 @@
 
         <link href="~/css/resource-article.css" rel="stylesheet" asp-append-version="true" />
         <div class="article-body text-dark">
-            @Html.Raw(Model.Article?.ContentHtml ?? "")
+            @* Sanitised on display as well as on save: articles saved before v1.46.11 still carry pasted styles. *@
+            @Html.Raw(EINVWORLD.Helpers.ResourceHtmlSanitizer.Sanitize(Model.Article?.ContentHtml))
         </div>
 
         <a href="/resources" class="btn btn-outline-secondary mt-4">&larr; Back to Resources</a>
