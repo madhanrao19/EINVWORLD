@@ -1527,6 +1527,10 @@ namespace eInvWorld.Pages.Invoices
                 object? partyData = null;
                 // Bank details only for parties the caller belongs to / owns (was returned for any id).
                 // A company's saved accounts feed the Saved bank account picker; the default comes first.
+                // Only parties the caller may pick on this screen (own company, linked buyer, general TIN);
+                // anything else answers as "not found" so ids can't be probed for other tenants' details.
+                if (!await EINVWORLD.Helpers.PartyBankAccess.CanViewPartyAsync(User, _context, partyType, partyId))
+                    return new JsonResult(new { success = false, message = "Details not found" });
                 bool canSeeBank = await EINVWORLD.Helpers.PartyBankAccess.CanSeeBankAsync(User, _context, partyType, partyId);
                 var bankAccounts = canSeeBank && partyType == "PI"
                     ? (await bankAccountService.ListAsync(partyId)).Select(a => new { a.Id, a.BankName, a.BankAccountNo, a.IsDefault }).ToList<object>()

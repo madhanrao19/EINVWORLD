@@ -286,8 +286,8 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "❌ Failed to retrieve access token for user {UserName}.", Input.UserName);
-                            ModelState.AddModelError(string.Empty, $"Login succeeded but failed to retrieve system token: {ex.Message}");
-                            return Page();
+                            // Don't leave a half-signed-in session, and never show exception text to the user.
+                            return await SignOutAndShowErrorAsync("We couldn't connect to the e-invoice service just now. Please try again in a few minutes.");
                         }
                     }
 
