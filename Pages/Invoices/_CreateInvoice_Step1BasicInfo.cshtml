@@ -33,7 +33,7 @@
                         <div class="col-6 col-lg-3">
                             <div class="border rounded-3 p-3 h-100">
                                 <div class="text-muted einv-label">Running Total</div>
-                                <div class="fw-bold mt-2 text-primary" id="kpiRunningTotal">RM 0.00</div>
+                                <div class="fw-bold mt-2 text-primary" id="kpiRunningTotal">MYR 0.00</div>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
@@ -165,7 +165,7 @@
                                     {
                                         @foreach (var currency in Model.CurrencyCodes)
                                         {
-                                            var isSelected = currency.Value == "MYR";
+                                            var isSelected = currency.Value == (string.IsNullOrEmpty(Model.Invoice?.Currency) ? "MYR" : Model.Invoice.Currency);
                                             <option value="@currency.Value" selected="@(isSelected ? "selected" : null)">@currency.Text</option>
                                         }
                                     }
@@ -180,7 +180,7 @@
                         <!-- Exchange Rate -->
                         <div class="col-md-4">
                             <div class="form-floating">
-                                <input type="number" asp-for="Invoice.ExchangeRate" value="@InvoiceFormatting.Fmt2(Model.Invoice?.ExchangeRate)" class="form-control" id="exchangeRate" step="0.01" placeholder="1.00" />
+                                <input type="number" asp-for="Invoice.ExchangeRate" value="@InvoiceFormatting.FmtRate(Model.Invoice?.ExchangeRate)" class="form-control" id="exchangeRate" step="any" placeholder="1.00" />
                                 <label for="exchangeRate">
                                     Exchange Rate
                                     <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="Exchange rate if different from base currency"></i>
@@ -235,7 +235,9 @@
                                         @foreach (var supplier in Model.Suppliers)
                                         {
                                             var isPrimary = supplier.Value == Model.PrimaryCompanyId?.ToString();
-                                            <option value="@supplier.Value" selected="@(isPrimary ? "selected" : null)">
+                                            // Saved supplier wins; primary is only the default for a new invoice.
+                                            var isSelected = Model.Invoice?.SupplierId > 0 ? supplier.Value == Model.Invoice.SupplierId.ToString() : isPrimary;
+                                            <option value="@supplier.Value" selected="@(isSelected ? "selected" : null)">
                                                 @(isPrimary ? "⭐ " + supplier.Text + " (Primary)" : supplier.Text)
                                             </option>
                                         }
@@ -601,11 +603,11 @@
                         <section class="einv-sum mb-3" aria-label="Invoice summary">
                             <div class="einv-sum-h">Invoice summary</div>
                             <dl class="einv-sum-rows">
-                                <dt>Subtotal</dt><dd id="step1SummarySubtotal">RM 0.00</dd>
-                                <dt>Tax amount</dt><dd id="step1SummaryTax">RM 0.00</dd>
+                                <dt>Subtotal (excl. tax)</dt><dd id="step1SummarySubtotal">0.00</dd>
+                                <dt>Tax amount</dt><dd id="step1SummaryTax">0.00</dd>
                             </dl>
                             <div class="einv-sum-total"><span>Total payable</span><b id="step1SummaryTotal">0.00</b></div>
-                            <div class="einv-sum-note">MYR - Malaysian Ringgit</div>
+                            <div class="einv-sum-note js-sum-currency">MYR</div>
                         </section>
                         <div class="card">
                             <div class="card-body">
