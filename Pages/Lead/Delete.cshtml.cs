@@ -10,6 +10,8 @@ using eInvWorld.Models.InputModel;
 
 namespace eInvWorld.Pages.Lead
 {
+    // Lead (company) records are an Admin back-office; Lead/List and Lead/Edit already require Admin.
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class DeleteModel : PageModel
     {
         private readonly eInvWorld.Data.ApplicationDbContext _context;

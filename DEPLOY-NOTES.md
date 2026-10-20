@@ -426,6 +426,11 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
   authenticator-setup page until they enrol (no hard lockout either way — recovery codes always work).
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
+- **Demo users:** `Seeding:SeedDefaultUsers` defaults to **true** and seeds `admin@`/`supplier@`/`buyer@einvworld.com`
+  with well-known passwords. **Set `Seeding__SeedDefaultUsers = false` on Production.**
+- **General-TIN memberships (v1.47.11, once per database):** run `scripts/Remove-GeneralTinMemberships.sql`
+  (step 1 preview, then step 2 after a backup). No user should belong to a General Public / Foreign Buyer /
+  Foreign Supplier / Government placeholder company.
 
 ## 5b. Optional ingestion features (all OFF by default)
 

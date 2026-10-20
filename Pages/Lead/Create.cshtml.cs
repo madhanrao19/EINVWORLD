@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace eInvWorld.Pages.Lead
 {
-    [AllowAnonymous]
+    // Was [AllowAnonymous] and binds the whole PartyInfo (IsApproved, links...) with no Turnstile; the public
+    // sign-up form is /customer-info/submit (Lead/Submit), so this page is Admin-only.
+    [Authorize(Roles = "Admin")]
     public class CreateModel : PageModel
     {
         private readonly eInvWorld.Data.ApplicationDbContext _context;

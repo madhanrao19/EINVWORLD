@@ -128,6 +128,9 @@ namespace EINVWORLD.Helpers
                 .Where(uc => uc.UserId == userId)
                 .Select(uc => uc.PartyInfo.TIN)
                 .ToListAsync();
+            // LHDN general TINs (EI00000000010 General Public, ...) are shared by every tenant's invoices;
+            // a membership of such a party must never grant access to all of them.
+            userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
             if (userTins.Count == 0) return false;
 
             var party = await db.InvoiceHeaders
@@ -159,6 +162,9 @@ namespace EINVWORLD.Helpers
                 .Where(uc => uc.UserId == userId)
                 .Select(uc => uc.PartyInfo.TIN)
                 .ToListAsync();
+            // LHDN general TINs (EI00000000010 General Public, ...) are shared by every tenant's invoices;
+            // a membership of such a party must never grant access to all of them.
+            userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
             if (userTins.Count == 0) return false;
 
             var party = await db.InvoiceHeaders
@@ -188,6 +194,7 @@ namespace EINVWORLD.Helpers
         {
             if (string.IsNullOrWhiteSpace(tin)) return false;
             if (user.IsAdmin(db)) return true;
+            if (GeneralTINHelper.IsGeneralTIN(tin)) return false; // shared by all tenants; never "owned"
 
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(userId)) return false;
@@ -195,6 +202,34 @@ namespace EINVWORLD.Helpers
             return await db.UserCompanies
                 .Where(uc => uc.UserId == userId)
                 .AnyAsync(uc => uc.PartyInfo.TIN == tin);
+        }
+
+        /// <summary>
+        /// Write access to an invoice (edit / delete): the user must own the ISSUER's TIN — the supplier,
+        /// or the customer for self-billed types 11–14 (the same rule submission uses). Unlike
+        /// <see cref="CanAccessInvoiceAsync"/>, the counterparty that merely receives the invoice is refused.
+        /// </summary>
+        public static async Task<bool> CanManageInvoiceAsync(this ClaimsPrincipal user, ApplicationDbContext db, string invoiceNo)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceNo)) return false;
+            if (user.IsAdmin(db)) return true;
+
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return false;
+
+            var issuer = await db.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo)
+                .Select(i => i.DocTypeCode == "11" || i.DocTypeCode == "12" || i.DocTypeCode == "13" || i.DocTypeCode == "14"
+                    ? new { Id = i.CustomerId, Tin = i.Customer != null ? i.Customer.TIN : null }
+                    : new { Id = (int?)i.SupplierId, Tin = (string?)i.Supplier.TIN })
+                .FirstOrDefaultAsync();
+
+            // Match the issuing company itself (not its TIN), and never treat a shared LHDN general TIN
+            // (EI00000000010 etc.) as owned: those parties are common to every tenant, so membership of one
+            // must not grant write access to every invoice issued under it.
+            if (issuer?.Id is not int issuerId || GeneralTINHelper.IsGeneralTIN(issuer.Tin)) return false;
+
+            return await db.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId);
         }
 
     }
