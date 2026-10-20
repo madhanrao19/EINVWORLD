@@ -427,7 +427,7 @@ namespace eInvWorld.Pages.Invoices
                 .Cast<InvoicePeriodEnum>()
                 .Select(e => new SelectListItem
                 {
-                    Text = e.ToString(),
+                    Text = e.ToString().Replace('_', ' '), // "Not_Applicable" -> "Not Applicable"; Value keeps the enum name
                     Value = e.ToString()
                 })
                 .ToList();
