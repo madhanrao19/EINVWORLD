@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.2`** (`AppInfo:Version` in `appsettings.json`). v1.47.2 is a **patch**
+> **Current version: `v1.47.3`** (`AppInfo:Version` in `appsettings.json`). v1.47.3 is a **patch**
+> release: My Company overview redesigned, one 2FA screen (backup codes now shown), dark-mode fixes — see the dated entry below. v1.47.2 was a **patch**
 > release: browsers load the new scripts straight after a deploy (22 script tags were never cache-busted) — see the dated entry below. v1.47.1 was a **patch**
 > release: fixes from the v1.47.0 Staging test (empty Draft export, dark-mode ticked rows and editor menu, duplicate Validate button, collapsed sidebar) — see the dated entry below. v1.47.0 was a **minor**
 > release: a company can keep several bank accounts and pick one on each invoice (database migration) —
@@ -382,6 +383,29 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.3 (My Company overview, one 2FA screen, dark-mode fixes)
+
+- **My Company → Overview redesigned** (works on phone, tablet and desktop): four stat tiles with icons
+  (Users, Buyers, Suppliers, Verification); one Company Details card with the logo, badges and Edit
+  Company button, and Legal & Registration / Contact & Finance side by side — on phones these become
+  tap-to-open sections; Assigned Users and Assigned Buyers sit side by side on wide screens and turn into
+  stacked cards on phones. Empty values show "—". Every action (invite, assign, change role, permissions,
+  unassign) works as before.
+- **Two-factor authentication: one screen everywhere.** Company → Security now uses the same 2FA card as
+  My Profile → Security (with an On/Off status), and both open the app's own 2FA page instead of the
+  plain built-in one; Back/Cancel return to where you came from. The 2FA page lays out properly (icon above
+  its heading) and works in dark mode.
+- **Fixed: new 2FA backup codes were never shown.** Turning 2FA on or regenerating codes created the codes
+  and then reloaded the page, which threw them away. They are now displayed right away.
+- **Credit / Debit / Refund Note from the invoice list:** the read-only Reference UUID box was light grey
+  in dark mode (text nearly invisible); it now follows the theme. When picking the Reference UUID from the
+  dropdown, the value now sits under its label like the other fields.
+- **Review & Submit:** item notes no longer show "Origin: -- Select --" when no country of origin was
+  chosen (Create and Edit Invoice).
+- **Dark mode sweep:** remaining hard-coded light backgrounds on signed-in pages now use theme colours
+  (submission dialog copy button, 2FA recovery-code boxes). Utility classes such as bg-light were already
+  remapped; the invoice preview stays white on purpose (it is the A4 page).
 
 ## 📅 2026-10-19 — v1.47.2 (browsers pick up script fixes straight after a deploy)
 

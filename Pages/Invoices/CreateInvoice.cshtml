@@ -447,15 +447,15 @@
     }
 
         .swal-submission-success .copy-btn:hover {
-            background: #e9ecef;
+            background: var(--einv-surface-2, #e9ecef);
             color: var(--einv-text, #495057);
             border-color: #adb5bd;
         }
 
         .swal-submission-success .copy-btn.copied {
-            background: #d1edff;
-            color: #0c63e4;
-            border-color: #0c63e4;
+            background: rgba(var(--einv-primary-rgb, 0, 105, 72), .14);
+            color: var(--einv-primary, #006948);
+            border-color: var(--einv-primary, #006948);
         }
 
             .swal-submission-success .copy-btn.copied i:before {
@@ -909,7 +909,8 @@
     /* RefUUID select container styling */
     #refUUIDSelect + .select2-container .select2-selection--single {
         height: calc(3.5rem + 2px) !important;
-        padding: 1rem 0.75rem !important;
+        /* Same top padding as the other floating Select2s (1.6rem) so the value sits below the label. */
+        padding: 1.6rem 0.75rem 0.375rem !important;
         border: 1px solid var(--einv-border) !important;
         border-radius: 0.375rem !important;
     }

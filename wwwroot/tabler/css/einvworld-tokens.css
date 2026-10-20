@@ -1650,3 +1650,6 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 }
 .navbar-vertical .dropdown-item:hover .einv-nav-sub-icon,
 .navbar-vertical .dropdown-item.active .einv-nav-sub-icon { opacity: 1; }
+
+/* Lets a flex child shrink below its content so .text-truncate / long names wrap or clip inside cards. */
+.min-w-0 { min-width: 0; }

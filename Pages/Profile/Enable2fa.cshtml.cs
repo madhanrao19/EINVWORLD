@@ -37,6 +37,12 @@ namespace eInvWorld.Pages.Profile
         }
 
         public bool Is2faEnabled { get; set; }
+
+        /// <summary>Page to go back to (My Profile or Company → Security). Only local URLs are honoured.</summary>
+        [BindProperty(SupportsGet = true)]
+        public string? ReturnUrl { get; set; }
+
+        public string BackUrl => !string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl) ? ReturnUrl : Url.Page("/Profile/Index")!;
         public int RecoveryCodesLeft { get; set; }
         public string SharedKey { get; set; } = null!;
         public string AuthenticatorUri { get; set; } = null!;
@@ -105,7 +111,10 @@ namespace eInvWorld.Pages.Profile
             }
 
             TempData["SuccessMessage"] = "Two-factor authentication enabled.";
-            return RedirectToPage(); // Reload page to show "Enabled" view
+            // Render (not redirect): RecoveryCodes exist only in this response — a redirect lost them.
+            Is2faEnabled = true;
+            RecoveryCodesLeft = await _userManager.CountRecoveryCodesAsync(user);
+            return Page();
         }
 
         // Handler: Disable 2FA
@@ -118,14 +127,13 @@ namespace eInvWorld.Pages.Profile
             if (!result.Succeeded)
             {
                 TempData["ErrorMessage"] = "Unexpected error occurred disabling 2FA.";
-                return RedirectToPage();
+                return RedirectToPage(new { ReturnUrl });
             }
 
             _logger.LogInformation("User with ID '{UserId}' has disabled 2FA.", user.Id);
             TempData["SuccessMessage"] = "2FA has been disabled.";
 
-            // CHANGED: Redirect to the main Profile page
-            return RedirectToPage("/Profile/Index");
+            return LocalRedirect(BackUrl);
         }
 
         // Handler: Generate New Recovery Codes
@@ -139,7 +147,9 @@ namespace eInvWorld.Pages.Profile
 
             _logger.LogInformation("User with ID '{UserId}' has generated new 2FA recovery codes.", user.Id);
             TempData["SuccessMessage"] = "You have generated new recovery codes.";
-            return RedirectToPage();
+            Is2faEnabled = true;
+            RecoveryCodesLeft = RecoveryCodes.Length;
+            return Page();
         }
 
         private async Task LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)
