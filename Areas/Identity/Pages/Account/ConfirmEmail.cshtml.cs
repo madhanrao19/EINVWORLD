@@ -91,14 +91,14 @@ namespace eInvWorld.Areas.Identity.Pages.Account
 
                 var baseUrl = (_configuration["EmailConfiguration:EmailBaseUrls:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}/").TrimEnd('/');
                 var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
-                var enc = HtmlEncoder.Default;
                 var body = await _emailService.LoadEmailTemplate("NewUserRegistration/AdminEmailTemplate.html", new Dictionary<string, string>
                 {
-                    { "Name", enc.Encode(user.FullName ?? "") },
-                    { "Email", enc.Encode(user.Email ?? "") },
-                    { "Phone", enc.Encode(user.PhoneNumber ?? "") },
-                    { "Position", enc.Encode(user.Position ?? "") },
-                    { "ReviewUrl", enc.Encode($"{baseUrl}/Admin/Users/ManageUser") },
+                    // EmailService.LoadEmailTemplate HTML-encodes every value.
+                    { "Name", user.FullName ?? "" },
+                    { "Email", user.Email ?? "" },
+                    { "Phone", user.PhoneNumber ?? "" },
+                    { "Position", user.Position ?? "" },
+                    { "ReviewUrl", $"{baseUrl}/Admin/Users/ManageUser" },
                     { "Timestamp", now.ToString("dd/MM/yyyy hh:mm tt") },
                     { "Year", now.Year.ToString() }
                 });

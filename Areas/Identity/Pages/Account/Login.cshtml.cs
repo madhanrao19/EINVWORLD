@@ -205,7 +205,8 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 string logData = $"Username: {Input.UserName}, RememberMe: {Input.RememberMe}";
 
                 // ✅ Authenticate the user FIRST
-                var result = await _signInManager.PasswordSignInAsync(Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                // lockoutOnFailure: count wrong passwords so IdentityLockout (5 tries / 15 min) actually applies.
+                var result = await _signInManager.PasswordSignInAsync(Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
                 // -----------------------------------------------------------
                 // 1️⃣ CHECK FOR 2FA FIRST (Priority Check)

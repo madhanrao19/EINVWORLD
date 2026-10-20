@@ -48,7 +48,7 @@ namespace EINVWORLD.Controllers
                 // Determine content type based on file extension
                 var contentType = GetContentType(Path.GetExtension(fileName));
 
-                return File(fileBytes, contentType);
+                return ImageFile(fileBytes, contentType);
             }
             catch (Exception ex)
             {
@@ -79,7 +79,7 @@ namespace EINVWORLD.Controllers
                 // Determine content type based on file extension
                 var contentType = GetContentType(Path.GetExtension(fileName));
 
-                return File(fileBytes, contentType);
+                return ImageFile(fileBytes, contentType);
             }
             catch (Exception ex)
             {
@@ -110,13 +110,22 @@ namespace EINVWORLD.Controllers
                 // Determine content type based on file extension
                 var contentType = GetContentType(Path.GetExtension(fileName));
 
-                return File(fileBytes, contentType);
+                return ImageFile(fileBytes, contentType);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error serving company logo {FileName}", fileName);
                 return StatusCode(500, "Error serving company logo.");
             }
+        }
+
+        // Served anonymously from the app's own origin: an uploaded SVG (or a file sniffed as HTML) opened
+        // directly must not run script here. <img> rendering is unaffected by these headers.
+        private FileContentResult ImageFile(byte[] bytes, string contentType)
+        {
+            Response.Headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            return File(bytes, contentType);
         }
 
         private static string GetContentType(string extension)

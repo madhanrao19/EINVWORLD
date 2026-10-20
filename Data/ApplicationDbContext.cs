@@ -491,6 +491,13 @@ namespace eInvWorld.Data
                 if (_secretProtector is not null)
                     ((Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder)secret).HasConversion(new ProtectedStringConverter(_secretProtector));
             });
+
+            // LHDN OAuth access tokens are bearer credentials for a taxpayer's MyInvois account: encrypted at
+            // rest with the secret protector. Rows written before this stay readable (the converter returns
+            // non-ciphertext verbatim) and are encrypted on their next refresh. Column is already nvarchar(max).
+            if (_secretProtector is not null)
+                modelBuilder.Entity<eInvWorld.Models.Auth.LHDNToken>().Property(t => t.AccessToken)
+                    .HasConversion(new ProtectedStringConverter(_secretProtector));
         }
     }
 }

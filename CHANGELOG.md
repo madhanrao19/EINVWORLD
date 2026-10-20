@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.14`** (`AppInfo:Version` in `appsettings.json`). v1.47.14 is a **patch**
+> **Current version: `v1.47.15`** (`AppInfo:Version` in `appsettings.json`). v1.47.15 is a **patch**
+> release: hardening — draft files, sign-in lockout, emails, logos, webhooks, LHDN tokens — see the dated entry below. v1.47.14 was a **patch**
 > release: LHDN reliability — status polling, recurring auto-submit and duplicate submissions — see the dated entry below. v1.47.13 was a **patch**
 > release: security fixes for templates, recurring invoices, invoice PDFs and buyer names — see the dated entry below. v1.47.12 was a **patch**
 > release: security checks when saving an invoice — see the dated entry below. v1.47.11 was a **patch**
@@ -394,6 +395,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.15 (hardening)
+
+- **Draft files:** saving a draft writes the LHDN JSON file only once the database save succeeds (temp file, then
+  rename). Before, a failed save could leave the file and the database out of step, and the file is what gets
+  submitted.
+- **Sign-in lockout:** 5 wrong passwords now lock the account for 15 minutes, as the settings always said.
+  Wrong passwords weren't being counted.
+- **Emails:** names, the buyer's rejection reason, contact-form messages and public sign-up details are
+  HTML-encoded in every notification email. Before, a buyer could put a link or formatting into the supplier's email.
+- **Company logos:** uploads must be a real PNG or JPG (checked by content, not file name). Logos and resource
+  images are served with headers that stop an uploaded SVG or HTML file from running script.
+- **Webhooks:** redirects are no longer followed, and more internal address ranges are blocked.
+- **LHDN tokens** are encrypted in the database (existing rows stay readable and are encrypted on their next
+  refresh), and a company stuck in LHDN rate limiting no longer delays token access for other companies.
+- **IIS:** the deploy guide now sets **Disable Overlapped Recycle = True** on the app pool (see DEPLOY-NOTES §3).
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.14 (LHDN reliability)
 
