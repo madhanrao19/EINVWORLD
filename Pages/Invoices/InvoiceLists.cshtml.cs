@@ -2284,12 +2284,12 @@ namespace eInvWorld.Pages.Invoices
         // synchronous loop over hundreds of documents — the real timeout risk flagged earlier.
         private const int MaxBulkPdfCount = 50;
 
-        public async Task<IActionResult> OnGetBulkPdfAsync(string uuids)
+        // invoiceNos (preferred) also covers Drafts, which have no UUID yet; uuids kept for older links.
+        public async Task<IActionResult> OnGetBulkPdfAsync(string? uuids, string? invoiceNos = null)
         {
-            if (string.IsNullOrEmpty(uuids))
-                return BadRequest("No invoices selected.");
-
-            var uuidList = uuids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            var byInvoiceNo = !string.IsNullOrEmpty(invoiceNos);
+            var uuidList = (byInvoiceNo ? invoiceNos : uuids ?? "")!
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
             if (uuidList.Count == 0)
                 return BadRequest("No invoices selected.");
             if (uuidList.Count > MaxBulkPdfCount)
@@ -2313,7 +2313,7 @@ namespace eInvWorld.Pages.Invoices
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => uuidList.Contains(i.UUID!) &&
+                .Where(i => (byInvoiceNo ? uuidList.Contains(i.InvoiceNo) : uuidList.Contains(i.UUID!)) &&
                             (userTINs.Contains(i.Supplier.TIN) ||
                              (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                              (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))

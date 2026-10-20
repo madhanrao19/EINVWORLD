@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.5`** (`AppInfo:Version` in `appsettings.json`). v1.47.5 is a **patch**
+> **Current version: `v1.47.6`** (`AppInfo:Version` in `appsettings.json`). v1.47.6 is a **patch**
+> release: fixes and polish from the v1.47.4 Staging review (CN from link, Draft PDF export, 2FA messages, phone cards, tabs, address, old articles) — see the dated entry below. v1.47.5 was a **patch**
 > release: security fixes for invoice party details and 2FA sign-in — see the dated entry below. v1.47.4 was a **patch**
 > release: company logos load again; My Company tidy on phones; tablet top bar no longer overlaps — see the dated entry below. v1.47.3 was a **patch**
 > release: My Company overview redesigned, one 2FA screen (backup codes now shown), dark-mode fixes — see the dated entry below. v1.47.2 was a **patch**
@@ -385,6 +386,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.6 (fixes and polish from the v1.47.4 Staging review)
+
+- **Credit / Debit / Refund Note started without a source invoice** (`Create Invoice?type=CN` etc.) showed the
+  Reference UUID picker while the document type stayed "Invoice". The type now matches the link (CN, DN, RN,
+  and their self-billed versions).
+- **Export → PDF (ZIP) of selected Drafts:** Drafts were silently skipped (they have no LHDN UUID yet) while
+  the "Selected (n)" count included them. PDFs are now picked by invoice number, so Drafts are included,
+  the same as CSV/XLSX.
+- **2FA page:** "2FA enabled", "codes regenerated" and error messages now appear on the page, and it
+  reminds you to regenerate backup codes if you don't have them saved (anyone who turned 2FA on before
+  v1.47.3 never saw theirs).
+- **Phones:** the "Columns" button is hidden on tables shown as cards (it had nothing to do there).
+- **Company workspace tabs:** the sideways-scrolling tab row no longer shows a scrollbar strip on Windows.
+- **My Company address:** address lines saved with a trailing comma no longer show as ", ," when joined.
+- **Resource articles:** article HTML is also cleaned when shown, so articles saved before v1.46.11 lose
+  their pasted Word formatting without needing to be re-saved.
 
 ## 📅 2026-10-20 — v1.47.5 (security: party details, 2FA sign-in checks)
 
