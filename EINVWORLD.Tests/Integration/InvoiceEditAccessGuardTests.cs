@@ -197,5 +197,106 @@ namespace EINVWORLD.Tests.Integration
             var neverSavedInvoiceNo = $"INV-NEW-{Guid.NewGuid():N}"[..20];
             Assert.False(await UserExtensions.CanAccessInvoiceAsync(principal, ctx, neverSavedInvoiceNo));
         }
+
+        [Fact]
+        public async Task CanManageInvoiceAsync_Allows_Only_The_Issuer_Not_The_Counterparty()
+        {
+            // Write access (delete from list, later save-draft) must be issuer-only: the buyer can SEE a
+            // supplier's draft through CanAccessInvoiceAsync but must not delete it. For self-billed (11-14)
+            // the issuer is the customer, so the roles flip.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var supplierCo = await CreateValidPartyInfoAsync(ctx, "Manage Supplier Co");
+            var buyerCo = await CreateValidPartyInfoAsync(ctx, "Manage Buyer Co");
+            ctx.PartyInfos.AddRange(supplierCo, buyerCo);
+            await ctx.SaveChangesAsync();
+
+            var supplierUserId = await CreateUserAsync(ctx, "manage-supplier");
+            var buyerUserId = await CreateUserAsync(ctx, "manage-buyer");
+            ctx.UserCompanies.Add(new UserCompany { UserId = supplierUserId, PartyInfoId = supplierCo.PartyInfoId, HasCompanyAccess = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = buyerUserId, PartyInfoId = buyerCo.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var status = await SeedStatusAsync(ctx);
+            string NewNo() => $"INV-MNG-{Guid.NewGuid():N}"[..20];
+            var normalNo = NewNo();
+            var selfBilledNo = NewNo();
+            foreach (var (no, doc) in new[] { (normalNo, "01"), (selfBilledNo, "11") })
+                ctx.InvoiceHeaders.Add(new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = doc, Currency = "MYR",
+                    CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                    SupplierId = supplierCo.PartyInfoId, CustomerId = buyerCo.PartyInfoId,
+                });
+            await ctx.SaveChangesAsync();
+
+            var supplier = PrincipalFor(supplierUserId, "manage-supplier");
+            var buyer = PrincipalFor(buyerUserId, "manage-buyer");
+
+            Assert.True(await UserExtensions.CanAccessInvoiceAsync(buyer, ctx, normalNo));   // can see it...
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(buyer, ctx, normalNo));  // ...but not change it
+            Assert.True(await UserExtensions.CanManageInvoiceAsync(supplier, ctx, normalNo));
+
+            Assert.True(await UserExtensions.CanManageInvoiceAsync(buyer, ctx, selfBilledNo));
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(supplier, ctx, selfBilledNo));
+        }
+
+        [Fact]
+        public async Task CanManageInvoiceAsync_Never_Grants_Write_Through_A_Shared_General_TIN_Party()
+        {
+            // General TIN parties (e.g. EI00000000030 Foreign Supplier) are shared by every tenant. A user who
+            // happens to be linked to one must not gain write access to every invoice issued under it.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var general = await ctx.PartyInfos.FirstOrDefaultAsync(p => p.TIN == "EI00000000030");
+            if (general == null)
+            {
+                general = await CreateValidPartyInfoAsync(ctx, "Foreign Supplier (general)");
+                general.TIN = "EI00000000030";
+                ctx.PartyInfos.Add(general);
+                await ctx.SaveChangesAsync();
+            }
+            var userId = await CreateUserAsync(ctx, "general-member");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = general.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-GEN-{Guid.NewGuid():N}"[..20];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR",
+                CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                SupplierId = general.PartyInfoId,
+            });
+            await ctx.SaveChangesAsync();
+
+            var member = PrincipalFor(userId, "general-member");
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(member, ctx, invoiceNo));
+            Assert.False(await UserExtensions.CanAccessInvoiceAsync(member, ctx, invoiceNo)); // nor read it
+            Assert.False(await UserExtensions.OwnsTinAsync(member, ctx, "EI00000000030"));     // nor submit as it
+        }
+
+        [Fact]
+        public async Task CompanyAuthorization_Refuses_ManageUsers_On_A_Company_The_User_Is_Not_In()
+        {
+            // Suppliers/Details write handlers now call this with the POSTED company id; before, a supplier
+            // could post another company's id to join it or change its members.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var own = await CreateValidPartyInfoAsync(ctx, "Own Co");
+            var victim = await CreateValidPartyInfoAsync(ctx, "Victim Co");
+            ctx.PartyInfos.AddRange(own, victim);
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "company-manager");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = own.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var auth = new EINVWORLD.Services.Authorization.CompanyAuthorizationService(ctx);
+            Assert.True(await auth.HasPermissionAsync(userId, own.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.ManageUsers));
+            Assert.False(await auth.HasPermissionAsync(userId, victim.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.ManageUsers));
+        }
     }
 }
