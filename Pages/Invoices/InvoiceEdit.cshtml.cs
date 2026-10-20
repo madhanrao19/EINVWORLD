@@ -612,6 +612,27 @@ namespace eInvWorld.Pages.Invoices
                     }
                 }
 
+                // Editing an existing invoice: the route id (already access-checked above) decides which row is
+                // saved, never the posted hidden field.
+                if (Invoice != null && !string.IsNullOrWhiteSpace(id) && await _context.InvoiceHeaders.AnyAsync(h => h.InvoiceNo == id))
+                    Invoice.InvoiceNo = id;
+
+                // Never trust posted ids (supplier, buyer, invoice number) — see InvoiceWriteGuard.
+                if (Invoice != null)
+                {
+                    var denied = await EINVWORLD.Helpers.InvoiceWriteGuard.CheckAsync(User, _context, _buyerService,
+                        Invoice.InvoiceNo, Invoice.DocTypeCode, Invoice.SupplierId, Invoice.CustomerId, Invoice.PublicCustomerId,
+                        checkInvoiceNo: action is "saveDraft" or "saveAndSubmit");
+                    if (denied != null)
+                    {
+                        _logger.LogWarning("Invoice save refused for {User} on {InvoiceNo}: {Reason}", User.Identity?.Name, Invoice.InvoiceNo, denied);
+                        if (isAjax) return AjaxFail(denied, 403);
+                        ModelState.AddModelError("", denied);
+                        await OnGetAsync(Invoice?.InvoiceNo ?? id ?? "");
+                        return Page();
+                    }
+                }
+
                 // PRIORITY 1: Template Save
                 if (action == "saveAsTemplate")
                 {
