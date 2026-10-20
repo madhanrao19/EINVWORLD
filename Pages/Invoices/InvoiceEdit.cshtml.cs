@@ -321,6 +321,7 @@ namespace eInvWorld.Pages.Invoices
             {
                 InvoiceNo = existingInvoice.InvoiceNo,
                 RefDocumentNo = existingInvoice.RefDocumentNo,
+                RefUUID = existingInvoice.RefUUID,
                 DocTypeCode = existingInvoice.DocTypeCode,
                 IssueDate = existingInvoice.IssueDate,
                 Currency = existingInvoice.Currency,
@@ -752,6 +753,15 @@ namespace eInvWorld.Pages.Invoices
                     Invoice.CalculateInvoiceTotals();
                 }
 
+                // CN/DN/RN must reference the original invoice: without it the LHDN payload carries UUID "NA".
+                if (Invoice != null)
+                {
+                    Invoice.RefUUID = IsAdjustment(Invoice.DocTypeCode) ? Invoice.RefUUID?.Trim() : null;
+                    if (IsAdjustment(Invoice.DocTypeCode) && string.IsNullOrEmpty(Invoice.RefUUID)
+                        && action is not ("saveAsTemplate" or "updateTemplate"))
+                        ModelState.AddModelError("Invoice.RefUUID", "Reference UUID is required for credit, debit and refund notes.");
+                }
+
                 // ===============================
                 // Validation Exit
                 // ===============================
@@ -890,6 +900,7 @@ namespace eInvWorld.Pages.Invoices
                     _context.InvoiceLines.RemoveRange(draftInvoice.InvoiceLines);
 
                     draftInvoice.RefDocumentNo = Invoice.RefDocumentNo;
+                    draftInvoice.RefUUID = Invoice.RefUUID;
                     draftInvoice.UUID = Invoice.UUID;
                     draftInvoice.ForeignCurrency = Invoice.Currency ?? "MYR";
                     draftInvoice.ExchangeRate = Invoice.ExchangeRate;
@@ -963,6 +974,7 @@ namespace eInvWorld.Pages.Invoices
                         InvoiceNo = Invoice.InvoiceNo,
                         PrefixedID = Invoice.InvoiceNo,
                         RefDocumentNo = Invoice.RefDocumentNo,
+                        RefUUID = Invoice.RefUUID,
                         UUID = Invoice.UUID,
                         ForeignCurrency = Invoice.Currency ?? "MYR",
                         ExchangeRate = Invoice.ExchangeRate,
@@ -1312,6 +1324,10 @@ namespace eInvWorld.Pages.Invoices
             return new[] { "11", "12", "13", "14" }.Contains(docTypeCode);
         }
 
+        // Credit / Debit / Refund notes (and their self-billed versions) reference an original invoice's UUID.
+        private static bool IsAdjustment(string? docTypeCode) =>
+            new[] { "02", "03", "04", "12", "13", "14" }.Contains(docTypeCode);
+
         // ✅ Updated signature
         private InputModels.InvoiceHeader CreateInvoiceHeader(
             PartyInfo supplier,
@@ -1322,6 +1338,7 @@ namespace eInvWorld.Pages.Invoices
             {
                 InvoiceNo = Invoice.InvoiceNo ?? "",
                 RefDocumentNo = Invoice.RefDocumentNo,
+                RefUUID = Invoice.RefUUID,
                 IssueDate = Invoice.IssueDate,
                 DocTypeCode = Invoice.DocTypeCode,
                 InvoicePeriod = Invoice.InvoicePeriod,
