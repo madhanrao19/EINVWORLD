@@ -1379,6 +1379,16 @@ body:has(.einv-fab) .footer { padding-bottom: calc(5rem + env(safe-area-inset-bo
   }
 }
 
+/* Tablets (768–991px): the topbar overlays the sidebar row (block above), but navbar-expand-md showed the
+ * search inline from 768px, right over the menu button and logo. Use the phone pattern here too: a
+ * search button that drops the panel below the bar. */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .page-wrapper > header.navbar > .container-fluid { flex-wrap: wrap; }
+  .page-wrapper > header.navbar .nav-item.d-md-none { display: block !important; }
+  .page-wrapper > header.navbar #einv-topbar-content { flex-basis: 100% !important; order: 99; }
+  .page-wrapper > header.navbar #einv-topbar-content:not(.show):not(.collapsing) { display: none !important; }
+}
+
 /* One calendar: "Clear" under the calendar for optional date fields (einvworld-date.js). */
 .flatpickr-calendar .einv-date-clear {
   display: block; width: 100%; border: 0; border-top: 1px solid var(--einv-border); background: none;

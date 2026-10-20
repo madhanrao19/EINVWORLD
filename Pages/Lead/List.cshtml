@@ -102,7 +102,7 @@
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="flex-shrink-0">
-                                                    <img src="@(!string.IsNullOrEmpty(item.LogoPath) ? Url.Content(item.LogoPath) : Url.Content("~/assets/images/users/multi-user.jpg"))"
+                                                    <img src="@Url.Content(EINVWORLD.Helpers.LogoUrl.For(item.LogoPath))"
                                                          alt="Company Logo" class="avatar-xxs rounded-circle object-fit-contain" />
                                                 </div>
                                                 <div class="flex-grow-1 ms-2 name">
