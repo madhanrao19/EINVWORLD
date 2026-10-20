@@ -7,10 +7,8 @@
     ViewData["Title"] = "Edit Invoice";
     ViewData["IsEditMode"] = true;
 
-    // Display-only 2dp formatting for the number inputs below (Quantity, UnitPrice, TaxPercentage,
-    // ExchangeRate). Storage keeps its full decimal(18,6)/decimal(18,4) precision (UnitTypes/LHDN mapping
-    // untouched) — this only overrides the rendered <input value="…">, matching the step="0.01" these
-    // fields already use, so a value like 1500.0000 doesn't leak decimal-column padding onto the screen.
+    // Display-only 2dp formatting for TaxPercentage (stored decimal(18,2)). Quantity, UnitPrice and
+    // ExchangeRate use InvoiceFormatting.FmtNum/FmtRate instead so their extra stored digits aren't rounded.
     string Fmt2(decimal? v) => (v ?? 0m).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 }
 
@@ -1156,11 +1154,11 @@
                                         </div>
                                         <div class="irow-qty">
                                             <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@Fmt2(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                            <input asp-for="Invoice.InvoiceLines[i].Quantity" value="@eInvWorld.Helpers.InvoiceFormatting.FmtNum(Model.Invoice?.InvoiceLines[i].Quantity)" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                                         </div>
                                         <div class="irow-price">
                                             <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@Fmt2(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                            <input asp-for="Invoice.InvoiceLines[i].UnitPrice" value="@eInvWorld.Helpers.InvoiceFormatting.FmtNum(Model.Invoice?.InvoiceLines[i].UnitPrice)" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                                         </div>
                                         <div class="irow-total">
                                             <div class="irow-mlabel">Subtotal</div>
@@ -4343,11 +4341,11 @@
                     </div>
                     <div class="irow-qty">
                         <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                        <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                     </div>
                     <div class="irow-price">
                         <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                        <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                     </div>
                     <div class="irow-total">
                         <div class="irow-mlabel">Subtotal</div>
@@ -4695,11 +4693,11 @@
                                 </div>
                                 <div class="irow-qty">
                                     <div class="irow-mlabel">Qty <span class="text-danger">*</span></div>
-                                    <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="0.01" min="0" required placeholder="0" />
+                                    <input name="Invoice.InvoiceLines[${itemCount}].Quantity" type="number" class="form-control form-control-sm quantity-input text-center" step="any" min="0" required placeholder="0" />
                                 </div>
                                 <div class="irow-price">
                                     <div class="irow-mlabel">Unit Price <span class="text-danger">*</span></div>
-                                    <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="0.01" min="0" required placeholder="0.00" />
+                                    <input name="Invoice.InvoiceLines[${itemCount}].UnitPrice" type="number" class="form-control form-control-sm price-input text-end" step="any" min="0" required placeholder="0.00" />
                                 </div>
                                 <div class="irow-total">
                                     <div class="irow-mlabel">Subtotal</div>
