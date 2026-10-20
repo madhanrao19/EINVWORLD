@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.11`** (`AppInfo:Version` in `appsettings.json`). v1.47.11 is a **patch**
+> **Current version: `v1.47.12`** (`AppInfo:Version` in `appsettings.json`). v1.47.12 is a **patch**
+> release: security checks when saving an invoice — see the dated entry below. v1.47.11 was a **patch**
 > release: security fixes for company membership, user roles, Lead pages and invoice delete — see the dated entry below. v1.47.10 was a **patch**
 > release: Invoice Edit shows and keeps the Reference UUID of credit, debit and refund notes — see the dated entry below. v1.47.9 was a **patch**
 > release: line Quantity and Unit Price keep all their decimals when an invoice is reopened — see the dated entry below. v1.47.8 was a **patch**
@@ -391,6 +392,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.12 (security: saving an invoice)
+
+- **Create e-Invoice / Invoice Edit** now check what the form sends before saving:
+  - **Invoice number:** if an invoice with that number already exists, it must be your own company's invoice
+    and still a Draft or Transmission Error. Before, saving with another invoice's number replaced it (even a
+    submitted one, or another company's). Invoice Edit now always saves the invoice in its address bar.
+  - **Supplier:** must be one of your companies (or the General Public / Foreign Supplier placeholder for
+    self-billed documents).
+  - **Buyer:** must be in the selected supplier's buyer list (one of your own companies for self-billed).
+  - **Invoice number as a file name:** numbers with `..`, slashes or other path characters are refused (the
+    number is also the saved draft's file name).
+- Save as template uses the same supplier/buyer checks.
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.11 (security: company access checks)
 
