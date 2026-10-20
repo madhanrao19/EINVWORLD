@@ -3,6 +3,7 @@ using eInvWorld.Helpers;
 using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using EINVWORLD.Helpers;
+using EINVWORLD.Services.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,13 +22,28 @@ namespace eInvWorld.Pages.Suppliers
         private readonly UserManager<ApplicationUser> _userManager;
         private new readonly ApplicationDbContext _context;
         private readonly ILogger<DetailsModel> _logger;
+        private readonly ICompanyAuthorizationService _companyAuth;
 
-        public DetailsModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<DetailsModel> logger)
+        public DetailsModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<DetailsModel> logger,
+            ICompanyAuthorizationService companyAuth)
             : base(context)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _companyAuth = companyAuth;
+        }
+
+        // SupplierBasePage only checks ?id (or the caller's own company), but these write handlers act on a
+        // company id posted in the form — so each one must check that the caller may manage *that* company.
+        private async Task<bool> MayAsync(int companyId, CompanyPermission permission) =>
+            User.IsInRole("Admin") ||
+            await _companyAuth.HasPermissionAsync(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "", companyId, permission);
+
+        private JsonResult Denied(int companyId)
+        {
+            _logger.LogWarning("Suppliers/Details write denied: user {User} on company {CompanyId}.", User.Identity?.Name, companyId);
+            return new JsonResult(new { success = false, message = "You are not allowed to manage this company." });
         }
 
         public PartyInfo PartyInfo { get; set; } = default!;
@@ -205,6 +221,8 @@ namespace eInvWorld.Pages.Suppliers
         // Handler: Mutually Exclusive Supplier Permissions
         public async Task<IActionResult> OnPostSetSupplierPermissionAsync(string userId, int companyId, string type, bool isChecked)
         {
+            if (!await MayAsync(companyId, CompanyPermission.ManageUsers)) return Denied(companyId);
+
             var assignment = await _context.UserCompanies
                 .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.PartyInfoId == companyId);
 
@@ -230,6 +248,7 @@ namespace eInvWorld.Pages.Suppliers
         // Replace your existing OnPostToggleViewOnlyAsync with this:
         public async Task<IActionResult> OnPostToggleViewOnlyAsync(string userId, int companyId, bool isViewOnly)
         {
+            if (!await MayAsync(companyId, CompanyPermission.ManageUsers)) return Denied(companyId);
             var assignment = await _context.UserCompanies.FirstOrDefaultAsync(uc => uc.UserId == userId && uc.PartyInfoId == companyId);
             if (assignment == null) return new JsonResult(new { success = false, message = "Assignment not found." });
 
@@ -244,6 +263,8 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostSetPrimaryCompanyAsync([FromForm] string userId, [FromForm] int companyId, [FromForm] bool isPrimary)
         {
+            if (!await MayAsync(companyId, CompanyPermission.ManageUsers)) return Denied(companyId);
+
             if (string.IsNullOrEmpty(userId))
             {
                 return new JsonResult(new { success = false, message = "Invalid user ID." });
@@ -279,6 +300,9 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostChangeUserRoleAsync([FromForm] string userId, [FromForm] string roleName)
         {
+            // Global Identity roles affect every company the user belongs to — system Admins only.
+            if (!User.IsInRole("Admin")) return Denied(0);
+
             if (roleName != "Supplier" && roleName != "Buyer")
             {
                 return new JsonResult(new { success = false, message = "Invalid role selection." });
@@ -309,6 +333,8 @@ namespace eInvWorld.Pages.Suppliers
         }
         public async Task<IActionResult> OnPostAssignUserAsync([FromForm] int supplierId, [FromForm] string? SelectedUserId, [FromForm] string? UserEmail)
         {
+            if (!await MayAsync(supplierId, CompanyPermission.ManageUsers)) return Denied(supplierId);
+
             _logger.LogDebug("Assign user: SupplierId={SupplierId}, SelectedUserId={SelectedUserId}, UserEmail={UserEmail}", supplierId, SelectedUserId, UserEmail);
 
             bool isAdmin = User.IsInRole("Admin");
@@ -374,6 +400,8 @@ namespace eInvWorld.Pages.Suppliers
             int buyerId,
             string buyerType)
         {
+            if (!await MayAsync(supplierId, CompanyPermission.EditProfile)) return Denied(supplierId);
+
             SupplierBuyer? assignment = null;
 
             if (buyerType == "PI")
@@ -406,6 +434,8 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostAssignBuyerAsync(int supplierId)
         {
+            if (!await MayAsync(supplierId, CompanyPermission.EditProfile)) return Forbid();
+
             if (SelectedBuyerIds == null || !SelectedBuyerIds.Any())
             {
                 return RedirectToPage(new { id = supplierId });
@@ -435,6 +465,8 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostUnassignUserAsync([FromForm] int supplierId, [FromForm] string userId)
         {
+            if (!await MayAsync(supplierId, CompanyPermission.ManageUsers)) return Denied(supplierId);
+
             _logger.LogDebug("Unassign user: SupplierId={SupplierId}, UserId={UserId}", supplierId, userId);
 
             if (string.IsNullOrEmpty(userId))
@@ -465,20 +497,7 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostAssignPublicBuyerAsync([FromForm] int supplierId)
         {
-            // --- SECURITY CHECK START ---
-            bool isAdmin = User.IsInRole("Admin");
-            if (!isAdmin)
-            {
-                string? currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                bool hasAccess = await _context.UserCompanies
-                    .AnyAsync(uc => uc.UserId == currentUserId && uc.PartyInfoId == supplierId);
-
-                if (!hasAccess)
-                {
-                    return new JsonResult(new { success = false, message = "Access Denied." });
-                }
-            }
-            // --- SECURITY CHECK END ---
+            if (!await MayAsync(supplierId, CompanyPermission.EditProfile)) return Denied(supplierId);
 
             if (SelectedPublicBuyerIds == null || !SelectedPublicBuyerIds.Any())
             {

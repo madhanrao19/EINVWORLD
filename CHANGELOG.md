@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.10`** (`AppInfo:Version` in `appsettings.json`). v1.47.10 is a **patch**
+> **Current version: `v1.47.11`** (`AppInfo:Version` in `appsettings.json`). v1.47.11 is a **patch**
+> release: security fixes for company membership, user roles, Lead pages and invoice delete — see the dated entry below. v1.47.10 was a **patch**
 > release: Invoice Edit shows and keeps the Reference UUID of credit, debit and refund notes — see the dated entry below. v1.47.9 was a **patch**
 > release: line Quantity and Unit Price keep all their decimals when an invoice is reopened — see the dated entry below. v1.47.8 was a **patch**
 > release: reopened invoices keep their saved values (Exchange Rate and more) and the totals cards match on all three steps — see the dated entry below. v1.47.7 was a **patch**
@@ -390,6 +391,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-20 — v1.47.11 (security: company access checks)
+
+- **My Company → Users / Buyers:** adding, removing or changing a company's users or buyers now checks that you
+  may manage **that** company. Before, the company id sent by the page wasn't checked, so a Supplier could add
+  themselves to another company or change its members.
+- **Changing a user's role** (Supplier ⇄ Buyer) is now **Admin only**. Before, any Supplier could change any
+  user's role, including an Admin's.
+- **Lead (company) pages:** Lead Create, Details and Delete are now Admin only, like Lead List and Edit. Before,
+  any signed-in user (including Buyers) could open them, and Lead Create was public.
+- **Delete invoice from the list:** only the issuing company can delete a draft now (the supplier, or the buyer
+  for self-billed invoices). Before, the invoice's buyer could delete the supplier's draft.
+- No database change.
 
 ## 📅 2026-10-20 — v1.47.10 (Reference UUID on Invoice Edit)
 

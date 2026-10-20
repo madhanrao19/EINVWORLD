@@ -715,8 +715,9 @@ namespace eInvWorld.Pages.Invoices
                 return new JsonResult(new { success = false, message = "Invalid invoice number." });
             }
 
-            // IDOR guard: a user may only delete their own company's invoice (no LHDN backstop on local delete).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, input.InvoiceNo))
+            // IDOR guard: only the issuing company may delete (no LHDN backstop on local delete) — the buyer
+            // can see the invoice but must not delete the supplier's draft.
+            if (!await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, input.InvoiceNo))
             {
                 _logger.LogWarning("DeleteFromList denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, input.InvoiceNo);
                 return new JsonResult(new { success = false, message = "You are not authorized to delete this invoice." });

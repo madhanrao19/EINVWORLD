@@ -197,5 +197,24 @@ namespace EINVWORLD.Helpers
                 .AnyAsync(uc => uc.PartyInfo.TIN == tin);
         }
 
+        /// <summary>
+        /// Write access to an invoice (edit / delete): the user must own the ISSUER's TIN — the supplier,
+        /// or the customer for self-billed types 11–14 (the same rule submission uses). Unlike
+        /// <see cref="CanAccessInvoiceAsync"/>, the counterparty that merely receives the invoice is refused.
+        /// </summary>
+        public static async Task<bool> CanManageInvoiceAsync(this ClaimsPrincipal user, ApplicationDbContext db, string invoiceNo)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceNo)) return false;
+
+            var issuerTin = await db.InvoiceHeaders
+                .Where(i => i.InvoiceNo == invoiceNo)
+                .Select(i => i.DocTypeCode == "11" || i.DocTypeCode == "12" || i.DocTypeCode == "13" || i.DocTypeCode == "14"
+                    ? (i.Customer != null ? i.Customer.TIN : null)
+                    : (string?)i.Supplier.TIN)
+                .FirstOrDefaultAsync();
+
+            return await user.OwnsTinAsync(db, issuerTin);
+        }
+
     }
 }
