@@ -539,6 +539,21 @@
                             </div>
                         </div>
 
+                        <!-- Reference UUID: Credit / Debit / Refund notes (and self-billed versions) only; toggled by doc type -->
+                        @{ var isAdjustmentDoc = System.Linq.Enumerable.Contains(new[] { "02", "03", "04", "12", "13", "14" }, Model.Invoice?.DocTypeCode); }
+                        <div class="col-md-6" id="refUUIDSection" style="display: @(isAdjustmentDoc ? "block" : "none");">
+                            <div class="form-floating">
+                                <input type="text" asp-for="Invoice.RefUUID" class="form-control" id="refUUID" maxlength="100"
+                                       placeholder="Reference UUID" required="@isAdjustmentDoc" disabled="@(!isAdjustmentDoc)" />
+                                <label for="refUUID">
+                                    Reference UUID <span class="text-danger">*</span>
+                                    <i class="ri-information-line ms-1" data-bs-toggle="tooltip" title="UUID of the original invoice this adjustment refers to"></i>
+                                </label>
+                                <div class="invalid-feedback">Enter the UUID of the original invoice.</div>
+                                <span asp-validation-for="Invoice.RefUUID" class="text-danger"></span>
+                            </div>
+                        </div>
+
                         <!-- Reference Document -->
                         <div class="col-md-6">
                             <div class="form-floating">
@@ -2432,6 +2447,16 @@
                     // Handle document type change logic
                     function handleDocTypeChange(docTypeCode) {
                         console.log(`🔄 Processing document type change: ${docTypeCode}`);
+
+                        // Reference UUID only for adjustment notes; disabled while hidden so it isn't posted or required.
+                        const isAdjustment = ['02', '03', '04', '12', '13', '14'].includes(docTypeCode);
+                        const refUUIDSection = document.getElementById('refUUIDSection');
+                        const refUUIDInput = document.getElementById('refUUID');
+                        if (refUUIDSection && refUUIDInput) {
+                            refUUIDSection.style.display = isAdjustment ? 'block' : 'none';
+                            refUUIDInput.disabled = !isAdjustment;
+                            refUUIDInput.required = isAdjustment;
+                        }
 
                         // Auto-update classification codes only for self-billed documents
                         const isSelfBilled = ['11', '12', '13', '14'].includes(docTypeCode);
