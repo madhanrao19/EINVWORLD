@@ -15,10 +15,6 @@
 
     // Export Scope: "Selected Items" exports exactly the checked rows from the list page instead of
     // the date/type/status filters below. Kept in sync whenever the modal opens or a row is (un)checked.
-    function selectedInvoiceUuids() {
-        return Array.from(document.querySelectorAll(".invoice-checkbox:checked")).map(cb => cb.value).filter(Boolean);
-    }
-
     // CSV/XLSX export keys on InvoiceNo (the PK) so Drafts, which have no LHDN UUID yet, are included.
     function selectedInvoiceNos() {
         return Array.from(document.querySelectorAll(".invoice-checkbox:checked")).map(cb => cb.dataset.invoiceno).filter(Boolean);
@@ -254,17 +250,18 @@
                 Swal.fire("Selected Items Only", "Switch Export Scope to \"Selected Items\" to export PDFs — this avoids generating hundreds of PDFs in one request.", "info");
                 return;
             }
-            let uuids = selectedInvoiceUuids();
-            if (uuids.length === 0) {
+            // By invoice number so Drafts (no LHDN UUID yet) are included, like the CSV/XLSX export.
+            let invoiceNos = selectedInvoiceNos();
+            if (invoiceNos.length === 0) {
                 Swal.fire("No Selection", "Please select at least one invoice.", "warning");
                 return;
             }
-            if (uuids.length > 50) {
+            if (invoiceNos.length > 50) {
                 Swal.fire("Too Many Selected", "Select at most 50 invoices for a PDF export.", "warning");
                 return;
             }
             let invoiceDirection = getInvoiceDirection();
-            let url = `/Invoices/InvoiceLists?handler=BulkPdf&invoiceDirection=${encodeURIComponent(invoiceDirection)}&uuids=${encodeURIComponent(uuids.join(','))}`;
+            let url = `/Invoices/InvoiceLists?handler=BulkPdf&invoiceDirection=${encodeURIComponent(invoiceDirection)}&invoiceNos=${encodeURIComponent(invoiceNos.join(','))}`;
             window.location.href = url;
         });
     }

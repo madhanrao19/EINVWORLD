@@ -1663,3 +1663,12 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 
 /* Lets a flex child shrink below its content so .text-truncate / long names wrap or clip inside cards. */
 .min-w-0 { min-width: 0; }
+
+/* Phone card view (einv-mobile-stack): there are no columns to show or hide, so drop the Columns button. */
+@media (max-width: 767.98px) {
+  .einv-table-tools:has(+ .table-responsive .einv-mobile-stack),
+  .einv-table-tools:has(+ .einv-mobile-stack) { display: none; }
+}
+/* Scrolling tab rows (company workspace tabs): scroll by touch / trackpad / shift-wheel, no scrollbar strip. */
+.nav-tabs.overflow-x-auto { scrollbar-width: none; }
+.nav-tabs.overflow-x-auto::-webkit-scrollbar { display: none; }

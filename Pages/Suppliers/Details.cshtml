@@ -46,7 +46,8 @@
     {
         Model.PartyInfo.Addr1, Model.PartyInfo.Addr2, Model.PartyInfo.Addr3,
         Model.PartyInfo.PostalCode, Model.PartyInfo.CityName, Model.StateName, Model.CountryName
-    }.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+    }.Select(x => (x ?? "").Trim().Trim(',').Trim()) // stored lines often end in ", " -> no ", ," when joined
+     .Where(x => x.Length > 0).ToList();
     var googleMapsUrl = $"https://www.google.com/maps/search/?q={Uri.EscapeDataString(string.Join(" ", addressParts))}";
 
     string Show(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
