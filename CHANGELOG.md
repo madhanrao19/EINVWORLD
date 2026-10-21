@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.34`** (`AppInfo:Version` in `appsettings.json`). v1.47.34 is a **patch**
+> **Current version: `v1.47.35`** (`AppInfo:Version` in `appsettings.json`). v1.47.35 is a **patch**
+> release: My Company, Recurring Invoices, Invoice Templates and the Invoices list fit 19" monitors and phones — see the dated entry below. v1.47.34 was a **patch**
 > release: invoice forms fit 19" monitors and tablets, and the Unit box matches the other dropdowns — see the dated entry below. v1.47.33 was a **patch**
 > release: a submitted invoice keeps LHDN's validation time and QR link straight away — see the dated entry below. v1.47.32 was a **patch**
 > release: a Supplier editing My Company returns to the company page instead of Access Denied — see the dated entry below. v1.47.31 was a **patch**
@@ -414,6 +415,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.35 (more pages on 19" monitors and phones)
+
+- **My Company (Supplier → Company Management):** on 19" monitors (1280 wide) the Assigned Users table was cut
+  off at the Actions column. Assigned Users and Assigned Buyers now sit one above the other below 1400px wide.
+- **Recurring Invoices and Invoice Templates on phones:** the tables now turn into one card per row, like the
+  other lists, instead of a wide table you scroll sideways. The empty-list message wraps instead of being cut off.
+- **Invoices list on phones:** the Total keeps the amount and currency together.
+- `24-screen-sizes.spec.js` now checks every page in the Supplier and Buyer menus (plus My Profile and an
+  invoice's details page) at the six screen sizes. Admin pages are checked when `ADMIN_TOTP_SECRET` (the
+  admin's authenticator key) is set, since the admin account uses 2FA. The 2FA code helper moved into
+  `tests/playwright/helpers/auth.js`.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.34 (invoice forms on 19" monitors and tablets)
 

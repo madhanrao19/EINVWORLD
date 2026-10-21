@@ -9,40 +9,7 @@
 //
 // Run explicitly: npx playwright test 09-2fa-remember-device
 const { test, expect } = require('@playwright/test');
-const crypto = require('crypto');
-const { USERS, submitCredentials, logout } = require('./helpers/auth');
-
-function base32Decode(s) {
-  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  s = s.replace(/[\s-]+/g, '').toUpperCase().replace(/=+$/, '');
-  let bits = '';
-  for (const c of s) {
-    const v = A.indexOf(c);
-    if (v < 0) throw new Error(`Invalid base32 char: ${c}`);
-    bits += v.toString(2).padStart(5, '0');
-  }
-  const bytes = [];
-  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
-  return Buffer.from(bytes);
-}
-
-function totp(sharedKey, atMs = Date.now()) {
-  const key = base32Decode(sharedKey);
-  const counter = Math.floor(atMs / 1000 / 30);
-  const buf = Buffer.alloc(8);
-  buf.writeBigUInt64BE(BigInt(counter));
-  const h = crypto.createHmac('sha1', key).update(buf).digest();
-  const o = h[h.length - 1] & 0xf;
-  const code = (((h[o] & 0x7f) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1e6;
-  return String(code).padStart(6, '0');
-}
-
-/** Waits until at least `min` seconds remain in the current 30s TOTP window, then returns a code. */
-async function freshTotp(sharedKey, min = 5) {
-  const secondsLeft = 30 - (Math.floor(Date.now() / 1000) % 30);
-  if (secondsLeft < min) await new Promise(r => setTimeout(r, (secondsLeft + 1) * 1000));
-  return totp(sharedKey);
-}
+const { USERS, submitCredentials, logout, freshTotp } = require('./helpers/auth');
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(180000);
