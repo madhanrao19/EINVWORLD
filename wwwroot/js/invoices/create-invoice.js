@@ -14,6 +14,14 @@
             return div.innerHTML;
         }
 
+        // Selects a unit code, adding it as an option first when it's outside the Finance-approved list
+        // (an older item or line saved with another LHDN code keeps its unit instead of going blank).
+        function setUnitValue(select, code) {
+            if (!select || !code) return;
+            if (![...select.options].some(o => o.value === code)) select.add(new Option(code, code));
+            select.value = code;
+        }
+
         // Classification/unit/tax-category/saved-item dropdown HTML for dynamic item creation.
         // Built server-side in CreateInvoice.cshtml (Razor loops over Model data) and exposed
         // via window.* because this file cannot contain Razor syntax.
@@ -3173,9 +3181,7 @@
                 if (classificationSelect && sourceData.classificationCode) {
                     classificationSelect.value = sourceData.classificationCode;
                 }
-                if (unitSelect && sourceData.unitOfMeasure) {
-                    unitSelect.value = sourceData.unitOfMeasure;
-                }
+                setUnitValue(unitSelect, sourceData.unitOfMeasure);
 
                 // Initialize Select2 for new dropdowns
                 if (typeof $ !== 'undefined' && $.fn.select2) {
@@ -4096,7 +4102,7 @@
                 // Unit/Unit Price are the catalogue item's own defaults — only prefill when the
                 // catalogue actually has them set; never blank out whatever the user already typed.
                 if (unitSelect && itemData.UnitCode) {
-                    unitSelect.value = itemData.UnitCode;
+                    setUnitValue(unitSelect, itemData.UnitCode);
                     if (typeof $ !== 'undefined' && $(unitSelect).hasClass("select2-hidden-accessible")) {
                         $(unitSelect).trigger('change');
                     } else {

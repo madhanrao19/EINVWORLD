@@ -1637,6 +1637,14 @@
 
         // Escapes user-entered text before it's interpolated into innerHTML (Review step item
         // summary etc.) - an item description/tariff code/country is free text a user controls.
+        // Selects a unit code, adding it as an option first when it's outside the Finance-approved list
+        // (an older item or line saved with another LHDN code keeps its unit instead of going blank).
+        function setUnitValue(select, code) {
+            if (!select || !code) return;
+            if (![...select.options].some(o => o.value === code)) select.add(new Option(code, code));
+            select.value = code;
+        }
+
         function escapeHtml(value) {
             const div = document.createElement('div');
             div.textContent = value;
@@ -1654,14 +1662,11 @@
             }
         `;
 
-        // Unit options HTML for dynamic item creation
+        // Unit options HTML for new item rows: the Finance-approved units only, Each preselected.
         const unitOptionsHtml = `
-            @if (Model.UnitOptions != null)
+            @foreach (var unit in eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions?.Any(o => o.Value == u.Code) == true))
             {
-                @foreach (var unit in Model.UnitOptions)
-                {
-                            <option value="@unit.Value">@unit.Text</option>
-                }
+                            <option value="@unit.Code" selected="@(unit.Code == "EA")">@unit.Name</option>
             }
         `;
 
@@ -4846,7 +4851,7 @@
                             classificationSelect.value = sourceData.classificationCode;
                         }
                         if (unitSelect && sourceData.unitOfMeasure) {
-                            unitSelect.value = sourceData.unitOfMeasure;
+                            setUnitValue(unitSelect, sourceData.unitOfMeasure);
                         }
 
                         // Initialize Select2 for new dropdowns
@@ -5497,6 +5502,15 @@
                         // Fill the fields
                         if (codeInput) codeInput.value = itemData.ItemCode || '';
                         if (descTextarea) descTextarea.value = itemData.Description || '';
+
+                        // Same as Create: the catalogue item's own Unit, when it has one.
+                        const unitSelect = row.querySelector('select[name*=".UnitOfMeasure"]');
+                        if (unitSelect && itemData.UnitCode) {
+                            setUnitValue(unitSelect, itemData.UnitCode);
+                            if (typeof $ !== 'undefined' && $(unitSelect).hasClass("select2-hidden-accessible")) {
+                                $(unitSelect).trigger('change');
+                            }
+                        }
 
                         if (classificationSelect && itemData.ClassificationCode) {
                             // Check if the document type is self-billed (which locks it to 004)
