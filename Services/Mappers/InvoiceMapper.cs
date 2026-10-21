@@ -1044,16 +1044,19 @@ namespace eInvWorld.Services.Mappers
                 .SelectMany(line => line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>())
                 .Sum(tax => tax.TaxAmount ?? 0);
 
-            // Sourced from the same real, persisted DiscountAmount/FeeChargeAmount fields
-            // MapLineAllowanceCharges now synthesizes the per-line UBL AllowanceCharge from
-            // (line.AllowanceCharge, the old source here, is dead - never populated or persisted - so
-            // this total was always 0 before). A fee/charge is the inverse of a discount here - it must
-            // increase the payable amount, so it's subtracted out of the net allowance total.
-            decimal totalAllowanceCharge = Math.Round(
-                 header.InvoiceLines.Sum(line => (line.DiscountAmount ?? 0) - (line.FeeChargeAmount ?? 0)), 2);
+            // Same DiscountAmount/FeeChargeAmount fields MapLineAllowanceCharges emits, split the same way:
+            // a negative discount is a charge, a negative fee is an allowance.
+            decimal totalAllowanceCharge = Math.Round(header.InvoiceLines.Sum(line =>
+                Math.Max(line.DiscountAmount ?? 0, 0) + Math.Max(-(line.FeeChargeAmount ?? 0), 0)), 2);
+            decimal totalChargeAmount = Math.Round(header.InvoiceLines.Sum(line =>
+                Math.Max(-(line.DiscountAmount ?? 0), 0) + Math.Max(line.FeeChargeAmount ?? 0, 0)), 2);
 
-            decimal taxInclusiveAmount = Math.Round(totalLineExtensionAmount + totalTaxAmount, 2);
-            decimal totalPayableAmount = Math.Round(taxInclusiveAmount - totalAllowanceCharge, 2);
+            // LHDN: Total Excluding Tax is "inclusive of applicable discounts and charges" - the base the line
+            // taxes were calculated on (InvoiceLine.CalculateAmounts: AmountExclTax = Subtotal - Discount + Fee).
+            decimal taxExclusiveAmount = Math.Round(totalLineExtensionAmount - totalAllowanceCharge + totalChargeAmount, 2);
+            // Rounded once from the unrounded sum, as before, so Total Payable keeps its old value to the sen.
+            decimal taxInclusiveAmount = Math.Round(totalLineExtensionAmount - totalAllowanceCharge + totalChargeAmount + totalTaxAmount, 2);
+            decimal totalPayableAmount = taxInclusiveAmount;
 
             return new List<JsonModels.LegalMonetaryTotal>
         {
@@ -1065,7 +1068,7 @@ namespace eInvWorld.Services.Mappers
             },
             TaxExclusiveAmount = new List<JsonModels.Amount>
             {
-                new JsonModels.Amount { _ = totalLineExtensionAmount, currencyID = header.Currency }
+                new JsonModels.Amount { _ = taxExclusiveAmount, currencyID = header.Currency }
             },
             TaxInclusiveAmount = new List<JsonModels.Amount>
             {
@@ -1077,7 +1080,7 @@ namespace eInvWorld.Services.Mappers
             },
             ChargeTotalAmount = new List<JsonModels.Amount>
             {
-                new JsonModels.Amount { _ = totalPayableAmount, currencyID = header.Currency }
+                new JsonModels.Amount { _ = totalChargeAmount, currencyID = header.Currency }
             },
             PayableAmount = new List<JsonModels.Amount>
             {
