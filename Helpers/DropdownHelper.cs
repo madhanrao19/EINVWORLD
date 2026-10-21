@@ -126,48 +126,44 @@ namespace eInvWorld.Helpers
                 .ToList();
         }
 
-        // Curated shortlist of the MyInvois/UN-ECE unit codes that cover the vast majority of
-        // SME invoicing scenarios. Kept in display priority order; every other active unit
-        // remains fully available (and LHDN-compliant) under the "All Units" group.
-        private static readonly string[] CommonUnitCodes =
+        // Finance-approved units for Datamation, in display order: Finance-friendly name -> LHDN/MyInvois
+        // (UN/ECE Rec-20) code that is submitted. The first entry (Each) is the default for new lines.
+        public static readonly (string Code, string Name)[] FinanceUnits =
         {
-            "EA", "H87", "SET", "KGM", "GRM", "LTR", "MLT", "MTR", "MTK", "MTQ",
-            "HUR", "DAY", "MON", "ANN", "PR", "DZN", "XCT", "TNE", "KWH", "KT",
-            "E48", "E51", "E54", "LS", "XUN"
+            ("EA", "Each"), ("XUN", "Unit"), ("H87", "Piece (pcs)"), ("E48", "Service"), ("HUR", "Hour"),
+            ("DAY", "Day"), ("E51", "Job / Project"), ("LS", "Lump Sum (LS)"), ("SET", "Set"), ("ZP", "Page"),
+            ("XST", "Sheet")
         };
 
-        // Method to populate unit of measure options, grouped so the ~24 units SMEs actually
-        // use surface above the full UN/ECE Rec-20 list (hundreds of codes) that LHDN requires
-        // as the source of truth. Select2's built-in search still covers the full list.
-        public List<SelectListItem> GetUnitOptions()
+        /// <summary>
+        /// Unit of measure options: the Finance-approved units (active in UnitTypes only - the mapper rejects
+        /// inactive codes), then any <paramref name="keepCodes"/> outside that list that are valid LHDN codes,
+        /// shown as "name (code)" so an existing invoice line or item keeps its saved unit when re-saved.
+        /// </summary>
+        public List<SelectListItem> GetUnitOptions(IEnumerable<string?>? keepCodes = null)
         {
             var units = _context.UnitTypes
                 .Where(u => u.IsActive)
-                .ToDictionary(u => u.Code, u => u.Name);
+                .ToDictionary(u => u.Code, u => u.Name, StringComparer.OrdinalIgnoreCase);
+            return BuildUnitOptions(units, keepCodes);
+        }
 
-            var commonGroup = new SelectListGroup { Name = "Common Units" };
-            var allGroup = new SelectListGroup { Name = "All Units" };
+        /// <summary>The list logic of <see cref="GetUnitOptions"/>, given the active LHDN units (code -> name).</summary>
+        public static List<SelectListItem> BuildUnitOptions(IReadOnlyDictionary<string, string> units, IEnumerable<string?>? keepCodes)
+        {
+            var options = FinanceUnits
+                .Where(u => units.ContainsKey(u.Code))
+                .Select(u => new SelectListItem { Value = u.Code, Text = u.Name })
+                .ToList();
 
-            var common = CommonUnitCodes
-                .Where(units.ContainsKey)
-                .Select(code => new SelectListItem
-                {
-                    Value = code,
-                    Text = $"{units[code]} ({code})",
-                    Group = commonGroup
-                });
+            foreach (var code in (keepCodes ?? Enumerable.Empty<string?>()).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (options.Any(o => string.Equals(o.Value, code, StringComparison.OrdinalIgnoreCase))) continue;
+                if (units.TryGetValue(code!, out var name))
+                    options.Add(new SelectListItem { Value = code, Text = $"{name} ({code})" });
+            }
 
-            var others = units.Keys
-                .Except(CommonUnitCodes)
-                .OrderBy(code => code)
-                .Select(code => new SelectListItem
-                {
-                    Value = code,
-                    Text = $"{units[code]} ({code})",
-                    Group = allGroup
-                });
-
-            return common.Concat(others).ToList();
+            return options;
         }
 
 

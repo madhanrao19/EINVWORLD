@@ -55,7 +55,7 @@ namespace eInvWorld.Pages.Items
 
             ItemDescription = itemdescription;
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
-            UnitOptions = _dropdownHelper.GetUnitOptions();
+            UnitOptions = _dropdownHelper.GetUnitOptions(new[] { ItemDescription?.UnitCode });
             return Page();
         }
 
@@ -64,7 +64,7 @@ namespace eInvWorld.Pages.Items
             if (!ModelState.IsValid)
             {
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
-                UnitOptions = _dropdownHelper.GetUnitOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions(new[] { ItemDescription?.UnitCode });
                 return Page();
             }
 
@@ -73,7 +73,7 @@ namespace eInvWorld.Pages.Items
             {
                 ModelState.AddModelError("ItemDescription.UnitCode", "Selected Unit is not a valid LHDN unit-of-measure code.");
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
-                UnitOptions = _dropdownHelper.GetUnitOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions(new[] { ItemDescription?.UnitCode });
                 return Page();
             }
 

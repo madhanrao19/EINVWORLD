@@ -247,7 +247,7 @@ namespace eInvWorld.Pages.Invoices
 
                 // Load all dropdown options for edit mode
                 ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
-                UnitOptions = _dropdownHelper.GetUnitOptions();
+                UnitOptions = _dropdownHelper.GetUnitOptions(Invoice?.InvoiceLines?.Select(l => l.UnitOfMeasure));
                 TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
                 CountryOptions = _dropdownHelper.GetCountryOptions();
                 IdTypeOptions = _dropdownHelper.GetIdTypesOptions();
@@ -432,7 +432,7 @@ namespace eInvWorld.Pages.Invoices
                 })
                 .ToList();
 
-            UnitOptions = _dropdownHelper.GetUnitOptions();
+            UnitOptions = _dropdownHelper.GetUnitOptions(Invoice?.InvoiceLines?.Select(l => l.UnitOfMeasure));
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();
