@@ -249,8 +249,7 @@ namespace EINVWORLD.Pages.Invoices
             foreach (var h in histories)
             {
                 var timestamp = DateTimeHelper.ToMalaysiaTime(h.Timestamp).ToString("yyyy-MM-dd HH:mm:ss");
-                var remarks = h.Remarks?.Replace("\"", "\"\"");
-                csv.AppendLine($"\"{timestamp}\",\"{h.Action}\",\"{h.PerformedBy}\",\"{remarks}\"");
+                csv.AppendLine(string.Join(",", new[] { timestamp, h.Action, h.PerformedBy, h.Remarks }.Select(EINVWORLD.Helpers.CsvExportHelper.EscapeCsv)));
             }
 
             var bytes = Encoding.UTF8.GetBytes(csv.ToString());
