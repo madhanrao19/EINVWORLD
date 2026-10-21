@@ -149,6 +149,23 @@ namespace EINVWORLD.Tests
             Assert.Equal(8, (myt - utc).TotalHours, 3); // precision: 3 decimal places
         }
 
+        // ── DateTimeHelper.MalaysiaToUtc (invoice IssueDate/IssueTime sent to LHDN) ──────────
+        [Fact]
+        public void MalaysiaToUtc_SubtractsEightHours_WhateverTheServerZone()
+        {
+            var stored = new DateTime(2026, 10, 21, 11, 37, 0, DateTimeKind.Unspecified); // as read from the DB
+            Assert.Equal(new DateTime(2026, 10, 21, 3, 37, 0), DateTimeHelper.MalaysiaToUtc(stored));
+            Assert.Equal(new DateTime(2026, 10, 20, 23, 0, 0), DateTimeHelper.MalaysiaToUtc(new DateTime(2026, 10, 21, 7, 0, 0)));
+        }
+
+        [Fact]
+        public void MalaysiaToUtc_LeavesUtcAlone_AndRoundTripsToMalaysiaTime()
+        {
+            var utc = new DateTime(2026, 10, 21, 3, 37, 0, DateTimeKind.Utc);
+            Assert.Equal(utc, DateTimeHelper.MalaysiaToUtc(utc));
+            Assert.Equal(utc, DateTimeHelper.MalaysiaToUtc(DateTimeHelper.ToMalaysiaTime(utc)));
+        }
+
         // ── AmountInWordsHelper.ToWordsEnglish ────────────────────────────────────────────────
         [Fact]
         public void ToWords_Zero_IsZeroOnly()
