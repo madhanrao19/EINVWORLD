@@ -166,6 +166,18 @@ namespace EINVWORLD.Tests
             Assert.Equal(utc, DateTimeHelper.MalaysiaToUtc(DateTimeHelper.ToMalaysiaTime(utc)));
         }
 
+        // ── CsvExportHelper.EscapeCsv (formula injection + quoting) ──────────────────────────────
+        [Theory]
+        [InlineData("=HYPERLINK(\"x\")", "\"'=HYPERLINK(\"\"x\"\")\"")]
+        [InlineData("+1", "'+1")]
+        [InlineData("-2", "'-2")]
+        [InlineData("@SUM(A1)", "'@SUM(A1)")]
+        [InlineData("a,b", "\"a,b\"")]
+        [InlineData("plain", "plain")]
+        [InlineData(null, "")]
+        public void EscapeCsv_NeutralisesFormulasAndQuotes(string? input, string expected)
+            => Assert.Equal(expected, EINVWORLD.Helpers.CsvExportHelper.EscapeCsv(input));
+
         // ── AmountInWordsHelper.ToWordsEnglish ────────────────────────────────────────────────
         [Fact]
         public void ToWords_Zero_IsZeroOnly()

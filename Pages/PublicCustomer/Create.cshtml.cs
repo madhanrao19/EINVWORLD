@@ -321,89 +321,10 @@ namespace eInvWorld.Pages.PublicCustomer
             }
         }
 
-        private async Task<string> GetLhdnAccessTokenAsync()
-        {
-            // ✅ 1. Read credentials directly from appsettings.json
-            string? myCompanyTin = _configuration["TaxpayerValidationSettings:DefaultTIN"];
-            string? clientId = _configuration["LHDNApiConfig:ClientId"];
-            string? clientSecret = _configuration["LHDNApiConfig:ClientSecret"];
-            string scope = _configuration["LHDNApiConfig:Scope"] ?? "InvoicingAPI";
-
-            // Construct the token URL based on your base URL and token endpoint
-            string baseUrl = _configuration["LHDNApiConfig:BaseUrl"]?.TrimEnd('/') ?? "https://preprod-api.myinvois.hasil.gov.my";
-            string tokenEndpoint = _configuration["LHDNApiConfig:TokenEndpoint"]?.TrimStart('/') ?? "connect/token";
-            string tokenUrl = $"{baseUrl}/{tokenEndpoint}";
-
-            // ✅ 2. Check the database for an existing, unexpired token (5-minute buffer)
-            var existingToken = await _context.Set<LHDNToken>()
-                .Where(t => t.TIN == myCompanyTin && t.ExpiryTime > DateTime.UtcNow.AddMinutes(5))
-                .FirstOrDefaultAsync();
-
-            if (existingToken != null)
-            {
-                return existingToken.AccessToken;
-            }
-
-            // ✅ 3. Call LHDN Identity Server for a new one
-            var client = _httpClientFactory.CreateClient();
-            var requestContent = new FormUrlEncodedContent(new[]
-            {
-        new KeyValuePair<string, string>("client_id", clientId ?? ""),
-        new KeyValuePair<string, string>("client_secret", clientSecret ?? ""),
-        new KeyValuePair<string, string>("grant_type", "client_credentials"),
-        new KeyValuePair<string, string>("scope", scope)
-    });
-
-            var response = await client.PostAsync(tokenUrl, requestContent);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"Failed to retrieve LHDN Access Token. Status: {response.StatusCode}");
-            }
-
-            var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
-
-            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.access_token))
-            {
-                throw new Exception("LHDN Identity server returned empty token.");
-            }
-
-            // ✅ 4. Save/Update the token in the database
-            var dbToken = await _context.Set<LHDNToken>().FirstOrDefaultAsync(t => t.TIN == myCompanyTin);
-
-            if (dbToken == null)
-            {
-                dbToken = new LHDNToken
-                {
-                    TIN = myCompanyTin ?? "",
-                    AccessToken = tokenResponse.access_token,
-                    ExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.expires_in),
-                    LastUpdated = DateTime.UtcNow
-                };
-                _context.Add(dbToken);
-            }
-            else
-            {
-                dbToken.AccessToken = tokenResponse.access_token;
-                dbToken.ExpiryTime = DateTime.UtcNow.AddSeconds(tokenResponse.expires_in);
-                dbToken.LastUpdated = DateTime.UtcNow;
-                _context.Update(dbToken);
-            }
-
-            // ✅ 5. Add to Audit Log
-            _context.Add(new LHDNTokenLog
-            {
-                TIN = myCompanyTin ?? "",
-                IssuedAt = DateTime.UtcNow,
-                ExpiryTime = dbToken.ExpiryTime,
-                ClientIdUsed = clientId ?? "",
-                Source = "ValidateBuyerTIN"
-            });
-
-            await _context.SaveChangesAsync();
-
-            return tokenResponse.access_token;
-        }
+        // Shared per-TIN token service: one lock per TIN, encrypted DB copy, same token as the rest of the app.
+        private Task<string> GetLhdnAccessTokenAsync() =>
+            HttpContext.RequestServices.GetRequiredService<eInvWorld.Services.ITokenService>()
+                .GetAccessTokenForTIN(_configuration["TaxpayerValidationSettings:DefaultTIN"] ?? string.Empty);
 
         private void PopulateDropdowns()
         {

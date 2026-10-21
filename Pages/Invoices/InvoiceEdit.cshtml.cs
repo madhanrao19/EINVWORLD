@@ -260,7 +260,7 @@ namespace eInvWorld.Pages.Invoices
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading invoice for editing: {InvoiceId}", id);
-                return BadRequest($"Error loading invoice: {ex.Message}");
+                return BadRequest("Error loading invoice. Please try again or contact support.");
             }
 
         }
@@ -845,7 +845,7 @@ namespace eInvWorld.Pages.Invoices
                             return new JsonResult(new
                             {
                                 success = true,
-                                draftPath = HttpContext.Session.GetString("DraftFilePath"),
+                                draftPath = System.IO.Path.GetFileName(HttpContext.Session.GetString("DraftFilePath")), // file name only: never send server paths to the browser
                                 invoiceNo = Invoice!.InvoiceNo,
                                 isUpdate = wasUpdate
                             });
@@ -1128,7 +1128,7 @@ namespace eInvWorld.Pages.Invoices
                     isUpdate ? "Invoice draft updated" : "Invoice draft created");
 
                 HttpContext.Session.SetString("DraftFilePath", filePath);
-                ViewData["DraftFilePath"] = filePath;
+                ViewData["DraftFilePath"] = System.IO.Path.GetFileName(filePath);
 
                 Message = $"Draft saved as {fileName}";
 

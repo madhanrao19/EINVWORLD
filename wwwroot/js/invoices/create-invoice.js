@@ -1472,7 +1472,10 @@
                             : '';
 
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${desc}${notesHtml}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${parseFloat(price).toFixed(2)}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
+                        // Unit price keeps up to 4 decimals (decimal(18,4)), shown with at least 2.
+                        const priceNum = +(parseFloat(price) || 0).toFixed(4);
+                        const priceText = priceNum.toFixed(Math.max(2, (String(priceNum).split('.')[1] || '').length));
+                        tr.innerHTML = `<td>${desc}${notesHtml}</td><td class="text-center">${parseFloat(qty).toFixed(2)}</td><td class="text-end">${priceText}</td><td class="text-end">${tax}</td><td class="text-end fw-bold">${rowTotal.toFixed(2)}</td>`;
                         reviewBody.appendChild(tr);
                     });
                 }

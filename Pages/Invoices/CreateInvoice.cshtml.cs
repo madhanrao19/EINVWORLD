@@ -940,7 +940,7 @@ namespace EINVWORLD.Pages.Invoices
                             return new JsonResult(new
                             {
                                 success = true,
-                                draftPath = HttpContext.Session.GetString("DraftFilePath"),
+                                draftPath = System.IO.Path.GetFileName(HttpContext.Session.GetString("DraftFilePath")), // file name only: never send server paths to the browser
                                 invoiceNo = Invoice!.InvoiceNo,
                                 isUpdate = wasUpdate
                             });
@@ -1216,7 +1216,7 @@ namespace EINVWORLD.Pages.Invoices
 
                 // Save the draft path in session and view data
                 HttpContext.Session.SetString("DraftFilePath", filePath);
-                ViewData["DraftFilePath"] = filePath;
+                ViewData["DraftFilePath"] = System.IO.Path.GetFileName(filePath);
 
                 _logger.LogInformation("Draft saved successfully at: {FilePath}", filePath);
 

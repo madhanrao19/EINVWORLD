@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.18`** (`AppInfo:Version` in `appsettings.json`). v1.47.18 is a **patch**
+> **Current version: `v1.47.19`** (`AppInfo:Version` in `appsettings.json`). v1.47.19 is a **patch**
+> release: audit follow-ups — shared LHDN token, no internal error text or server paths, safe CSV exports — see the dated entry below. v1.47.18 was a **patch**
 > release: invoices from a template or Smart Capture are sent to LHDN with the right issue time — see the dated entry below. v1.47.17 was a **patch**
 > release: Create e-Invoice keeps up to 4 decimals in a typed Unit Price — see the dated entry below. v1.47.16 was a **patch**
 > release: invoice form tidy-up — see the dated entry below. v1.47.15 was a **patch**
@@ -398,6 +399,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.19 (audit follow-ups)
+
+- **LHDN token:** Supplier and Public Customer Create/Import (TIN validation) now get their LHDN token from the
+  shared token service instead of their own copy, so they use the per-TIN lock and the encrypted stored token.
+  They stop writing rows to the unused `LHDNTokenLogs` table. Assumes `LHDNApiConfig:OnBehalfOf` equals
+  `TaxpayerValidationSettings:DefaultTIN` (true in `appsettings.json`), so no `onbehalfof` header is sent.
+- **Error messages:** Contact, Main Dashboard, Invoice Edit (load) and the Supplier/Public Customer Import
+  pages no longer show internal exception text; Contact now logs the error.
+- **Draft save** returns the draft file name only, not the server's folder path.
+- **CSV exports:** invoice history and System Logs exports guard against spreadsheet formulas and quote cells
+  correctly (`CsvExportHelper`).
+- **Review & Submit:** the item summary shows the unit price with up to 4 decimals.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.18 (issue time from templates and Smart Capture)
 
