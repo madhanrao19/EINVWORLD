@@ -281,6 +281,9 @@ namespace eInvWorld.Pages.Suppliers
                 }),
             });
 
+            // The company list is Admin-only; a Supplier editing My Company goes back to that company's page.
+            if (!User.IsInRole("Admin"))
+                return RedirectToPage("./Details", new { id = PartyInfo.PartyInfoId });
             return RedirectToPage(From == "lead" ? "/Lead/List" : "./Index");
         }
 
