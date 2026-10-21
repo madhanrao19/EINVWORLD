@@ -895,6 +895,40 @@
 <!-- Invoice Details specific actions -->
 <script src="~/js/invoice-details-actions.js" asp-append-version="true"></script>
 <script src="/assets/libs/html2pdf/html2pdf.bundle.min.js"></script>
+@{
+    var lhdnStatus = Model.InvoiceDetail?.LHDNStatusId;
+    // Submitted: waiting for LHDN's verdict. Valid: the buyer can still reject / the supplier cancel within 72h
+    // (DateTimeValidated is stored in MY time).
+    var canStillChange = lhdnStatus == "Submitted"
+        || (lhdnStatus == "Valid" && Model.InvoiceDetail?.DateTimeValidated?.AddHours(72) > eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow));
+}
+@if (canStillChange)
+{
+    <script>
+        // Same 30s LHDN status check as the Invoices list (its SyncActiveSession handler: company-scoped,
+        // one pass per user at a time, 60s cooldown for Valid); reload when LHDN reports a change.
+        (function () {
+            const invoiceNo = @Json.Serialize(Model.InvoiceDetail!.InvoiceNo);
+            let inFlight = false;
+            setInterval(function () {
+                if (document.hidden || inFlight) return;
+                inFlight = true;
+                fetch('/Invoices/InvoiceLists?handler=SyncActiveSession', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify([invoiceNo])
+                })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(res => { if (res && res.success && res.updatedCount > 0) location.reload(); })
+                    .catch(() => { })
+                    .finally(() => { inFlight = false; });
+            }, 30000);
+        })();
+    </script>
+}
 <script>
     // PDF-viewer zoom for the A4 preview: starts at "fit to width" (never above 100%), re-fits on
     // resize until the user zooms manually, -/+ step 10% between 25% and 200%.

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.24`** (`AppInfo:Version` in `appsettings.json`). v1.47.24 is a **patch**
+> **Current version: `v1.47.25`** (`AppInfo:Version` in `appsettings.json`). v1.47.25 is a **patch**
+> release: a submitted invoice turns Valid on screen within about 30 seconds — see the dated entry below. v1.47.24 was a **patch**
 > release: decimal quantities are sent to LHDN unchanged — see the dated entry below. v1.47.23 was a **patch**
 > release: the deploy script ships all settings files, so nothing is edited after a deploy — see the dated entry below. v1.47.22 was a **patch**
 > release: e-Invoice totals sent to LHDN follow its definitions (fees/charges, total excluding tax) — see the dated entry below. v1.47.21 was a **patch**
@@ -404,6 +405,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.25 (status updates while you watch)
+
+- **Invoices list:** the 30-second LHDN status check covered only Valid invoices (to catch a buyer's reject or a
+  cancel). It now also covers **Submitted** ones, so an invoice shows Valid/Invalid within about 30 seconds of LHDN
+  deciding, instead of waiting for the 10-minute background check (EINV100563 sat on Submitted for ~6 minutes).
+- **Invoice details page:** it never checked LHDN; it now runs the same 30-second check (the list's
+  `SyncActiveSession` handler, so the same company scoping, one-check-per-user gate and 60-second cooldown for
+  Valid) while the invoice is Submitted, or Valid within its 72-hour cancel/reject window, and reloads when the
+  status changes. Paused while the browser tab is hidden.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.24 (decimal quantities to LHDN)
 
