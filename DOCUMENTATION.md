@@ -513,10 +513,9 @@ access grid), resources (CMS), system logs, **Sync Jobs**, **Audit Trail**, **Sy
   *TablePreferencesController*
 - `GET  /api/resources/images/{category}/{size}/{fileName}` — resource images. *ResourcesApiController*
 - `GET  /api/resources/editor/{fileName}`, `companies/logos/{fileName}` — resource/logo files.
-- `POST /api/…/submitDocuments`, `save`, `save-pdf` — invoice operations. *EInvoicing/Invoice controllers*
-- `GET  /api/.../validateTaxpayer/{tin}` — LHDN taxpayer validation.
+- `POST /api/Invoice/save`, `save-pdf` — invoice operations. *InvoiceController*
 - `POST /api/resources-migration/*`, `cleanup-old-*`, `migrate-existing-*` — admin resource maintenance.
-- `GET  /Theme/global`, `POST /Home/LoginAsTaxpayer|LoginAsIntermediary`, `GET /LogExport/download`.
+- `GET  /Theme/global`, `GET /LogExport/download`.
 
 **UI** — Razor Pages under `/`, `/Invoices/*`, `/Admin/*`, `/Suppliers/*`, `/Templates/*`,
 `/RecurringInvoices/*`, `/Assistant`, `/Profile`, `/Dashboard`, plus the `/Identity` account area.
