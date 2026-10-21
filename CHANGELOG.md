@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.27`** (`AppInfo:Version` in `appsettings.json`). v1.47.27 is a **patch**
+> **Current version: `v1.47.28`** (`AppInfo:Version` in `appsettings.json`). v1.47.28 is a **patch**
+> release: the Items-step checklist updates as soon as a Classification or Unit is picked — see the dated entry below. v1.47.27 was a **patch**
 > release: the Unit dropdown shows only the 11 Finance-approved units — see the dated entry below. v1.47.26 was a **patch**
 > release: the e-Invoice tax breakdown is one entry per tax type with its own taxable amount — see the dated entry below. v1.47.25 was a **patch**
 > release: a submitted invoice turns Valid on screen within about 30 seconds — see the dated entry below. v1.47.24 was a **patch**
@@ -407,6 +408,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.28 (Items checklist refresh)
+
+- **Create e-Invoice / Invoice Edit, Items step:** the "Classification / Unit Set/Incomplete" checklist only
+  recalculated when a Quantity or Price was typed, so it kept saying Incomplete after the last Classification or
+  Unit was picked. Picking a Classification, Unit or Tax Category now refreshes it (and the totals) straight away.
+- No server or database change.
 
 ## 📅 2026-10-21 — v1.47.27 (Finance-approved Unit list)
 

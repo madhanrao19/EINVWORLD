@@ -1292,11 +1292,13 @@
                 if (window.jQuery) {
                     jQuery(document).on('change', 'select[name*="TaxCategory"], select[name*="ClassificationCode"], select[name*="UnitOfMeasure"]', function() {
                         validateField(this);
+                        calculateTotals(); // refreshes the Step 2 checklist (Classification / Unit Set)
                     });
                 } else {
                     document.addEventListener('change', function(e) {
                         if (e.target.name && (e.target.name.includes('TaxCategory') || e.target.name.includes('ClassificationCode') || e.target.name.includes('UnitOfMeasure'))) {
                             validateField(e.target);
+                            calculateTotals();
                         }
                     });
                 }
