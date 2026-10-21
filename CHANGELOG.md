@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.31`** (`AppInfo:Version` in `appsettings.json`). v1.47.31 is a **patch**
+> **Current version: `v1.47.32`** (`AppInfo:Version` in `appsettings.json`). v1.47.32 is a **patch**
+> release: a Supplier editing My Company returns to the company page instead of Access Denied — see the dated entry below. v1.47.31 was a **patch**
 > release: the Invoices list stops polling LHDN for settled invoices (no more 429 bursts) — see the dated entry below. v1.47.30 was a **patch**
 > release: Download PDF no longer fails right after the validated email — see the dated entry below. v1.47.29 was a **patch**
 > release: no automatic retry when LHDN rejects a document for validation errors — see the dated entry below. v1.47.28 was a **patch**
@@ -411,6 +412,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.32 (Supplier: Edit company no longer ends on Access Denied)
+
+- **My Company → Edit (Supplier):** "Back to List" and **Save** both went to the company list, which is Admin-only, so
+  a Supplier landed on Access Denied (the save itself worked). A Supplier now goes back to that company's page
+  ("Back to Company"); Admins still return to the company list. Found by a read-only crawl of every Supplier and
+  Buyer page on Staging with Production's data.
 
 ## 📅 2026-10-21 — v1.47.31 (fewer LHDN calls from the Invoices list)
 
