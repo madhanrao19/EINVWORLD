@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.22`** (`AppInfo:Version` in `appsettings.json`). v1.47.22 is a **patch**
+> **Current version: `v1.47.23`** (`AppInfo:Version` in `appsettings.json`). v1.47.23 is a **patch**
+> release: the deploy script ships all settings files, so nothing is edited after a deploy — see the dated entry below. v1.47.22 was a **patch**
 > release: e-Invoice totals sent to LHDN follow its definitions (fees/charges, total excluding tax) — see the dated entry below. v1.47.21 was a **patch**
 > release: Production settings no longer depend on the server's own `appsettings.json` — see the dated entry below. v1.47.20 was a **patch**
 > release: Cancel/Reject buttons follow the real 72-hour window; unused endpoints removed — see the dated entry below. v1.47.19 was a **patch**
@@ -403,6 +404,17 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-21 — v1.47.23 (hands-off deploys)
+
+- **Deploy script:** `appsettings.Production.json` is no longer excluded from the copy; only `web.config` (secrets and
+  per-server environment variables) is kept. Production's non-secret values come from the repo (v1.47.21), so a
+  deploy to Staging or Production needs no edits on the server afterwards: version, new settings and Production
+  folders/keys all arrive with the build. The script prints which settings files on the server differ from the
+  build before replacing them; the pre-deploy backup keeps the old copies.
+- **`AI:Enabled` is `true` in `appsettings.Production.json`**, matching what Production has run with since v1.28.
+- The `-ExtraExcludeFiles appsettings.json` workaround from v1.47.21 is no longer needed.
+- No database change.
+
 ## 📅 2026-10-21 — v1.47.22 (LHDN invoice totals)
 
 - **Total Fee / Charge Amount (`ChargeTotalAmount`)** was filled with the Total Payable on every invoice ever sent,
@@ -419,6 +431,7 @@
   4-decimal unit price.
 - No database change.
 
+## 📅 2026-10-21 — v1.47.21 (Production settings in the repo)
 
 - **Deploy safety:** `appsettings.json` is copied to the server on every deploy but holds Staging values. Production
   kept its own hand-edited copy, so a normal deploy would have switched Production to Staging's document folders
@@ -431,6 +444,7 @@
   `DEPLOY-NOTES.md` §0 step 3. Until it is done, deploy Production with `-ExtraExcludeFiles appsettings.json`.
 - No database change. No change on Staging (it never loads `appsettings.Production.json`).
 
+## 📅 2026-10-21 — v1.47.20 (72-hour window, unused endpoints, CSP)
 
 - **Invoice details:** the Cancel and Reject buttons compared the validation time (stored in Malaysia time) with
   UTC, so they stayed visible for 8 hours after the 72-hour window had closed (the server then refused). They
