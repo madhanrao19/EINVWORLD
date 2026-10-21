@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.21`** (`AppInfo:Version` in `appsettings.json`). v1.47.21 is a **patch**
+> **Current version: `v1.47.22`** (`AppInfo:Version` in `appsettings.json`). v1.47.22 is a **patch**
+> release: e-Invoice totals sent to LHDN follow its definitions (fees/charges, total excluding tax) — see the dated entry below. v1.47.21 was a **patch**
 > release: Production settings no longer depend on the server's own `appsettings.json` — see the dated entry below. v1.47.20 was a **patch**
 > release: Cancel/Reject buttons follow the real 72-hour window; unused endpoints removed — see the dated entry below. v1.47.19 was a **patch**
 > release: audit follow-ups — shared LHDN token, no internal error text or server paths, safe CSV exports — see the dated entry below. v1.47.18 was a **patch**
@@ -402,7 +403,22 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
-## 📅 2026-10-21 — v1.47.21 (Production settings in the repo)
+## 📅 2026-10-21 — v1.47.22 (LHDN invoice totals)
+
+- **Total Fee / Charge Amount (`ChargeTotalAmount`)** was filled with the Total Payable on every invoice ever sent,
+  so LHDN recorded the whole invoice amount as fees. It is now the sum of line fees/charges (0 when there are none),
+  as LHDN defines it. LHDN never rejected the old value (EINV100559/560 are Valid), so nothing needs resubmitting.
+- **Total Excluding Tax / Total Including Tax** now include line discounts and fees, as LHDN defines them ("inclusive
+  of applicable discounts and charges"). Before, they used the gross line amounts, so on discounted invoices Total
+  Including Tax was higher than Total Payable.
+- **Total Discount Value (`AllowanceTotalAmount`)** is now the sum of discounts only; fees are reported in the charge
+  total instead of being netted against it. A negative discount counts as a charge and a negative fee as a
+  discount, the same as the line-level discount/charge entries.
+- **Total Payable is unchanged** to the sen (still rounded once from the unrounded sum), and nothing changes in the
+  app's own screens, PDFs or database. Tests cover no discount, discount, discount + fee, negative values and a
+  4-decimal unit price.
+- No database change.
+
 
 - **Deploy safety:** `appsettings.json` is copied to the server on every deploy but holds Staging values. Production
   kept its own hand-edited copy, so a normal deploy would have switched Production to Staging's document folders
