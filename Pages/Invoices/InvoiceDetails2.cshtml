@@ -8,7 +8,7 @@
 
     var rejectionReasons = eInvWorld.Models.Document.RejectDocumentInput.GetReasons();
     var isOver72Hours = Model.InvoiceDetail?.DateTimeValidated.HasValue == true &&
-                       Model.InvoiceDetail.DateTimeValidated!.Value.AddHours(72) < DateTime.UtcNow;
+                       Model.InvoiceDetail.DateTimeValidated!.Value.AddHours(72) < eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow); // DateTimeValidated is stored in MY time
 
     var invoice = Model?.InvoiceDetail ?? new eInvWorld.Models.InputModel.InvoiceHeader();
     var items = Model?.InvoiceLines ?? new List<eInvWorld.Models.InputModel.InvoiceLine>();
