@@ -104,8 +104,8 @@ namespace eInvWorld.Services.Mappers
                     new JsonModels.Invoice
                     {
                         ID = new List<JsonModels.ID> { new JsonModels.ID { _ = header.InvoiceNo } },
-                        IssueDate = new List<JsonModels.IssueDate> { new JsonModels.IssueDate {  _ = header.IssueDate?.ToUniversalTime().ToString("yyyy-MM-dd") ?? string.Empty } },
-                        IssueTime = new List<JsonModels.IssueTime> { new JsonModels.IssueTime { _ = header.IssueDate?.ToUniversalTime().ToString("HH:mm:ssZ") ?? string.Empty } },
+                        IssueDate = new List<JsonModels.IssueDate> { new JsonModels.IssueDate {  _ = header.IssueDate.HasValue ? eInvWorld.Helpers.DateTimeHelper.MalaysiaToUtc(header.IssueDate.Value).ToString("yyyy-MM-dd") : string.Empty } },
+                        IssueTime = new List<JsonModels.IssueTime> { new JsonModels.IssueTime { _ = header.IssueDate.HasValue ? eInvWorld.Helpers.DateTimeHelper.MalaysiaToUtc(header.IssueDate.Value).ToString("HH:mm:ssZ") : string.Empty } },
                         InvoiceTypeCode = new List<JsonModels.InvoiceTypeCode>
                         {
                             // 1.0/1.1 = standard e-Invoice (unsigned/signed). 1.2/1.3 = e-Invoice Special

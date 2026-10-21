@@ -224,7 +224,7 @@ namespace eInvWorld.Pages.Invoices
             {
                 DocTypeCode = docTypeCode,
                 Currency = string.IsNullOrWhiteSpace(suggestion?.Currency) ? "MYR" : suggestion!.Currency!,
-                IssueDate = DateTime.UtcNow,
+                IssueDate = eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow), // stored in MY time; InvoiceMapper converts to UTC
                 SupplierId = supplierId,
                 CustomerId = customerId,
                 InvoiceLines = (suggestion?.LineItems ?? new List<SuggestionLine>()).Select((line, idx) => new InvoiceLineView
