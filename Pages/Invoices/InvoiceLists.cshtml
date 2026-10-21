@@ -767,7 +767,7 @@
                                                     </td>
                                                     <td class="col-submitted-date" data-label="Date">@invoice.IssueDate?.ToString("yyyy-MM-dd") <small class="text-muted">@invoice.IssueDate?.ToString("hh:mm tt")</small></td>
                                                     <td class="col-total-amount text-end fw-semibold" data-label="Total">
-                                                        @invoice.TotalAmountIncTax?.ToString("N2") <small class="text-muted fw-normal">@invoice.Currency</small>
+                                                        <span>@invoice.TotalAmountIncTax?.ToString("N2") <small class="text-muted fw-normal">@invoice.Currency</small></span>
                                                     </td>
                                                     <td class="col-internal-status" data-label="Internal Status">
                                                         @if (invoice.InternalStatusId == "Invalid" || invoice.InternalStatusId == "RequestReject")
