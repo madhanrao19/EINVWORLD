@@ -515,7 +515,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex flex-column flex-lg-row gap-4">
+                    <div class="d-flex flex-column flex-xl-row gap-4">
                     <div class="flex-grow-1" style="min-width:0;">
 
                     <!-- Document Setup -->
@@ -566,7 +566,7 @@
                         </div>
 
                         <!-- Date Invoice (Original Date) -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="date" asp-for="Invoice.OriginalInvoiceDate" class="form-control" id="originalInvoiceDate" placeholder="Select original invoice date" />
                                 <label for="originalInvoiceDate">
@@ -576,7 +576,7 @@
                             </div>
                         </div>
                         <!-- PO/DO No -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="text" asp-for="Invoice.PoDoNo" class="form-control" id="poDoNo" placeholder="Enter PO/DO Number" />
                                 <label for="poDoNo">
@@ -587,7 +587,7 @@
                         </div>
 
                         <!-- Currency -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <select asp-for="Invoice.Currency" class="form-select select2" id="currency" required onchange="updateExchangeRate()">
                                     <option value="">Select Currency</option>
@@ -615,7 +615,7 @@
                         </div>
 
                         <!-- Exchange Rate -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="number" asp-for="Invoice.ExchangeRate" value="@eInvWorld.Helpers.InvoiceFormatting.FmtRate(Model.Invoice?.ExchangeRate)" class="form-control" id="exchangeRate" step="any" placeholder="1.00" />
                                 <label for="exchangeRate">
@@ -628,7 +628,7 @@
                         @if (Configuration.GetValue<bool>("LHDNApiConfig:SvdpEnabled", false))
                         {
                             <!-- SVDP (Special Voluntary Disclosure Programme, until 31 Dec 2027) -->
-                            <div class="col-md-4">
+                            <div class="col-md-6 col-xxl-4">
                                 <div class="form-check form-switch mt-3">
                                     <input class="form-check-input" type="checkbox" asp-for="Invoice.IsSvdp" id="isSvdp" />
                                     <label class="form-check-label" for="isSvdp">
@@ -641,7 +641,7 @@
                         }
 
                         <!-- Issue Date -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="text" asp-for="Invoice.IssueDate" class="form-control" id="issueDate" data-provider="flatpickr" data-date-format="Y-m-d H:i" required placeholder="Select date" value="@Model.Invoice?.IssueDateFormatted" />
                                 <label for="issueDate">
@@ -709,7 +709,7 @@
                         </div>
 
                         <!-- Billing Period -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <select asp-for="Invoice.InvoicePeriod" asp-items="Model.InvoicePeriodOptions" class="form-select select2" required>
                                     <option value="">Select Frequency</option>
@@ -722,7 +722,7 @@
                         </div>
 
                         <!-- Start Date -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="text" asp-for="Invoice.StartDate" value="@Model.Invoice?.StartDate?.ToString("dd-MMM-yyyy", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" id="startDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select start date" />
                                 <label for="startDate">Start Date</label>
@@ -730,7 +730,7 @@
                         </div>
 
                         <!-- End Date -->
-                        <div class="col-md-4">
+                        <div class="col-md-6 col-xxl-4">
                             <div class="form-floating">
                                 <input type="text" asp-for="Invoice.EndDate" value="@Model.Invoice?.EndDate?.ToString("dd-MMM-yyyy", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" id="endDate" data-provider="flatpickr" data-date-format="d-M-Y" placeholder="Select end date" />
                                 <label for="endDate">End Date</label>
@@ -893,37 +893,37 @@
                                             <button class="btn btn-info btn-validate-shipping text-nowrap" type="button" onclick="validateShippingRecipientLHDN()">Validate with LHDN</button>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6 col-xxl-4">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientAddrLine1" class="form-control" id="shippingRecipientAddrLine1" placeholder="Address Line 1" />
                                             <label for="shippingRecipientAddrLine1">Address Line 1</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6 col-xxl-4">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientAddrLine2" class="form-control" id="shippingRecipientAddrLine2" placeholder="Address Line 2" />
                                             <label for="shippingRecipientAddrLine2">Address Line 2</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6 col-xxl-4">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientAddrLine3" class="form-control" id="shippingRecipientAddrLine3" placeholder="Address Line 3" />
                                             <label for="shippingRecipientAddrLine3">Address Line 3</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6 col-xxl-3">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientPostcode" class="form-control" id="shippingRecipientPostcode" placeholder="Postcode" maxlength="5" />
                                             <label for="shippingRecipientPostcode">Postcode</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6 col-xxl-3">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientCity" class="form-control" id="shippingRecipientCity" placeholder="City" />
                                             <label for="shippingRecipientCity">City</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6 col-xxl-3">
                                         <div class="form-floating" id="shippingRecipientStateSelectWrap">
                                             <select asp-for="Invoice.ShippingRecipientState" asp-items="Model.StateOptions" class="form-select" id="shippingRecipientState">
                                                 <option value="">-- Select --</option>
@@ -937,7 +937,7 @@
                                             <label for="shippingRecipientStateText">State</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-6 col-xxl-3">
                                         <div class="form-floating">
                                             <select asp-for="Invoice.ShippingRecipientCountryCode" asp-items="Model.CountryOptions" class="form-select" id="shippingRecipientCountryCode" onchange="toggleShippingRecipientStateField()">
                                                 <option value="">-- Select --</option>
@@ -945,7 +945,7 @@
                                             <label for="shippingRecipientCountryCode">Country</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6 col-xxl-4">
                                         <div class="form-floating">
                                             <select asp-for="Invoice.ShippingRecipientIdType" asp-items="Model.IdTypeOptions" class="form-select" id="shippingRecipientIdType" onchange="resetShippingRecipientValidation()">
                                                 <option value="">-- Select --</option>
@@ -953,7 +953,7 @@
                                             <label for="shippingRecipientIdType">ID Type</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-8">
+                                    <div class="col-md-6 col-xxl-8">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.ShippingRecipientIdNumber" class="form-control" id="shippingRecipientIdNumber" placeholder="Registration / Identification / Passport Number" oninput="resetShippingRecipientValidation()" />
                                             <label for="shippingRecipientIdNumber">Registration / Identification / Passport Number</label>
@@ -999,13 +999,13 @@
                                             <label for="certifiedExporterAuthorizationNumber">Authorization Number for Certified Exporter</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6 col-xxl-4">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.OtherChargesAmount" type="number" step="0.01" class="form-control" id="otherChargesAmount" placeholder="0.00" />
                                             <label for="otherChargesAmount">Details of Other Charges (Amount)</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-8">
+                                    <div class="col-md-6 col-xxl-8">
                                         <div class="form-floating">
                                             <input asp-for="Invoice.OtherChargesDescription" class="form-control" id="otherChargesDescription" placeholder="Details of other charges" />
                                             <label for="otherChargesDescription">Details of Other Charges (Description)</label>
@@ -1097,7 +1097,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-column flex-lg-row gap-4">
+                    <div class="d-flex flex-column flex-xl-row gap-4">
                     <div class="flex-grow-1" style="min-width:0;">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div class="text-muted small">Add products or services to your invoice</div>
@@ -1143,7 +1143,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                                    <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm item-unit" required>
+                                                    <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-select form-select-sm item-unit" required>
                                                         <option value="">Unit</option>
                                                     </select>
                                                 </div>
@@ -4349,7 +4349,7 @@
                             </div>
                             <div class="col-6">
                                 <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-select form-select-sm item-unit" required>
                                     <option value="">Unit</option>
                                     ${unitOptionsHtml}
                                 </select>
@@ -4701,7 +4701,7 @@
                                         </div>
                                         <div class="col-6">
                                             <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                            <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-select form-select-sm item-unit" required>
                                                 <option value="">Unit</option>
                                                 ${unitOptionsHtml}
                                             </select>

@@ -2675,7 +2675,7 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-select form-select-sm item-unit" required>
                                         <option value="">Unit</option>
                                         ${unitOptionsHtml}
                                     </select>
@@ -3032,7 +3032,7 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-control form-control-sm item-unit" required>
+                                    <select name="Invoice.InvoiceLines[${itemCount}].UnitOfMeasure" class="form-select form-select-sm item-unit" required>
                                         <option value="">Unit</option>
                                         ${unitOptionsHtml}
                                     </select>

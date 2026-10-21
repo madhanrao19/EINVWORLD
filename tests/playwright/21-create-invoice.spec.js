@@ -19,7 +19,7 @@ test('billing period: hidden when not applicable, required and ordered when a fr
   await expect(page.locator('#startDate-display')).toBeAttached();
   await expect(page.locator('#billingPeriodError')).toBeAttached();
 
-  const startCol = page.locator('#startDate-display').locator('xpath=ancestor::div[contains(@class,"col-md-4")][1]');
+  const startCol = page.locator('#startDate-display').locator('xpath=ancestor::div[contains(@class,"col-xxl-4")][1]');
   await setFrequency(page, 'Not_Applicable');
   await expect(startCol).toBeHidden();
 
