@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.19`** (`AppInfo:Version` in `appsettings.json`). v1.47.19 is a **patch**
+> **Current version: `v1.47.20`** (`AppInfo:Version` in `appsettings.json`). v1.47.20 is a **patch**
+> release: Cancel/Reject buttons follow the real 72-hour window; unused endpoints removed — see the dated entry below. v1.47.19 was a **patch**
 > release: audit follow-ups — shared LHDN token, no internal error text or server paths, safe CSV exports — see the dated entry below. v1.47.18 was a **patch**
 > release: invoices from a template or Smart Capture are sent to LHDN with the right issue time — see the dated entry below. v1.47.17 was a **patch**
 > release: Create e-Invoice keeps up to 4 decimals in a typed Unit Price — see the dated entry below. v1.47.16 was a **patch**
@@ -399,6 +400,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.20 (72-hour window, unused endpoints, CSP)
+
+- **Invoice details:** the Cancel and Reject buttons compared the validation time (stored in Malaysia time) with
+  UTC, so they stayed visible for 8 hours after the 72-hour window had closed (the server then refused). They
+  now hide on time. The server-side check was already correct.
+- **Removed unused code:** `HomeController` (`POST /Home/LoginAsTaxpayer`, `/Home/LoginAsIntermediary`),
+  `EInvoicingController` (`/EInvoicing/validateTaxpayer`, `/EInvoicing/submitDocuments` — the latter let a
+  signed-in Supplier send any document to LHDN without the duplicate-submission guard), the view-less
+  `PdfTemplate_v2` page model and the unlinked `Suppliers/Delete` page. Nothing in the app called them.
+- **CSP (report-only):** `connect-src` now lists the GA4 endpoints (`*.google-analytics.com`,
+  `analytics.google.com`, `www.google.com.my`…), so Google Analytics no longer floods the CSP violation log.
+  The policy is report-only, so nothing was being blocked.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.19 (audit follow-ups)
 
