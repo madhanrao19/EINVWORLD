@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.16`** (`AppInfo:Version` in `appsettings.json`). v1.47.16 is a **patch**
+> **Current version: `v1.47.17`** (`AppInfo:Version` in `appsettings.json`). v1.47.17 is a **patch**
+> release: Create e-Invoice keeps up to 4 decimals in a typed Unit Price — see the dated entry below. v1.47.16 was a **patch**
 > release: invoice form tidy-up — see the dated entry below. v1.47.15 was a **patch**
 > release: hardening — draft files, sign-in lockout, emails, logos, webhooks, LHDN tokens — see the dated entry below. v1.47.14 was a **patch**
 > release: LHDN reliability — status polling, recurring auto-submit and duplicate submissions — see the dated entry below. v1.47.13 was a **patch**
@@ -396,6 +397,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.17 (typed Unit Price keeps its decimals)
+
+- **Create e-Invoice, Invoice items:** a Unit Price typed with more than 2 decimals (for example 12.3456) is
+  no longer rounded to 2 decimals when you leave the field, so the line total uses the price you typed
+  (2 × 12.3456 = 24.69, not 24.70). Up to 4 decimals are kept, the most the database stores; prices with
+  fewer decimals are still shown with 2. Invoice Edit already kept them.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.16 (invoice form tidy-up)
 
