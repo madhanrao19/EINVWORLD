@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.26`** (`AppInfo:Version` in `appsettings.json`). v1.47.26 is a **patch**
+> **Current version: `v1.47.27`** (`AppInfo:Version` in `appsettings.json`). v1.47.27 is a **patch**
+> release: the Unit dropdown shows only the 11 Finance-approved units — see the dated entry below. v1.47.26 was a **patch**
 > release: the e-Invoice tax breakdown is one entry per tax type with its own taxable amount — see the dated entry below. v1.47.25 was a **patch**
 > release: a submitted invoice turns Valid on screen within about 30 seconds — see the dated entry below. v1.47.24 was a **patch**
 > release: decimal quantities are sent to LHDN unchanged — see the dated entry below. v1.47.23 was a **patch**
@@ -406,6 +407,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.27 (Finance-approved Unit list)
+
+- **Unit dropdown** (Create e-Invoice incl. Self-Billed and Credit/Debit/Refund Note, Invoice Edit incl. templates,
+  Item Management) now shows only Finance's 11 units, with friendly names and no "Common Units" header. The LHDN
+  code sent stays the standard one: Each `EA` (default), Unit `XUN`, Piece (pcs) `H87`, Service `E48`, Hour `HUR`,
+  Day `DAY`, Job / Project `E51`, Lump Sum (LS) `LS`, Set `SET`, Page `ZP`, Sheet `XST`. Kilogram, litre etc. are
+  no longer offered.
+- **Saved data is kept:** an invoice line or catalogue item already saved with another LHDN unit (e.g. C62) shows it
+  as an extra option, "one (C62)", only on that record, so re-saving never changes or blanks the unit. Picking such
+  a saved item on a new line keeps its unit too.
+- New lines default to Each. Invoice Edit's saved-item picker now also fills the item's Unit, as Create already did.
+- CSV/bulk import, the import API and item import still accept any active LHDN unit code. LHDN submission and the
+  database are unchanged. `DropdownHelper.FinanceUnits` holds the list.
 
 ## 📅 2026-10-21 — v1.47.26 (tax breakdown per tax type)
 
