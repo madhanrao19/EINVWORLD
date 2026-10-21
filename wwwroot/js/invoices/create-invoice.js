@@ -1242,13 +1242,14 @@
                 }
             });
 
-            // 2. Auto-format to exactly 2 decimal places when the user clicks away (blur/focusout)
+            // 2. Auto-format when the user clicks away (blur/focusout): at least 2 decimals, keeping up to 4 (UnitPrice is decimal(18,4))
             document.addEventListener('focusout', function(e) {
                 if (e.target.classList.contains('price-input')) {
                     if (e.target.value) {
                         let val = parseFloat(e.target.value);
                         if (!isNaN(val)) {
-                            e.target.value = val.toFixed(2);
+                            const typed = (e.target.value.split('.')[1] || '').length;
+                            e.target.value = val.toFixed(Math.min(4, Math.max(2, typed)));
                             calculateSubtotal(e.target); // Recalculate to ensure accuracy
                         }
                     }
