@@ -316,7 +316,7 @@ namespace EINVWORLD.Pages.Invoices
                         PoDoNo = template.PoDoNo,
                         EndDate = template.EndDate,
                         InvoicePeriod = template.InvoicePeriod,
-                        IssueDate = DateTime.UtcNow,
+                        IssueDate = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow), // stored in MY time; InvoiceMapper converts to UTC
                         InvoiceNo = GenerateNextInvoiceNumber(),
                         InvoiceLines = template.InvoiceLines.Select((line, i) => new InvoiceLineView
                         {
@@ -1268,7 +1268,7 @@ namespace EINVWORLD.Pages.Invoices
             string? tin = null;
             try
             {
-                _logger.LogInformation($"[Debug] Submitting Invoice: {invoiceNo}, Ajax: {isAjax}");
+                _logger.LogInformation("Submitting invoice {InvoiceNo} (ajax: {IsAjax})", invoiceNo, isAjax);
 
                 if (string.IsNullOrEmpty(invoiceNo))
                 {
@@ -1319,7 +1319,6 @@ namespace EINVWORLD.Pages.Invoices
                 }
 
                 var invoiceJson = await System.IO.File.ReadAllTextAsync(jsonPath);
-                _logger.LogInformation($"📄 JSON Document Content Preview: {invoiceJson.Substring(0, Math.Min(500, invoiceJson.Length))}...");
                 var encodedDocument = _lhdnApiService.Base64Encode(invoiceJson);
                 var documentHash = _lhdnApiService.ComputeSHA256Hash(invoiceJson);
 
@@ -1385,7 +1384,6 @@ namespace EINVWORLD.Pages.Invoices
                 // Pass the resolved TIN so submission uses the per-TIN token and adds the onbehalfof
                 // header, instead of relying on session state (which is empty right after a 2FA login).
                 var apiResponseJson = await _lhdnApiService.SubmitDocumentsAsync(documents, tin);
-                _logger.LogInformation("[Debug] LHDN API raw response: " + apiResponseJson);
 
                 var apiResponse = JsonConvert.DeserializeObject<SuccessSubmit>(apiResponseJson);
 
