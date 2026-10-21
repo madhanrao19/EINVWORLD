@@ -56,7 +56,7 @@ namespace eInvWorld.Pages.Dashboard
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load dashboard data.");
-                return new JsonResult(new { error = "Failed to load dashboard data.", exception = ex.Message });
+                return new JsonResult(new { error = "Failed to load dashboard data." });
             }
         }
     }

@@ -76,7 +76,7 @@ namespace eInvWorld.Controllers
 
                             if (isCsv)
                             {
-                                content.AppendLine($"\"{timestamp}\",\"{user}\",\"{ip}\",\"{levelVal}\",\"{message?.Replace("\"", "'")}\"");
+                                content.AppendLine(string.Join(",", new[] { timestamp, user, ip, levelVal, message }.Select(EINVWORLD.Helpers.CsvExportHelper.EscapeCsv)));
                             }
                             else
                             {

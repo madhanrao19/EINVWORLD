@@ -18,14 +18,16 @@ namespace eInvWorld.Pages
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _dbContext;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<ContactModel> _logger;
 
-        public ContactModel(EmailService emailService, IOptions<EmailConfiguration> emailConfig, IConfiguration configuration, ApplicationDbContext dbContext, IHttpClientFactory httpClientFactory)
+        public ContactModel(EmailService emailService, IOptions<EmailConfiguration> emailConfig, IConfiguration configuration, ApplicationDbContext dbContext, IHttpClientFactory httpClientFactory, ILogger<ContactModel> logger)
         {
             _emailService = emailService;
             _emailConfig = emailConfig.Value;
             _configuration = configuration;
             _dbContext = dbContext;
             _httpClientFactory = httpClientFactory;
+            _logger = logger;
         }
 
         [BindProperty]
@@ -119,7 +121,8 @@ namespace eInvWorld.Pages
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Error processing request: {ex.Message}";
+                _logger.LogError(ex, "Contact form submission failed.");
+                ErrorMessage = "Sorry, we couldn't send your message. Please try again later.";
                 return Page();
             }
         }
