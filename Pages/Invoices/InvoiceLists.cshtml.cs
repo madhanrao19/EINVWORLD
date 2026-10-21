@@ -2089,12 +2089,15 @@ namespace eInvWorld.Pages.Invoices
                 if (!userTINs.Any())
                     return new JsonResult(new { success = true, updatedCount = 0 });
 
-                // "Submitted" (waiting for LHDN's verdict) and "Valid" (waiting to see if the buyer rejects/cancels them).
-                // Submitted used to wait for the 10-minute background poll, so a validated invoice kept showing Submitted.
+                // "Submitted" (waiting for LHDN's verdict) and "Valid" inside the 72h cancel/reject window (a buyer may still
+                // reject it). Older Valid invoices can't change, and polling every visible one every 30s hit LHDN's 429 limit
+                // with a full list; a missing QR is still picked up by the background InvoiceStatusUpdater.
+                var settledBeforeMyt = eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow).AddHours(-72); // DateTimeValidated is MY time
                 var invoicesToSync = await _context.InvoiceHeaders
                     .Include(i => i.Supplier)
                     .Include(i => i.Customer)
-                    .Where(i => visibleInvoiceNos.Contains(i.InvoiceNo) && (i.LHDNStatusId == "Valid" || i.LHDNStatusId == "Submitted") &&
+                    .Where(i => visibleInvoiceNos.Contains(i.InvoiceNo) &&
+                                (i.LHDNStatusId == "Submitted" || (i.LHDNStatusId == "Valid" && i.DateTimeValidated > settledBeforeMyt)) &&
                                 (userTINs.Contains(i.Supplier.TIN) ||
                                  (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                                  (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
