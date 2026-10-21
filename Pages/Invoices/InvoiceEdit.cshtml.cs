@@ -1339,6 +1339,10 @@ namespace eInvWorld.Pages.Invoices
                 // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't
                 // require the user to notice and resubmit — it auto-retries, and lands in
                 // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
+                // Not for LHDN validation errors: resending the same document can never pass.
+                if (ex is LhdnDocumentRejectedException)
+                    return new JsonResult(new { success = false, message = $"LHDN rejected Invoice {invoiceNo}. Fix the details below and submit again. {ex.Message}" });
+
                 await _jobTracker.CreateAsync(
                     tin ?? string.Empty, eInvWorld.Models.Background.SyncJobType.SubmitDocument,
                     User.Identity?.Name ?? "System",

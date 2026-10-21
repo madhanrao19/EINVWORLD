@@ -266,6 +266,7 @@ public class LHDNApiService : ILHDNApiService
                 if (rejected?.HasValues == true)
                 {
                     _logger.LogWarning("⚠️ Rejected document(s): {Rejected}", rejected.ToString());
+                    throw new LhdnDocumentRejectedException($"❌ Submission failed. No accepted documents. Status: {response.StatusCode}. Response: {responseContent}");
                 }
             }
 
@@ -747,6 +748,11 @@ public class LHDNApiService : ILHDNApiService
     }
 }
 
-
-
-
+/// <summary>
+/// LHDN answered and rejected the document(s) with validation errors (e.g. CF324 invalid NRIC). Sending the same
+/// document again can never succeed, so callers must not queue an automatic retry; the user fixes the data and resubmits.
+/// </summary>
+public class LhdnDocumentRejectedException : System.Net.Http.HttpRequestException
+{
+    public LhdnDocumentRejectedException(string message) : base(message) { }
+}
