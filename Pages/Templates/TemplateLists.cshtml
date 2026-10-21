@@ -35,7 +35,7 @@
 <div class="card border-0 shadow-sm" id="customerList">
     <div class="card-body">
         <div class="table-responsive">
-            <table data-einv-table="templates" class="table align-middle mb-0" id="templateTable">
+            <table data-einv-table="templates" class="table align-middle mb-0 einv-mobile-stack" id="templateTable">
                 <thead class="einv-table-head">
                         <tr>
                             <th scope="col" class="col-checkbox">
@@ -62,7 +62,8 @@
                                 </div>
                             </td>
 
-                            <td class="template_name col-template-name">
+                            <td class="template_name col-template-name" data-label="Template">
+                                <div>
                                 <form method="post" asp-page-handler="ToggleFavorite" asp-route-templateId="@item.Id" class="d-inline">
                                     <button type="submit" class="btn btn-link p-0 border-0" title="Toggle Favorite">
                                         @if (item.IsFavorite)
@@ -77,14 +78,15 @@
                                 </form>
                                 <span class="ms-2 fw-semibold">@item.TemplateName</span>
                                 <span class="text-muted small d-block ms-4">@item.Supplier?.CompanyName</span>
+                                </div>
                             </td>
-                            <td class="doc_type">
+                            <td class="doc_type" data-label="Doc Type">
                                 <span class="badge bg-light text-body border">@DropdownHelper.GetEInvoiceTypeDescription(item.DocTypeCode)</span>
                             </td>
-                            <td class="customer_name">@(item.Customer != null ? item.Customer.CompanyName : item.PublicCustomer?.CompanyName)</td>
-                            <td>@item.InvoiceLines.Count item@(item.InvoiceLines.Count == 1 ? "" : "s")</td>
-                            <td class="fw-semibold">@item.Currency @(item.TotalAmountIncTax?.ToString("N2") ?? "0.00")</td>
-                            <td>
+                            <td class="customer_name" data-label="Buyer">@(item.Customer != null ? item.Customer.CompanyName : item.PublicCustomer?.CompanyName)</td>
+                            <td data-label="Items">@item.InvoiceLines.Count item@(item.InvoiceLines.Count == 1 ? "" : "s")</td>
+                            <td class="fw-semibold" data-label="Estimated Total">@item.Currency @(item.TotalAmountIncTax?.ToString("N2") ?? "0.00")</td>
+                            <td data-label="Recurring">
                                 @if (recurringCount > 0)
                                 {
                                     <span class="badge rounded-pill bg-primary-soft text-primary"><i class="ri-repeat-2-line align-bottom"></i> @recurringCount</span>
