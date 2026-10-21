@@ -1582,7 +1582,7 @@ a.einv-kpi-cell:hover { background: var(--einv-surface-2); color: var(--einv-tex
 
 /* Right-hand summary column. */
 .einv-ci-side { flex-shrink: 0; width: 100%; }
-@media (min-width: 992px) { .einv-ci-side { max-width: 20rem; } }
+@media (min-width: 1200px) { .einv-ci-side { max-width: 20rem; } }
 .einv-ci-sticky { position: sticky; top: var(--einv-space-4); }
 .einv-sum { background: var(--einv-surface); border: 1px solid var(--einv-border); border-radius: var(--einv-radius-md); overflow: hidden; }
 .einv-sum-h { padding: var(--einv-space-3) var(--einv-space-4); border-bottom: 1px solid var(--einv-border); font-weight: 600; }

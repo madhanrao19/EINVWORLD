@@ -31,7 +31,7 @@ test('wizard look, Save as template on steps 1-3, billing period rule', async ({
   await expect(page.locator('select[name="Invoice.InvoicePeriod"]')).not.toHaveValue('');
 
   const freq = v => page.evaluate(v => window.jQuery('select[name="Invoice.InvoicePeriod"]').val(v).trigger('change'), v);
-  const startCol = page.locator('#startDate-display').locator('xpath=ancestor::div[contains(@class,"col-md-4")][1]');
+  const startCol = page.locator('#startDate-display').locator('xpath=ancestor::div[contains(@class,"col-xxl-4")][1]');
   await freq('Monthly');
   await expect(startCol).toBeVisible();
   await page.evaluate(() => { window.jQuery('#startDate')[0]._flatpickr.clear(); window.jQuery('#endDate')[0]._flatpickr.clear(); window.nextStep(); });
