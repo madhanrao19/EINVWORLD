@@ -130,7 +130,7 @@ namespace eInvWorld.Services
                         EnableSsl = true
                     };
 
-                    var mailMessage = new MailMessage
+                    using var mailMessage = new MailMessage // releases the linked logo file after sending
                     {
                         From = new MailAddress(_emailConfig.Default.SmtpUsername, _emailConfig.Default.FromEmailName),
                         Subject = subject,
