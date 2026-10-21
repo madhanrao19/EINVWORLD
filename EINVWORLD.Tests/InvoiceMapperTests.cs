@@ -111,6 +111,17 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void Map_DecimalQuantity_IsSentUnchanged()
+        {
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(2.5m, 10, 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var line = doc.RootElement.GetProperty("Invoice")[0].GetProperty("InvoiceLine")[0];
+            Assert.Equal(2.5m, line.GetProperty("InvoicedQuantity")[0].GetProperty("_").GetDecimal());
+            Assert.Equal(25m, line.GetProperty("LineExtensionAmount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
         public void Map_MultiLine_TotalsAreSummed()
         {
             // Line A: 3 × 33.33 = 99.99 excl, 6% = 5.9994 tax. Line B: 1 × 100 = 100 excl, 10% = 10 tax.
