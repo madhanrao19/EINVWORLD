@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.33`** (`AppInfo:Version` in `appsettings.json`). v1.47.33 is a **patch**
+> **Current version: `v1.47.34`** (`AppInfo:Version` in `appsettings.json`). v1.47.34 is a **patch**
+> release: invoice forms fit 19" monitors and tablets, and the Unit box matches the other dropdowns — see the dated entry below. v1.47.33 was a **patch**
 > release: a submitted invoice keeps LHDN's validation time and QR link straight away — see the dated entry below. v1.47.32 was a **patch**
 > release: a Supplier editing My Company returns to the company page instead of Access Denied — see the dated entry below. v1.47.31 was a **patch**
 > release: the Invoices list stops polling LHDN for settled invoices (no more 429 bursts) — see the dated entry below. v1.47.30 was a **patch**
@@ -413,6 +414,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.34 (invoice forms on 19" monitors and tablets)
+
+- **Invoice Items (Create, Invoice Edit):** the line Unit dropdown is now the same size as Classification beside
+  it (it used `form-control-sm`, which the Select2 theme doesn't shrink; now `form-select-sm`).
+- **Create / Invoice Edit, Basic Information:** on 19" monitors (1280×1024, 1440×900) and laptops the header
+  fields were squeezed three across next to the summary panel, so labels were cut off ("Invoice Da…").
+  They now sit two across below 1400px wide, and three across above.
+- **Tablets (under 1200px):** the Invoice summary and Validation checklist move below the form instead of
+  squeezing it.
+- **Dropdowns with a clear (×) button:** long names (e.g. Supplier) end with "…" before the ×, instead of
+  running under it.
+- Billing period start/end dates still hide and show as a whole column (`billing-period.js` now finds the
+  column by its new class).
+- New Playwright check `24-screen-sizes.spec.js`: no sideways scrolling on the main Supplier pages at
+  1440×900, 1280×1024, 1366×768, 1024×768, 768×1024 and 390×844, and Unit/Classification heights match.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.33 (submitted invoices keep LHDN's validation time)
 

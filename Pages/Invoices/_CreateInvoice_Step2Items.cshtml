@@ -11,7 +11,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-column flex-lg-row gap-4">
+                    <div class="d-flex flex-column flex-xl-row gap-4">
                     <div class="flex-grow-1" style="min-width:0;">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div class="text-muted small">Add products or services to your invoice</div>
@@ -58,7 +58,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="irow-mlabel-always">Unit <span class="text-danger">*</span></div>
-                                                    <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-control form-control-sm item-unit" required>
+                                                    <select asp-for="Invoice.InvoiceLines[i].UnitOfMeasure" asp-items="Model.UnitOptions" class="form-select form-select-sm item-unit" required>
                                                         <option value="">Unit</option>
                                                     </select>
                                                 </div>
