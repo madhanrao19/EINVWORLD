@@ -16,7 +16,12 @@ changes are additive and AI/features stay off unless already enabled.
      will rotate the keys and log everyone out / break 2FA. Startup now fails fast if it's blank in
      Production, so verify it is set.
 2. **Stop the site** (or the app pool) so no requests hit a half-swapped folder.
-3. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
+3. **Production, once (v1.47.21):** the base `appsettings.json` holds Staging values (folders, log path,
+   Turnstile site key, contact email). Since v1.47.21 the Production values are in the repo's
+   `appsettings.Production.json`, but the deploy script never copies that file. So copy it to the server's
+   `App\` once by hand, keeping any setting you changed there yourself (for example `AI:Enabled`). Until
+   then, deploy Production with `-ExtraExcludeFiles appsettings.json` so the server's own copy is kept.
+4. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
    key-ring folder intact — never overwrite server secrets). Get the build from the green **CI run on
    `main`** → **Artifacts → `einvworld-app`** (a ready `dotnet publish` output; carries no secrets).
    For Staging specifically, `scripts\Deploy-Staging.ps1` automates publish + backup + copy and
@@ -40,7 +45,7 @@ changes are additive and AI/features stay off unless already enabled.
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
    **If you're deploying from a CI artifact** (or any pre-built output), run it with
    **`-SkipPublish`** after copying the publish folder to `bin\Release\net10.0\win-x64\publish`.
-4. **Config/env changes for this version:**
+5. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
      `AI__*` (`AIAssistant__Enabled` → `AI__Enabled`, `AIAssistant__Model` → `AI__Model`, etc.).
      If you skip this, AI simply stays **off** after the upgrade — invoicing is unaffected. Default
@@ -83,14 +88,14 @@ changes are additive and AI/features stay off unless already enabled.
      several access-denied fixes) and MyInvois SDK 1.0 compliance work (unit-code validation, signed
      SVDP 1.3, configurable LHDN rate limits — see `LHDNApiConfig:RateLimits:*`). **No new required
      secrets.** See §1 for the 2 new migrations — both additive, no data loss, safe to auto-migrate.
-5. **Database migrations** — `scripts\Deploy-Staging.ps1` applies them for you, on both Staging and
+6. **Database migrations** — `scripts\Deploy-Staging.ps1` applies them for you, on both Staging and
    Production (see §1). Otherwise run the `Apply_*.sql` scripts by hand. Additive only; do it in a
    **low-traffic window**.
-6. **Start the site**, then **verify**:
+7. **Start the site**, then **verify**:
    - `/health` returns Healthy; sign-in works; open an existing invoice; create + submit one to LHDN.
    - If AI is enabled: **Admin → AI Settings → Test connection** reports reachable + model pulled.
    - Check the startup logs for no configuration-validation errors (the app fail-fasts on bad prod config).
-7. **Rollback if needed:** stop the site, restore the previous `App\` folder, and (only if a migration
+8. **Rollback if needed:** stop the site, restore the previous `App\` folder, and (only if a migration
    caused the problem) restore the database backup. Additive migrations rarely need a DB restore.
 
 ## 1. Database migrations
