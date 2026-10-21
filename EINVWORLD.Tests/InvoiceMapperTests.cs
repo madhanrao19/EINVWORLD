@@ -89,6 +89,25 @@ namespace EINVWORLD.Tests
             Assert.Equal(1000m, Amount(lmt, "TaxExclusiveAmount"));
             Assert.Equal(1100m, Amount(lmt, "TaxInclusiveAmount"));
             Assert.Equal(1100m, Amount(lmt, "PayableAmount"));
+            Assert.Equal(0m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(0m, Amount(lmt, "ChargeTotalAmount")); // was the payable amount (LHDN: fees/charges only)
+        }
+
+        [Fact]
+        public void Map_FourDecimalUnitPrice_PayableRoundedOnce()
+        {
+            // 3 x 0.3333 = 0.9999, discount 0.50 -> base 0.4999, 6% tax = 0.029994. Payable = round(0.529894) = 0.53.
+            var line = LineWithTax(3, 0.3333m, 6);
+            line.DiscountAmount = 0.50m;
+            line.CalculateAmounts();
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
+
+            Assert.Equal(0.50m, Amount(lmt, "TaxExclusiveAmount"));
+            Assert.Equal(0.53m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(0.53m, Amount(lmt, "PayableAmount"));
         }
 
         [Fact]
@@ -531,8 +550,8 @@ namespace EINVWORLD.Tests
         public void Map_HeaderTotals_ReflectLineDiscount()
         {
             // Qty 1 x 100 = 100 subtotal, discount 20 -> taxable base 80, 10% tax = 8.
-            // LineExtensionAmount stays gross (100, UBL convention); AllowanceTotalAmount = 20;
-            // TaxInclusiveAmount = 100 + 8 = 108; PayableAmount = 108 - 20 = 88.
+            // LineExtensionAmount stays gross (100, UBL convention); AllowanceTotalAmount = 20; no charges;
+            // LHDN: TaxExclusiveAmount includes the discount = 80; TaxInclusiveAmount = 80 + 8 = 88 = PayableAmount.
             var line = new InvoiceLine
             {
                 InvoiceHeaderInvoiceNo = "INV-1",
@@ -553,7 +572,9 @@ namespace EINVWORLD.Tests
 
             Assert.Equal(100m, Amount(lmt, "LineExtensionAmount"));
             Assert.Equal(20m, Amount(lmt, "AllowanceTotalAmount"));
-            Assert.Equal(108m, Amount(lmt, "TaxInclusiveAmount"));
+            Assert.Equal(0m, Amount(lmt, "ChargeTotalAmount"));
+            Assert.Equal(80m, Amount(lmt, "TaxExclusiveAmount"));
+            Assert.Equal(88m, Amount(lmt, "TaxInclusiveAmount"));
             Assert.Equal(88m, Amount(lmt, "PayableAmount"));
 
             // Cross-check against the client-preview formula's own totals for the same input.
@@ -619,8 +640,8 @@ namespace EINVWORLD.Tests
         public void Map_LineWithDiscountAndFeeCharge_HeaderPayableReflectsBoth()
         {
             // Qty 1 x 100 = 100 subtotal, discount 20, fee 5 -> taxable base 85, 10% tax = 8.5.
-            // TaxInclusive = 100 + 8.5 = 108.5; AllowanceTotalAmount = 20 - 5 = 15;
-            // Payable = 108.5 - 15 = 93.5.
+            // AllowanceTotalAmount = 20, ChargeTotalAmount = 5 (reported separately, not netted);
+            // TaxExclusive = 100 - 20 + 5 = 85; TaxInclusive = Payable = 85 + 8.5 = 93.5.
             var line = new InvoiceLine
             {
                 InvoiceHeaderInvoiceNo = "INV-1",
@@ -639,9 +660,29 @@ namespace EINVWORLD.Tests
             using var doc = JsonDocument.Parse(json);
             var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
 
-            Assert.Equal(108.5m, Amount(lmt, "TaxInclusiveAmount"));
-            Assert.Equal(15m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(20m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(5m, Amount(lmt, "ChargeTotalAmount"));
+            Assert.Equal(85m, Amount(lmt, "TaxExclusiveAmount"));
+            Assert.Equal(93.5m, Amount(lmt, "TaxInclusiveAmount"));
             Assert.Equal(93.5m, Amount(lmt, "PayableAmount"));
+        }
+
+        [Fact]
+        public void Map_NegativeDiscountAndNegativeFee_SwapSides()
+        {
+            // A negative discount is a charge and a negative fee an allowance, matching the line AllowanceCharge flags.
+            var line = LineWithTax(1, 100, 0);
+            line.DiscountAmount = -10;
+            line.FeeChargeAmount = -4;
+
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", line));
+            using var doc = JsonDocument.Parse(json);
+            var lmt = doc.RootElement.GetProperty("Invoice")[0].GetProperty("LegalMonetaryTotal")[0];
+
+            Assert.Equal(4m, Amount(lmt, "AllowanceTotalAmount"));
+            Assert.Equal(10m, Amount(lmt, "ChargeTotalAmount"));
+            Assert.Equal(106m, Amount(lmt, "TaxExclusiveAmount"));
+            Assert.Equal(106m, Amount(lmt, "PayableAmount"));
         }
 
         [Fact]
