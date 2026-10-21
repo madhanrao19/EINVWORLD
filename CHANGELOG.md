@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.29`** (`AppInfo:Version` in `appsettings.json`). v1.47.29 is a **patch**
+> **Current version: `v1.47.30`** (`AppInfo:Version` in `appsettings.json`). v1.47.30 is a **patch**
+> release: Download PDF no longer fails right after the validated email — see the dated entry below. v1.47.29 was a **patch**
 > release: no automatic retry when LHDN rejects a document for validation errors — see the dated entry below. v1.47.28 was a **patch**
 > release: the Items-step checklist updates as soon as a Classification or Unit is picked — see the dated entry below. v1.47.27 was a **patch**
 > release: the Unit dropdown shows only the 11 Finance-approved units — see the dated entry below. v1.47.26 was a **patch**
@@ -409,6 +410,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.30 (PDF download after the validated email)
+
+- **Invoice details → Download PDF** failed with an error page right after the "e-Invoice Validated" email was sent
+  (Staging, EINV00077, 22:48 and 22:51): the email never closed its message, so its PDF attachment kept
+  `EINVxxx.pdf` locked ("being used by another process") until .NET's garbage collector freed it, and the download
+  (which regenerates that file) failed. Both email senders now close the message after sending, releasing the PDF
+  and the logo immediately.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.29 (no retry for LHDN validation rejections)
 

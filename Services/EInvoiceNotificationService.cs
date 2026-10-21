@@ -365,7 +365,9 @@ namespace eInvWorld.Services
                 EnableSsl = true
             };
 
-            var mailMessage = new MailMessage
+            // Disposed after sending: the PDF attachment / logo hold their files open until then, and the PDF
+            // download (which regenerates EINVxxx.pdf) failed with "being used by another process" until GC ran.
+            using var mailMessage = new MailMessage
             {
                 From = new MailAddress(smtpUser, fromName),
                 Subject = subject,
