@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.20`** (`AppInfo:Version` in `appsettings.json`). v1.47.20 is a **patch**
+> **Current version: `v1.47.21`** (`AppInfo:Version` in `appsettings.json`). v1.47.21 is a **patch**
+> release: Production settings no longer depend on the server's own `appsettings.json` — see the dated entry below. v1.47.20 was a **patch**
 > release: Cancel/Reject buttons follow the real 72-hour window; unused endpoints removed — see the dated entry below. v1.47.19 was a **patch**
 > release: audit follow-ups — shared LHDN token, no internal error text or server paths, safe CSV exports — see the dated entry below. v1.47.18 was a **patch**
 > release: invoices from a template or Smart Capture are sent to LHDN with the right issue time — see the dated entry below. v1.47.17 was a **patch**
@@ -401,7 +402,19 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
-## 📅 2026-10-21 — v1.47.20 (72-hour window, unused endpoints, CSP)
+## 📅 2026-10-21 — v1.47.21 (Production settings in the repo)
+
+- **Deploy safety:** `appsettings.json` is copied to the server on every deploy but holds Staging values. Production
+  kept its own hand-edited copy, so a normal deploy would have switched Production to Staging's document folders
+  (`E:\EINVWORLD_STAGING\Documents\...`), Staging's log file and tessdata folder, Cloudflare's test Turnstile
+  site key (login and register would fail), `test@einvworld.com` for Contact and "eInvWorld Staging" as the
+  sender name. These values now live in `appsettings.Production.json`, which Production loads on top.
+- **New test** (`ProductionSettingsFileTests`) merges the two files like the app does and fails if a Staging
+  folder, a "Staging |" subject or the Turnstile test key reaches Production, or a Serilog sink goes missing.
+- **One-time step on Production** (the deploy script never copies `appsettings.Production.json`): see
+  `DEPLOY-NOTES.md` §0 step 3. Until it is done, deploy Production with `-ExtraExcludeFiles appsettings.json`.
+- No database change. No change on Staging (it never loads `appsettings.Production.json`).
+
 
 - **Invoice details:** the Cancel and Reject buttons compared the validation time (stored in Malaysia time) with
   UTC, so they stayed visible for 8 hours after the 72-hour window had closed (the server then refused). They
