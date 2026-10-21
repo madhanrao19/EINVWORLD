@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.17`** (`AppInfo:Version` in `appsettings.json`). v1.47.17 is a **patch**
+> **Current version: `v1.47.18`** (`AppInfo:Version` in `appsettings.json`). v1.47.18 is a **patch**
+> release: invoices from a template or Smart Capture are sent to LHDN with the right issue time — see the dated entry below. v1.47.17 was a **patch**
 > release: Create e-Invoice keeps up to 4 decimals in a typed Unit Price — see the dated entry below. v1.47.16 was a **patch**
 > release: invoice form tidy-up — see the dated entry below. v1.47.15 was a **patch**
 > release: hardening — draft files, sign-in lockout, emails, logos, webhooks, LHDN tokens — see the dated entry below. v1.47.14 was a **patch**
@@ -397,6 +398,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.18 (issue time from templates and Smart Capture)
+
+- **LHDN submission:** an invoice created from a template (Create e-Invoice or Invoice Edit) or from Smart Capture
+  was stored with a UTC issue date while every other invoice is stored in Malaysia time, so it was converted to
+  UTC twice and reached LHDN 8 hours early (created 11:37, sent as 03:37; before 08:00 it landed on the previous
+  day). These now store Malaysia time like the rest.
+- The UBL IssueDate/IssueTime are now converted from Malaysia time explicitly instead of from the server's clock
+  zone, so the result no longer depends on the server's Windows time zone (`DateTimeHelper.MalaysiaToUtc`).
+- **Logs:** submit no longer writes the start of the invoice document or LHDN's raw reply to the log (the
+  accepted UUIDs are still logged).
+- Invoices already submitted keep the time LHDN recorded. No database change.
 
 ## 📅 2026-10-21 — v1.47.17 (typed Unit Price keeps its decimals)
 
