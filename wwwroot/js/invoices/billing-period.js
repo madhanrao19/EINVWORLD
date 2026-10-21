@@ -19,7 +19,7 @@
     var end = document.getElementById("endDate");
     if (!freq || !start || !end) return;
 
-    var cols = [start, end].map(function (el) { return el.closest(".col-md-4") || el.parentNode; });
+    var cols = [start, end].map(function (el) { return el.closest(".col-xxl-4") || el.parentNode; });
     var error = document.createElement("div");
     error.className = "invalid-feedback d-block einv-period-error";
     error.id = "billingPeriodError";
