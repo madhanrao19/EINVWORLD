@@ -178,10 +178,11 @@ namespace eInvWorld.Services.Mappers
                         PaymentTerms = MapPaymentTerms(header),
                         PrepaidPayment = MapPrepaidPayment(header),
                         AllowanceCharge = MapAllowanceCharges(header),
-                        TaxTotal = MapTaxTotals(header),
                         InvoiceLine = header.InvoiceLines?
                             .Select((line, index) => MapInvoiceLine(line, index + 1))
                             .ToList() ?? new List<JsonModels.InvoiceLine>(),
+                        // After the lines: MapLineTaxTotals fills in any tax amount not calculated yet.
+                        TaxTotal = MapTaxTotals(header),
                         LegalMonetaryTotal = MapLegalMonetaryTotal(header),
                         TaxExchangeRate = new List<JsonModels.TaxExchangeRate>
                         {
@@ -986,8 +987,24 @@ namespace eInvWorld.Services.Mappers
                 .SelectMany(line => line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>())
                 .Sum(tax => tax.TaxAmount ?? 0);
 
-            decimal totalTaxableAmount = header.InvoiceLines
-                .Sum(line => (line.Quantity ?? 0) * (line.UnitPrice ?? 0));
+            // LHDN: one TaxSubtotal per tax type, with that type's own taxable amount and tax. Each line's base is
+            // the same one its tax was calculated on (Subtotal - Discount + Fee, see MapLineTaxTotals). Before, every
+            // line/tax pair got its own entry carrying the whole invoice's gross amount.
+            var taxSubtotals = header.InvoiceLines
+                .SelectMany(line => (line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>()).Select(tax => new
+                {
+                    Tax = tax,
+                    Base = (line.Quantity ?? 0) * (line.UnitPrice ?? 0) - (line.DiscountAmount ?? 0) + (line.FeeChargeAmount ?? 0)
+                }))
+                .GroupBy(x => x.Tax.TaxCategory ?? "01")
+                .Select(g => new
+                {
+                    Category = g.Key,
+                    Taxable = g.Sum(x => x.Base),
+                    TaxAmount = g.Sum(x => x.Tax.TaxAmount ?? 0),
+                    ExemptionReason = g.Select(x => x.Tax.TaxExemptionReason).FirstOrDefault(r => !string.IsNullOrWhiteSpace(r)) ?? ""
+                })
+                .ToList();
 
             return new List<JsonModels.TaxTotal>
         {
@@ -997,22 +1014,22 @@ namespace eInvWorld.Services.Mappers
             {
                 new JsonModels.TaxAmount { _ = Math.Round(totalTaxAmount, 2), currencyID = header.Currency }
             },
-            TaxSubtotal = header.InvoiceLines.SelectMany(line => line.InvoiceTaxes ?? new List<InputModel.InvoiceTax>())
+            TaxSubtotal = taxSubtotals
             .Select(tax => new JsonModels.TaxSubtotal
             {
                 TaxableAmount = new List<JsonModels.TaxableAmount>
                 {
-                    new JsonModels.TaxableAmount { _ = Math.Round(totalTaxableAmount, 2), currencyID = header.Currency }
+                    new JsonModels.TaxableAmount { _ = Math.Round(tax.Taxable, 2), currencyID = header.Currency }
                 },
                 TaxAmount = new List<JsonModels.TaxAmount>
                 {
-                    new JsonModels.TaxAmount { _ = Math.Round(tax.TaxAmount ?? 0, 2), currencyID = header.Currency }
+                    new JsonModels.TaxAmount { _ = Math.Round(tax.TaxAmount, 2), currencyID = header.Currency }
                 },
                 TaxCategory = new List<JsonModels.TaxCategory>
                 {
                     new JsonModels.TaxCategory
                     {
-                        ID = new List<JsonModels.ID> { new JsonModels.ID { _ = tax.TaxCategory ?? "01" } },
+                        ID = new List<JsonModels.ID> { new JsonModels.ID { _ = tax.Category } },
                         TaxScheme = new List<JsonModels.TaxScheme>
                         {
                             new JsonModels.TaxScheme
@@ -1024,7 +1041,7 @@ namespace eInvWorld.Services.Mappers
                             }
                         },
                         TaxExemptionReason = new List<JsonModels.TaxExemptionReason>
-                            { new JsonModels.TaxExemptionReason { _ = tax.TaxExemptionReason ?? "" } }
+                            { new JsonModels.TaxExemptionReason { _ = tax.ExemptionReason } }
                                     }
                                 }
                             }).ToList()

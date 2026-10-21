@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Text.Json;
 using eInvWorld.Models.InputModel;
@@ -119,6 +120,36 @@ namespace EINVWORLD.Tests
             var line = doc.RootElement.GetProperty("Invoice")[0].GetProperty("InvoiceLine")[0];
             Assert.Equal(2.5m, line.GetProperty("InvoicedQuantity")[0].GetProperty("_").GetDecimal());
             Assert.Equal(25m, line.GetProperty("LineExtensionAmount")[0].GetProperty("_").GetDecimal());
+        }
+
+        [Fact]
+        public void Map_TaxSubtotals_OnePerTaxType_WithItsOwnNetBase()
+        {
+            static InvoiceLine L(int n, decimal qty, decimal price, decimal disc, decimal fee, string cat, decimal pct)
+            {
+                var l = new InvoiceLine
+                {
+                    InvoiceHeaderInvoiceNo = "INV-1", LineNumber = n, ItemDescription = "Item", UnitOfMeasure = "C62",
+                    ClassificationCode = "022", Quantity = qty, UnitPrice = price, DiscountAmount = disc, FeeChargeAmount = fee,
+                };
+                l.InvoiceTaxes.Add(new InvoiceTax { TaxCategory = cat, TaxPercentage = pct }); // TaxAmount left for the mapper
+                return l;
+            }
+            // 02 @ 8%: (2x50 - 10) = 90 -> 7.20 and (1x100 + 5) = 105 -> 8.40; 06 @ 0%: 30 -> 0.
+            var json = new InvoiceMapper().MapToJsonModel(Header("01",
+                L(1, 2, 50, 10, 0, "02", 8), L(2, 1, 100, 0, 5, "02", 8), L(3, 1, 30, 0, 0, "06", 0)));
+
+            using var doc = JsonDocument.Parse(json);
+            var taxTotal = doc.RootElement.GetProperty("Invoice")[0].GetProperty("TaxTotal")[0];
+            Assert.Equal(15.6m, taxTotal.GetProperty("TaxAmount")[0].GetProperty("_").GetDecimal());
+
+            var subs = taxTotal.GetProperty("TaxSubtotal").EnumerateArray().ToDictionary(
+                t => t.GetProperty("TaxCategory")[0].GetProperty("ID")[0].GetProperty("_").GetString()!,
+                t => (Taxable: t.GetProperty("TaxableAmount")[0].GetProperty("_").GetDecimal(),
+                      Tax: t.GetProperty("TaxAmount")[0].GetProperty("_").GetDecimal()));
+            Assert.Equal(2, subs.Count);
+            Assert.Equal((195m, 15.6m), subs["02"]);
+            Assert.Equal((30m, 0m), subs["06"]);
         }
 
         [Fact]
