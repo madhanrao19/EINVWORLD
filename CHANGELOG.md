@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.23`** (`AppInfo:Version` in `appsettings.json`). v1.47.23 is a **patch**
+> **Current version: `v1.47.24`** (`AppInfo:Version` in `appsettings.json`). v1.47.24 is a **patch**
+> release: decimal quantities are sent to LHDN unchanged — see the dated entry below. v1.47.23 was a **patch**
 > release: the deploy script ships all settings files, so nothing is edited after a deploy — see the dated entry below. v1.47.22 was a **patch**
 > release: e-Invoice totals sent to LHDN follow its definitions (fees/charges, total excluding tax) — see the dated entry below. v1.47.21 was a **patch**
 > release: Production settings no longer depend on the server's own `appsettings.json` — see the dated entry below. v1.47.20 was a **patch**
@@ -403,6 +404,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.24 (decimal quantities to LHDN)
+
+- **e-Invoice quantity:** the LHDN document cut the line quantity to a whole number (2.5 was sent as 2) while the
+  line amount used the real quantity, so quantity × unit price didn't match the line amount on LHDN's copy.
+  The quantity is now sent as stored. The app's own screens, PDFs and totals were always right.
+- Already-submitted invoices keep LHDN's truncated quantity (amounts were right). Staging has none; to list them on
+  Production: `SELECT DISTINCT InvoiceHeaderInvoiceNo FROM InvoiceLines WHERE Quantity <> FLOOR(Quantity)`.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.23 (hands-off deploys)
 
