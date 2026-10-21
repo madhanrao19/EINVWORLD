@@ -44,6 +44,17 @@ namespace EINVWORLD.Tests
             Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("❌ Error submitting document: BadRequest")));
             Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new System.Net.Http.HttpRequestException("down", null, System.Net.HttpStatusCode.ServiceUnavailable)));
             Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new InvalidOperationException("no TIN")));
+            Assert.False(InvoiceSubmissionGuard.OutcomeUnknown(new LhdnDocumentRejectedException("CF324"))); // claim released
+        }
+
+        // ── Durable job retry: never re-send a document LHDN rejected for validation errors ──
+        [Fact]
+        public void SubmitRetry_Skips_LhdnValidationRejection_But_Keeps_Transient_Failures()
+        {
+            Assert.False(EINVWORLD.Services.Background.DurableSyncJobWorker.ShouldRetry(1, 3, new LhdnDocumentRejectedException("CF324")));
+            Assert.True(EINVWORLD.Services.Background.DurableSyncJobWorker.ShouldRetry(1, 3, new System.Net.Http.HttpRequestException("down", null, System.Net.HttpStatusCode.ServiceUnavailable)));
+            Assert.True(EINVWORLD.Services.Background.DurableSyncJobWorker.ShouldRetry(2, 3, new InvalidOperationException("token")));
+            Assert.False(EINVWORLD.Services.Background.DurableSyncJobWorker.ShouldRetry(3, 3, new InvalidOperationException("token")));
         }
 
         // ── Webhook SSRF private-address check ───────────────────────────────────────────────
