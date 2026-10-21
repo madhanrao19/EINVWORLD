@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.30`** (`AppInfo:Version` in `appsettings.json`). v1.47.30 is a **patch**
+> **Current version: `v1.47.31`** (`AppInfo:Version` in `appsettings.json`). v1.47.31 is a **patch**
+> release: the Invoices list stops polling LHDN for settled invoices (no more 429 bursts) — see the dated entry below. v1.47.30 was a **patch**
 > release: Download PDF no longer fails right after the validated email — see the dated entry below. v1.47.29 was a **patch**
 > release: no automatic retry when LHDN rejects a document for validation errors — see the dated entry below. v1.47.28 was a **patch**
 > release: the Items-step checklist updates as soon as a Classification or Unit is picked — see the dated entry below. v1.47.27 was a **patch**
@@ -410,6 +411,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.31 (fewer LHDN calls from the Invoices list)
+
+- **Invoices list, 30-second status check:** it asked LHDN about every visible Valid invoice, including ones validated
+  weeks ago that can no longer change (the cancel/reject window is 72 hours). With a full page of older invoices
+  this hit LHDN's rate limit: 13 "429 Too Many Requests" in 7 minutes on Staging with Production's data, slowing
+  submissions and status checks. It now checks only Submitted invoices and Valid ones inside their 72-hour window,
+  the same rule as the invoice details page. The background job still fills in any missing QR link.
 
 ## 📅 2026-10-21 — v1.47.30 (PDF download after the validated email)
 
