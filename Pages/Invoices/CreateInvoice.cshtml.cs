@@ -1420,6 +1420,12 @@ namespace EINVWORLD.Pages.Invoices
                     _context.InvoiceHeaders.Update(existingInvoice);
                     await _context.SaveChangesAsync();
 
+                    // Also store LHDN's validation time, QR link etc. like the background sync does. With only the status,
+                    // a just-validated invoice had no DateTimeValidated, so the 72h window, the live status checks and
+                    // the validated email/PDF waited for the 10-minute background poll.
+                    await HttpContext.RequestServices.GetRequiredService<eInvWorld.Helpers.InvoiceStatusSyncHelper>()
+                        .SyncInvoiceFromDocumentSummaryAsync(invoiceNo, finalStatus, User.Identity?.Name ?? "System");
+
                     _invoiceHistoryService.Log(invoiceNo, "StatusSync", $"Fetched status: {finalStatus.status}");
                 }
 
