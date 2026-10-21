@@ -185,7 +185,7 @@ namespace EINVWORLD.Services.Background
             catch (Exception ex)
             {
                 var now2 = DateTime.UtcNow;
-                if (job.AttemptCount < job.MaxAttempts)
+                if (ShouldRetry(job.AttemptCount, job.MaxAttempts, ex))
                 {
                     // Exponential backoff: 2, 4, 8, 16 … capped at 30 minutes. Clamp the exponent first so
                     // a large MaxAttempts can't make Math.Pow overflow to Infinity/NaN before the Min cap.
@@ -229,5 +229,12 @@ namespace EINVWORLD.Services.Background
 
         private static string? Truncate(string? value, int max) =>
             string.IsNullOrEmpty(value) || value.Length <= max ? value : value.Substring(0, max);
+
+        /// <summary>
+        /// Whether a failed attempt is queued again: attempts remain, and the failure isn't an LHDN validation
+        /// rejection (resending the same document can never pass; the user fixes it and resubmits).
+        /// </summary>
+        public static bool ShouldRetry(int attemptCount, int maxAttempts, Exception ex) =>
+            attemptCount < maxAttempts && ex is not LhdnDocumentRejectedException;
     }
 }
