@@ -673,7 +673,7 @@ namespace eInvWorld.Services.Mappers
                 {
                     new JsonModels.InvoicedQuantity
                     {
-                        _ = (int)(line.Quantity ?? 0),  // Default to 0 if null
+                        _ = line.Quantity ?? 0,  // decimal as stored (an int cast sent 2.5 as 2)
                         unitCode = line.UnitOfMeasure ?? "XUN"  // Default unit code if null
                     }
                 },
