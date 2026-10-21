@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.32`** (`AppInfo:Version` in `appsettings.json`). v1.47.32 is a **patch**
+> **Current version: `v1.47.33`** (`AppInfo:Version` in `appsettings.json`). v1.47.33 is a **patch**
+> release: a submitted invoice keeps LHDN's validation time and QR link straight away — see the dated entry below. v1.47.32 was a **patch**
 > release: a Supplier editing My Company returns to the company page instead of Access Denied — see the dated entry below. v1.47.31 was a **patch**
 > release: the Invoices list stops polling LHDN for settled invoices (no more 429 bursts) — see the dated entry below. v1.47.30 was a **patch**
 > release: Download PDF no longer fails right after the validated email — see the dated entry below. v1.47.29 was a **patch**
@@ -412,6 +413,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.33 (submitted invoices keep LHDN's validation time)
+
+- **Submit to LHDN (Create, Invoice Edit, queued/auto submissions):** when LHDN validated the invoice during the
+  submit, only the status was saved, not LHDN's validation time, QR link or receive time. Found on Staging:
+  EINV100560 was Valid with no validation time. Until the 10-minute background check filled it in, the
+  invoice page didn't run its live status check, the Invoices list skipped it, and the "validated" email and PDF
+  waited. Submit now stores everything LHDN returned, through the same code the background status check uses.
+- No database change.
 
 ## 📅 2026-10-21 — v1.47.32 (Supplier: Edit company no longer ends on Access Denied)
 

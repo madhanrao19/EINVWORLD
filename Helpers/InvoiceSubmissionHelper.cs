@@ -17,14 +17,17 @@ namespace EINVWORLD.Helpers
         private readonly ILHDNApiService _lhdnApiService;
         private readonly IJsonFileService _jsonFileService;
         private readonly ILogger<InvoiceSubmissionHelper> _logger;
+        private readonly eInvWorld.Helpers.InvoiceStatusSyncHelper _statusSync;
 
         public InvoiceSubmissionHelper(
             ApplicationDbContext context,
             ITokenService tokenService,
             ILHDNApiService lhdnApiService,
             IJsonFileService jsonFileService,
-            ILogger<InvoiceSubmissionHelper> logger)
+            ILogger<InvoiceSubmissionHelper> logger,
+            eInvWorld.Helpers.InvoiceStatusSyncHelper statusSync)
         {
+            _statusSync = statusSync;
             _context = context;
             _tokenService = tokenService;
             _lhdnApiService = lhdnApiService;
@@ -145,6 +148,8 @@ namespace EINVWORLD.Helpers
                         });
 
                         await _context.SaveChangesAsync();
+                        // Validation time, QR link etc. too, so the validated email and 72h window don't wait for the next poll.
+                        await _statusSync.SyncInvoiceFromDocumentSummaryAsync(invoiceNo, docStatus, submittedBy);
                         break;
                     }
                 }
