@@ -16,16 +16,16 @@ changes are additive and AI/features stay off unless already enabled.
      will rotate the keys and log everyone out / break 2FA. Startup now fails fast if it's blank in
      Production, so verify it is set.
 2. **Stop the site** (or the app pool) so no requests hit a half-swapped folder.
-3. **Production, once (v1.47.21):** the base `appsettings.json` holds Staging values (folders, log path,
-   Turnstile site key, contact email). Since v1.47.21 the Production values are in the repo's
-   `appsettings.Production.json`, but the deploy script never copies that file. So copy it to the server's
-   `App\` once by hand, keeping any setting you changed there yourself (for example `AI:Enabled`). Until
-   then, deploy Production with `-ExtraExcludeFiles appsettings.json` so the server's own copy is kept.
-4. **Deploy the new build** into `App\` (keep `appsettings.Production.json`, `web.config` env, and the
+3. **Settings files come from the repo (v1.47.23).** The base `appsettings.json` holds Staging values;
+   `appsettings.Production.json` / `appsettings.Staging.json` override them per server and are deployed
+   too, so nothing is edited on the server after a deploy. Only `web.config` (secrets + per-server env
+   vars) is server-owned. Put any per-server override there as an environment variable, never in a
+   server's appsettings file: the next deploy replaces it (the script warns and the backup keeps it).
+4. **Deploy the new build** into `App\` (keep `web.config` env and the
    key-ring folder intact — never overwrite server secrets). Get the build from the green **CI run on
    `main`** → **Artifacts → `einvworld-app`** (a ready `dotnet publish` output; carries no secrets).
    For Staging specifically, `scripts\Deploy-Staging.ps1` automates publish + backup + copy and
-   **always excludes `web.config`/`appsettings.Production.json`** from the copy — safer than a manual
+   **always excludes `web.config`** from the copy — safer than a manual
    `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
    `<environmentVariables>` secrets live) and crash the app on next start
    (`ArgumentNullException: connectionString` from the Serilog SQL sink) until it's restored from a
@@ -38,7 +38,7 @@ changes are additive and AI/features stay off unless already enabled.
    It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
    `App\.deploy-manifest.txt` (outside `wwwroot`, never served) and the next run deletes only files on
    that list that the new publish output lacks. Files it never shipped — uploads under `wwwroot`,
-   `web.config`, `appsettings.Production.json`, the key ring — are never touched, and the pre-deploy
+   `web.config`, the key ring — are never touched, and the pre-deploy
    backup keeps every removed file. The first run after this change deletes nothing; it lists the
    `wwwroot` files not in the release so you can delete old build files by hand (not uploads).
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it

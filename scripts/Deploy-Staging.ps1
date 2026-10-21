@@ -20,9 +20,11 @@
       1. `dotnet publish` (Release, win-x64, framework-dependent) to a local folder.
       2. Back up the current server `App\` folder to a timestamped sibling folder (your rollback
          point - never deleted automatically).
-      3. Copy the fresh publish output into `App\`, EXCLUDING `web.config` and
-         `appsettings.Production.json` (the two files DEPLOY-NOTES.md calls out as
-         "never overwrite server secrets"). No `/MIR`: the only files ever deleted are ones the
+      3. Copy the fresh publish output into `App\`, EXCLUDING `web.config` (the only file that holds
+         server secrets). Every appsettings*.json is shipped from the repo, including
+         `appsettings.Production.json`, which carries Production's non-secret values (folders, log
+         path, Turnstile site key, LHDN host) so nothing has to be edited on the server after a
+         deploy. Per-server overrides go in web.config environment variables. No `/MIR`: the only files ever deleted are ones the
          PREVIOUS run of this script shipped (listed in `App\.deploy-manifest.txt`) that are no
          longer in this release, so old JS/CSS/DLLs don't pile up. Files it never shipped (uploads
          under wwwroot, server-only files) are never touched; the first run only lists candidates.
@@ -55,7 +57,7 @@
 
 .PARAMETER ExtraExcludeFiles
     Additional filenames (not full paths) to exclude from the copy, on top of the built-in
-    web.config / appsettings.Production.json exclusions. Space-separated.
+    web.config exclusion. Space-separated.
 
 .PARAMETER SkipMigrations
     Skip the database-migration step entirely.
@@ -127,7 +129,7 @@ if (-not $SourcePublishPath) {
 }
 
 # Files that must never be overwritten on the server - see .DESCRIPTION above.
-$excludeFiles = @('web.config', 'appsettings.Production.json') + $ExtraExcludeFiles
+$excludeFiles = @('web.config') + $ExtraExcludeFiles
 
 Write-Host "=== EINVWORLD Staging Deploy ===" -ForegroundColor Cyan
 Write-Host "Source (publish output): $SourcePublishPath"
@@ -454,6 +456,16 @@ Write-Host ""
 Write-Host "Copying publish output into App\ (excluding: $($excludeFiles -join ', ')) ..." -ForegroundColor Cyan
 
 $rcArgs = @($SourcePublishPath, $DestAppPath, '/E', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH', '/XF') + $excludeFiles
+
+# Settings files the server has that differ from this build are replaced (the backup keeps the old copy).
+foreach ($name in 'appsettings.json', 'appsettings.Production.json', 'appsettings.Staging.json') {
+    $src = Join-Path $SourcePublishPath $name
+    $dst = Join-Path $DestAppPath $name
+    if ($excludeFiles -notcontains $name -and (Test-Path $src) -and (Test-Path $dst) -and
+        [IO.File]::ReadAllText($src) -cne [IO.File]::ReadAllText($dst)) {   # not Get-FileHash: it returns nothing under -WhatIf on PS 5.1
+        Write-Host "  $name on the server differs from this build and will be replaced (old copy is in the backup)." -ForegroundColor Yellow
+    }
+}
 if ($WhatIfPreference) { $rcArgs += '/L' }
 
 # app_offline.htm makes the ASP.NET Core Module stop the app and release its DLL locks, so no manual
