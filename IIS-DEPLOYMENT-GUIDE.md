@@ -697,7 +697,7 @@ testing the case where you let it run and it appears on **Admin → Sync Jobs** 
 3. Keep `Documents\`, `Logs\`, `Keys\`, `Cert\` — **never delete these.** Replace only the contents of
    `App\` with the new build (tip: deploy to `App_New`, then swap, keeping the old folder as `App_Old`
    for quick rollback).
-4. Re-check `web.config` and `appsettings.Production.json` are present in the new `App\`.
+4. Re-check `web.config` is present in the new `App\` (`appsettings.Production.json` ships with the build).
 5. **Start** the site. The first start applies any new DB changes automatically (additive — your data is
    safe).
 6. Check `/health/ready` and **Admin → System Health**, then do a quick smoke test (Part 15).
