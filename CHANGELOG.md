@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.25`** (`AppInfo:Version` in `appsettings.json`). v1.47.25 is a **patch**
+> **Current version: `v1.47.26`** (`AppInfo:Version` in `appsettings.json`). v1.47.26 is a **patch**
+> release: the e-Invoice tax breakdown is one entry per tax type with its own taxable amount — see the dated entry below. v1.47.25 was a **patch**
 > release: a submitted invoice turns Valid on screen within about 30 seconds — see the dated entry below. v1.47.24 was a **patch**
 > release: decimal quantities are sent to LHDN unchanged — see the dated entry below. v1.47.23 was a **patch**
 > release: the deploy script ships all settings files, so nothing is edited after a deploy — see the dated entry below. v1.47.22 was a **patch**
@@ -405,6 +406,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-21 — v1.47.26 (tax breakdown per tax type)
+
+- **e-Invoice tax breakdown (`TaxTotal/TaxSubtotal`):** the document had one entry per line *and* tax, and every entry
+  carried the whole invoice's amount before discounts as its taxable amount (a 3-line invoice reported it three
+  times). LHDN asks for one entry per tax type with that type's own "Total Taxable Amount Per Tax Type". Entries are
+  now grouped by tax type, each with the sum of its lines' tax base (quantity × price − discount + fee) and tax.
+  LHDN accepted the old layout (e.g. 3-line EINV100559 is Valid), so nothing needs resubmitting.
+- The tax breakdown is now built after the lines, so a tax amount the mapper fills in for a line also counts in the
+  invoice-level tax total (it was 0 in that case).
+- Total tax, totals and payable are unchanged. No database change.
 
 ## 📅 2026-10-21 — v1.47.25 (status updates while you watch)
 
