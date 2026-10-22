@@ -63,7 +63,7 @@ namespace eInvWorld.Services
 
             // Preconditions: only a fully-validated invoice (status, QR LongId, validation timestamp)
             // gets a PDF and the validation email. Anything else is left for a later sync/finalizer pass.
-            if (invoice.LHDNStatusId != "Valid" || string.IsNullOrWhiteSpace(invoice.LongId) || invoice.DateTimeValidated == null)
+            if (invoice.LHDNStatusId != "Valid" || string.IsNullOrWhiteSpace(invoice.UUID) || string.IsNullOrWhiteSpace(invoice.LongId) || invoice.DateTimeValidated == null)
             {
                 return new InvoiceFinalizeResult();
             }
