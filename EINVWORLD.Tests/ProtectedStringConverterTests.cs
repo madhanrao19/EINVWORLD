@@ -95,7 +95,10 @@ namespace EINVWORLD.Tests
             // Guards the ApplicationDbContext wiring (not just the converter): both bearer-credential
             // columns must carry the protecting converter once a DataProtection provider is supplied.
             var options = new DbContextOptionsBuilder<eInvWorld.Data.ApplicationDbContext>()
-                .UseSqlServer("Server=.;Database=EinvWorldModelValidationOnly;Trusted_Connection=True;").Options; // model only, never connects
+                .UseSqlServer("Server=.;Database=EinvWorldModelValidationOnly;Trusted_Connection=True;") // model only, never connects
+                // EF caches one model per context type; a context built earlier without a protector (the SQL
+                // integration tests) would otherwise hand us its converter-less model.
+                .EnableServiceProviderCaching(false).Options;
             using var db = new eInvWorld.Data.ApplicationDbContext(options, new EphemeralDataProtectionProvider());
 
             var token = db.Model.FindEntityType(typeof(eInvWorld.Models.Auth.LHDNToken))!.FindProperty("AccessToken")!;
