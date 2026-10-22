@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.36`** (`AppInfo:Version` in `appsettings.json`). v1.47.36 is a **patch**
+> **Current version: `v1.47.37`** (`AppInfo:Version` in `appsettings.json`). v1.47.37 is a **patch**
+> release: Invoices list — newest date first, working Save View, filters tucked away, Actions always visible — see the dated entry below. v1.47.36 was a **patch**
 > release: Admin code lists and Create e-Invoice fit phones and 1024-wide screens — see the dated entry below. v1.47.35 was a **patch**
 > release: My Company, Recurring Invoices, Invoice Templates and the Invoices list fit 19" monitors and phones — see the dated entry below. v1.47.34 was a **patch**
 > release: invoice forms fit 19" monitors and tablets, and the Unit box matches the other dropdowns — see the dated entry below. v1.47.33 was a **patch**
@@ -416,6 +417,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.37 (Invoices list clean-up)
+
+- **Newest first:** the Invoices list now opens sorted by Date, newest first (it was Last Updated, so dates
+  looked out of order). Click any column header to sort differently, as before.
+- **Save View works:** it saves what is in the filter fields right now, even before you click Filter, and
+  the sort order too. Saving with nothing set now says so instead of saving an empty view. The view you are
+  on is highlighted. Views saved earlier with no filters (they open the plain list) can be deleted with ×.
+- **More room for rows:** the filter panel starts closed and opens when you click Filter. The Filter button
+  shows how many filters are applied.
+- **Actions always visible:** on 19" monitors and laptops, with extra columns turned on, the Actions column
+  stays pinned at the right edge while the rest of the table scrolls.
+- "Reference Document No." column renamed **Ref No.** (full name on hover).
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.36 (Admin pages on 19" monitors and phones)
 
