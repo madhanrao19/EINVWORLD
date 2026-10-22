@@ -97,3 +97,47 @@ test('shipping recipient TIN matches the other fields and Validate still works',
   await btn.click();
   await expect(btn).toHaveText(/Validated/);
 });
+
+// Tax Type 06 ("Not Applicable") must be 0% (LHDN CF394). Read-only like the rest of this file.
+const rate = page => page.locator('input[name="Invoice.InvoiceLines[0].Taxes[0].TaxPercentage"]');
+const pickTax = (page, code) => page.evaluate(c => {
+  document.getElementById('step2')?.classList.remove('d-none');
+  // What a user's pick fires: Select2 sets the value, then raises select2:select.
+  window.jQuery('select[name="Invoice.InvoiceLines[0].Taxes[0].TaxCategory"]').val(c).trigger('change').trigger({ type: 'select2:select', params: { data: { id: c } } });
+}, code);
+
+test('Tax Type 06 sets the rate to 0.00 and locks it; another type unlocks it', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
+  await expect(rate(page)).toBeAttached();
+
+  await pickTax(page, '02');
+  await rate(page).evaluate(el => { el.value = '8'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await pickTax(page, '06');
+  await expect(rate(page)).toHaveValue(/^0(\.0+)?$/);
+  expect(await rate(page).evaluate(el => el.readOnly)).toBe(true);
+
+  await pickTax(page, '02');
+  expect(await rate(page).evaluate(el => el.readOnly)).toBe(false);
+});
+
+test('a saved line with Tax Type 06 and 8% opens at 0.00, locked, with a note (nothing saved)', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  // Render line 1 the way a legacy saved 06 + 8% line renders on Edit/template/clone (same Razor markup).
+  await page.route('**/Invoices/CreateInvoice', async route => {
+    const res = await route.fetch();
+    let html = await res.text();
+    html = html.replace(/(<select[^>]*name="Invoice\.InvoiceLines\[0\]\.Taxes\[0\]\.TaxCategory"[\s\S]*?<option value="06")/, '$1 selected="selected"')
+               .replace(/<input[^>]*name="Invoice\.InvoiceLines\[0\]\.Taxes\[0\]\.TaxPercentage"[^>]*>/, tag => tag.replace(/value="[^"]*"/, 'value="8.00"'));
+    await route.fulfill({ response: res, body: html });
+  });
+  await page.goto('/Invoices/CreateInvoice', { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => document.getElementById('step2')?.classList.remove('d-none'));
+
+  await expect(page.locator('select[name="Invoice.InvoiceLines[0].Taxes[0].TaxCategory"]')).toHaveValue('06');
+  await expect(rate(page)).toHaveValue(/^0(\.0+)?$/);
+  expect(await rate(page).evaluate(el => el.readOnly)).toBe(true);
+  await expect(page.locator('.einv-tax06-note')).toContainText('Saved with a 8.00% rate');
+});

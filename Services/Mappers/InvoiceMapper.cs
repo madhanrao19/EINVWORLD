@@ -74,6 +74,15 @@ namespace eInvWorld.Services.Mappers
                 }
             }
 
+            // Tax Type 06 must be 0% / 0.00 (LHDN CF394). Refuse rather than rewrite the user's stored tax.
+            var taxErrors = eInvWorld.Helpers.TaxTypeRules.LineErrors(header.InvoiceLines);
+            if (taxErrors.Count > 0)
+            {
+                var taxError = string.Join(" ", taxErrors);
+                Log.Warning("InvoiceMapper validation: {ErrorMessage}", taxError);
+                throw new InvalidOperationException($"Validation failed for Invoice: {taxError}");
+            }
+
             Log.Debug("InvoiceMapper: RefUUID={RefUUID}, LineCount={LineCount}", header.RefUUID, header.InvoiceLines.Count);
 
             var isSelfBilledInvoice = header.DocTypeCode == "11" || header.DocTypeCode == "12" || header.DocTypeCode == "13" || header.DocTypeCode == "14";
