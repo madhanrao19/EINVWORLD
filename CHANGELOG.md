@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.37`** (`AppInfo:Version` in `appsettings.json`). v1.47.37 is a **patch**
+> **Current version: `v1.47.38`** (`AppInfo:Version` in `appsettings.json`). v1.47.38 is a **patch**
+> release: the build and publish finish with no warnings — see the dated entry below. v1.47.37 was a **patch**
 > release: Invoices list — newest date first, working Save View, filters tucked away, Actions always visible — see the dated entry below. v1.47.36 was a **patch**
 > release: Admin code lists and Create e-Invoice fit phones and 1024-wide screens — see the dated entry below. v1.47.35 was a **patch**
 > release: My Company, Recurring Invoices, Invoice Templates and the Invoices list fit 19" monitors and phones — see the dated entry below. v1.47.34 was a **patch**
@@ -417,6 +418,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.38 (clean build)
+
+- The build and the deploy script's publish step now finish with **0 warnings** (were 2). No behaviour change:
+  - Create e-Invoice: removed a needless null check on the invoice that made the compiler warn further down.
+  - LHDN access tokens: the encryption-at-rest setting is written the same way as the webhook secret's, which
+    the compiler accepts. Tokens are encrypted exactly as before; a new unit test checks both stay encrypted.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.37 (Invoices list clean-up)
 
