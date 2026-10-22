@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.39`** (`AppInfo:Version` in `appsettings.json`). v1.47.39 is a **patch**
+> **Current version: `v1.47.40`** (`AppInfo:Version` in `appsettings.json`). v1.47.40 is a **patch**
+> release: the validated-invoice PDF always has its UUID, validation date and QR code — see the dated entry below. v1.47.39 was a **patch**
 > release: Tax Type 06 (Not Applicable) with a rate can no longer reach LHDN — see the dated entry below. v1.47.38 was a **patch**
 > release: the build and publish finish with no warnings — see the dated entry below. v1.47.37 was a **patch**
 > release: Invoices list — newest date first, working Save View, filters tucked away, Actions always visible — see the dated entry below. v1.47.36 was a **patch**
@@ -419,6 +420,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.40 (validated PDF missing QR)
+
+- **Why:** EINV100567's validated email had a PDF with no UUID, no validation date and no QR code. LHDN had
+  already validated it and the LongId was saved; the app only builds and sends the PDF once an invoice is Valid
+  with its UUID, LongId and validation time. But when that happens straight after you click Submit, the PDF read
+  an out-of-date copy of the invoice held from before the submission, instead of the saved record.
+- The PDF now always reads the saved invoice, so the UUID, validation date and QR code are filled in. The
+  validation email also now requires the UUID (it already required the LongId and validation time), and is
+  still sent only once.
+- Invoices already emailed with a blank PDF are not re-sent automatically.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.39 (Tax Type 06 guard)
 
