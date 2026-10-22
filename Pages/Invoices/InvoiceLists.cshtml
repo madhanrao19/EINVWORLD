@@ -26,6 +26,10 @@
                            || !string.IsNullOrEmpty(Request.Query["amountMax"])
                            || !string.IsNullOrEmpty(Request.Query["currencyFilter"]);
 
+    // Filter card starts closed, so the Filter button shows how many filters are applied.
+    var activeFilterCount = new[] { "searchQuery", "submissionDateFrom", "documentType", "LHDNStatus", "InternalStatus" }
+                                .Count(k => !string.IsNullOrEmpty(Request.Query[k])) + (hasAdvancedFilters ? 1 : 0);
+
     // Single Stitch-style tab row: All / Draft / Sent / Received (Buyers see only Received).
     var mainTabs = new List<(string Key, string Label)>();
 
@@ -267,8 +271,12 @@
             <div class="d-flex gap-2 flex-wrap">
                 <!-- Filter Button (collapses/expands the inline filter card) -->
                 <button class="btn btn-outline-secondary d-flex align-items-center gap-1" data-bs-toggle="collapse"
-                        data-bs-target="#filterOffcanvas" aria-expanded="true" aria-controls="filterOffcanvas">
+                        data-bs-target="#filterOffcanvas" aria-expanded="false" aria-controls="filterOffcanvas">
                     <i class="ri-filter-line"></i> Filter
+                    @if (activeFilterCount > 0)
+                    {
+                        <span class="badge bg-primary text-white ms-1" id="activeFilterCount" title="Filters applied">@activeFilterCount</span>
+                    }
                 </button>
 
                 @if (showRefreshAction)
@@ -428,8 +436,8 @@
         <div id="documentList">
             <!-- Inline filter card (Stitch design) — same GET form + field names/ids the previous
                  offcanvas carried (date-picker.js keys on #submissionDateRange), rendered as an
-                 always-visible card that the header Filter button collapses/expands. -->
-            <div class="collapse show" id="filterOffcanvas">
+                 card that starts closed and opens from the header Filter button. -->
+            <div class="collapse" id="filterOffcanvas">
                 <div class="card mb-3">
                     <div class="card-body pb-2">
                         <form method="get" action="./InvoiceLists">
@@ -628,9 +636,9 @@
                                                 </a>
                                             </th>
 
-                                            <th class="col-ref-doc-no" data-col-id="col-ref-doc-no">
+                                            <th class="col-ref-doc-no" data-col-id="col-ref-doc-no" title="Reference document number">
                                                 <a href="@SortUrl("RefDocumentNo")" class="@(Model.SortBy == "RefDocumentNo" ? "text-primary fw-semibold" : "")">
-                                                    Reference Document No. <i class="@SortIcon("RefDocumentNo") sort-indicator"></i>
+                                                    Ref No. <i class="@SortIcon("RefDocumentNo") sort-indicator"></i>
                                                 </a>
                                             </th>
 
@@ -738,7 +746,7 @@
                                                             @invoice.InvoiceNo
                                                         </a>
                                                     </td>
-                                                    <td class="col-ref-doc-no truncate" data-label="Reference Document No." title="@invoice.RefDocumentNo">
+                                                    <td class="col-ref-doc-no truncate" data-label="Ref No." title="@invoice.RefDocumentNo">
                                                         @if (string.IsNullOrWhiteSpace(invoice.RefDocumentNo))
                                                         {
                                                             <span class="text-muted" aria-label="No reference document">&mdash;</span>
@@ -1418,15 +1426,41 @@
         };
     })();
 
-    // Saved Views: capture the current URL's filter params (excluding direction/sort/paging — those
-    // come from the tab and live state, not the saved preset) and let the user name+save them.
+    // Saved Views: a view is the filter form's current values plus the sort (direction comes from the
+    // tab, paging from live state). Read from the form, not the URL, so filters typed but not yet
+    // applied are saved too.
     (function initSavedViews() {
+        const form = document.querySelector('#filterOffcanvas form');
+        const defaultSort = { sortBy: 'IssueDate', sortOrder: 'desc' };
+        // Canonical query for comparing/saving: no empty values, no tab/paging keys, default sort omitted.
+        function normalize(params) {
+            const out = new URLSearchParams();
+            for (const [k, v] of params) {
+                if (!v || k === 'invoiceDirection' || k === 'pageNo' || k === '__RequestVerificationToken') continue;
+                if (defaultSort[k] === v) continue;
+                out.append(k, v);
+            }
+            out.sort();
+            return out.toString();
+        }
+
+        // Mark the pill for the view currently on screen.
+        document.querySelectorAll('.saved-view-pill').forEach(pill => {
+            const href = pill.querySelector('a')?.getAttribute('href') || '';
+            if (normalize(new URLSearchParams(href.split('?')[1] || '')) === normalize(new URLSearchParams(window.location.search))) {
+                pill.classList.add('border-primary', 'bg-primary-lt');
+                pill.querySelector('a')?.setAttribute('aria-current', 'true');
+            }
+        });
+
         const saveBtn = document.getElementById('saveCurrentViewBtn');
         if (saveBtn) {
             saveBtn.addEventListener('click', async () => {
-                const params = new URLSearchParams(window.location.search);
-                ['invoiceDirection', 'sortBy', 'sortOrder', 'pageNo'].forEach(k => params.delete(k));
-                const queryString = params.toString();
+                const queryString = form ? normalize(new FormData(form)) : '';
+                if (!queryString) {
+                    Swal.fire('Nothing to Save', 'Set a filter or sort first, then save the view.', 'info');
+                    return;
+                }
 
                 const { value: name } = await Swal.fire({
                     title: 'Save Current View',

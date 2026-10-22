@@ -94,3 +94,76 @@ test('a change on the Draft tab keeps choices for columns only other tabs have',
   expect(saved[0].hidden).toEqual(expect.arrayContaining(['col-submission-id', 'col-supplier', 'col-document-type']));
   expect(saved[0].order).toContain('col-uuid');
 });
+
+// v1.47.37 list feedback: short Ref No. header, Date-desc default, closed filter card, Save View reads
+// the filter form, Actions pinned on narrow desktops. Save View is intercepted — nothing is written.
+test('default Date sort, short Ref No. header, filter card starts closed', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/Invoices/InvoiceLists?invoiceDirection=Sent', { waitUntil: 'domcontentloaded' });
+
+  await expect(page.locator('#invoiceTable th[data-col-id="col-ref-doc-no"] a')).toHaveText(/^\s*Ref No\.\s*$/);
+  await expect(page.locator('#invoiceTable th[data-col-id="col-submitted-date"] a')).toHaveClass(/text-primary/);
+  const stamps = await page.locator('#invoiceTable tbody td.col-submitted-date').evaluateAll(tds => tds.map(td => {
+    const m = td.textContent.trim().match(/^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d) (AM|PM)$/);
+    return m ? Date.UTC(+m[1], m[2] - 1, +m[3], (+m[4] % 12) + (m[6] === 'PM' ? 12 : 0), +m[5]) : null;
+  }).filter(v => v !== null));
+  for (let i = 1; i < stamps.length; i++) expect(stamps[i]).toBeLessThanOrEqual(stamps[i - 1]);
+
+  const panel = page.locator('#filterOffcanvas');
+  await expect(panel).toBeHidden();
+  await expect(page.locator('#activeFilterCount')).toHaveCount(0);
+  await page.locator('button[data-bs-target="#filterOffcanvas"]').click();
+  await expect(panel).toBeVisible();
+
+  await page.goto('/Invoices/InvoiceLists?invoiceDirection=Sent&searchQuery=EINV&LHDNStatus=Valid', { waitUntil: 'domcontentloaded' });
+  await expect(panel).toBeHidden();
+  await expect(page.locator('#activeFilterCount')).toHaveText('2');
+});
+
+test('Save View stores the filter form values, including unapplied ones', async ({ page }) => {
+  test.setTimeout(90000);
+  await loginOrSkip(page, 'supplier');
+  const posted = [];
+  await page.route('**/InvoiceLists?handler=SaveView', r => { posted.push(JSON.parse(r.request().postData())); return r.fulfill({ json: { success: false, message: 'intercepted' } }); });
+  await page.goto('/Invoices/InvoiceLists?invoiceDirection=Sent', { waitUntil: 'domcontentloaded' });
+
+  // Nothing set: refuses instead of saving an empty view.
+  await page.locator('#saveCurrentViewBtn').click();
+  await expect(page.locator('.swal2-popup')).toContainText('Set a filter or sort first');
+  await page.locator('.swal2-confirm').click();
+  expect(posted).toEqual([]);
+
+  await page.locator('button[data-bs-target="#filterOffcanvas"]').click();
+  await page.fill('#searchQuery', 'EINV100');           // typed, not applied
+  await page.selectOption('#LHDNStatusFilter', 'Valid');
+  await page.locator('#saveCurrentViewBtn').click();
+  await page.locator('.swal2-input').fill('PW view');
+  await page.locator('.swal2-confirm').click();
+  await expect.poll(() => posted.length).toBe(1);
+  const q = new URLSearchParams(posted[0].queryString);
+  expect(q.get('searchQuery')).toBe('EINV100');
+  expect(q.get('LHDNStatus')).toBe('Valid');
+  expect(q.has('invoiceDirection')).toBe(false);
+  expect(posted[0].name).toBe('PW view');
+});
+
+for (const vp of [{ width: 1280, height: 1024 }, { width: 1366, height: 768 }]) {
+  test(`Actions column stays visible with every column shown at ${vp.width}x${vp.height}`, async ({ page }) => {
+    test.setTimeout(90000);
+    await loginOrSkip(page, 'supplier');
+    await page.setViewportSize(vp);
+    await page.route('**/api/table-preferences?*', r => r.fulfill({ json: { invoices: { hidden: [], order: [] } } }));
+    await page.route('**/InvoiceLists?handler=LoadColumn*', r => r.fulfill({ json: { success: true, data: null } }));
+    await page.goto('/Invoices/InvoiceLists?invoiceDirection=Sent', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#invoiceTable th[data-col-id="col-uuid"]')).toBeVisible();
+    const box = await page.evaluate(() => {
+      const inner = document.querySelector('.table-scroll .inner').getBoundingClientRect();
+      const cell = document.querySelector('#invoiceTable tbody td.col-action') || document.querySelector('#invoiceTable th.col-action');
+      return { overflow: document.querySelector('.table-scroll .inner').scrollWidth - inner.width, right: cell.getBoundingClientRect().right, viewRight: inner.right };
+    });
+    expect(box.overflow).toBeGreaterThan(0);                   // the table really does scroll here
+    expect(box.right).toBeLessThanOrEqual(box.viewRight + 1);  // ...but Actions is still on screen
+  });
+}

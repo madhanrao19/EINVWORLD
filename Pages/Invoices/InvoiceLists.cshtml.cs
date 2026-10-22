@@ -319,9 +319,9 @@ namespace eInvWorld.Pages.Invoices
                 IsViewOnly = anyCompany.IsViewOnly;
             }
             UserType = user.UserType;
-            // Default view is "most recently updated first" (see ApplyFilters' default case). Reflect that
+            // Default view is "newest invoice date first" (see ApplyFilters' default case). Reflect that
             // in the header arrows so the active column matches the data when no explicit sort was chosen.
-            this.SortBy = string.IsNullOrEmpty(sortBy) ? "UpdatedDate" : sortBy;
+            this.SortBy = string.IsNullOrEmpty(sortBy) ? "IssueDate" : sortBy;
             this.SortOrder = string.IsNullOrEmpty(sortOrder) ? "desc" : sortOrder;
 
             // ENFORCE: If the user is a Buyer, strictly override any URL parameter
@@ -662,7 +662,7 @@ namespace eInvWorld.Pages.Invoices
 
             // Apply sorting. Always order before pagination — a Skip/Take without a stable OrderBy
             // produces non-deterministic paging and an EF Core warning. When no sortBy is supplied we
-            // fall through the switch to the default (InvoiceNo) ordering.
+            // fall through the switch to the default (newest invoice date) ordering.
             {
                 bool isDescending = !string.IsNullOrEmpty(sortOrder) && sortOrder.ToLower() == "desc";
 
@@ -670,7 +670,7 @@ namespace eInvWorld.Pages.Invoices
                 {
                     "InvoiceNo" => isDescending ? query.OrderByDescending(i => i.InvoiceNo) : query.OrderBy(i => i.InvoiceNo),
                     "RefDocumentNo" => isDescending ? query.OrderByDescending(i => i.RefDocumentNo) : query.OrderBy(i => i.RefDocumentNo),
-                    "IssueDate" => isDescending ? query.OrderByDescending(i => i.IssueDate) : query.OrderBy(i => i.IssueDate),
+                    "IssueDate" => isDescending ? query.OrderByDescending(i => i.IssueDate).ThenByDescending(i => i.InvoiceNo) : query.OrderBy(i => i.IssueDate).ThenBy(i => i.InvoiceNo),
                     "SubmissionDate" => isDescending ? query.OrderByDescending(i => i.IssueDate) : query.OrderBy(i => i.IssueDate),
                     "SupplierName" => isDescending ? query.OrderByDescending(i => i.Supplier.CompanyName) : query.OrderBy(i => i.Supplier.CompanyName),
                     "CustomerName" => isDescending
@@ -701,9 +701,9 @@ namespace eInvWorld.Pages.Invoices
                     "InternalStatus" => isDescending ? query.OrderByDescending(i => i.InternalStatus) : query.OrderBy(i => i.InternalStatus),
                     "RejectedDate" => isDescending ? query.OrderByDescending(i => i.RejectedTimestamp) : query.OrderBy(i => i.RejectedTimestamp),
                     "UpdatedDate" => isDescending ? query.OrderByDescending(i => i.LastUpdated) : query.OrderBy(i => i.LastUpdated),
-                    // Default (no explicit sort chosen) for every tab: most recently updated first, with
+                    // Default (no explicit sort chosen) for every tab: newest invoice date first, with
                     // InvoiceNo as a stable tie-breaker so pagination is deterministic.
-                    _ => query.OrderByDescending(i => i.LastUpdated).ThenByDescending(i => i.InvoiceNo)
+                    _ => query.OrderByDescending(i => i.IssueDate).ThenByDescending(i => i.InvoiceNo)
                 };
             }
 
