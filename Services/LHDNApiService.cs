@@ -159,6 +159,16 @@ public class LHDNApiService : ILHDNApiService
 
     public async Task<string> SubmitDocumentsAsync(List<eInvWorld.Models.JsonModels.Documents> documents, string? tin = null)
     {
+        // Final net: never send a payload LHDN is certain to reject — including files saved before a rule existed.
+        var blocked = documents
+            .SelectMany(d => eInvWorld.Helpers.TaxTypeRules.PayloadErrors(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(d.Document))))
+            .ToList();
+        if (blocked.Count > 0)
+        {
+            _logger.LogWarning("Submission blocked before sending to LHDN: {Errors}", string.Join(" ", blocked));
+            throw new SubmissionBlockedException(string.Join(" ", blocked));
+        }
+
         var stopwatch = Stopwatch.StartNew();
         string requestBody = string.Empty;
         string responseContent = string.Empty;
@@ -755,4 +765,13 @@ public class LHDNApiService : ILHDNApiService
 public class LhdnDocumentRejectedException : System.Net.Http.HttpRequestException
 {
     public LhdnDocumentRejectedException(string message) : base(message) { }
+}
+
+/// <summary>
+/// The document breaks a MyInvois rule we check locally (e.g. Tax Type 06 with a rate), so it was never sent.
+/// Handled like an LHDN rejection: no automatic retry, the user fixes the data and submits again.
+/// </summary>
+public class SubmissionBlockedException : LhdnDocumentRejectedException
+{
+    public SubmissionBlockedException(string message) : base(message) { }
 }
