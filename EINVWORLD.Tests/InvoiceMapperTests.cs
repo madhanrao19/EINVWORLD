@@ -153,6 +153,33 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void Map_TaxType06WithARate_IsRefused_NotRewritten()
+        {
+            // Saved/imported/template data with 06 + 8% (EINV00074's CF394): refuse to build the payload,
+            // naming the line, rather than silently sending 8% or rewriting the stored tax to 0.
+            var line = LineWithTax(1, 200, 8);
+            line.LineNumber = 2;
+            line.ItemDescription = "Standby Man Days (Miri)";
+            line.InvoiceTaxes[0].TaxCategory = "06";
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(1, 100, 6), line)));
+
+            Assert.Contains("Item 2 – Standby Man Days (Miri): Tax Rate must be 0% when Tax Type is Not Applicable.", ex.Message);
+            Assert.Equal(8m, line.InvoiceTaxes[0].TaxPercentage); // stored intent untouched
+        }
+
+        [Fact]
+        public void Map_ValidPayload_PassesThePreSendCheck()
+        {
+            // Mixed 01 @ 6%, 01 @ 0% and 06 @ 0% — a real mapper payload must never trip the final net.
+            var na = LineWithTax(1, 30, 0);
+            na.InvoiceTaxes[0].TaxCategory = "06";
+            var json = new InvoiceMapper().MapToJsonModel(Header("01", LineWithTax(3, 33.33m, 6), LineWithTax(1, 50, 0), na));
+
+            Assert.Empty(eInvWorld.Helpers.TaxTypeRules.PayloadErrors(json));
+        }
+
+        [Fact]
         public void Map_MultiLine_TotalsAreSummed()
         {
             // Line A: 3 × 33.33 = 99.99 excl, 6% = 5.9994 tax. Line B: 1 × 100 = 100 excl, 10% = 10 tax.
