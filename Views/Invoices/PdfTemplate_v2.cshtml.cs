@@ -61,12 +61,8 @@ namespace EINVWORLD.Views.Invoices
                 }
 
                 InvoiceDetail = await _context.InvoiceHeaders
-                .Include(i => i.Supplier)  
-                    .ThenInclude(s => s.State)   
                 .Include(i => i.Supplier)
                     .ThenInclude(s => s.Country) 
-                .Include(i => i.Customer) 
-                    .ThenInclude(c => c.State) 
                 .Include(i => i.Customer)
                     .ThenInclude(c => c.Country) 
                 .Include(i => i.PublicCustomer)

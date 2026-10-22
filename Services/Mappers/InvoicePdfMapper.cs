@@ -50,9 +50,7 @@ namespace EINVWORLD.Services.Mappers
             // validated PDF went out with no UUID, no validation date and no QR (EINV100567).
             var invoice = await _context.InvoiceHeaders
                 .AsNoTracking()
-                .Include(i => i.Supplier).ThenInclude(s => s.State)
                 .Include(i => i.Supplier).ThenInclude(s => s.Country)
-                .Include(i => i.Customer).ThenInclude(c => c.State)
                 .Include(i => i.Customer).ThenInclude(c => c.Country)
                 .Include(i => i.PublicCustomer).ThenInclude(pc => pc!.Country)
                 .Include(i => i.InvoiceLines).ThenInclude(il => il.InvoiceTaxes)

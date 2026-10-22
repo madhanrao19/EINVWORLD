@@ -262,7 +262,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label asp-for="PublicCustomer.CountryCode" class="form-label">Country</label>
-                            <select asp-for="PublicCustomer.CountryCode" id="PublicCustomer_CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required onchange="toggleStateFieldForCountry()">
+                            <select asp-for="PublicCustomer.CountryCode" id="PublicCustomer_CountryCode" class="form-select select2" asp-items="Model.CountryOptions" required>
                                 <option value="">-- Select Country --</option>
                             </select>
                         </div>
@@ -295,42 +295,11 @@
 <script src="/assets/libs/jquery/dist/jquery.min.js"></script>
 <script src="/assets/libs/select2/js/select2.min.js"></script>
 <script src="~/js/create-company.js" asp-append-version="true"></script>
+<script src="~/js/state-by-country.js" asp-append-version="true"></script>
 
 @section Scripts {
     <script>
-        // Malaysia keeps the fixed State dropdown (LHDN's own MyInvois Portal requires it); any
-        // other country switches to a free-text State input, matching LHDN's own portal behavior for
-        // foreign parties. Treat "no country chosen yet" like Malaysia so the dropdown is the default
-        // on a fresh Create form.
-        function toggleStateFieldForCountry() {
-            const countrySelect = document.getElementById('PublicCustomer_CountryCode');
-            const stateSelect = document.getElementById('PublicCustomer_StateCode');
-            const stateText = document.getElementById('PublicCustomer_StateCode_Text');
-            if (!countrySelect || !stateSelect || !stateText) return;
-
-            const isMalaysia = countrySelect.value === '' || countrySelect.value === 'MYS';
-            const stateSelect2Container = $(stateSelect).next('.select2-container');
-
-            if (isMalaysia) {
-                stateSelect2Container.removeClass('d-none');
-                stateSelect.disabled = false;
-                stateSelect.required = true;
-                stateText.classList.add('d-none');
-                stateText.disabled = true;
-                stateText.required = false;
-            } else {
-                stateSelect2Container.addClass('d-none');
-                stateSelect.disabled = true;
-                stateSelect.required = false;
-                stateText.classList.remove('d-none');
-                stateText.disabled = false;
-                stateText.required = true;
-            }
-        }
-
-        $(function () {
-            toggleStateFieldForCountry();
-        });
+        $(function () { bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text'); });
 
         let isLhdnValidated = false;
 
