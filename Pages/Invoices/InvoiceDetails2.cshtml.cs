@@ -85,12 +85,8 @@ namespace EINVWORLD.Pages.Invoices
             {
                 // Query using UUID (for Sent and Received invoices)
                 InvoiceDetail = await _context.InvoiceHeaders
-                    .Include(i => i.Supplier)  //  Load Supplier (PartyInfo)
-                        .ThenInclude(s => s.State)
                     .Include(i => i.Supplier)
                         .ThenInclude(s => s.Country)
-                    .Include(i => i.Customer)  //  Load Buyer (PartyInfo)
-                        .ThenInclude(c => c.State)
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer
@@ -106,11 +102,7 @@ namespace EINVWORLD.Pages.Invoices
                 // Query using InvoiceNo (for Draft invoices)
                 InvoiceDetail = await _context.InvoiceHeaders
                     .Include(i => i.Supplier)
-                        .ThenInclude(s => s.State)
-                    .Include(i => i.Supplier)
                         .ThenInclude(s => s.Country)
-                    .Include(i => i.Customer)
-                        .ThenInclude(c => c.State)
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country)
                     .Include(i => i.PublicCustomer) // 🔥 HYBRID FIX: Include PublicCustomer

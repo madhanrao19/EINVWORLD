@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.40`** (`AppInfo:Version` in `appsettings.json`). v1.47.40 is a **patch**
+> **Current version: `v1.47.41`** (`AppInfo:Version` in `appsettings.json`). v1.47.41 is a **patch**
+> release: Create/Edit Company takes a foreign State / Province like Add Buyer — see the dated entry below. v1.47.40 was a **patch**
 > release: the validated-invoice PDF always has its UUID, validation date and QR code — see the dated entry below. v1.47.39 was a **patch**
 > release: Tax Type 06 (Not Applicable) with a rate can no longer reach LHDN — see the dated entry below. v1.47.38 was a **patch**
 > release: the build and publish finish with no warnings — see the dated entry below. v1.47.37 was a **patch**
@@ -420,6 +421,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.41 (company State / Province like Add Buyer)
+
+- **Create Company and Edit Company → Address & Contact** now work like Add Buyer: Malaysia shows the LHDN State
+  list; any other country shows a free-text **State / Province** box. Only one of the two is sent, and a typed
+  state is kept if the form comes back with an error.
+- A Malaysian company must still pick a state from the LHDN list (checked on save). Company CSV import is
+  unchanged (LHDN state codes only).
+- Add Buyer, Edit Buyer and both Company pages now share one script for this (`wwwroot/js/state-by-country.js`).
+- **Database:** migration `RemovePartyInfoStateCodeForeignKey` removes the company table's link to the States
+  list (as was done for buyers on 27 Aug) and limits State to 100 characters. No data is changed; all existing
+  values are 2-letter codes. `Deploy-Staging.ps1` applies it after its usual database backup.
+- State names on invoices, PDFs and My Profile are looked up the same way as for buyers, so they look the same.
 
 ## 📅 2026-10-22 — v1.47.40 (validated PDF missing QR)
 

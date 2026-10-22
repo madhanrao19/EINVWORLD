@@ -143,6 +143,9 @@ namespace eInvWorld.Pages.Suppliers
                 }
             }
 
+            if (!_dropdownHelper.IsValidStateForCountry(PartyInfo.CountryCode, PartyInfo.StateCode))
+                ModelState.AddModelError("PartyInfo.StateCode", "Invalid state selected.");
+
             if (!ModelState.IsValid)
             {
                 var errors = ModelState.Values.SelectMany(v => v.Errors);

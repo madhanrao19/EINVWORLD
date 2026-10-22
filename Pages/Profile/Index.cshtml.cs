@@ -67,8 +67,6 @@ namespace eInvWorld.Pages.Profile
             var userCompanyData = await _context.UserCompanies
                 .Where(u => u.UserId == user.Id)
                 .Include(u => u.PartyInfo)
-                .ThenInclude(p => p.State)
-                .Include(u => u.PartyInfo)
                 .ThenInclude(p => p.Country)
                 .Include(u => u.PartyInfo)
                 .ThenInclude(p => p.RegType)
@@ -128,8 +126,6 @@ namespace eInvWorld.Pages.Profile
                 // Reload company data for display
                 var userCompanyData = await _context.UserCompanies
                     .Where(u => u.UserId == user2!.Id)
-                    .Include(u => u.PartyInfo)
-                    .ThenInclude(p => p.State)
                     .Include(u => u.PartyInfo)
                     .ThenInclude(p => p.Country)
                     .Include(u => u.PartyInfo)

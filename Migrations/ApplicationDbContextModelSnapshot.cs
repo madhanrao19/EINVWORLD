@@ -1665,7 +1665,8 @@ namespace eInvWorld.Migrations
 
                     b.Property<string>("StateCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("TIN")
                         .IsRequired()
@@ -1687,8 +1688,6 @@ namespace eInvWorld.Migrations
                     b.HasIndex("CountryCode");
 
                     b.HasIndex("RegTypeCode");
-
-                    b.HasIndex("StateCode");
 
                     b.HasIndex("TIN")
                         .IsUnique()
@@ -3552,17 +3551,9 @@ namespace eInvWorld.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("eInvWorld.Models.StateCode", "State")
-                        .WithMany()
-                        .HasForeignKey("StateCode")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Country");
 
                     b.Navigation("RegType");
-
-                    b.Navigation("State");
                 });
 
             modelBuilder.Entity("eInvWorld.Models.InputModel.PublicCustomer", b =>
