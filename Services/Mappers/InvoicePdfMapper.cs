@@ -44,8 +44,12 @@ namespace EINVWORLD.Services.Mappers
 
         public async Task<PdfTemplate_v2ViewModel?> CreateViewModelAsync(string invoiceNo)
         {
-            // 1. Fetch Invoice with all necessary relationships
+            // 1. Fetch Invoice with all necessary relationships. AsNoTracking: always read the row as stored.
+            // The submit pages load the invoice (tracked) before LHDN answers, then write UUID/LongId/status
+            // with ExecuteUpdate; a tracked query on the same context returned that stale copy, so the
+            // validated PDF went out with no UUID, no validation date and no QR (EINV100567).
             var invoice = await _context.InvoiceHeaders
+                .AsNoTracking()
                 .Include(i => i.Supplier).ThenInclude(s => s.State)
                 .Include(i => i.Supplier).ThenInclude(s => s.Country)
                 .Include(i => i.Customer).ThenInclude(c => c.State)
