@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.35`** (`AppInfo:Version` in `appsettings.json`). v1.47.35 is a **patch**
+> **Current version: `v1.47.36`** (`AppInfo:Version` in `appsettings.json`). v1.47.36 is a **patch**
+> release: Admin code lists and Create e-Invoice fit phones and 1024-wide screens — see the dated entry below. v1.47.35 was a **patch**
 > release: My Company, Recurring Invoices, Invoice Templates and the Invoices list fit 19" monitors and phones — see the dated entry below. v1.47.34 was a **patch**
 > release: invoice forms fit 19" monitors and tablets, and the Unit box matches the other dropdowns — see the dated entry below. v1.47.33 was a **patch**
 > release: a submitted invoice keeps LHDN's validation time and QR link straight away — see the dated entry below. v1.47.32 was a **patch**
@@ -415,6 +416,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.36 (Admin pages on 19" monitors and phones)
+
+- Checked every page in the Admin menu on Staging at the six screen sizes (19" wide and 5:4, laptop, tablet
+  landscape and portrait, phone). Two problems found and fixed:
+- **Admin code lists on phones:** the page-number buttons under Country Codes and Currency Codes ran off the
+  right edge. They now wrap onto a second line (all nine code lists).
+- **Create e-Invoice at 1024 wide:** the page was 3px wider than the screen, because page-only CSS cut the side
+  padding to 5px. Removed it, so Create e-Invoice uses the same side padding as every other page.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.35 (more pages on 19" monitors and phones)
 
