@@ -685,6 +685,23 @@ button.einv-badge { cursor: pointer; }
   #invoiceTable .col-document-type { display: none; }
 }
 
+/* Actions stays pinned to the right edge of the scrolling invoice table (19" monitors / laptops with
+ * extra columns shown). Cells keep the row's own background (zebra rule above outranks this one);
+ * the edge shadow is a pseudo-element so Tabler's hover box-shadow on cells still works, and it shows
+ * only while there is more table to the right (.at-right is toggled by enhanced-table-scroll.js). */
+@media (min-width: 768px) {
+  #invoiceTable th.col-action,
+  #invoiceTable td.col-action { position: sticky; right: 0; z-index: 1; }
+  #invoiceTable td.col-action { background-color: var(--einv-surface); }
+  #invoiceTable th.col-action { z-index: 2; }
+  #invoiceTable .col-action::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: -8px; width: 8px;
+    pointer-events: none; opacity: 0;
+    background: linear-gradient(to left, rgba(0, 0, 0, .10), transparent);
+  }
+  .table-scroll:not(.at-right) #invoiceTable .col-action::after { opacity: 1; }
+}
+
 /* Invoice tabs scroll horizontally instead of wrapping on narrow screens. */
 @media (max-width: 575.98px) {
   .einv-invoice-tabs { flex-wrap: nowrap; overflow-x: auto; }
