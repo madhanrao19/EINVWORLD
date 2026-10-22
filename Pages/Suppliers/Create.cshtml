@@ -261,10 +261,14 @@
                             <input asp-for="PartyInfo.CityName" class="form-control" required />
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label asp-for="PartyInfo.StateCode" class="form-label">State</label>
-                            <select asp-for="PartyInfo.StateCode" class="form-select select2" asp-items="Model.StateOptions" required>
+                            <label asp-for="PartyInfo.StateCode" class="form-label">State / Province</label>
+                            <select asp-for="PartyInfo.StateCode" class="form-select select2" asp-items="Model.StateOptions">
                                 <option value="">-- Select State --</option>
                             </select>
+                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode"
+                                   value="@Model.PartyInfo?.StateCode"
+                                   class="form-control d-none" disabled maxlength="100"
+                                   placeholder="Enter state / province" />
                             <span asp-validation-for="PartyInfo.StateCode" class="text-danger"></span>
                         </div>
                     </div>
@@ -304,9 +308,12 @@
 <script src="/assets/libs/jquery/dist/jquery.min.js"></script>
 <script src="/assets/libs/select2/js/select2.min.js"></script>
 <script src="~/js/create-company.js" asp-append-version="true"></script>
+<script src="~/js/state-by-country.js" asp-append-version="true"></script>
 
 @section Scripts {
     <script>
+        $(function () { bindStateToCountry('PartyInfo_CountryCode', 'PartyInfo_StateCode', 'PartyInfo_StateCode_Text'); });
+
         let isLhdnValidated = false;
 
         // Reset validation state if user edits TIN, RegNo, or ID Type

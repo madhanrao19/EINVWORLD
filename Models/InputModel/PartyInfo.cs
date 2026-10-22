@@ -80,11 +80,12 @@ namespace eInvWorld.Models.InputModel
         public string CityName { get; set; } = null!;
 
         [Required(ErrorMessage = "State is required.")]
+        [StringLength(100, ErrorMessage = "State cannot exceed 100 characters.")]
         [Display(Name = "State Code")]
         public string StateCode { get; set; } = null!;
-
-         [ForeignKey("StateCode")]
-        public virtual StateCode? State { get; set; } // ✅ Navigation Property
+        // No FK to StateCodes (same as PublicCustomer): a Malaysian company must still use a StateCodes
+        // entry (checked in Suppliers Create/Edit OnPostAsync), but a foreign one may hold a free-text
+        // state. Show the name with DropdownHelper.GetStateName(StateCode).
 
         [Required(ErrorMessage = "Country code is required.")]
         [Display(Name = "Country Code")]

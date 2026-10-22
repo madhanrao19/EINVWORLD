@@ -374,7 +374,7 @@
                                 var suppCountry = invoice.Supplier?.Country?.Country ?? "";
                                 var suppCountryTitle = string.IsNullOrEmpty(suppCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(suppCountry.ToLower());
                             }
-                            @invoice.Supplier?.PostalCode @invoice.Supplier?.CityName, @invoice.Supplier?.State?.State, @suppCountryTitle.
+                            @invoice.Supplier?.PostalCode @invoice.Supplier?.CityName, @DropdownHelper.GetStateName(invoice.Supplier?.StateCode), @suppCountryTitle.
                         </div>
                         <div class="supplier-subline">
                             Tel: @invoice.Supplier?.PhoneNo
@@ -418,7 +418,7 @@
                             var buyerCity = invoice.Customer != null ? invoice.Customer.CityName : invoice.PublicCustomer?.CityName;
                             var buyerTIN = invoice.Customer != null ? invoice.Customer.TIN : invoice.PublicCustomer?.TIN;
                             var buyerAttention = invoice.Customer != null ? invoice.Customer.Attention : invoice.PublicCustomer?.Attention;
-                            var buyerState = invoice.Customer != null ? invoice.Customer.State?.State : invoice.PublicCustomer != null ? DropdownHelper.GetStateName(invoice.PublicCustomer.StateCode) : null;
+                            var buyerState = invoice.Customer != null ? DropdownHelper.GetStateName(invoice.Customer.StateCode) : invoice.PublicCustomer != null ? DropdownHelper.GetStateName(invoice.PublicCustomer.StateCode) : null;
                             var buyerCountry = invoice.Customer != null ? invoice.Customer.Country?.Country : invoice.PublicCustomer?.Country?.Country;
                             var buyerCountryTitle = string.IsNullOrEmpty(buyerCountry) ? "" : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(buyerCountry.ToLower());
                         }

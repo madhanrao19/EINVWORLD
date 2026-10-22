@@ -167,10 +167,14 @@
                             <span asp-validation-for="PartyInfo.CityName" class="text-danger"></span>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label asp-for="PartyInfo.StateCode" class="form-label"></label>
+                            <label asp-for="PartyInfo.StateCode" class="form-label">State / Province</label>
                             <select asp-for="PartyInfo.StateCode" class="form-select" asp-items="Model.StateOptions" id="stateSelect">
                                 <option value="">-- Select a State --</option>
                             </select>
+                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode"
+                                   value="@Model.PartyInfo.StateCode"
+                                   class="form-control d-none" disabled maxlength="100"
+                                   placeholder="Enter state / province" />
                             <span asp-validation-for="PartyInfo.StateCode" class="text-danger"></span>
                         </div>
                     </div>
@@ -265,7 +269,10 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
+    <script src="~/js/state-by-country.js" asp-append-version="true"></script>
     <script>
+        $(function () { bindStateToCountry('countrySelect', 'stateSelect', 'PartyInfo_StateCode_Text'); });
+
         document.addEventListener("DOMContentLoaded", function () {
             var msicSelect = document.getElementById("msicSelect");
             var bizDescriptionField = document.getElementById("PartyInfo_BizDescription");

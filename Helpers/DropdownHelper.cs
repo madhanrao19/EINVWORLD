@@ -89,6 +89,14 @@ namespace eInvWorld.Helpers
 
         // Resolves a state code to its display name; falls back to the raw value when it doesn't
         // match a StateCodes row (e.g. a foreign buyer's free-text state).
+        /// <summary>
+        /// A Malaysian party's state must be an active LHDN state code; any other country may use free text
+        /// (length is checked by the model). No FK enforces this any more for PublicCustomer or PartyInfo.
+        /// </summary>
+        public bool IsValidStateForCountry(string? countryCode, string? stateCode) =>
+            !string.Equals(countryCode, "MYS", StringComparison.OrdinalIgnoreCase)
+            || _context.StateCodes.Any(s => s.Code == stateCode && s.IsActive);
+
         public string GetStateName(string? code)
         {
             if (string.IsNullOrEmpty(code)) return "-";
