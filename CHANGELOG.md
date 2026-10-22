@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.38`** (`AppInfo:Version` in `appsettings.json`). v1.47.38 is a **patch**
+> **Current version: `v1.47.39`** (`AppInfo:Version` in `appsettings.json`). v1.47.39 is a **patch**
+> release: Tax Type 06 (Not Applicable) with a rate can no longer reach LHDN — see the dated entry below. v1.47.38 was a **patch**
 > release: the build and publish finish with no warnings — see the dated entry below. v1.47.37 was a **patch**
 > release: Invoices list — newest date first, working Save View, filters tucked away, Actions always visible — see the dated entry below. v1.47.36 was a **patch**
 > release: Admin code lists and Create e-Invoice fit phones and 1024-wide screens — see the dated entry below. v1.47.35 was a **patch**
@@ -418,6 +419,26 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-22 — v1.47.39 (Tax Type 06 guard)
+
+- **Why:** EINV00074 was rejected by LHDN (CF394) because a saved line had Tax Type **06 – Not Applicable** with
+  an 8% rate. Picking 06 already sets the rate to 0.00 and locks it, but only when you *change* the tax type: a
+  line saved that way earlier (or from a template / copied invoice) opened in Invoice Edit with 8% still in it,
+  and nothing on the server checked it.
+- **Opening a saved line with 06 and a rate** (Invoice Edit, or Create from a template / copy): the rate is set
+  to 0.00 and locked, totals recalculate, and the line says what was saved. Nothing is stored until you save.
+- **Saving** an invoice with a 06 line that has a rate or tax amount is refused with the line named, e.g.
+  "Item 2 – Standby Man Days (Miri): Tax Rate must be 0% when Tax Type is Not Applicable." This covers every
+  way an invoice is built: Create, Edit, CSV import, recurring invoices.
+- **Submitting** checks the saved e-Invoice file too, so invoices saved before this release can't slip through:
+  the invoice is not sent to LHDN and you see the same message. Applies to every Submit button and background
+  submissions; it is never retried automatically.
+- **Invoices list → Submit:** when LHDN rejects an invoice for validation errors it now stays a Draft with history
+  "LHDN Validation Failed" (was marked as a failed transmission, "Transmission Failed"). Genuine connection
+  failures are unchanged and still retry.
+- Tax Exemption (E) and real 0% rates on other tax types are not affected. No database change; existing data is
+  not modified.
 
 ## 📅 2026-10-22 — v1.47.38 (clean build)
 

@@ -1887,6 +1887,24 @@ namespace eInvWorld.Pages.Invoices
                 await EINVWORLD.Helpers.InvoiceSubmissionGuard.ReleaseAfterFailureAsync(_context, invoiceNo, ex); // keeps it if LHDN may have accepted
                 _logger.LogError(ex, $"❌ Error submitting invoice {invoiceNo} from list.");
 
+                // LHDN validation rejection (or our own pre-send check): the document reached LHDN, or was
+                // never sent, so it is not a transmission failure. Keep it a Draft (as Create/Edit do) and
+                // don't queue a retry — resending the same document can never pass.
+                if (ex is LhdnDocumentRejectedException)
+                {
+                    var blocked = ex is SubmissionBlockedException;
+                    _context.InvoiceHistories.Add(new InvoiceHistory
+                    {
+                        InvoiceNo = invoiceNo,
+                        Action = blocked ? "Submission Blocked" : "LHDN Validation Failed",
+                        Timestamp = GetMYTime(),
+                        PerformedBy = User.Identity?.Name ?? "System",
+                        Remarks = ex.Message.Substring(0, Math.Min(ex.Message.Length, 200))
+                    });
+                    await _context.SaveChangesAsync();
+                    return SubmitDraftResult.Fail($"{(blocked ? $"Invoice {invoiceNo} was not sent to LHDN" : $"LHDN rejected invoice {invoiceNo}")}. Fix it and submit again. {ex.Message}");
+                }
+
                 // Mark the failure with a direct UPDATE too — the tracked entity's rowversion is stale
                 // (the claim/release UPDATEs bumped it), so a tracked SaveChanges here would itself throw
                 // a false concurrency conflict and mask the original error.
@@ -1914,9 +1932,6 @@ namespace eInvWorld.Pages.Invoices
                 // Queue a background retry so a transient failure (LHDN outage/network blip) doesn't
                 // require the user to notice and resubmit — it auto-retries, and lands in
                 // Admin -> Sync Jobs (Failed) for visibility/manual replay if every attempt fails.
-                // Not for LHDN validation errors: resending the same document can never pass.
-                if (ex is LhdnDocumentRejectedException)
-                    return SubmitDraftResult.Fail($"LHDN rejected invoice {invoiceNo}. Fix it and submit again. {ex.Message}");
 
                 await _jobTracker.CreateAsync(
                     submitterTin ?? string.Empty, SyncJobType.SubmitDocument,

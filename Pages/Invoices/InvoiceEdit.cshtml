@@ -3149,6 +3149,21 @@
                     }
                 });
 
+                // Saved lines with Tax Type 06 and a rate (data from before the rule was enforced): apply the
+                // same rule as picking 06 (0.00, read-only) and say so on the line. Nothing is stored until Save.
+                document.querySelectorAll('.tax-category').forEach(select => {
+                    const row = select.closest('.tax-row');
+                    const rate = row?.querySelector('input[name*=".TaxPercentage"]');
+                    if (select.value !== '06' || !rate || !parseFloat(rate.value)) return; // empty, 0 and NaN are fine
+                    const saved = rate.value;
+                    toggleExemptionReason(select);
+                    const note = document.createElement('div');
+                    note.className = 'small text-warning mt-1 einv-tax06-note';
+                    note.setAttribute('role', 'status');
+                    note.textContent = `Saved with a ${saved}% rate. Tax Type Not Applicable must be 0%, so the rate is now 0.00. Check the totals, then save.`;
+                    row.appendChild(note);
+                });
+
                 // Calculate initial totals
                 calculateTotals();
 
