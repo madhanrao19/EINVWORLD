@@ -57,12 +57,8 @@ namespace eInvWorld.Pages.Invoices
                 }
 
                 InvoiceDetail = await _context.InvoiceHeaders
-                .Include(i => i.Supplier)  //  Load Supplier (PartyInfo)
-                        .ThenInclude(s => s.State)   // ✅ Load Supplier's State Name
                      .Include(i => i.Supplier)
                         .ThenInclude(s => s.Country) // ✅ Load Supplier's Country Name
-                    .Include(i => i.Customer)  //  Load Buyer (PartyInfo)
-                        .ThenInclude(c => c.State)   // ✅ Load Customer's State Name
                     .Include(i => i.Customer)
                         .ThenInclude(c => c.Country) // ✅ Load Customer's Country Name
                 .Include(i => i.InvoiceLines)

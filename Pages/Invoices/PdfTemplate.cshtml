@@ -159,7 +159,7 @@
                     <h4>@invoice.Supplier?.CompanyName</h4>
                     <p>@invoice.Supplier?.Addr1 @invoice.Supplier?.Addr2</p>
                     <p>@invoice.Supplier?.Addr3 @invoice.Supplier?.PostalCode @invoice.Supplier?.CityName</p>
-                    <p>@invoice.Supplier?.State?.State, @invoice.Supplier?.Country?.Country</p>
+                    <p>@Model.DropdownHelper.GetStateName(invoice.Supplier?.StateCode), @invoice.Supplier?.Country?.Country</p>
                     <p>Phone: @invoice.Supplier?.PhoneNo</p>
                     <p>Email: @invoice.Supplier?.Email</p>
                     <p>Tax Identification Number (TIN): @invoice.Supplier?.TIN</p>
@@ -209,7 +209,7 @@
             <p>@invoice.Customer?.CompanyName</p>
             <p>@invoice.Customer?.Addr1 @invoice.Customer?.Addr2</p>
             <p>@invoice.Customer?.Addr3 @invoice.Customer?.PostalCode @invoice.Customer?.CityName</p>
-            <p>@invoice.Customer?.State?.State, @invoice.Customer?.Country?.Country</p>
+            <p>@Model.DropdownHelper.GetStateName(invoice.Customer?.StateCode), @invoice.Customer?.Country?.Country</p>
             <p>Phone: @invoice.Customer?.PhoneNo</p>
             <p>Email: @invoice.Customer?.Email</p>
             <p>TIN: @invoice.Customer?.TIN</p>
@@ -238,7 +238,7 @@
             <p>@invoice.Customer?.CompanyName</p>
             <p>@invoice.Customer?.Addr1 @invoice.Customer?.Addr2</p>
             <p>@invoice.Customer?.Addr3 @invoice.Customer?.PostalCode @invoice.Customer?.CityName</p>
-            <p>@invoice.Customer?.State?.State, @invoice.Customer?.Country?.Country</p>
+            <p>@Model.DropdownHelper.GetStateName(invoice.Customer?.StateCode), @invoice.Customer?.Country?.Country</p>
             <p>Phone: @invoice.Customer?.PhoneNo</p>
             <p>Email: @invoice.Customer?.Email</p>
             <p>TIN: @invoice.Customer?.TIN</p>

@@ -54,7 +54,6 @@ namespace eInvWorld.Pages.Lead
             var query = _context.PartyInfos
                 .Include(p => p.Country)
                 .Include(p => p.RegType)
-                .Include(p => p.State)
                 .AsQueryable();
 
             if (User.IsInRole("Admin"))

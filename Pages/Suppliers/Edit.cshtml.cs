@@ -124,6 +124,9 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostAsync()
         {
+            if (!_dropdownHelper.IsValidStateForCountry(PartyInfo.CountryCode, PartyInfo.StateCode))
+                ModelState.AddModelError("PartyInfo.StateCode", "Invalid state selected.");
+
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("ModelState is invalid during Edit operation.");
