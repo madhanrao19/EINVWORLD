@@ -447,7 +447,7 @@ namespace EINVWORLD.Pages.Invoices
                 })
                 .ToList();
 
-            UnitOptions = _dropdownHelper.GetUnitOptions(Invoice?.InvoiceLines?.Select(l => l.UnitOfMeasure));
+            UnitOptions = _dropdownHelper.GetUnitOptions(Invoice.InvoiceLines?.Select(l => l.UnitOfMeasure));
             TaxCategoryOptions = _dropdownHelper.GetTaxCategoryOptions();
             ClassificationCodes = _dropdownHelper.GetClassificationCodeOptions();
             CountryOptions = _dropdownHelper.GetCountryOptions();

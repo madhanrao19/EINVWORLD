@@ -496,7 +496,7 @@ namespace eInvWorld.Data
             // rest with the secret protector. Rows written before this stay readable (the converter returns
             // non-ciphertext verbatim) and are encrypted on their next refresh. Column is already nvarchar(max).
             if (_secretProtector is not null)
-                modelBuilder.Entity<eInvWorld.Models.Auth.LHDNToken>().Property(t => t.AccessToken)
+                ((Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder)modelBuilder.Entity<eInvWorld.Models.Auth.LHDNToken>().Property(t => t.AccessToken))
                     .HasConversion(new ProtectedStringConverter(_secretProtector));
         }
     }

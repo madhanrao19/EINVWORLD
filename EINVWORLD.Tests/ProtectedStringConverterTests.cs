@@ -1,6 +1,7 @@
 using System;
 using eInvWorld.Services.Security;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace EINVWORLD.Tests
@@ -86,6 +87,21 @@ namespace EINVWORLD.Tests
 
             var c = Converter();
             Assert.Equal(foreign, Read(c, foreign));
+        }
+
+        [Fact]
+        public void Model_EncryptsLhdnAccessTokenAndWebhookSecret_WhenProtectorConfigured()
+        {
+            // Guards the ApplicationDbContext wiring (not just the converter): both bearer-credential
+            // columns must carry the protecting converter once a DataProtection provider is supplied.
+            var options = new DbContextOptionsBuilder<eInvWorld.Data.ApplicationDbContext>()
+                .UseSqlServer("Server=.;Database=EinvWorldModelValidationOnly;Trusted_Connection=True;").Options; // model only, never connects
+            using var db = new eInvWorld.Data.ApplicationDbContext(options, new EphemeralDataProtectionProvider());
+
+            var token = db.Model.FindEntityType(typeof(eInvWorld.Models.Auth.LHDNToken))!.FindProperty("AccessToken")!;
+            var secret = db.Model.FindEntityType(typeof(eInvWorld.Models.Webhooks.WebhookSubscription))!.FindProperty("Secret")!;
+            Assert.IsType<ProtectedStringConverter>(token.GetValueConverter());
+            Assert.IsType<ProtectedStringConverter>(secret.GetValueConverter());
         }
     }
 }
