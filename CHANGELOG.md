@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.45`** (`AppInfo:Version` in `appsettings.json`). v1.47.45 is a **patch**
+> **Current version: `v1.47.46`** (`AppInfo:Version` in `appsettings.json`). v1.47.46 is a **patch**
+> release: view-only company members can only view, print and download invoices — see the dated entry below. v1.47.45 was a **patch**
 > release: the unused Lead Edit page is removed; Lead Details edits through Edit Company — see the dated entry below. v1.47.44 was a **patch**
 > release: Import Invoices (CSV) saves only what its preview checked, and a stopped import lists what was saved — see the dated entry below. v1.47.43 was a **patch**
 > release: daily-review fixes — invoice print page access check, safe PDF text, Edit Buyer State, saved-view sort — see the dated entry below. v1.47.42 was a **patch**
@@ -425,6 +426,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.46 (view-only members are read-only)
+
+- **Security / permissions:** a company member marked **View Only** (Company → Users) could still submit, cancel,
+  reject or delete that company's invoices, save drafts for it, email invoices to buyers, and upload or confirm
+  Smart Capture documents by sending the request directly — the screens hid some buttons, but most of these requests weren't checked on the server. View-only members can now
+  only **view, print and download**; every one of those actions is refused for a view-only membership. Members
+  with full access, and Admins, are unchanged.
+- The rule lives in the shared ownership checks (`CanManageInvoiceAsync`, `OwnsTinAsync`, `InvoiceWriteGuard`,
+  cancel/reject's `CanAccessInvoiceByUuidAsync(forWrite: true)`, Smart Capture's `editableOnly`), so it applies
+  per company: a user with full access to one company and view-only access to another can still work on the first.
+  Submit buttons now require write access to the issuing company rather than only read access.
+- Removed the leftover `/einvoice` path from the view-only allow-list (no page has that path).
+- No database change.
 
 ## 📅 2026-10-23 — v1.47.45 (remove the Lead Edit scaffold)
 

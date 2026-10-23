@@ -42,7 +42,8 @@ namespace EINVWORLD.Helpers
             if (user.IsAdmin(db)) return null;
 
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            var ownCompanyIds = await db.UserCompanies.Where(uc => uc.UserId == userId).Select(uc => uc.PartyInfoId).ToListAsync();
+            // View-only memberships can't issue or receive (self-billed) invoices: view, print and download only.
+            var ownCompanyIds = await db.UserCompanies.Where(uc => uc.UserId == userId && !uc.IsViewOnly).Select(uc => uc.PartyInfoId).ToListAsync();
             bool selfBilled = SelfBilledTypes.Contains(docTypeCode);
 
             if (supplierId is int sid)

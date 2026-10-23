@@ -279,6 +279,50 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task View_Only_Member_Can_See_The_Issuers_Invoice_But_Not_Change_Submit_Or_Cancel_It()
+        {
+            // Business rule (2026-10-23): view-only members may only view, print and download.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var issuer = await CreateValidPartyInfoAsync(ctx, "ViewOnly Issuer Co");
+            ctx.PartyInfos.Add(issuer);
+            await ctx.SaveChangesAsync();
+
+            var viewerId = await CreateUserAsync(ctx, "view-only");
+            var editorId = await CreateUserAsync(ctx, "full-access");
+            ctx.UserCompanies.Add(new UserCompany { UserId = viewerId, PartyInfoId = issuer.PartyInfoId, IsViewOnly = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = editorId, PartyInfoId = issuer.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-VO-{Guid.NewGuid():N}"[..20];
+            var uuid = $"VO{Guid.NewGuid():N}"[..26];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR", UUID = uuid,
+                CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                SupplierId = issuer.PartyInfoId,
+            });
+            await ctx.SaveChangesAsync();
+
+            var viewer = PrincipalFor(viewerId, "view-only");
+            var editor = PrincipalFor(editorId, "full-access");
+
+            Assert.True(await UserExtensions.CanAccessInvoiceAsync(viewer, ctx, invoiceNo));            // view / print / download
+            Assert.True(await UserExtensions.CanAccessInvoiceByUuidAsync(viewer, ctx, uuid));
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(viewer, ctx, invoiceNo));           // edit / delete / submit
+            Assert.False(await UserExtensions.OwnsTinAsync(viewer, ctx, issuer.TIN));                   // submit as the issuer
+            Assert.False(await UserExtensions.CanAccessInvoiceByUuidAsync(viewer, ctx, uuid, forWrite: true)); // cancel / reject
+            Assert.NotNull(await InvoiceWriteGuard.CheckAsync(viewer, ctx, null!, null, "01", issuer.PartyInfoId, null, null)); // create
+
+            Assert.True(await UserExtensions.CanManageInvoiceAsync(editor, ctx, invoiceNo));
+            Assert.True(await UserExtensions.OwnsTinAsync(editor, ctx, issuer.TIN));
+            Assert.True(await UserExtensions.CanAccessInvoiceByUuidAsync(editor, ctx, uuid, forWrite: true));
+            Assert.Null(await InvoiceWriteGuard.CheckAsync(editor, ctx, null!, null, "01", issuer.PartyInfoId, null, null));
+        }
+
+        [Fact]
         public async Task InvoiceWriteGuard_Refuses_Foreign_Ids_And_Allows_The_Users_Own_Draft()
         {
             // Create e-Invoice / Invoice Edit POSTs used to trust the posted InvoiceNo (Save Draft overwrote

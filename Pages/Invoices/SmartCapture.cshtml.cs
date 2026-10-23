@@ -127,7 +127,7 @@ namespace eInvWorld.Pages.Invoices
         public async Task<IActionResult> OnPostCancelAutoSubmitAsync(int documentId, CancellationToken ct)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            var document = await _documents.GetOwnedAsync(documentId, userId, ct);
+            var document = await _documents.GetOwnedAsync(documentId, userId, ct, editableOnly: true);
             if (document is null) return NotFound();
 
             var cancelled = await _autoSubmit.CancelAsync(document, ct);
