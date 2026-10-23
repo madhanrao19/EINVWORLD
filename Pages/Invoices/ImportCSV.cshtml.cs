@@ -18,6 +18,7 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace EINVWORLD.Pages.Invoices
 {
@@ -32,6 +33,7 @@ namespace EINVWORLD.Pages.Invoices
         private readonly ILogger<ImportCSVModel> _logger;
         private readonly IWebHostEnvironment _env;
         private readonly eInvWorld.Services.InvoiceService _invoiceService;
+        private readonly IDataProtectionProvider _dataProtection;
 
         // Note: IWebHostEnvironment was added here to access wwwroot files!
         public ImportCSVModel(
@@ -42,8 +44,10 @@ namespace EINVWORLD.Pages.Invoices
             ILogger<ImportCSVModel> logger,
             IWebHostEnvironment env,
             eInvWorld.Services.InvoiceService invoiceService,
-            eInvWorld.Services.IDocumentSigningService signingService) : base(context)
+            eInvWorld.Services.IDocumentSigningService signingService,
+            IDataProtectionProvider dataProtection) : base(context)
         {
+            _dataProtection = dataProtection;
             _context = context;
             _invoiceMapper = new InvoiceMapper(_context, signingService);
             _statusMappingService = statusMappingService;
@@ -362,15 +366,34 @@ namespace EINVWORLD.Pages.Invoices
                 }
             }
 
-            ValidRecordsJson = JsonSerializer.Serialize(validLinesToKeep);
+            // Signed, so Confirm saves exactly the lines this step validated (counterparty linked to this
+            // account, dates, codes) and nothing a hand-edited hidden field adds.
+            ValidRecordsJson = RecordsProtector().Protect(JsonSerializer.Serialize(validLinesToKeep), ValidRecordsLifetime);
             return Page();
         }
+
+        private static readonly TimeSpan ValidRecordsLifetime = TimeSpan.FromHours(2);
+
+        // Per-user purpose: a payload signed for one user can't be replayed by another.
+        private ITimeLimitedDataProtector RecordsProtector() =>
+            _dataProtection.CreateProtector("ImportCSV.ValidRecords.v1", User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "")
+                .ToTimeLimitedDataProtector();
 
         // --- STEP 2: CONFIRM, GENERATE JSON, AND SAVE DRAFTS ---
         public async Task<IActionResult> OnPostConfirmAsync()
         {
             if (string.IsNullOrWhiteSpace(ValidRecordsJson)) return RedirectToPage("./InvoiceLists");
-            var records = JsonSerializer.Deserialize<List<InvoiceCsvDto>>(ValidRecordsJson);
+            List<InvoiceCsvDto>? records;
+            try
+            {
+                records = JsonSerializer.Deserialize<List<InvoiceCsvDto>>(RecordsProtector().Unprotect(ValidRecordsJson));
+            }
+            catch (System.Security.Cryptography.CryptographicException ex)
+            {
+                _logger.LogWarning(ex, "CSV import confirm rejected: preview data expired, from another user, or altered.");
+                ModelState.AddModelError("", "This import preview has expired or was changed. Please upload the CSV file again.");
+                return Page();
+            }
             if (records == null || !records.Any()) return RedirectToPage("./InvoiceLists");
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -379,153 +402,168 @@ namespace EINVWORLD.Pages.Invoices
                 .FirstOrDefaultAsync(uc => uc.UserId == userId);
 
             int successCount = 0;
+            var imported = new List<string>(); // saved so far, so a stopped import says exactly what to drop before retrying
+            string? currentRef = null;
             var draftsFolder = _filePathConfig.DraftFolder;
             if (!Directory.Exists(draftsFolder)) Directory.CreateDirectory(draftsFolder);
 
-            foreach (var group in records.GroupBy(r => r.InvoiceNo))
+            try
             {
-                var firstLine = group.First();
-                var isSelfBilled = new[] { "11", "12", "13", "14" }.Contains(firstLine.DocTypeCode);
-
-                PartyInfo? supplier = null;
-                PartyInfo? customer = null;
-                PublicCustomer? publicCustomer = null;
-
-                var counterpartyParty = await _context.PartyInfos.FirstOrDefaultAsync(p => p.TIN == firstLine.CounterpartyTIN);
-                var counterpartyPublic = await _context.PublicCustomers.FirstOrDefaultAsync(p => p.TIN == firstLine.CounterpartyTIN && p.CreatedByCompanyId == (userCompany != null ? userCompany.PartyInfoId : 0));
-
-                if (isSelfBilled)
+                foreach (var group in records.GroupBy(r => r.InvoiceNo))
                 {
-                    customer = userCompany?.PartyInfo;
-                    if (counterpartyParty != null) supplier = counterpartyParty;
-                }
-                else
-                {
-                    supplier = userCompany?.PartyInfo;
-                    if (counterpartyParty != null) customer = counterpartyParty;
-                    else if (counterpartyPublic != null) publicCustomer = counterpartyPublic;
-                }
+                    var firstLine = group.First();
+                    currentRef = firstLine.InvoiceNo;
+                    var isSelfBilled = new[] { "11", "12", "13", "14" }.Contains(firstLine.DocTypeCode);
 
-                InvoicePeriodEnum parsedPeriod = InvoicePeriodEnum.Not_Applicable;
-                if (!string.IsNullOrWhiteSpace(firstLine.BillingFrequency))
-                {
-                    Enum.TryParse(firstLine.BillingFrequency.Replace(" ", "_"), true, out parsedPeriod);
-                }
+                    PartyInfo? supplier = null;
+                    PartyInfo? customer = null;
+                    PublicCustomer? publicCustomer = null;
 
-                DateTime? startDate = null;
-                DateTime? endDate = null;
-                if (!string.IsNullOrWhiteSpace(firstLine.StartDate) && DateTime.TryParse(firstLine.StartDate, out DateTime sDate)) startDate = sDate;
-                if (!string.IsNullOrWhiteSpace(firstLine.EndDate) && DateTime.TryParse(firstLine.EndDate, out DateTime eDate)) endDate = eDate;
+                    var counterpartyParty = await _context.PartyInfos.FirstOrDefaultAsync(p => p.TIN == firstLine.CounterpartyTIN);
+                    var counterpartyPublic = await _context.PublicCustomers.FirstOrDefaultAsync(p => p.TIN == firstLine.CounterpartyTIN && p.CreatedByCompanyId == (userCompany != null ? userCompany.PartyInfoId : 0));
 
-                var systemInvoiceNo = GenerateNextInvoiceNumber();
-
-                var invoiceHeader = new InvoiceHeader
-                {
-                    InvoiceNo = systemInvoiceNo,
-                    PrefixedID = systemInvoiceNo,
-                    RefDocumentNo = firstLine.InvoiceNo,
-                    PoDoNo = firstLine.PoDoNo,
-                    DocTypeCode = firstLine.DocTypeCode ?? "01",
-                    IssueDate = DateTime.Parse(firstLine.IssueDate ?? ""),
-                    CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
-                    LastUpdated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
-                    CreatedBy = User.Identity?.Name ?? "System",
-                    UpdatedBy = User.Identity?.Name ?? "System",
-                    InternalStatusId = _statusMappingService.GetStatusIdByCode("Draft"),
-                    Currency = string.IsNullOrWhiteSpace(firstLine.Currency) ? "MYR" : firstLine.Currency,
-                    ForeignCurrency = string.IsNullOrWhiteSpace(firstLine.Currency) ? "MYR" : firstLine.Currency,
-                    ExchangeRate = firstLine.ExchangeRate > 0 ? firstLine.ExchangeRate.Value : 1,
-                    InvoicePeriod = parsedPeriod,
-                    StartDate = startDate,
-                    EndDate = endDate,
-                    BankAccountNo = firstLine.BankAccountNumber,
-                    BankName = firstLine.BankName,
-                    Attention = firstLine.AttentionTo,
-                    PaymentTerms = firstLine.PaymentTerms,
-                    Incoterms = firstLine.Incoterms,
-                    PrepaymentReferenceNumber = firstLine.PrepaymentReferenceNumber,
-                    ShippingRecipientName = firstLine.ShippingRecipientName,
-                    ShippingRecipientAddrLine1 = firstLine.ShippingRecipientAddrLine1,
-                    ShippingRecipientAddrLine2 = firstLine.ShippingRecipientAddrLine2,
-                    ShippingRecipientAddrLine3 = firstLine.ShippingRecipientAddrLine3,
-                    ShippingRecipientPostcode = firstLine.ShippingRecipientPostcode,
-                    ShippingRecipientCity = firstLine.ShippingRecipientCity,
-                    ShippingRecipientState = firstLine.ShippingRecipientState,
-                    ShippingRecipientCountryCode = firstLine.ShippingRecipientCountryCode,
-                    ShippingRecipientIdType = firstLine.ShippingRecipientIdType,
-                    ShippingRecipientIdNumber = firstLine.ShippingRecipientIdNumber,
-                    ShippingRecipientTIN = firstLine.ShippingRecipientTIN,
-                    CustomsFormNo1Reference = firstLine.CustomsFormNo1Reference,
-                    FreeTradeAgreementInfo = firstLine.FreeTradeAgreementInfo,
-                    CertifiedExporterAuthorizationNumber = firstLine.CertifiedExporterAuthorizationNumber,
-                    CustomsFormNo2Reference = firstLine.CustomsFormNo2Reference,
-                    OtherChargesAmount = firstLine.OtherChargesAmount,
-                    OtherChargesDescription = firstLine.OtherChargesDescription,
-                    Supplier = supplier!,
-                    SupplierId = supplier?.PartyInfoId,
-                    Customer = customer!,
-                    CustomerId = customer?.PartyInfoId,
-                    PublicCustomer = publicCustomer,
-                    PublicCustomerId = publicCustomer?.PublicCustomerId,
-                    InvoiceLines = new List<InvoiceLine>()
-                };
-
-                int lineNum = 1;
-                foreach (var line in group)
-                {
-                    var invoiceLine = new InvoiceLine
+                    if (isSelfBilled)
                     {
-                        LineNumber = lineNum++,
-                        ItemCode = line.ItemCode ?? "",
-                        ItemDescription = line.ItemDescription ?? "",
+                        customer = userCompany?.PartyInfo;
+                        if (counterpartyParty != null) supplier = counterpartyParty;
+                    }
+                    else
+                    {
+                        supplier = userCompany?.PartyInfo;
+                        if (counterpartyParty != null) customer = counterpartyParty;
+                        else if (counterpartyPublic != null) publicCustomer = counterpartyPublic;
+                    }
 
-                        // Handle nullable decimals properly with fallbacks
-                        Quantity = line.Quantity ?? 0,
-                        UnitPrice = line.UnitPrice ?? 0,
-                        DiscountAmount = line.DiscountAmount ?? 0,
+                    InvoicePeriodEnum parsedPeriod = InvoicePeriodEnum.Not_Applicable;
+                    if (!string.IsNullOrWhiteSpace(firstLine.BillingFrequency))
+                    {
+                        Enum.TryParse(firstLine.BillingFrequency.Replace(" ", "_"), true, out parsedPeriod);
+                    }
 
-                        UnitOfMeasure = line.UnitOfMeasure ?? "",
-                        ClassificationCode = string.IsNullOrWhiteSpace(line.ClassificationCode) ? (isSelfBilled ? "004" : "022") : line.ClassificationCode,
-                        DiscountReason = line.DiscountReason,
-                        FeeChargeAmount = line.FeeChargeAmount,
-                        FeeChargeReason = line.FeeChargeReason,
-                        ProductTariffCode = line.ProductTariffCode,
-                        CountryOfOrigin = line.CountryOfOrigin,
-                        InvoiceHeader = invoiceHeader,
-                        InvoiceTaxes = new List<InvoiceTax>
-                        {
-                            new InvoiceTax
-                            {
-                                TaxCategory = line.TaxCategory ?? "",
-                                
-                                // Handle nullable decimal properly with fallback
-                                TaxPercentage = line.TaxPercentage ?? 0,
+                    DateTime? startDate = null;
+                    DateTime? endDate = null;
+                    if (!string.IsNullOrWhiteSpace(firstLine.StartDate) && DateTime.TryParse(firstLine.StartDate, out DateTime sDate)) startDate = sDate;
+                    if (!string.IsNullOrWhiteSpace(firstLine.EndDate) && DateTime.TryParse(firstLine.EndDate, out DateTime eDate)) endDate = eDate;
 
-                                TaxExemptionReason = line.TaxCategory == "E" ? "Tax exempted as per applicable regulations" : ""
-                            }
-                        }
+                    var systemInvoiceNo = GenerateNextInvoiceNumber();
+
+                    var invoiceHeader = new InvoiceHeader
+                    {
+                        InvoiceNo = systemInvoiceNo,
+                        PrefixedID = systemInvoiceNo,
+                        RefDocumentNo = firstLine.InvoiceNo,
+                        PoDoNo = firstLine.PoDoNo,
+                        DocTypeCode = firstLine.DocTypeCode ?? "01",
+                        IssueDate = DateTime.Parse(firstLine.IssueDate ?? ""),
+                        CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+                        LastUpdated = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+                        CreatedBy = User.Identity?.Name ?? "System",
+                        UpdatedBy = User.Identity?.Name ?? "System",
+                        InternalStatusId = _statusMappingService.GetStatusIdByCode("Draft"),
+                        Currency = string.IsNullOrWhiteSpace(firstLine.Currency) ? "MYR" : firstLine.Currency,
+                        ForeignCurrency = string.IsNullOrWhiteSpace(firstLine.Currency) ? "MYR" : firstLine.Currency,
+                        ExchangeRate = firstLine.ExchangeRate > 0 ? firstLine.ExchangeRate.Value : 1,
+                        InvoicePeriod = parsedPeriod,
+                        StartDate = startDate,
+                        EndDate = endDate,
+                        BankAccountNo = firstLine.BankAccountNumber,
+                        BankName = firstLine.BankName,
+                        Attention = firstLine.AttentionTo,
+                        PaymentTerms = firstLine.PaymentTerms,
+                        Incoterms = firstLine.Incoterms,
+                        PrepaymentReferenceNumber = firstLine.PrepaymentReferenceNumber,
+                        ShippingRecipientName = firstLine.ShippingRecipientName,
+                        ShippingRecipientAddrLine1 = firstLine.ShippingRecipientAddrLine1,
+                        ShippingRecipientAddrLine2 = firstLine.ShippingRecipientAddrLine2,
+                        ShippingRecipientAddrLine3 = firstLine.ShippingRecipientAddrLine3,
+                        ShippingRecipientPostcode = firstLine.ShippingRecipientPostcode,
+                        ShippingRecipientCity = firstLine.ShippingRecipientCity,
+                        ShippingRecipientState = firstLine.ShippingRecipientState,
+                        ShippingRecipientCountryCode = firstLine.ShippingRecipientCountryCode,
+                        ShippingRecipientIdType = firstLine.ShippingRecipientIdType,
+                        ShippingRecipientIdNumber = firstLine.ShippingRecipientIdNumber,
+                        ShippingRecipientTIN = firstLine.ShippingRecipientTIN,
+                        CustomsFormNo1Reference = firstLine.CustomsFormNo1Reference,
+                        FreeTradeAgreementInfo = firstLine.FreeTradeAgreementInfo,
+                        CertifiedExporterAuthorizationNumber = firstLine.CertifiedExporterAuthorizationNumber,
+                        CustomsFormNo2Reference = firstLine.CustomsFormNo2Reference,
+                        OtherChargesAmount = firstLine.OtherChargesAmount,
+                        OtherChargesDescription = firstLine.OtherChargesDescription,
+                        Supplier = supplier!,
+                        SupplierId = supplier?.PartyInfoId,
+                        Customer = customer!,
+                        CustomerId = customer?.PartyInfoId,
+                        PublicCustomer = publicCustomer,
+                        PublicCustomerId = publicCustomer?.PublicCustomerId,
+                        InvoiceLines = new List<InvoiceLine>()
                     };
-                    invoiceLine.CalculateAmounts();
-                    invoiceHeader.InvoiceLines.Add(invoiceLine);
+
+                    int lineNum = 1;
+                    foreach (var line in group)
+                    {
+                        var invoiceLine = new InvoiceLine
+                        {
+                            LineNumber = lineNum++,
+                            ItemCode = line.ItemCode ?? "",
+                            ItemDescription = line.ItemDescription ?? "",
+
+                            // Handle nullable decimals properly with fallbacks
+                            Quantity = line.Quantity ?? 0,
+                            UnitPrice = line.UnitPrice ?? 0,
+                            DiscountAmount = line.DiscountAmount ?? 0,
+
+                            UnitOfMeasure = line.UnitOfMeasure ?? "",
+                            ClassificationCode = string.IsNullOrWhiteSpace(line.ClassificationCode) ? (isSelfBilled ? "004" : "022") : line.ClassificationCode,
+                            DiscountReason = line.DiscountReason,
+                            FeeChargeAmount = line.FeeChargeAmount,
+                            FeeChargeReason = line.FeeChargeReason,
+                            ProductTariffCode = line.ProductTariffCode,
+                            CountryOfOrigin = line.CountryOfOrigin,
+                            InvoiceHeader = invoiceHeader,
+                            InvoiceTaxes = new List<InvoiceTax>
+                            {
+                                new InvoiceTax
+                                {
+                                    TaxCategory = line.TaxCategory ?? "",
+                                    
+                                    // Handle nullable decimal properly with fallback
+                                    TaxPercentage = line.TaxPercentage ?? 0,
+
+                                    TaxExemptionReason = line.TaxCategory == "E" ? "Tax exempted as per applicable regulations" : ""
+                                }
+                            }
+                        };
+                        invoiceLine.CalculateAmounts();
+                        invoiceHeader.InvoiceLines.Add(invoiceLine);
+                    }
+
+                    invoiceHeader.TotalAmountExclTax = invoiceHeader.InvoiceLines.Sum(l => l.AmountExclTax ?? 0);
+                    invoiceHeader.TotalTaxAmount = invoiceHeader.InvoiceLines.Sum(l => l.InvoiceTaxes?.Sum(t => t.TaxAmount ?? 0) ?? 0);
+                    invoiceHeader.TotalAmountIncTax = invoiceHeader.TotalAmountExclTax + invoiceHeader.TotalTaxAmount;
+                    invoiceHeader.TotalDiscountAmount = invoiceHeader.InvoiceLines.Sum(l => l.DiscountAmount ?? 0);
+                    invoiceHeader.TotalPayableAmount = invoiceHeader.TotalAmountIncTax;
+                    invoiceHeader.TotalNetAmount = invoiceHeader.TotalAmountIncTax;
+
+                    _context.InvoiceHeaders.Add(invoiceHeader);
+                    await _context.SaveChangesAsync(); // header, lines and taxes: one SaveChanges, one implicit transaction
+                    imported.Add($"{systemInvoiceNo} (Ref: {firstLine.InvoiceNo})");
+
+                    var invoiceJson = _invoiceMapper.MapToJsonModel(invoiceHeader);
+                    var filePath = Path.Combine(draftsFolder, $"{systemInvoiceNo}.json");
+                    await System.IO.File.WriteAllTextAsync(filePath, invoiceJson);
+
+                    _invoiceHistoryService.Log(systemInvoiceNo, "Created", $"Invoice draft created via CSV Import (Ref: {firstLine.InvoiceNo})");
+
+                    successCount++;
                 }
-
-                invoiceHeader.TotalAmountExclTax = invoiceHeader.InvoiceLines.Sum(l => l.AmountExclTax ?? 0);
-                invoiceHeader.TotalTaxAmount = invoiceHeader.InvoiceLines.Sum(l => l.InvoiceTaxes?.Sum(t => t.TaxAmount ?? 0) ?? 0);
-                invoiceHeader.TotalAmountIncTax = invoiceHeader.TotalAmountExclTax + invoiceHeader.TotalTaxAmount;
-                invoiceHeader.TotalDiscountAmount = invoiceHeader.InvoiceLines.Sum(l => l.DiscountAmount ?? 0);
-                invoiceHeader.TotalPayableAmount = invoiceHeader.TotalAmountIncTax;
-                invoiceHeader.TotalNetAmount = invoiceHeader.TotalAmountIncTax;
-
-                _context.InvoiceHeaders.Add(invoiceHeader);
-                await _context.SaveChangesAsync();
-
-                var invoiceJson = _invoiceMapper.MapToJsonModel(invoiceHeader);
-                var filePath = Path.Combine(draftsFolder, $"{systemInvoiceNo}.json");
-                await System.IO.File.WriteAllTextAsync(filePath, invoiceJson);
-
-                _invoiceHistoryService.Log(systemInvoiceNo, "Created", $"Invoice draft created via CSV Import (Ref: {firstLine.InvoiceNo})");
-
-                successCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CSV import stopped at reference {Ref} after {Count} invoice(s) were saved.", currentRef, imported.Count);
+                TempData["ErrorMessage"] = imported.Count == 0
+                    ? $"Import stopped at invoice reference {currentRef}. No invoices were saved. Please check the file and try again."
+                    : $"Import stopped at invoice reference {currentRef}. These {imported.Count} invoice(s) were saved as drafts: {string.Join(", ", imported)}. Remove them from the file before importing the rest.";
+                return RedirectToPage("InvoiceLists");
             }
 
             TempData["SuccessMessage"] = $"Successfully imported {successCount} invoices as Drafts!";

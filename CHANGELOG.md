@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.43`** (`AppInfo:Version` in `appsettings.json`). v1.47.43 is a **patch**
+> **Current version: `v1.47.44`** (`AppInfo:Version` in `appsettings.json`). v1.47.44 is a **patch**
+> release: Import Invoices (CSV) saves only what its preview checked, and a stopped import lists what was saved — see the dated entry below. v1.47.43 was a **patch**
 > release: daily-review fixes — invoice print page access check, safe PDF text, Edit Buyer State, saved-view sort — see the dated entry below. v1.47.42 was a **patch**
 > release: a reopened draft keeps its Classification, and Tax Type Not Applicable stays 0% — see the dated entry below. v1.47.41 was a **patch**
 > release: Create/Edit Company takes a foreign State / Province like Add Buyer — see the dated entry below. v1.47.40 was a **patch**
@@ -423,6 +424,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.44 (Import Invoices: signed preview, clear partial result)
+
+- **Security:** the Confirm step of Import Invoices (CSV) read the previewed lines back from a hidden form field
+  without checking them, so an edited post skipped every preview check — for example linking any company's TIN
+  as the buyer. The previewed lines are now signed for the signed-in user (ASP.NET Data Protection, valid
+  2 hours); anything changed, expired or posted by another user is refused with "Please upload the CSV file
+  again", and nothing is saved.
+- **Partial imports:** if an import failed part-way (e.g. a database error), the invoices before it stayed saved
+  and the user got an error page, so importing the file again created duplicates. The import now stops at the
+  failing invoice and says exactly which drafts were saved (EINV number and file reference) so they can be
+  removed from the file before retrying. Each invoice is still saved in one step (header, lines and taxes
+  together). A single transaction for the whole file was not used: it would make everyone else's new
+  invoices wait until the import finished.
+- Tests: integration test — altered payload refused, another user's payload refused, own payload accepted.
+- No database change.
 
 ## 📅 2026-10-23 — v1.47.43 (daily review: access, PDF text, Edit Buyer State, saved views)
 
