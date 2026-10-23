@@ -72,10 +72,9 @@ namespace EINVWORLD.Helpers
                 string currentPath = context.HttpContext.Request.Path.Value?.ToLower() ?? "";
 
                 // ✅ STRICT SAFE LIST
-                // Only allow Dashboard and Invoice Creation. 
-                // Any other page will trigger Access Denied.
-                bool isSafe = currentPath.Contains("/dashboard") ||
-                              currentPath.Contains("/einvoice");
+                // View-only members may only view, print and download: every page on this base
+                // (create/edit/import invoices, items, buyers, company settings) changes data.
+                bool isSafe = currentPath.Contains("/dashboard");
 
                 if (isSafe)
                 {

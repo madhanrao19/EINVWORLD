@@ -149,8 +149,9 @@ namespace EINVWORLD.Helpers
                 || (party.P != null && userTins.Contains(party.P));
         }
 
-        /// <summary>Same ownership check as <see cref="CanAccessInvoiceAsync"/> but keyed by the document UUID (for cancel/reject handlers).</summary>
-        public static async Task<bool> CanAccessInvoiceByUuidAsync(this ClaimsPrincipal user, ApplicationDbContext db, string uuid)
+        /// <summary>Same ownership check as <see cref="CanAccessInvoiceAsync"/> but keyed by the document UUID (for cancel/reject handlers).
+        /// <paramref name="forWrite"/> ignores view-only memberships: view-only members may only view, print and download.</summary>
+        public static async Task<bool> CanAccessInvoiceByUuidAsync(this ClaimsPrincipal user, ApplicationDbContext db, string uuid, bool forWrite = false)
         {
             if (string.IsNullOrWhiteSpace(uuid)) return false;
             if (user.IsAdmin(db)) return true;
@@ -159,7 +160,7 @@ namespace EINVWORLD.Helpers
             if (string.IsNullOrWhiteSpace(userId)) return false;
 
             var userTins = await db.UserCompanies
-                .Where(uc => uc.UserId == userId)
+                .Where(uc => uc.UserId == userId && (!forWrite || !uc.IsViewOnly))
                 .Select(uc => uc.PartyInfo.TIN)
                 .ToListAsync();
             // LHDN general TINs (EI00000000010 General Public, ...) are shared by every tenant's invoices;
@@ -188,7 +189,8 @@ namespace EINVWORLD.Helpers
         /// otherwise the TIN must be one of the user's assigned company TINs (UserCompanies).
         /// CanAccessInvoiceAsync only checks read access (owns supplier OR customer TIN), so this is the
         /// stronger gate needed before submitting under a specific issuer TIN — it stops a counterparty
-        /// who only owns the other party's TIN from submitting as the invoice issuer.
+        /// who only owns the other party's TIN from submitting as the invoice issuer. A view-only membership
+        /// never counts: view-only members may only view, print and download.
         /// </summary>
         public static async Task<bool> OwnsTinAsync(this ClaimsPrincipal user, ApplicationDbContext db, string? tin)
         {
@@ -201,13 +203,14 @@ namespace EINVWORLD.Helpers
 
             return await db.UserCompanies
                 .Where(uc => uc.UserId == userId)
-                .AnyAsync(uc => uc.PartyInfo.TIN == tin);
+                .AnyAsync(uc => uc.PartyInfo.TIN == tin && !uc.IsViewOnly);
         }
 
         /// <summary>
         /// Write access to an invoice (edit / delete): the user must own the ISSUER's TIN — the supplier,
         /// or the customer for self-billed types 11–14 (the same rule submission uses). Unlike
-        /// <see cref="CanAccessInvoiceAsync"/>, the counterparty that merely receives the invoice is refused.
+        /// <see cref="CanAccessInvoiceAsync"/>, the counterparty that merely receives the invoice is refused, and so
+        /// is a view-only member of the issuer (view-only members may only view, print and download).
         /// </summary>
         public static async Task<bool> CanManageInvoiceAsync(this ClaimsPrincipal user, ApplicationDbContext db, string invoiceNo)
         {
@@ -229,7 +232,7 @@ namespace EINVWORLD.Helpers
             // must not grant write access to every invoice issued under it.
             if (issuer?.Id is not int issuerId || GeneralTINHelper.IsGeneralTIN(issuer.Tin)) return false;
 
-            return await db.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId);
+            return await db.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly);
         }
 
     }

@@ -113,7 +113,7 @@ namespace eInvWorld.Pages.Invoices
             int id, string confirmedDocTypeCode, int selectedBuyerPartyInfoId, CancellationToken ct)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-            Document = await _documents.GetOwnedAsync(id, userId, ct);
+            Document = await _documents.GetOwnedAsync(id, userId, ct, editableOnly: true);
             if (Document is null) return NotFound();
 
             if (Document.Status != SmartCaptureDocumentStatus.ReviewRequired)

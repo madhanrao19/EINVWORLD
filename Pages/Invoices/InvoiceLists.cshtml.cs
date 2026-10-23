@@ -787,7 +787,7 @@ namespace eInvWorld.Pages.Invoices
             _logger.LogInformation("🚀 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
+            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
             {
                 _logger.LogWarning("RejectDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to reject this document." });
@@ -899,7 +899,7 @@ namespace eInvWorld.Pages.Invoices
             _logger.LogInformation("CancelDocument handler called with documentId: {DocumentId}, reason: {CancellationReason}, tin: {Tin}", documentId, cancellationReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
+            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
             {
                 _logger.LogWarning("CancelDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to cancel this document." });
@@ -1644,8 +1644,8 @@ namespace eInvWorld.Pages.Invoices
         // writing TempData/redirecting so each caller can shape its own response.
         private async Task<SubmitDraftResult> SubmitDraftCoreAsync(string invoiceNo)
         {
-            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping): issuer, not view-only.
+            if (!await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, invoiceNo))
             {
                 _logger.LogWarning("SubmitFromList denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
                 return SubmitDraftResult.Fail("You are not authorized to submit this invoice.");
@@ -2242,8 +2242,9 @@ namespace eInvWorld.Pages.Invoices
             if (user == null)
                 return new JsonResult(new { success = false, sentCount = 0, skippedCount = 0 });
 
+            // Emailing buyers is an action, so view-only memberships don't count (view, print and download only).
             var userTINs = await _context.UserCompanies
-                .Where(uc => uc.UserId == user.Id)
+                .Where(uc => uc.UserId == user.Id && !uc.IsViewOnly)
                 .Select(uc => uc.PartyInfo.TIN)
                 .Distinct()
                 .ToListAsync(HttpContext.RequestAborted);
