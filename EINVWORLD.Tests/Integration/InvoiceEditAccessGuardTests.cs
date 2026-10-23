@@ -518,25 +518,35 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
-        public async Task Recurring_Writes_Are_Refused_For_A_View_Only_Member()
+        public async Task Recurring_Writes_Need_Edit_Access_To_The_Templates_Issuing_Company()
         {
-            // The Recurring pages checked view-only on GET only; every POST (toggle/resume, bulk, delete, create, edit)
-            // now calls IndexModel.CanWriteAsync.
+            // Every recurring POST and the worker call IndexModel.CanWriteTemplateAsync. The check is on the company
+            // that issues the template's invoices (customer for self-billed), not the user's primary company: a user
+            // with full access to their own company but view-only access to the issuer must be refused.
             if (!_fx.Available) return;
             await using var ctx = _fx.CreateContext();
 
-            var company = await CreateValidPartyInfoAsync(ctx, "Recurring Co");
-            ctx.PartyInfos.Add(company);
+            var issuer = await CreateValidPartyInfoAsync(ctx, "Recurring Issuer Co");
+            var other = await CreateValidPartyInfoAsync(ctx, "Recurring Other Co");
+            ctx.PartyInfos.AddRange(issuer, other);
             await ctx.SaveChangesAsync();
-            var viewerId = await CreateUserAsync(ctx, "recurring-viewer");
             var editorId = await CreateUserAsync(ctx, "recurring-editor");
-            ctx.UserCompanies.Add(new UserCompany { UserId = viewerId, PartyInfoId = company.PartyInfoId, HasCompanyAccess = true, IsViewOnly = true });
-            ctx.UserCompanies.Add(new UserCompany { UserId = editorId, PartyInfoId = company.PartyInfoId, HasCompanyAccess = true });
+            var mixedId = await CreateUserAsync(ctx, "recurring-mixed");
+            ctx.UserCompanies.Add(new UserCompany { UserId = editorId, PartyInfoId = issuer.PartyInfoId });
+            ctx.UserCompanies.Add(new UserCompany { UserId = mixedId, PartyInfoId = other.PartyInfoId, HasCompanyAccess = true, IsPrimaryCompany = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = mixedId, PartyInfoId = issuer.PartyInfoId, IsViewOnly = true });
+            var normal = new eInvWorld.Models.Templates.InvoiceTemplate { TemplateName = "rt", DocTypeCode = "01", SupplierId = issuer.PartyInfoId, CustomerId = other.PartyInfoId };
+            var selfBilled = new eInvWorld.Models.Templates.InvoiceTemplate { TemplateName = "rt-sb", DocTypeCode = "11", SupplierId = other.PartyInfoId, CustomerId = issuer.PartyInfoId };
+            ctx.InvoiceTemplates.AddRange(normal, selfBilled);
             await ctx.SaveChangesAsync();
 
-            Assert.False(await eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteAsync(ctx, viewerId));
-            Assert.True(await eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteAsync(ctx, editorId));
-            Assert.False(await eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteAsync(ctx, "no-such-user"));
+            var check = eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteTemplateAsync;
+            Assert.True(await check(ctx, editorId, normal.Id));
+            Assert.True(await check(ctx, editorId, selfBilled.Id));    // self-billed: the customer issues
+            Assert.False(await check(ctx, mixedId, normal.Id));        // view-only at the issuer, full elsewhere
+            Assert.False(await check(ctx, mixedId, selfBilled.Id));    // supplier side of a self-billed template
+            Assert.False(await check(ctx, editorId, -1));              // unknown template
+            Assert.False(await check(ctx, null, normal.Id));
         }
     }
 }
