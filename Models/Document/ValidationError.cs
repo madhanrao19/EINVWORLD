@@ -13,5 +13,9 @@
         public string errorMs { get; set; } = null!;
 
         public List<ValidationInnerError> innerError { get; set; } = null!;
+
+        /// <summary>Fields LHDN adds later (e.g. SDK error references) — kept instead of silently dropped.</summary>
+        [Newtonsoft.Json.JsonExtensionData]
+        public IDictionary<string, Newtonsoft.Json.Linq.JToken>? Extra { get; set; }
     }
 }
