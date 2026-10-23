@@ -67,21 +67,22 @@ namespace EINVWORLD.Services.SmartCapture
         }
 
         /// <summary>PartyInfoIds the given user belongs to, via UserCompanies. Every scoped query below
-        /// filters through this — the one place the tenant-isolation join lives for Smart Capture.</summary>
-        public async Task<List<int>> GetMemberCompanyIdsAsync(string userId, CancellationToken ct)
+        /// filters through this — the one place the tenant-isolation join lives for Smart Capture.
+        /// <paramref name="editableOnly"/> drops view-only memberships (view-only members may only view and download).</summary>
+        public async Task<List<int>> GetMemberCompanyIdsAsync(string userId, CancellationToken ct, bool editableOnly = false)
         {
             if (string.IsNullOrWhiteSpace(userId)) return new List<int>();
             return await _context.UserCompanies
-                .Where(uc => uc.UserId == userId)
+                .Where(uc => uc.UserId == userId && (!editableOnly || !uc.IsViewOnly))
                 .Select(uc => uc.PartyInfoId)
                 .ToListAsync(ct);
         }
 
         /// <summary>Fetches a document only if the user is a member of the owning company. Returns null
         /// (not the row) on any tenant mismatch — callers must treat null as 404, never leak existence.</summary>
-        public async Task<SmartCaptureDocument?> GetOwnedAsync(int documentId, string userId, CancellationToken ct)
+        public async Task<SmartCaptureDocument?> GetOwnedAsync(int documentId, string userId, CancellationToken ct, bool editableOnly = false)
         {
-            var companyIds = await GetMemberCompanyIdsAsync(userId, ct);
+            var companyIds = await GetMemberCompanyIdsAsync(userId, ct, editableOnly);
             if (companyIds.Count == 0) return null;
 
             return await _context.SmartCaptureDocuments
@@ -110,7 +111,7 @@ namespace EINVWORLD.Services.SmartCapture
             if (!_options.Enabled)
                 return new SmartCaptureUploadResult(false, SmartCaptureUploadFailureReason.Disabled, null, "Smart Capture is disabled.");
 
-            var companyIds = await GetMemberCompanyIdsAsync(userId, ct);
+            var companyIds = await GetMemberCompanyIdsAsync(userId, ct, editableOnly: true);
             if (!companyIds.Contains(companyPartyInfoId))
                 return new SmartCaptureUploadResult(false, SmartCaptureUploadFailureReason.NotAMember, null, "You do not have access to this company.");
 

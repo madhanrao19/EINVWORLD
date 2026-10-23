@@ -257,6 +257,14 @@ namespace EINVWORLD.Tests.Integration
             Assert.NotNull(ownedByA);
             Assert.Equal(document.Id, ownedByA!.Id);
             Assert.Null(attemptByB); // cross-tenant access must be invisible, not just "forbidden"
+
+            // A view-only member of A can open the document but not confirm/cancel it (editableOnly).
+            var viewerId = await CreateUserAsync(ctx, "viewerA");
+            ctx.UserCompanies.Add(new UserCompany { UserId = viewerId, PartyInfoId = companyA.PartyInfoId, IsViewOnly = true });
+            await ctx.SaveChangesAsync();
+            Assert.NotNull(await service.GetOwnedAsync(document.Id, viewerId, CancellationToken.None));
+            Assert.Null(await service.GetOwnedAsync(document.Id, viewerId, CancellationToken.None, editableOnly: true));
+            Assert.NotNull(await service.GetOwnedAsync(document.Id, userAId, CancellationToken.None, editableOnly: true));
         }
 
         [Fact]
