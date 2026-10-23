@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.41`** (`AppInfo:Version` in `appsettings.json`). v1.47.41 is a **patch**
+> **Current version: `v1.47.42`** (`AppInfo:Version` in `appsettings.json`). v1.47.42 is a **patch**
+> release: a reopened draft keeps its Classification, and Tax Type Not Applicable stays 0% — see the dated entry below. v1.47.41 was a **patch**
 > release: Create/Edit Company takes a foreign State / Province like Add Buyer — see the dated entry below. v1.47.40 was a **patch**
 > release: the validated-invoice PDF always has its UUID, validation date and QR code — see the dated entry below. v1.47.39 was a **patch**
 > release: Tax Type 06 (Not Applicable) with a rate can no longer reach LHDN — see the dated entry below. v1.47.38 was a **patch**
@@ -421,6 +422,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.42 (draft keeps Classification; Not Applicable stays 0%)
+
+- **Why:** a draft saved with Classification 003 (or any code other than 022) reopened in Edit showing
+  **022 – Others**. The page kept the saved code, but its dropdown-refresh step then set every line to 022 anyway,
+  so saving again stored 022. The same step in Create e-Invoice did the same for lines filled from a copy,
+  template or a form returned with an error. Both now keep the saved code. Picking a different document type still
+  resets the lines to 022 (or to the self-billed codes), as before.
+- **Tax Type Not Applicable (06):** a saved 06 line now opens with its Tax Rate at 0.00 and read-only on Edit and
+  on Create (copy/template), exactly as when 06 is picked. Before, only 06 lines saved with a non-zero rate were
+  locked, so a 0% line could be edited. Other tax types keep an editable rate.
+  **Duplicate item** on a 06 line now gives the copy the same locked 0.00 rate (it used to be editable until the
+  tax type was picked again).
+- On the server, every save of Create e-Invoice and Edit (draft, submit, save/update template) now sets any 06 line
+  to 0% and 0.00 tax, so a rate cannot be slipped in by editing the page. Lines on other tax types, including
+  Tax Exemption (E), are not changed. The existing pre-submit check (v1.47.39) stays.
+- No database change.
 
 ## 📅 2026-10-22 — v1.47.41 (company State / Province like Add Buyer)
 

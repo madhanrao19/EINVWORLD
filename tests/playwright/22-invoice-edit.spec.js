@@ -41,3 +41,25 @@ test('wizard look, Save as template on steps 1-3, billing period rule', async ({
   await expect(startCol).toBeHidden();
   await expect(page.locator('#billingPeriodError')).toBeHidden();
 });
+
+// A saved line must open with exactly what was saved: the page's start-up scripts (Select2, the
+// classification-code pass) may not swap a saved Classification for 022, and a saved Tax Type 06
+// (Not Applicable) line opens at 0.00, read-only, as when it is picked. Read-only, works on any draft.
+test('saved Classification / Unit / Tax Type survive page start-up; 06 rate locked at 0', async ({ page }) => {
+  test.setTimeout(90000);
+  await openNewestDraft(page);
+  const selects = 'select[name$=".ClassificationCode"], select[name$=".UnitOfMeasure"], select[name$=".TaxCategory"]';
+  // What the server rendered (selected attribute), before any start-up script can change it.
+  const rendered = await page.$$eval(selects, els => els.map(s => [s.name, s.querySelector('option[selected]')?.value ?? '']));
+  await page.waitForTimeout(2000); // start-up passes run at 100/500/1000 ms
+  for (const [name, value] of rendered) {
+    if (!value) continue; // nothing saved: a default is allowed
+    await expect(page.locator(`select[name="${name}"]`), name).toHaveValue(value);
+  }
+  for (const row of await page.locator('.tax-row').all()) {
+    if ((await row.locator('select.tax-category').inputValue()) !== '06') continue;
+    const rate = row.locator('input[name$=".TaxPercentage"]');
+    await expect(rate).toHaveJSProperty('readOnly', true);
+    expect(parseFloat((await rate.inputValue()) || '0')).toBe(0);
+  }
+});
