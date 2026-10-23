@@ -78,10 +78,15 @@ namespace eInvWorld.Pages.Items
             }
 
             var existingItem = await _context.ItemDescriptions.AsNoTracking().FirstOrDefaultAsync(i => i.Id == ItemDescription.Id);
-            if (existingItem != null)
+            if (existingItem == null) return NotFound();
+
+            // GET checks ownership; the POST must too, or any supplier could overwrite another company's item by id.
+            var (allowed, companyId) = await DeleteModel.ManageScopeAsync(_context, User);
+            if (!allowed || (companyId.HasValue && existingItem.CreatedByCompanyId != companyId))
             {
-                ItemDescription.CreatedByCompanyId = existingItem.CreatedByCompanyId;
+                return Redirect("/Identity/Account/AccessDenied");
             }
+            ItemDescription.CreatedByCompanyId = existingItem.CreatedByCompanyId;
 
             // Get Malaysia Time & Username
             var malaysiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));

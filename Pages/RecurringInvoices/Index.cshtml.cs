@@ -100,10 +100,25 @@ namespace eInvWorld.Pages.RecurringInvoices
             return Page();
         }
 
+        /// <summary>
+        /// Write rule for every recurring POST, the same one the Create/Edit pages apply on GET: the user's
+        /// primary membership must have company access and not be view-only. Without it on the POSTs a member
+        /// later made view-only could still resume a profile or switch on auto-submit.
+        /// </summary>
+        internal static async Task<bool> CanWriteAsync(ApplicationDbContext context, string? userId)
+        {
+            var userCompany = await context.UserCompanies
+                .Where(uc => uc.UserId == userId)
+                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .FirstOrDefaultAsync();
+            return userCompany != null && userCompany.HasCompanyAccess && !userCompany.IsViewOnly;
+        }
+
         // Action handler for the Play/Pause button
         public async Task<IActionResult> OnPostToggleStatusAsync(int id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!await CanWriteAsync(_context, userId)) return Redirect("/Identity/Account/AccessDenied");
             var profile = await _context.RecurringProfiles
                 .FirstOrDefaultAsync(p => p.Id == id && p.CreatedByUserId == userId);
 
@@ -120,6 +135,7 @@ namespace eInvWorld.Pages.RecurringInvoices
         public async Task<IActionResult> OnPostBulkAsync(int[] ids, string bulkAction)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!await CanWriteAsync(_context, userId)) return Redirect("/Identity/Account/AccessDenied");
             var selected = (ids ?? Array.Empty<int>()).Distinct().Take(500).ToList();
             var profiles = await _context.RecurringProfiles
                 .Where(p => selected.Contains(p.Id) && p.CreatedByUserId == userId)
@@ -141,6 +157,7 @@ namespace eInvWorld.Pages.RecurringInvoices
         public async Task<IActionResult> OnPostDeleteAsync(int id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!await CanWriteAsync(_context, userId)) return Redirect("/Identity/Account/AccessDenied");
             var profile = await _context.RecurringProfiles
                 .FirstOrDefaultAsync(p => p.Id == id && p.CreatedByUserId == userId);
 

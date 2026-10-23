@@ -86,6 +86,7 @@ namespace eInvWorld.Pages.RecurringInvoices
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!await IndexModel.CanWriteAsync(_context, userId)) return Redirect("/Identity/Account/AccessDenied");
 
             // 1. Fetch the exact existing record from the database to prevent tampering
             var profileToUpdate = await _context.RecurringProfiles

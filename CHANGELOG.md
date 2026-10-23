@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.48`** (`AppInfo:Version` in `appsettings.json`). v1.47.48 is a **patch**
+> **Current version: `v1.47.49`** (`AppInfo:Version` in `appsettings.json`). v1.47.49 is a **patch**
+> release: server-side permission gaps closed (items, buyers, cancel/reject, recurring, exports) — see the dated entry below. v1.47.48 was a **patch**
 > release: view-only members no longer see Cancel / Reject on the invoice page — see the dated entry below. v1.47.47 was a **patch**
 > release: the app trusts the Cloudflare tunnel host, so it stops sending http:// redirects — see the dated entry below. v1.47.46 was a **patch**
 > release: view-only company members can only view, print and download invoices — see the dated entry below. v1.47.45 was a **patch**
@@ -428,6 +429,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.49 (server-side permission gaps closed)
+
+A sweep of every save, delete, cancel and download action found places where the screen hid an action but the
+server still allowed it. All are now checked on the server:
+
+- **Items:** saving the Edit Item page now checks the item belongs to your company and that you are not view-only
+  (before, any supplier could overwrite another company's item by its id).
+- **Buyers:** "Add to my buyers" and "Assign buyer" on My Company only accept buyers your company created; saving
+  Edit Buyer now refuses view-only members.
+- **Cancel / Reject:** only the issuer can cancel (the buyer side could before) and only the recipient can reject.
+  Each now goes to LHDN with that party's own TIN — the customer's for self-billed documents — instead of the
+  user's first company. The invoice details page now also checks the Valid status and the 72-hour window before
+  cancelling or rejecting, as the invoice list already did, and shows each button only to the party allowed to use it.
+- **Needs Attention resolve/reopen:** checked against the invoice's issuing company, not just your primary company.
+- **Recurring invoices:** every save, pause/resume, bulk action and delete now refuses view-only members, and the
+  background run stops (recorded as a failed run) if the profile's creator lost edit access to the issuing company.
+- **Company roles:** a view-only member is view-only even when a company role would otherwise allow editing.
+- **Export, bulk PDF, LHDN status refresh, send to buyers:** shared LHDN placeholder TINs (General Public etc.)
+  never widen what you can see, matching the on-screen list.
+- **Main Dashboard charts:** show only your own companies' invoices (Admins still see all).
+- No database change. New integration tests cover the cancel/reject parties, view-only roles and recurring writes.
 
 ## 📅 2026-10-24 — v1.47.48 (invoice page hides Cancel / Reject from view-only members)
 

@@ -235,5 +235,30 @@ namespace EINVWORLD.Helpers
             return await db.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly);
         }
 
+        /// <summary>
+        /// The invoice number plus the issuer and recipient TINs of a submitted document, using the same
+        /// self-billed rule (types 11–14 are issued by the customer) as <see cref="CanManageInvoiceAsync"/>.
+        /// Cancel acts as the issuer and Reject as the recipient, so each must use that party's TIN
+        /// rather than whichever company the user happens to belong to first. Returns null if the UUID is unknown.
+        /// </summary>
+        public static async Task<(string InvoiceNo, string? IssuerTin, string? RecipientTin)?> GetDocumentPartiesAsync(ApplicationDbContext db, string uuid)
+        {
+            if (string.IsNullOrWhiteSpace(uuid)) return null;
+
+            var doc = await db.InvoiceHeaders
+                .Where(i => i.UUID == uuid)
+                .Select(i => new
+                {
+                    i.InvoiceNo,
+                    SelfBilled = i.DocTypeCode == "11" || i.DocTypeCode == "12" || i.DocTypeCode == "13" || i.DocTypeCode == "14",
+                    S = (string?)i.Supplier.TIN,
+                    B = i.Customer != null ? i.Customer.TIN : i.PublicCustomer != null ? i.PublicCustomer.TIN : null
+                })
+                .FirstOrDefaultAsync();
+            if (doc == null) return null;
+
+            return doc.SelfBilled ? (doc.InvoiceNo, doc.B, doc.S) : (doc.InvoiceNo, doc.S, doc.B);
+        }
+
     }
 }
