@@ -276,7 +276,7 @@ public class LHDNApiService : ILHDNApiService
                 if (rejected?.HasValues == true)
                 {
                     _logger.LogWarning("⚠️ Rejected document(s): {Rejected}", rejected.ToString());
-                    throw new LhdnDocumentRejectedException($"❌ Submission failed. No accepted documents. Status: {response.StatusCode}. Response: {responseContent}");
+                    throw new LhdnDocumentRejectedException($"❌ Submission failed. No accepted documents. {EINVWORLD.Helpers.LhdnValidationErrors.DescribeRejection(responseContent)}");
                 }
             }
 

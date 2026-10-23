@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.49`** (`AppInfo:Version` in `appsettings.json`). v1.47.49 is a **patch**
+> **Current version: `v1.47.50`** (`AppInfo:Version` in `appsettings.json`). v1.47.50 is a **patch**
+> release: LHDN error details are readable and keep their SDK error links (24 Oct 2026 LHDN change) — see the dated entry below. v1.47.49 was a **patch**
 > release: server-side permission gaps closed (items, buyers, cancel/reject, recurring, exports) — see the dated entry below. v1.47.48 was a **patch**
 > release: view-only members no longer see Cancel / Reject on the invoice page — see the dated entry below. v1.47.47 was a **patch**
 > release: the app trusts the Cloudflare tunnel host, so it stops sending http:// redirects — see the dated entry below. v1.47.46 was a **patch**
@@ -429,6 +430,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.50 (LHDN error details ready for the 24 Oct 2026 error-reference change)
+
+LHDN's 25 Sep 2026 SDK update adds SDK error-page references to validation errors, live in Production from 24 Oct 2026.
+
+- **Validation details popup (Invoices list):**
+  - Links to any LHDN `*.hasil.gov.my` page are clickable, including links with `&` in them. A full stop or bracket
+    after a link is no longer treated as part of it.
+  - Each error shows which LHDN validation step failed.
+  - All inner-error levels are shown, with their error code and field location.
+  - If LHDN adds a new field holding a link (for example an error reference), it is shown as **Reference**
+    instead of being dropped.
+  - A step status in different casing (`invalid`) is still recognised.
+- **Submit / Submit from list:** when LHDN refuses a document outright, the message now reads like
+  `EINV100581: Validation Error [CF404] … (at Invoice.UBLExtensions).` instead of LHDN's raw JSON.
+- Errors already saved for an invoice before this release still show, in their old form.
+- No database change. New unit tests cover both LHDN response shapes.
 
 ## 📅 2026-10-24 — v1.47.49 (server-side permission gaps closed)
 
