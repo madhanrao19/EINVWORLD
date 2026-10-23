@@ -731,6 +731,9 @@ namespace EINVWORLD.Pages.Invoices
                 if (string.IsNullOrWhiteSpace(action))
                     action = Request.Form["invoiceAction"].ToString();
 
+                // Before every save branch (draft, submit, template): Tax Type 06 is always 0%.
+                eInvWorld.Helpers.TaxTypeRules.ZeroNotApplicable(Invoice?.InvoiceLines);
+
                 // 🔥 HYBRID FIX: Parse SelectedBuyerId BEFORE any action logic (including saveAsTemplate)
                 if (Invoice != null && !string.IsNullOrEmpty(SelectedBuyerId))
                 {

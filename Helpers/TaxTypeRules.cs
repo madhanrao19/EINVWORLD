@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using eInvWorld.Models.InputModel;
+using eInvWorld.Models.ViewModels;
 
 namespace eInvWorld.Helpers
 {
@@ -20,6 +21,23 @@ namespace eInvWorld.Helpers
         public static bool IsInvalidNotApplicable(string? taxCategory, decimal? percentage, decimal? amount) =>
             string.Equals(taxCategory?.Trim(), NotApplicable, StringComparison.Ordinal)
             && ((percentage ?? 0m) != 0m || (amount ?? 0m) != 0m);
+
+        /// <summary>
+        /// Forces every Tax Type 06 entry on posted lines to 0% / 0.00, so a rate typed past the read-only
+        /// field (or sent by a hand-made POST) is never saved to a draft or template. Returns how many changed.
+        /// </summary>
+        public static int ZeroNotApplicable(IEnumerable<InvoiceLineView>? lines)
+        {
+            var changed = 0;
+            foreach (var tax in lines?.SelectMany(l => l.Taxes ?? Enumerable.Empty<InvoiceTaxView>()) ?? Enumerable.Empty<InvoiceTaxView>())
+            {
+                if (!IsInvalidNotApplicable(tax.TaxCategory, tax.TaxPercentage, tax.TaxAmount)) continue;
+                tax.TaxPercentage = 0m;
+                tax.TaxAmount = 0m;
+                changed++;
+            }
+            return changed;
+        }
 
         /// <summary>Finance-facing message naming the line.</summary>
         public static string Message(string? lineNo, string? description) =>
