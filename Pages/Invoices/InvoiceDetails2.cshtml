@@ -451,8 +451,8 @@
 
 @{
     var displayStatus = Model!.DisplayStatusName != "" ? Model!.DisplayStatusName : "Unknown";
-    bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours && Model.CanActOnInvoice;
-    bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours && Model.CanActOnInvoice;
+    bool canCancel = (User.IsInRole("Supplier") || isAdmin) && displayStatus == "Valid" && !isOver72Hours && Model.CanCancelInvoice;
+    bool canReject = (User.IsInRole("Buyer") || isAdmin) && displayStatus == "Valid" && !isOver72Hours && Model.CanRejectInvoice;
 }
 @* Ledger 3d-2 (mockup "Details"): the A4 viewer on the left and the status/actions panels beside it on
    wide screens, stacked on narrow ones. The A4 sheet itself is the frozen PdfTemplate layout. *@

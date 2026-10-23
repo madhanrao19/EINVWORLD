@@ -1,4 +1,5 @@
 using eInvWorld.Data;
+using EINVWORLD.Helpers;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Models.Recurring;
 using Microsoft.AspNetCore.Authorization;
@@ -100,12 +101,36 @@ namespace eInvWorld.Pages.RecurringInvoices
             return Page();
         }
 
+        /// <summary>
+        /// Write rule for recurring profiles, checked by every recurring POST and again by the worker at run time:
+        /// the user must be a non-view-only member of the company that ISSUES the template's invoices (the customer
+        /// for self-billed types 11–14) — the same rule as <c>UserExtensions.CanManageInvoiceAsync</c>. Without it a
+        /// member later made view-only could still resume a profile or switch on auto-submit.
+        /// </summary>
+        internal static async Task<bool> CanWriteTemplateAsync(ApplicationDbContext context, string? userId, int templateId)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return false;
+            var t = await context.InvoiceTemplates
+                .Where(x => x.Id == templateId)
+                .Select(x => new { x.DocTypeCode, x.SupplierId, x.CustomerId })
+                .FirstOrDefaultAsync();
+            var issuerId = t == null ? null : TinHelper.IsSelfBilledDocType(t.DocTypeCode) ? t.CustomerId : t.SupplierId;
+            return issuerId != null
+                && await context.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly);
+        }
+
+        private async Task<bool> MayWriteAsync(string? userId, int templateId) =>
+            User.IsInRole("Admin") || await CanWriteTemplateAsync(_context, userId, templateId);
+
         // Action handler for the Play/Pause button
         public async Task<IActionResult> OnPostToggleStatusAsync(int id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var profile = await _context.RecurringProfiles
                 .FirstOrDefaultAsync(p => p.Id == id && p.CreatedByUserId == userId);
+
+            if (profile != null && !await MayWriteAsync(userId, profile.InvoiceTemplateId))
+                return Redirect("/Identity/Account/AccessDenied");
 
             if (profile != null)
             {
@@ -125,6 +150,12 @@ namespace eInvWorld.Pages.RecurringInvoices
                 .Where(p => selected.Contains(p.Id) && p.CreatedByUserId == userId)
                 .ToListAsync();
 
+            // Skip any profile whose issuing company the user can't write to (view-only there, or no longer a member).
+            var writable = new List<RecurringProfile>();
+            foreach (var p in profiles)
+                if (await MayWriteAsync(userId, p.InvoiceTemplateId)) writable.Add(p);
+            profiles = writable;
+
             switch (bulkAction)
             {
                 case "pause": profiles.ForEach(p => p.Status = "Paused"); break;
@@ -143,6 +174,9 @@ namespace eInvWorld.Pages.RecurringInvoices
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var profile = await _context.RecurringProfiles
                 .FirstOrDefaultAsync(p => p.Id == id && p.CreatedByUserId == userId);
+
+            if (profile != null && !await MayWriteAsync(userId, profile.InvoiceTemplateId))
+                return Redirect("/Identity/Account/AccessDenied");
 
             if (profile != null)
             {

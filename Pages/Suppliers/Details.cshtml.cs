@@ -514,10 +514,13 @@ namespace eInvWorld.Pages.Suppliers
 
             foreach (var publicBuyerId in SelectedPublicBuyerIds)
             {
-                var publicBuyerTin = await _context.PublicCustomers
-                    .Where(p => p.PublicCustomerId == publicBuyerId)
-                    .Select(p => p.TIN)
+                // Same scope as the GET list: only buyers this company created (a posted foreign id is skipped).
+                var publicBuyer = await _context.PublicCustomers
+                    .Where(p => p.PublicCustomerId == publicBuyerId && p.CreatedByCompanyId == supplierId)
+                    .Select(p => new { p.TIN })
                     .FirstOrDefaultAsync();
+                if (publicBuyer == null) continue;
+                var publicBuyerTin = publicBuyer.TIN;
 
                 var linkExists = await _context.SupplierBuyers
                     .AnyAsync(sb => sb.SupplierId == supplierId &&

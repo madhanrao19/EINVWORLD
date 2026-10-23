@@ -26,7 +26,8 @@ namespace EINVWORLD.Services.Authorization
                 .Include(uc => uc.CompanyRole)
                 .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.PartyInfoId == partyInfoId, ct);
 
-            if (membership == null)
+            // View-only always wins, even over a role: view-only members may only view, print and download.
+            if (membership == null || (membership.IsViewOnly && permission != CompanyPermission.ViewAudit))
                 return false;
 
             if (membership.CompanyRole != null)

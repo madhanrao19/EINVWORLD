@@ -43,8 +43,10 @@ namespace EINVWORLD.Pages.Invoices
         public string DisplayStatusName => InvoiceDetail?.LHDNStatus?.Name ?? InvoiceDetail?.InternalStatus?.Name ?? "";
         public string? QRCodeBase64 { get; set; }
 
-        /// <summary>Same check the cancel/reject handlers make: false for view-only members, who only view, print and download.</summary>
-        public bool CanActOnInvoice { get; set; }
+        /// <summary>Same checks the cancel/reject handlers make: Cancel is for the issuer, Reject for the recipient;
+        /// both false for view-only members, who only view, print and download.</summary>
+        public bool CanCancelInvoice { get; set; }
+        public bool CanRejectInvoice { get; set; }
 
         public InvoiceDetails2Model(
             ApplicationDbContext context,
@@ -136,8 +138,12 @@ namespace EINVWORLD.Pages.Invoices
             // views are deliberately NOT audited — that would flood the chain with routine activity.
             await AuditCrossTenantViewIfApplicableAsync(InvoiceDetail);
 
-            CanActOnInvoice = !string.IsNullOrEmpty(InvoiceDetail.UUID)
-                && await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, InvoiceDetail.UUID, forWrite: true);
+            if (!string.IsNullOrEmpty(InvoiceDetail.UUID)
+                && await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, InvoiceDetail.UUID) is { } parties)
+            {
+                CanCancelInvoice = await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, parties.InvoiceNo);
+                CanRejectInvoice = await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, parties.RecipientTin);
+            }
 
             if (!string.IsNullOrEmpty(InvoiceDetail.Currency))
             {
@@ -290,13 +296,36 @@ namespace EINVWORLD.Pages.Invoices
             }
         }
 
+        /// <summary>
+        /// Same pre-checks the invoice list runs before calling LHDN: the document must be Valid (and, for a
+        /// rejection, not already rejection-requested) and still inside the 72-hour window. Returns the
+        /// message to show, or null when the action may go ahead.
+        /// </summary>
+        private async Task<string?> CancelRejectWindowErrorAsync(string documentId, bool rejecting)
+        {
+            var doc = await _context.InvoiceHeaders.AsNoTracking()
+                .Where(i => i.UUID == documentId)
+                .Select(i => new { i.LHDNStatusId, i.InternalStatusId, i.DateTimeValidated })
+                .FirstOrDefaultAsync();
+            if (doc == null) return "Invoice not found.";
+            if (doc.LHDNStatusId != "Valid" || (rejecting && doc.InternalStatusId == "RequestReject"))
+                return rejecting
+                    ? "Invoice cannot be rejected. LHDNStatus must be 'Valid' and the invoice must not be in 'RequestReject' status."
+                    : "Invoice cannot be canceled. LHDNStatus must be 'Valid'.";
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
+            if (!doc.DateTimeValidated.HasValue || now > doc.DateTimeValidated.Value.AddHours(72))
+                return "The 72-hour window for rejection or cancellation has expired.";
+            return null;
+        }
+
         // PUT /Invoices/InvoiceDetails2?handler=RejectDocument (Direct API like InvoiceLists)
         public async Task<IActionResult> OnPutRejectDocumentAsync(string documentId, string rejectionReason, string tin)
         {
             _logger.LogInformation("🚀 InvoiceDetails2 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, tin);
 
-            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
+            // Only the recipient may reject, acting as the recipient's TIN (not the user's first membership).
+            var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
+            if (parties is not { } p || !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, p.RecipientTin))
             {
                 _logger.LogWarning("RejectDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to reject this document." });
@@ -318,17 +347,9 @@ namespace EINVWORLD.Pages.Invoices
                     return StatusCode(401, "User not logged in.");
                 }
 
-                var userTin = await _context.UserCompanies
-                    .Where(uc => uc.UserId == user.Id)
-                    .Include(uc => uc.PartyInfo)
-                    .Select(uc => uc.PartyInfo.TIN)
-                    .FirstOrDefaultAsync();
-
-                if (string.IsNullOrEmpty(userTin))
-                {
-                    _logger.LogError("❌ No TIN found for user {userId}.", user.Id);
-                    return StatusCode(500, "User's TIN is missing.");
-                }
+                var userTin = p.RecipientTin!; // OwnsTinAsync above refuses a blank TIN
+                var windowError = await CancelRejectWindowErrorAsync(documentId, rejecting: true);
+                if (windowError != null) return BadRequest(windowError);
 
                 _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", userTin, tin);
 
@@ -429,8 +450,9 @@ namespace EINVWORLD.Pages.Invoices
         {
             _logger.LogInformation("🚀 InvoiceDetails2 CancelDocument handler called with documentId: {documentId}, reason: {cancellationReason}, tin: {tin}", documentId, cancellationReason, tin);
 
-            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
+            // Only the issuer may cancel (the recipient rejects instead), acting as the issuer's TIN.
+            var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
+            if (parties is not { } p || !await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, p.InvoiceNo))
             {
                 _logger.LogWarning("CancelDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to cancel this document." });
@@ -452,17 +474,14 @@ namespace EINVWORLD.Pages.Invoices
                     return StatusCode(401, "User not logged in.");
                 }
 
-                var userTin = await _context.UserCompanies
-                    .Where(uc => uc.UserId == user.Id)
-                    .Include(uc => uc.PartyInfo)
-                    .Select(uc => uc.PartyInfo.TIN)
-                    .FirstOrDefaultAsync();
-
+                var userTin = p.IssuerTin;
                 if (string.IsNullOrEmpty(userTin))
                 {
-                    _logger.LogError("❌ No TIN found for user {userId}.", user.Id);
-                    return StatusCode(500, "User's TIN is missing.");
+                    _logger.LogError("❌ Could not resolve issuer TIN for document {DocumentId} during cancellation.", documentId);
+                    return StatusCode(500, "Issuer TIN for the document could not be resolved.");
                 }
+                var windowError = await CancelRejectWindowErrorAsync(documentId, rejecting: false);
+                if (windowError != null) return BadRequest(windowError);
 
                 // Call LHDN API to cancel document
                 _logger.LogInformation($"📡 Calling LHDN CancelDocument API for document {documentId} with user TIN {userTin}...");
