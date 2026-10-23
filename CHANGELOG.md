@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.44`** (`AppInfo:Version` in `appsettings.json`). v1.47.44 is a **patch**
+> **Current version: `v1.47.45`** (`AppInfo:Version` in `appsettings.json`). v1.47.45 is a **patch**
+> release: the unused Lead Edit page is removed; Lead Details edits through Edit Company — see the dated entry below. v1.47.44 was a **patch**
 > release: Import Invoices (CSV) saves only what its preview checked, and a stopped import lists what was saved — see the dated entry below. v1.47.43 was a **patch**
 > release: daily-review fixes — invoice print page access check, safe PDF text, Edit Buyer State, saved-view sort — see the dated entry below. v1.47.42 was a **patch**
 > release: a reopened draft keeps its Classification, and Tax Type Not Applicable stays 0% — see the dated entry below. v1.47.41 was a **patch**
@@ -424,6 +425,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.45 (remove the Lead Edit scaffold)
+
+- `/Lead/Edit` (Admin) was an unused scaffolded page: Customer Submissions already edits a lead through Edit Company
+  (`/Suppliers/Edit?from=lead`). Its form posted about half of the company's fields and saved the whole record, so
+  every other field (second/third address line, bank details, branding) would have been blanked on save; it only
+  never happened because the form also lacked the required Address Line 1 and could not be saved at all. The page is
+  removed, and the Edit link on Lead Details now opens Edit Company like the list does.
+- No database change.
 
 ## 📅 2026-10-23 — v1.47.44 (Import Invoices: signed preview, clear partial result)
 
