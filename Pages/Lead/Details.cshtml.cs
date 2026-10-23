@@ -10,7 +10,7 @@ using eInvWorld.Models.InputModel;
 
 namespace eInvWorld.Pages.Lead
 {
-    // Lead (company) records are an Admin back-office; Lead/List and Lead/Edit already require Admin.
+    // Lead (company) records are an Admin back-office; Lead/List already requires Admin.
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class DetailsModel : PageModel
     {
