@@ -91,7 +91,7 @@ namespace eInvWorld.Pages.Suppliers
             StateName = await _context.StateCodes
                 .Where(s => s.Code == PartyInfo.StateCode)
                 .Select(s => s.State)
-                .FirstOrDefaultAsync() ?? "Unknown State";
+                .FirstOrDefaultAsync() ?? PartyInfo.StateCode; // a foreign company's state is free text, not a code
 
             CountryName = await _context.CountryCodes
                 .Where(c => c.Code == PartyInfo.CountryCode)

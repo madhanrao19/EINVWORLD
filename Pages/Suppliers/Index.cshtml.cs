@@ -49,8 +49,6 @@ namespace eInvWorld.Pages.Suppliers
         public int TotalPages { get; set; }
         public int TotalRecords { get; set; }
 
-        public IList<StateCode> StateCodes { get; set; } = default!;
-
         public async Task OnGetAsync()
         {
             // Query PartyInfo model directly (not Supplier)
@@ -99,9 +97,6 @@ namespace eInvWorld.Pages.Suppliers
                 .Skip((CurrentPage - 1) * PageSize)
                 .Take(PageSize)
                 .ToListAsync();
-
-            // Load the state codes (if needed)
-            StateCodes = await _context.StateCodes.ToListAsync();
         }
 
         public async Task<IActionResult> OnPostAsync([FromQuery] int id)
@@ -147,12 +142,6 @@ namespace eInvWorld.Pages.Suppliers
             _logger.LogInformation($"Company with ID {id} deleted successfully.");
 
             return new JsonResult(new { success = true, message = "Supplier deleted successfully!" });
-        }
-
-        // Method to get state name by state code
-        public string GetStateName(string stateCode)
-        {
-            return StateCodes.FirstOrDefault(s => s.Code == stateCode)?.State ?? "Unknown";
         }
     }
 }

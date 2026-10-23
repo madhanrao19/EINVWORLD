@@ -329,6 +329,51 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task PdfTemplate_Forbids_Another_Companys_Invoice_And_Renders_The_Owners()
+        {
+            // /Invoices/PdfTemplate?InvoiceNo=... loaded any invoice by its (sequential) number for any Supplier.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var owner = await CreateValidPartyInfoAsync(ctx, "Pdf Owner Co");
+            var outsiderCo = await CreateValidPartyInfoAsync(ctx, "Pdf Outsider Co");
+            ctx.PartyInfos.AddRange(owner, outsiderCo);
+            await ctx.SaveChangesAsync();
+            var ownerUserId = await CreateUserAsync(ctx, "pdf-owner");
+            var outsiderUserId = await CreateUserAsync(ctx, "pdf-outsider");
+            ctx.UserCompanies.Add(new UserCompany { UserId = ownerUserId, PartyInfoId = owner.PartyInfoId, HasCompanyAccess = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = outsiderUserId, PartyInfoId = outsiderCo.PartyInfoId, HasCompanyAccess = true });
+            var status = await SeedStatusAsync(ctx);
+            var invoiceNo = $"INV-PDF-{Guid.NewGuid():N}"[..20];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR",
+                CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                SupplierId = owner.PartyInfoId,
+            });
+            await ctx.SaveChangesAsync();
+
+            eInvWorld.Pages.Invoices.PdfTemplateModel PageFor(string userId)
+            {
+                var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+                var page = new eInvWorld.Pages.Invoices.PdfTemplateModel(ctx,
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<eInvWorld.Pages.Invoices.PdfTemplateModel>.Instance,
+                    config, new eInvWorld.Services.QRCodeGeneratorService(config), new eInvWorld.Helpers.DropdownHelper(ctx));
+                page.PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext
+                {
+                    HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = PrincipalFor(userId, ctx.Users.Find(userId)!.UserName!) }
+                };
+                return page;
+            }
+
+            Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(await PageFor(outsiderUserId).OnGetAsync(invoiceNo));
+
+            var ownerPage = PageFor(ownerUserId);
+            Assert.IsType<Microsoft.AspNetCore.Mvc.RazorPages.PageResult>(await ownerPage.OnGetAsync(invoiceNo));
+            Assert.Equal(invoiceNo, ownerPage.InvoiceDetail.InvoiceNo);
+        }
+
+        [Fact]
         public async Task CompanyAuthorization_Refuses_ManageUsers_On_A_Company_The_User_Is_Not_In()
         {
             // Suppliers/Details write handlers now call this with the POSTED company id; before, a supplier

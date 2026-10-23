@@ -17,6 +17,7 @@
 
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON; -- any error rolls back the whole transaction, so no half-applied schema gets a history row
 GO
 
 BEGIN TRANSACTION;
