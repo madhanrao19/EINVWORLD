@@ -290,7 +290,7 @@ namespace EINVWORLD.Pages.Invoices
             _logger.LogInformation("🚀 InvoiceDetails2 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, tin);
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
+            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
             {
                 _logger.LogWarning("RejectDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to reject this document." });
@@ -424,7 +424,7 @@ namespace EINVWORLD.Pages.Invoices
             _logger.LogInformation("🚀 InvoiceDetails2 CancelDocument handler called with documentId: {documentId}, reason: {cancellationReason}, tin: {tin}", documentId, cancellationReason, tin);
 
             // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId))
+            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
             {
                 _logger.LogWarning("CancelDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to cancel this document." });

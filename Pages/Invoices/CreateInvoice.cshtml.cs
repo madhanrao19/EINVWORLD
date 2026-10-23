@@ -1278,8 +1278,8 @@ namespace EINVWORLD.Pages.Invoices
                     return new JsonResult(new { success = false, message = "Invoice number is missing." });
                 }
 
-                // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-                if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+                // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping): issuer, not view-only.
+                if (!await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, invoiceNo))
                 {
                     _logger.LogWarning("SubmitDocuments denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
                     return new JsonResult(new { success = false, message = "You are not authorized to submit this invoice." });
