@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Configuration;
 using eInvWorld.Services;
 using eInvWorld.Helpers;
+using EINVWORLD.Helpers;
 using Microsoft.AspNetCore.Authorization;
 
 
@@ -46,14 +47,21 @@ namespace eInvWorld.Pages.Invoices
             _qrCodeService = qrCodeService;
             DropdownHelper = dropdownHelper;
         }
-        public async Task OnGetAsync(string InvoiceNo)
+        public async Task<IActionResult> OnGetAsync(string InvoiceNo)
         {
+            // IDOR guard: invoice numbers are sequential, so a Supplier must own (or be a party to) the invoice.
+            if (!string.IsNullOrWhiteSpace(InvoiceNo) && !await User.CanAccessInvoiceAsync(_context, InvoiceNo))
+            {
+                _logger.LogWarning("PdfTemplate access denied for invoice {InvoiceNo}.", InvoiceNo);
+                return Forbid();
+            }
+
             try
             {
                 if (string.IsNullOrWhiteSpace(InvoiceNo))
                 {
                     _logger.LogError("Invoice No. is missing.");
-                    return;
+                    return Page();
                 }
 
                 InvoiceDetail = await _context.InvoiceHeaders
@@ -70,7 +78,7 @@ namespace eInvWorld.Pages.Invoices
                 if (InvoiceDetail == null)
                 {
                     _logger.LogError($"Invoice with InvoiceNo {InvoiceNo} not found.");
-                    return;
+                    return Page();
                 }
                 InvoiceLines = InvoiceDetail.InvoiceLines.ToList(); // Store InvoiceLines separately
 
@@ -95,30 +103,7 @@ namespace eInvWorld.Pages.Invoices
             }
 
 
-            return;
-        }
-
-        public static string FormatDescription(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-
-            var lines = input
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
-                .Select(line => line.Trim())
-                .ToList();
-
-            if (lines.Count == 0) return string.Empty;
-
-            // First line bolded
-            var result = $"<strong>{lines[0]}</strong>";
-
-            // Add remaining lines as <br/> without bullets
-            for (int i = 1; i < lines.Count; i++)
-            {
-                result += $"<br/>{lines[i]}";
-            }
-
-            return result;
+            return Page();
         }
 
 

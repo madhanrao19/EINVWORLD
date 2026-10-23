@@ -155,6 +155,10 @@ namespace eInvWorld.Pages.Lead
             //    ModelState.Remove(nameof(AccountFullName));
             //}
 
+            // Anonymous form and PartyInfo.StateCode has no FK since v1.47.41: same rule as Suppliers Create/Edit.
+            if (!_dropdownHelper.IsValidStateForCountry(Input?.CountryCode, Input?.StateCode))
+                ModelState.AddModelError("Input.StateCode", "Invalid state selected.");
+
             foreach (var state in ModelState)
             {
                 foreach (var error in state.Value.Errors)

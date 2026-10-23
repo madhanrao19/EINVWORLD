@@ -167,11 +167,11 @@
                             <span asp-validation-for="PartyInfo.CityName" class="text-danger"></span>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label asp-for="PartyInfo.StateCode" class="form-label">State / Province</label>
+                            <label for="stateSelect" class="form-label">State / Province</label>
                             <select asp-for="PartyInfo.StateCode" class="form-select" asp-items="Model.StateOptions" id="stateSelect">
                                 <option value="">-- Select a State --</option>
                             </select>
-                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode"
+                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode" aria-label="State / Province"
                                    value="@Model.PartyInfo.StateCode"
                                    class="form-control d-none" disabled maxlength="100"
                                    placeholder="Enter state / province" />
@@ -180,7 +180,7 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label asp-for="PartyInfo.CountryCode" class="form-label"></label>
+                            <label for="countrySelect" class="form-label">Country Code</label>
                             <select asp-for="PartyInfo.CountryCode" class="form-select" asp-items="Model.CountryOptions" id="countrySelect">
                                 <option value="">-- Select a Country --</option>
                             </select>

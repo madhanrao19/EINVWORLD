@@ -171,7 +171,8 @@ namespace eInvWorld.Pages.Suppliers
 
                     // 2. DB Lookups
                     if (!validRegTypes.Contains(record.RegTypeCode ?? "")) previewRecord.Errors.Add($"Invalid RegTypeCode: '{record.RegTypeCode}'");
-                    if (!validStateCodes.Contains(record.StateCode ?? "")) previewRecord.Errors.Add($"Invalid StateCode: '{record.StateCode}'");
+                    // Same rule as Create/Edit (DropdownHelper.IsValidStateForCountry): only a Malaysian company needs an LHDN state code.
+                    if (string.Equals(record.CountryCode, "MYS", StringComparison.OrdinalIgnoreCase) && !validStateCodes.Contains(record.StateCode ?? "")) previewRecord.Errors.Add($"Invalid StateCode: '{record.StateCode}'");
                     if (!validCountryCodes.Contains(record.CountryCode ?? "")) previewRecord.Errors.Add($"Invalid CountryCode: '{record.CountryCode}'");
 
                     // 3. Duplicate Checks
