@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.47`** (`AppInfo:Version` in `appsettings.json`). v1.47.47 is a **patch**
+> **Current version: `v1.47.48`** (`AppInfo:Version` in `appsettings.json`). v1.47.48 is a **patch**
+> release: view-only members no longer see Cancel / Reject on the invoice page — see the dated entry below. v1.47.47 was a **patch**
 > release: the app trusts the Cloudflare tunnel host, so it stops sending http:// redirects — see the dated entry below. v1.47.46 was a **patch**
 > release: view-only company members can only view, print and download invoices — see the dated entry below. v1.47.45 was a **patch**
 > release: the unused Lead Edit page is removed; Lead Details edits through Edit Company — see the dated entry below. v1.47.44 was a **patch**
@@ -427,6 +428,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.48 (invoice page hides Cancel / Reject from view-only members)
+
+- Follow-up to v1.47.46: the invoice details page still showed **Cancel invoice** / **Reject** to view-only members,
+  and clicking them only returned "not authorized". The buttons now show only when the server would allow the
+  action (the same check the cancel/reject handlers use). No change for full-access members or Admins.
+- No database change.
 
 ## 📅 2026-10-23 — v1.47.47 (trust the Cloudflare tunnel host)
 

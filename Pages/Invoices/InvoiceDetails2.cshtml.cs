@@ -43,6 +43,9 @@ namespace EINVWORLD.Pages.Invoices
         public string DisplayStatusName => InvoiceDetail?.LHDNStatus?.Name ?? InvoiceDetail?.InternalStatus?.Name ?? "";
         public string? QRCodeBase64 { get; set; }
 
+        /// <summary>Same check the cancel/reject handlers make: false for view-only members, who only view, print and download.</summary>
+        public bool CanActOnInvoice { get; set; }
+
         public InvoiceDetails2Model(
             ApplicationDbContext context,
             ILogger<InvoiceDetailsModel> logger,
@@ -132,6 +135,9 @@ namespace EINVWORLD.Pages.Invoices
             // to another company's invoice is exactly what the tamper-evident trail should record. Same-tenant
             // views are deliberately NOT audited — that would flood the chain with routine activity.
             await AuditCrossTenantViewIfApplicableAsync(InvoiceDetail);
+
+            CanActOnInvoice = !string.IsNullOrEmpty(InvoiceDetail.UUID)
+                && await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, InvoiceDetail.UUID, forWrite: true);
 
             if (!string.IsNullOrEmpty(InvoiceDetail.Currency))
             {
