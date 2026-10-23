@@ -92,6 +92,8 @@ namespace eInvWorld.Pages.RecurringInvoices
                 .FirstOrDefaultAsync(p => p.Id == Input.Id && p.CreatedByUserId == userId);
 
             if (profileToUpdate == null) return NotFound();
+            if (!User.IsInRole("Admin") && !await IndexModel.CanWriteTemplateAsync(_context, userId, profileToUpdate.InvoiceTemplateId))
+                return Redirect("/Identity/Account/AccessDenied");
 
             // 2. Only update the safe, allowed fields
             profileToUpdate.ProfileName = Input.ProfileName;

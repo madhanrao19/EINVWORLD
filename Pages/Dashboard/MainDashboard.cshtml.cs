@@ -1,4 +1,6 @@
 using eInvWorld.Data;
+using EINVWORLD.Helpers;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -21,11 +23,25 @@ namespace eInvWorld.Pages.Dashboard
         {
             try
             {
-                var invoices = _context.InvoiceHeaders
+                var query = _context.InvoiceHeaders
                     .Include(i => i.Customer)
-                    .Where(i => i.InternalStatusId != "Draft" && i.IssueDate.HasValue)
-                    .AsNoTracking()
-                    .ToList();
+                    .Where(i => i.InternalStatusId != "Draft" && i.IssueDate.HasValue);
+
+                // Tenant scope: same rule as the invoice list — only invoices where one party is the user's company.
+                if (!User.IsInRole("Admin"))
+                {
+                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                    var userTins = _context.UserCompanies
+                        .Where(uc => uc.UserId == userId)
+                        .Select(uc => uc.PartyInfo.TIN)
+                        .ToList();
+                    userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
+                    query = query.Where(i => userTins.Contains(i.Supplier.TIN)
+                        || (i.Customer != null && userTins.Contains(i.Customer.TIN))
+                        || (i.PublicCustomer != null && userTins.Contains(i.PublicCustomer.TIN)));
+                }
+
+                var invoices = query.AsNoTracking().ToList();
 
                 var result = new
                 {

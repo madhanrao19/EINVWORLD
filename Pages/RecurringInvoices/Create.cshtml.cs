@@ -89,6 +89,8 @@ namespace eInvWorld.Pages.RecurringInvoices
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!User.IsInRole("Admin") && !await IndexModel.CanWriteTemplateAsync(_context, userId, Input.InvoiceTemplateId))
+                return Redirect("/Identity/Account/AccessDenied");
 
             // The template id is a posted hidden field: re-check ownership, or the worker would issue and
             // auto-submit invoices from another user's template (under that company's TIN).

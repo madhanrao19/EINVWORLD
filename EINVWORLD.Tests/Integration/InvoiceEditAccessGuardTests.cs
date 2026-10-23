@@ -437,5 +437,116 @@ namespace EINVWORLD.Tests.Integration
             Assert.True(await auth.HasPermissionAsync(userId, own.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.ManageUsers));
             Assert.False(await auth.HasPermissionAsync(userId, victim.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.ManageUsers));
         }
+
+        [Fact]
+        public async Task CompanyAuthorization_View_Only_Wins_Over_A_Role_That_Grants_Edit()
+        {
+            // Before v1.47.49 a membership with a CompanyRole was judged by the role's flags alone, so a
+            // view-only member holding an Editor-type role could still edit the profile and bank accounts.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var company = await CreateValidPartyInfoAsync(ctx, "Role ViewOnly Co");
+            ctx.PartyInfos.Add(company);
+            var role = new CompanyRole { Name = $"Editor-{Guid.NewGuid():N}"[..20], CanEditProfile = true, CanViewAudit = true };
+            ctx.CompanyRoles.Add(role);
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "role-view-only");
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = company.PartyInfoId, HasCompanyAccess = true, IsViewOnly = true, CompanyRoleId = role.CompanyRoleId });
+            await ctx.SaveChangesAsync();
+
+            var auth = new EINVWORLD.Services.Authorization.CompanyAuthorizationService(ctx);
+            Assert.False(await auth.HasPermissionAsync(userId, company.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.EditProfile));
+            Assert.True(await auth.HasPermissionAsync(userId, company.PartyInfoId, EINVWORLD.Services.Authorization.CompanyPermission.ViewAudit));
+        }
+
+        [Fact]
+        public async Task Cancel_Belongs_To_The_Issuer_And_Reject_To_The_Recipient()
+        {
+            // InvoiceLists/InvoiceDetails2 cancel used to let the buyer side through (and send the supplier's TIN),
+            // and reject used the user's first membership TIN. Both now resolve the parties from the document.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var supplier = await CreateValidPartyInfoAsync(ctx, "Cancel Supplier Co");
+            var buyer = await CreateValidPartyInfoAsync(ctx, "Cancel Buyer Co");
+            ctx.PartyInfos.AddRange(supplier, buyer);
+            await ctx.SaveChangesAsync();
+            var supplierUserId = await CreateUserAsync(ctx, "cancel-supplier");
+            var buyerUserId = await CreateUserAsync(ctx, "cancel-buyer");
+            ctx.UserCompanies.Add(new UserCompany { UserId = supplierUserId, PartyInfoId = supplier.PartyInfoId, HasCompanyAccess = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = buyerUserId, PartyInfoId = buyer.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var status = await SeedStatusAsync(ctx);
+            string Add(string docType)
+            {
+                var no = $"INV-CR-{Guid.NewGuid():N}"[..20];
+                ctx.InvoiceHeaders.Add(new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = docType, Currency = "MYR", UUID = $"CR{Guid.NewGuid():N}"[..26],
+                    CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
+                    SupplierId = supplier.PartyInfoId, CustomerId = buyer.PartyInfoId,
+                });
+                return no;
+            }
+            var normalNo = Add("01");
+            var selfBilledNo = Add("11");
+            await ctx.SaveChangesAsync();
+            var normalUuid = await ctx.InvoiceHeaders.Where(i => i.InvoiceNo == normalNo).Select(i => i.UUID!).SingleAsync();
+            var selfBilledUuid = await ctx.InvoiceHeaders.Where(i => i.InvoiceNo == selfBilledNo).Select(i => i.UUID!).SingleAsync();
+
+            var supplierUser = PrincipalFor(supplierUserId, "cancel-supplier");
+            var buyerUser = PrincipalFor(buyerUserId, "cancel-buyer");
+
+            var normal = (await UserExtensions.GetDocumentPartiesAsync(ctx, normalUuid))!.Value;
+            Assert.Equal(supplier.TIN, normal.IssuerTin);
+            Assert.Equal(buyer.TIN, normal.RecipientTin);
+            Assert.True(await UserExtensions.CanManageInvoiceAsync(supplierUser, ctx, normal.InvoiceNo));  // supplier cancels
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(buyerUser, ctx, normal.InvoiceNo));    // buyer may not cancel
+            Assert.True(await UserExtensions.OwnsTinAsync(buyerUser, ctx, normal.RecipientTin));           // buyer rejects
+            Assert.False(await UserExtensions.OwnsTinAsync(supplierUser, ctx, normal.RecipientTin));       // supplier may not reject
+
+            // Self-billed: the buyer issues, so the roles swap.
+            var selfBilled = (await UserExtensions.GetDocumentPartiesAsync(ctx, selfBilledUuid))!.Value;
+            Assert.Equal(buyer.TIN, selfBilled.IssuerTin);
+            Assert.Equal(supplier.TIN, selfBilled.RecipientTin);
+            Assert.True(await UserExtensions.CanManageInvoiceAsync(buyerUser, ctx, selfBilled.InvoiceNo));
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(supplierUser, ctx, selfBilled.InvoiceNo));
+
+            Assert.Null(await UserExtensions.GetDocumentPartiesAsync(ctx, "no-such-uuid"));
+        }
+
+        [Fact]
+        public async Task Recurring_Writes_Need_Edit_Access_To_The_Templates_Issuing_Company()
+        {
+            // Every recurring POST and the worker call IndexModel.CanWriteTemplateAsync. The check is on the company
+            // that issues the template's invoices (customer for self-billed), not the user's primary company: a user
+            // with full access to their own company but view-only access to the issuer must be refused.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var issuer = await CreateValidPartyInfoAsync(ctx, "Recurring Issuer Co");
+            var other = await CreateValidPartyInfoAsync(ctx, "Recurring Other Co");
+            ctx.PartyInfos.AddRange(issuer, other);
+            await ctx.SaveChangesAsync();
+            var editorId = await CreateUserAsync(ctx, "recurring-editor");
+            var mixedId = await CreateUserAsync(ctx, "recurring-mixed");
+            ctx.UserCompanies.Add(new UserCompany { UserId = editorId, PartyInfoId = issuer.PartyInfoId });
+            ctx.UserCompanies.Add(new UserCompany { UserId = mixedId, PartyInfoId = other.PartyInfoId, HasCompanyAccess = true, IsPrimaryCompany = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = mixedId, PartyInfoId = issuer.PartyInfoId, IsViewOnly = true });
+            var normal = new eInvWorld.Models.Templates.InvoiceTemplate { TemplateName = "rt", DocTypeCode = "01", SupplierId = issuer.PartyInfoId, CustomerId = other.PartyInfoId };
+            var selfBilled = new eInvWorld.Models.Templates.InvoiceTemplate { TemplateName = "rt-sb", DocTypeCode = "11", SupplierId = other.PartyInfoId, CustomerId = issuer.PartyInfoId };
+            ctx.InvoiceTemplates.AddRange(normal, selfBilled);
+            await ctx.SaveChangesAsync();
+
+            var check = eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteTemplateAsync;
+            Assert.True(await check(ctx, editorId, normal.Id));
+            Assert.True(await check(ctx, editorId, selfBilled.Id));    // self-billed: the customer issues
+            Assert.False(await check(ctx, mixedId, normal.Id));        // view-only at the issuer, full elsewhere
+            Assert.False(await check(ctx, mixedId, selfBilled.Id));    // supplier side of a self-billed template
+            Assert.False(await check(ctx, editorId, -1));              // unknown template
+            Assert.False(await check(ctx, null, normal.Id));
+        }
     }
 }

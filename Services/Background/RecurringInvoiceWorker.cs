@@ -95,6 +95,15 @@ namespace eInvWorld.Services.Background
                     if (profile.InvoiceTemplate == null)
                         throw new Exception("Base Invoice Template is missing or was deleted.");
 
+                    // The pages check write access only when a profile is saved; re-check at run time so a creator
+                    // later made view-only (or removed from the issuing company) can't keep issuing invoices.
+                    bool creatorIsAdmin = await context.UserRoles
+                        .AnyAsync(ur => ur.UserId == profile.CreatedByUserId
+                            && context.Roles.Any(r => r.Id == ur.RoleId && r.Name == "Admin"));
+                    if (!creatorIsAdmin && !await eInvWorld.Pages.RecurringInvoices.IndexModel
+                            .CanWriteTemplateAsync(context, profile.CreatedByUserId, profile.InvoiceTemplateId))
+                        throw new Exception("The profile's creator no longer has edit access to the issuing company.");
+
                     // Shared generator: numeric max over InvoiceHeaders + InvoiceHistories with collision retry
                     // (the old local one sorted numbers as text, so EINV99999 > EINV100000 and numbers repeated).
                     string newInvoiceNo = invoiceService.GenerateNextInvoiceNumber();
