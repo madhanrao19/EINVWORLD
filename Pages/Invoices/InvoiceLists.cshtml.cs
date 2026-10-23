@@ -786,8 +786,9 @@ namespace eInvWorld.Pages.Invoices
         {
             _logger.LogInformation("🚀 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
-            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
+            // Only the recipient may reject, acting as the recipient's TIN (not the user's first membership).
+            var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
+            if (parties is not { } p || !await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, p.RecipientTin))
             {
                 _logger.LogWarning("RejectDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to reject this document." });
@@ -809,19 +810,9 @@ namespace eInvWorld.Pages.Invoices
                     return StatusCode(401, "User not logged in.");
                 }
 
-                var userTin = await _context.UserCompanies
-                    .Where(uc => uc.UserId == user.Id)
-                    .Include(uc => uc.PartyInfo)
-                    .Select(uc => uc.PartyInfo.TIN)
-                    .FirstOrDefaultAsync();
+                var userTin = p.RecipientTin!; // OwnsTinAsync above refuses a blank TIN
 
-                if (string.IsNullOrEmpty(userTin))
-                {
-                    _logger.LogError("❌ No TIN found for user {userId}.", user.Id);
-                    return StatusCode(500, "User's TIN is missing.");
-                }
-
-                _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin), EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
+                _logger.LogInformation("🔑 Using document recipient TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin), EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
                 // Check rejection constraints
                 _logger.LogInformation("🔍 Checking rejection constraints for document {documentId}...", documentId);
@@ -898,8 +889,9 @@ namespace eInvWorld.Pages.Invoices
         {
             _logger.LogInformation("CancelDocument handler called with documentId: {DocumentId}, reason: {CancellationReason}, tin: {Tin}", documentId, cancellationReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
-            // IDOR guard (defense-in-depth alongside LHDN's per-TIN token scoping).
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceByUuidAsync(User, _context, documentId, forWrite: true))
+            // Only the issuer may cancel (the recipient rejects instead), acting as the issuer's TIN.
+            var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
+            if (parties is not { } p || !await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, p.InvoiceNo))
             {
                 _logger.LogWarning("CancelDocument denied: user {User} cannot access document {DocumentId}.", User.Identity?.Name, documentId);
                 return new JsonResult(new { success = false, message = "You are not authorized to cancel this document." });
@@ -917,13 +909,8 @@ namespace eInvWorld.Pages.Invoices
                 var cancellationConstraintsCheck = await CheckCancellationConstraints(documentId);
                 if (cancellationConstraintsCheck != null) return cancellationConstraintsCheck;
 
-                // Resolve the issuer TIN from the document server-side — never trust the frontend-supplied
-                // TIN (defense-in-depth; the IDOR guard above already confirmed the caller owns this
-                // document, so the document's own supplier TIN is the correct, safe value to send to LHDN).
-                var issuerTin = await _context.InvoiceHeaders
-                    .Where(i => i.UUID == documentId)
-                    .Select(i => i.Supplier != null ? i.Supplier.TIN : null)
-                    .FirstOrDefaultAsync();
+                // Issuer TIN from the document server-side (customer for self-billed) — never the frontend's.
+                var issuerTin = p.IssuerTin;
 
                 if (string.IsNullOrWhiteSpace(issuerTin))
                 {
@@ -1274,6 +1261,7 @@ namespace eInvWorld.Pages.Invoices
                     .Distinct()
                     .ToListAsync();
 
+                userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
                 if (!userTINs.Any())
                 {
                     _logger.LogWarning($"No TINs found for user: {user.Id}. Export aborted.");
@@ -1568,17 +1556,9 @@ namespace eInvWorld.Pages.Invoices
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToPage("/Account/Login");
 
-            // Same view-only rule OnGet uses to hide the action menu.
-            var company = await _context.UserCompanies.FirstOrDefaultAsync(uc => uc.UserId == user.Id && uc.IsPrimaryCompany)
-                          ?? await _context.UserCompanies.FirstOrDefaultAsync(uc => uc.UserId == user.Id);
-            if (company?.IsViewOnly == true)
-            {
-                TempData["ErrorMessage"] = "Your access is view-only.";
-                return Back();
-            }
-
-            // IDOR guard: only the user's own company's invoices.
-            if (!await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+            // Write guard on the invoice's own issuer: refuses other tenants, the counterparty and view-only members
+            // (checking only the primary company let a view-only member of the issuer through via another membership).
+            if (!await EINVWORLD.Helpers.UserExtensions.CanManageInvoiceAsync(User, _context, invoiceNo))
             {
                 _logger.LogWarning("SetAttentionResolved denied: user {User} cannot access invoice {InvoiceNo}.", User.Identity?.Name, invoiceNo);
                 TempData["ErrorMessage"] = "Invoice not found.";
@@ -2101,6 +2081,7 @@ namespace eInvWorld.Pages.Invoices
                     .Distinct()
                     .ToListAsync(HttpContext.RequestAborted);
 
+                userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
                 if (!userTINs.Any())
                     return new JsonResult(new { success = true, updatedCount = 0 });
 
@@ -2179,6 +2160,7 @@ namespace eInvWorld.Pages.Invoices
                     .Distinct()
                     .ToListAsync(HttpContext.RequestAborted);
 
+                userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
                 if (!userTINs.Any())
                     return new JsonResult(new { success = true, updatedCount = 0, checkedCount = 0 });
 
@@ -2249,6 +2231,7 @@ namespace eInvWorld.Pages.Invoices
                 .Distinct()
                 .ToListAsync(HttpContext.RequestAborted);
 
+            userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
             if (!userTINs.Any())
                 return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
 
@@ -2335,6 +2318,7 @@ namespace eInvWorld.Pages.Invoices
                 .Distinct()
                 .ToListAsync(HttpContext.RequestAborted);
 
+            userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
             if (!userTINs.Any())
                 return BadRequest("No company associated with this account.");
 

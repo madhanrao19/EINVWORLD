@@ -106,8 +106,10 @@ namespace eInvWorld.Pages.PublicCustomer
                     .OrderByDescending(uc => uc.IsPrimaryCompany)
                     .FirstOrDefaultAsync();
 
+                // Same view-only rule as GET; this page is a plain PageModel, so SupplierBasePage doesn't cover it.
                 if (userCompany == null ||
-                    existing.CreatedByCompanyId != userCompany.PartyInfoId)
+                    existing.CreatedByCompanyId != userCompany.PartyInfoId ||
+                    !userCompany.HasCompanyAccess || userCompany.IsViewOnly)
                 {
                     return Redirect("/Identity/Account/AccessDenied");
                 }

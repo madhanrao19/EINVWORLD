@@ -433,6 +433,15 @@ namespace eInvWorld.Pages.PublicCustomer
                     .FirstOrDefaultAsync();
 
                 if (userCompany != null) supplierIdToLink = userCompany.PartyInfoId;
+
+                // Only your own company's buyers can be (re)linked — linking a foreign id would expose another
+                // tenant's buyer (PartyBankAccess treats a SupplierBuyers link as ownership).
+                if (userCompany != null && (!userCompany.HasCompanyAccess || userCompany.IsViewOnly
+                    || publicCustomer.CreatedByCompanyId != userCompany.PartyInfoId))
+                {
+                    TempData["ErrorMessage"] = "You do not have permission to manage this buyer.";
+                    return RedirectToPage();
+                }
             }
 
             if (supplierIdToLink == null)
