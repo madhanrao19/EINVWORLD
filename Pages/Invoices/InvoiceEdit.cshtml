@@ -3149,14 +3149,15 @@
                     }
                 });
 
-                // Saved lines with Tax Type 06 and a rate (data from before the rule was enforced): apply the
-                // same rule as picking 06 (0.00, read-only) and say so on the line. Nothing is stored until Save.
+                // Saved lines with Tax Type 06 get the same rule as picking 06 (0.00, read-only). Lines saved
+                // with a rate (data from before the rule was enforced) also say so. Nothing is stored until Save.
                 document.querySelectorAll('.tax-category').forEach(select => {
                     const row = select.closest('.tax-row');
                     const rate = row?.querySelector('input[name*=".TaxPercentage"]');
-                    if (select.value !== '06' || !rate || !parseFloat(rate.value)) return; // empty, 0 and NaN are fine
+                    if (select.value !== '06' || !rate) return;
                     const saved = rate.value;
                     toggleExemptionReason(select);
+                    if (!parseFloat(saved)) return; // empty, 0 and NaN: locked, no note needed
                     const note = document.createElement('div');
                     note.className = 'small text-warning mt-1 einv-tax06-note';
                     note.setAttribute('role', 'status');
@@ -3610,7 +3611,7 @@
 
                         // Update Select2 if initialized
                         if (typeof $ !== 'undefined' && $.fn.select2 && $(select).hasClass('select2-hidden-accessible')) {
-                            $(select).val('022').trigger('change');
+                            $(select).val(select.value).trigger('change'); // keep the code chosen above, never force 022 over a saved one
                             // Re-enable Select2 interaction
                             $(select).next('.select2-container').css({
                                 'pointer-events': '',
@@ -4979,6 +4980,7 @@
                                         toggleExemptionReason(taxCategorySelect);
                                         validateTaxField(taxCategorySelect);
                                     });
+                                    if (tax.category === '06') toggleExemptionReason(taxCategorySelect); // copied 06 line: 0.00, read-only like a picked one
                                 }
 
                                 const taxPercentageInput = taxRow.querySelector('input[name*=".TaxPercentage"]');

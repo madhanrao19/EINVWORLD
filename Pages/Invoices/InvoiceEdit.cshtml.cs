@@ -578,6 +578,9 @@ namespace eInvWorld.Pages.Invoices
 
             try
             {
+                // Before every save branch (draft, submit, template): Tax Type 06 is always 0%.
+                eInvWorld.Helpers.TaxTypeRules.ZeroNotApplicable(Invoice?.InvoiceLines);
+
                 // IDOR guard: only when "id" refers to an invoice that ALREADY EXISTS — this handler is
                 // also used to save a brand-new invoice for the first time (Invoice.InvoiceNo = id ??
                 // GenerateNextInvoiceNumber() below), whose pre-generated number legitimately doesn't
