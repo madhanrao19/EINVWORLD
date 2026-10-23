@@ -182,7 +182,7 @@ namespace eInvWorld.Pages.Invoices
                     {
                         responseContent = await response.Content.ReadAsStringAsync();
                         var docValidation = JsonConvert.DeserializeObject<DocumentValidation>(responseContent);
-                        errors = ExtractErrors(docValidation?.validationResults);
+                        errors = EINVWORLD.Helpers.LhdnValidationErrors.Extract(docValidation?.validationResults).Cast<object>().ToList();
                     }
                 }
 
@@ -230,31 +230,6 @@ namespace eInvWorld.Pages.Invoices
                 _logger.LogError(ex, "Error fetching validation details for UUID: {UUID}", uuid);
                 return new JsonResult(new { success = false, message = "An internal error occurred." });
             }
-        }
-
-        private List<object> ExtractErrors(ValidationResults? results)
-        {
-            var errorList = new List<object>();
-            if (results?.validationSteps != null)
-            {
-                foreach (var step in results.validationSteps.Where(s => s.status == "Invalid" || s.status == "Error"))
-                {
-                    if (step.error != null)
-                    {
-                        errorList.Add(new
-                        {
-                            errorCode = step.error.errorCode,
-                            error = step.error.error,
-                            propertyPath = step.error.propertyPath,
-                            innerErrors = step.error.innerError?.Select(ie => new {
-                                propertyName = ie.propertyName,
-                                error = ie.error
-                            }).ToList()
-                        });
-                    }
-                }
-            }
-            return errorList;
         }
 
         public async Task<IActionResult> OnGetDownloadPdfAsync(string invoiceNo)
