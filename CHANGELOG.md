@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.46`** (`AppInfo:Version` in `appsettings.json`). v1.47.46 is a **patch**
+> **Current version: `v1.47.47`** (`AppInfo:Version` in `appsettings.json`). v1.47.47 is a **patch**
+> release: the app trusts the Cloudflare tunnel host, so it stops sending http:// redirects — see the dated entry below. v1.47.46 was a **patch**
 > release: view-only company members can only view, print and download invoices — see the dated entry below. v1.47.45 was a **patch**
 > release: the unused Lead Edit page is removed; Lead Details edits through Edit Company — see the dated entry below. v1.47.44 was a **patch**
 > release: Import Invoices (CSV) saves only what its preview checked, and a stopped import lists what was saved — see the dated entry below. v1.47.43 was a **patch**
@@ -426,6 +427,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.47 (trust the Cloudflare tunnel host)
+
+- cloudflared runs on a separate machine (192.168.1.10), but the app only trusted forwarded headers from itself
+  (loopback). So it treated every request as plain `http://` and sent absolute `http://` redirects, e.g. to the
+  login page. Cloudflare upgrades those, but they fail on networks that proxy plain http, and the real client IP
+  wasn't seen (per-IP rate limiting and audit logs saw the tunnel host instead).
+  `ForwardedHeaders:KnownProxies` is now set to `192.168.1.10` in `appsettings.Staging.json` and
+  `appsettings.Production.json`. Only that host's headers are trusted, and only for one hop.
+- Config only: no code or database change. If cloudflared moves to another machine, update both files.
 
 ## 📅 2026-10-23 — v1.47.46 (view-only members are read-only)
 
