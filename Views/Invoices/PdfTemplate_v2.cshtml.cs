@@ -121,28 +121,5 @@ namespace EINVWORLD.Views.Invoices
             return;
         }
 
-        public static string FormatDescription(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-
-            var lines = input
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
-                .Select(line => line.Trim())
-                .ToList();
-
-            if (lines.Count == 0) return string.Empty;
-
-            // First line bolded
-            var result = $"<strong>{lines[0]}</strong>";
-
-            // Add remaining lines as <br/> without bullets
-            for (int i = 1; i < lines.Count; i++)
-            {
-                result += $"<br/>{lines[i]}";
-            }
-
-            return result;
-        }
-
     }
 }

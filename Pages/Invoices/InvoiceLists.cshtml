@@ -1435,9 +1435,12 @@
         // Canonical query for comparing/saving: no empty values, no tab/paging keys, default sort omitted.
         function normalize(params) {
             const out = new URLSearchParams();
+            // Drop the sort only as a pair: "InvoiceNo desc" or "IssueDate asc" must keep both keys.
+            const sortIsDefault = (params.get('sortBy') || defaultSort.sortBy) === defaultSort.sortBy
+                && (params.get('sortOrder') || defaultSort.sortOrder) === defaultSort.sortOrder;
             for (const [k, v] of params) {
                 if (!v || k === 'invoiceDirection' || k === 'pageNo' || k === '__RequestVerificationToken') continue;
-                if (defaultSort[k] === v) continue;
+                if (sortIsDefault && k in defaultSort) continue;
                 out.append(k, v);
             }
             out.sort();

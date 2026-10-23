@@ -265,7 +265,7 @@
                             <select asp-for="PartyInfo.StateCode" class="form-select select2" asp-items="Model.StateOptions">
                                 <option value="">-- Select State --</option>
                             </select>
-                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode"
+                            <input type="text" id="PartyInfo_StateCode_Text" name="PartyInfo.StateCode" aria-label="State / Province"
                                    value="@Model.PartyInfo?.StateCode"
                                    class="form-control d-none" disabled maxlength="100"
                                    placeholder="Enter state / province" />

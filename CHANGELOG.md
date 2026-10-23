@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.42`** (`AppInfo:Version` in `appsettings.json`). v1.47.42 is a **patch**
+> **Current version: `v1.47.43`** (`AppInfo:Version` in `appsettings.json`). v1.47.43 is a **patch**
+> release: daily-review fixes — invoice print page access check, safe PDF text, Edit Buyer State, saved-view sort — see the dated entry below. v1.47.42 was a **patch**
 > release: a reopened draft keeps its Classification, and Tax Type Not Applicable stays 0% — see the dated entry below. v1.47.41 was a **patch**
 > release: Create/Edit Company takes a foreign State / Province like Add Buyer — see the dated entry below. v1.47.40 was a **patch**
 > release: the validated-invoice PDF always has its UUID, validation date and QR code — see the dated entry below. v1.47.39 was a **patch**
@@ -422,6 +423,30 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-23 — v1.47.43 (daily review: access, PDF text, Edit Buyer State, saved views)
+
+- **Security — invoice print page:** `/Invoices/PdfTemplate?InvoiceNo=…` loaded any invoice for any Supplier user.
+  Invoice numbers are sequential, so another company's invoices (parties, TINs, lines, totals) could be read by
+  changing the number. It now uses the same ownership check as Invoice Details (`CanAccessInvoiceAsync`); others get
+  403. Admin unchanged.
+- **Security — PDF text:** the downloadable PDF (`PdfTemplate_v2`) printed the supplier address, buyer address and
+  item description as raw HTML, so markup typed into those fields was run by the PDF engine on the server. They are
+  now encoded, the same way the on-screen invoice and the older print page already did. Line breaks still show.
+  Two unused helpers that built unencoded HTML (`FormatDescription`) were removed.
+- **Edit Buyer:** a stray `;` (v1.47.41) stopped the State / Province script, so a foreign buyer could not be saved
+  without picking a Malaysian state. Fixed.
+- **Saved views (Invoices list):** a view saved with a non-default sort (e.g. Invoice No descending, or Issue Date
+  ascending) lost half of the sort. The sort is now dropped only when both column and direction are the default.
+- **Foreign company State follow-ups (v1.47.41):** Company Details shows the typed State instead of "Unknown
+  State"; Import Companies accepts a free-text State for a non-Malaysian company (Malaysia still needs an LHDN code);
+  the public sign-up form checks the State like Create/Edit Company. The free-text State input has an accessible
+  name, and the Edit Company State/Country labels point at their dropdowns. Unused state lookup removed from the
+  Companies list.
+- **Database scripts:** every `Migrations/Apply_*.sql` now starts with `SET XACT_ABORT ON`, so a failing statement
+  rolls back the whole migration instead of recording it in `__EFMigrationsHistory` half-applied. No change when a
+  script succeeds; already-applied scripts stay no-ops.
+- Tests: integration test for the print page (outsider 403, owner sees it). No schema change.
 
 ## 📅 2026-10-23 — v1.47.42 (draft keeps Classification; Not Applicable stays 0%)
 
