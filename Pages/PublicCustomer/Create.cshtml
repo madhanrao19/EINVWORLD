@@ -252,7 +252,7 @@
                             <select asp-for="PublicCustomer.StateCode" id="PublicCustomer_StateCode" class="form-select select2" asp-items="Model.StateOptions">
                                 <option value="">-- Select State --</option>
                             </select>
-                            <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode"
+                            <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode" aria-label="State / Province"
                                    value="@Model.PublicCustomer.StateCode"
                                    class="form-control d-none" disabled maxlength="100"
                                    placeholder="Enter state / province" />

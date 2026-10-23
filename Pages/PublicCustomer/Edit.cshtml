@@ -156,7 +156,7 @@
                             class="form-select">
                         <option value="">-- Select State --</option>
                     </select>
-                    <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode"
+                    <input type="text" id="PublicCustomer_StateCode_Text" name="PublicCustomer.StateCode" aria-label="State / Province"
                            value="@Model.PublicCustomer.StateCode"
                            class="form-control d-none" disabled maxlength="100"
                            placeholder="Enter state / province" />
@@ -225,5 +225,5 @@
 
 <script src="~/js/state-by-country.js" asp-append-version="true"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text'););
+    document.addEventListener('DOMContentLoaded', () => bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text'));
 </script>
