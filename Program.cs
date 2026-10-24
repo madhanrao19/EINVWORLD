@@ -317,6 +317,7 @@ builder.Services.AddScoped<InvoiceHistoryService>();
 builder.Services.AddHttpContextAccessor(); // Needed for IHttpContextAccessor
 builder.Services.AddScoped<InvoiceDraftService>();
 builder.Services.AddScoped<InvoiceTemplateService>();
+builder.Services.AddScoped<eInvWorld.Services.FinanceTodayService>();
 builder.Services.AddScoped<DashboardDataService>();
 // Shared single-invoice PDF/email finalizer — used by the interactive submit flow and every
 // background finalizer loop, so the validation email can never be double-sent.

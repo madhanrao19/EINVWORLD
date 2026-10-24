@@ -116,36 +116,60 @@ else if (isSupplier)
 
     string dateParams = $"&submissionDateFrom={start:s}&submissionDateTo={end:s}";
 
-    @* Needs Attention (Phase 1D): a distinct-invoice headline (never a sum of the badges, since one
-       invoice can match more than one condition) that deep-links into the Invoice List's same
-       "Needs Attention" filter — one filtering mechanism, not two. *@
-    @if (Model.NeedsAttentionCount > 0)
+    @* Today (v1.49.0): what Finance should do now, for the user's own companies (FinanceTodayService). Replaces the
+       Needs Attention banner; "See all" still deep-links to the Invoice List's NeedsAttention filter. *@
+    @if (Model.Today is { } today)
     {
-        <a href="/Invoices/InvoiceLists?invoiceDirection=All&internalStatus=NeedsAttention" class="einv-attn">
-            <span class="einv-tile-ico"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
-            <span class="einv-attn-text">
-                <b>@Model.NeedsAttentionCount invoice@(Model.NeedsAttentionCount == 1 ? "" : "s") need@(Model.NeedsAttentionCount == 1 ? "s" : "") attention</b>
-                <span>Invalid, failed transmission, rejected, or drafts stuck more than 3 days</span>
-            </span>
-            <span class="einv-attn-pills">
-                @if (Model.NeedsAttentionInvalidCount > 0)
+        <section class="einv-panel mb-4" aria-label="Today">
+            <div class="einv-panel-h"><h2>Today</h2><span class="einv-panel-sub">Today in your companies</span></div>
+            <div class="einv-panel-b">
+                <div class="einv-tiles mb-3">
+                    <a href="/Invoices/InvoiceLists?invoiceDirection=All&internalStatus=NeedsAttention" class="einv-tile @(today.NeedsAttention > 0 ? "einv-tile-danger" : "")">
+                        <span class="einv-tile-ico"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
+                        <span class="einv-tile-text"><b>Needs your attention</b><small>Rejected, failed, not ready or waiting for review</small></span>
+                        <span class="einv-badge @(today.NeedsAttention > 0 ? "einv-badge-danger" : "einv-badge-neutral")">@today.NeedsAttention</span>
+                    </a>
+                    <a href="/Invoices/InvoiceLists?invoiceDirection=Draft" class="einv-tile">
+                        <span class="einv-tile-ico"><i class="ri-send-plane-line" aria-hidden="true"></i></span>
+                        <span class="einv-tile-text"><b>Ready to submit</b><small>Drafts that pass the LHDN check</small></span>
+                        <span class="einv-badge einv-badge-neutral">@today.ReadyToSubmit</span>
+                    </a>
+                    <a href="/Invoices/InvoiceLists?invoiceDirection=Sent&LHDNStatus=Submitted" class="einv-tile">
+                        <span class="einv-tile-ico"><i class="ri-loader-4-line" aria-hidden="true"></i></span>
+                        <span class="einv-tile-text"><b>Processing with LHDN</b><small>Submitted, waiting for the result</small></span>
+                        <span class="einv-badge einv-badge-neutral">@today.ProcessingWithLhdn</span>
+                    </a>
+                    <a href="/Invoices/InvoiceLists?invoiceDirection=All&LHDNStatus=Valid" class="einv-tile">
+                        <span class="einv-tile-ico"><i class="ri-checkbox-circle-line" aria-hidden="true"></i></span>
+                        <span class="einv-tile-text"><b>Validated today</b><small>Accepted by LHDN today</small></span>
+                        <span class="einv-badge einv-badge-neutral">@today.ValidatedToday</span>
+                    </a>
+                </div>
+                @if (today.Items.Count == 0)
                 {
-                    <span class="einv-badge einv-badge-danger">@Model.NeedsAttentionInvalidCount invalid</span>
+                    <p class="text-muted mb-0"><i class="ri-checkbox-circle-fill text-success me-1" aria-hidden="true"></i>Nothing needs your attention right now.</p>
                 }
-                @if (Model.NeedsAttentionTransmissionErrorCount > 0)
+                else
                 {
-                    <span class="einv-badge einv-badge-warning">@Model.NeedsAttentionTransmissionErrorCount transmission error@(Model.NeedsAttentionTransmissionErrorCount == 1 ? "" : "s")</span>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var item in today.Items)
+                        {
+                            <li class="d-flex align-items-center justify-content-between gap-2 py-2 border-bottom">
+                                <div class="min-w-0">
+                                    <div class="fw-bold text-truncate">@item.Title</div>
+                                    <div class="text-muted small">@item.Reason</div>
+                                </div>
+                                <a href="@item.Url" class="btn btn-sm @(item.ActionLabel == "View" ? "btn-outline-secondary" : "btn-outline-primary") flex-shrink-0">@item.ActionLabel</a>
+                            </li>
+                        }
+                    </ul>
+                    @if (today.MoreItems > 0)
+                    {
+                        <div class="mt-2 small"><a href="/Invoices/InvoiceLists?invoiceDirection=All&internalStatus=NeedsAttention">See all (@today.MoreItems more)</a></div>
+                    }
                 }
-                @if (Model.NeedsAttentionRejectedCount > 0)
-                {
-                    <span class="einv-badge einv-badge-warning">@Model.NeedsAttentionRejectedCount rejected</span>
-                }
-                @if (Model.NeedsAttentionAgingDraftsCount > 0)
-                {
-                    <span class="einv-badge einv-badge-neutral">@Model.NeedsAttentionAgingDraftsCount aging draft@(Model.NeedsAttentionAgingDraftsCount == 1 ? "" : "s")</span>
-                }
-            </span>
-        </a>
+            </div>
+        </section>
     }
 
     <div class="einv-kpis">
