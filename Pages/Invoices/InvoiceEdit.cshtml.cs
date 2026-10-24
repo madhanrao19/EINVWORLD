@@ -818,17 +818,20 @@ namespace eInvWorld.Pages.Invoices
                         return Page();
 
                     case "saveDraft":
-                        if (SaveDraft(invoiceJson, supplier!, customer, publicCustomer)) // ✅ Updated
+                        var wasUpdate = _context.InvoiceHeaders.Any(ih => ih.InvoiceNo == Invoice!.InvoiceNo); // before the save, or it's always true
+                        if (SaveDraft(invoiceJson, supplier!, customer, publicCustomer))
                         {
-                            var wasUpdate = _context.InvoiceHeaders
-                                .Any(ih => ih.InvoiceNo == Invoice!.InvoiceNo);
+                            // Probable duplicates only warn: the draft is saved and the user decides.
+                            var duplicates = await EINVWORLD.Helpers.DuplicateInvoiceFinder.FindForSavedAsync(_context, Invoice!.InvoiceNo, HttpContext.RequestAborted);
 
                             return new JsonResult(new
                             {
                                 success = true,
                                 draftPath = System.IO.Path.GetFileName(HttpContext.Session.GetString("DraftFilePath")), // file name only: never send server paths to the browser
                                 invoiceNo = Invoice!.InvoiceNo,
-                                isUpdate = wasUpdate
+                                isUpdate = wasUpdate,
+                                warnings = EINVWORLD.Helpers.DuplicateInvoiceFinder.Warnings(duplicates),
+                                duplicates = duplicates.Select(d => new { invoiceNo = d.InvoiceNo, uuid = d.Uuid })
                             });
                         }
 

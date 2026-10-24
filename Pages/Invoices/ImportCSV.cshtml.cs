@@ -360,6 +360,15 @@ namespace EINVWORLD.Pages.Invoices
                     previewRecord.TotalAmount = totalExclTax + totalTax;
                     previewRecord.IsValid = !previewRecord.Errors.Any();
 
+                    // Same parties as Confirm assigns; importing a row again only warns (it is still importable).
+                    int? previewSupplierId = isSelfBilled ? counterparty?.PartyInfoId : userCompany.PartyInfoId;
+                    int? previewCustomerId = isSelfBilled ? userCompany.PartyInfoId : counterparty?.PartyInfoId;
+                    int? previewPublicId = isSelfBilled || counterparty != null ? null : publicCounterparty?.PublicCustomerId;
+                    var alreadyImported = await EINVWORLD.Helpers.DuplicateInvoiceFinder.FindImportedAsync(
+                        _context, previewSupplierId, previewCustomerId, previewPublicId, firstLine.InvoiceNo, HttpContext.RequestAborted);
+                    if (alreadyImported != null)
+                        previewRecord.Warnings.Add($"Possible duplicate: {alreadyImported} was already created from invoice number {firstLine.InvoiceNo} for this buyer.");
+
                     if (previewRecord.IsValid) validLinesToKeep.AddRange(group);
 
                     PreviewRecords.Add(previewRecord);
@@ -587,6 +596,8 @@ namespace EINVWORLD.Pages.Invoices
             public string? Currency { get; set; }
             public bool IsValid { get; set; }
             public List<string> Errors { get; set; } = new();
+            /// <summary>Doesn't stop the import (e.g. a possible duplicate).</summary>
+            public List<string> Warnings { get; set; } = new();
         }
 
         public class InvoiceCsvDto

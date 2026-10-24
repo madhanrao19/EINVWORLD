@@ -453,6 +453,13 @@
 <!-- Main Form -->
 <div class="row">
     <div class="col-lg-12 einv-ci">
+        @if (TempData["DuplicateWarning"] is string duplicateWarning)
+        {
+            <div class="alert alert-warning d-flex gap-2" role="alert">
+                <i class="ri-file-copy-2-line" aria-hidden="true"></i>
+                <div><b>Possible duplicate invoice.</b> @duplicateWarning Check it before submitting, or carry on if it's intended.</div>
+            </div>
+        }
         <form asp-page="/Invoices/InvoiceEdit" method="post" id="invoice_form" class="needs-validation" novalidate>
             <input type="hidden" name="action" id="invoiceAction" />
             <input type="hidden" name="TemplateName" id="templateNameInput" value="@Model.TemplateName" />
@@ -2567,6 +2574,9 @@
                                 }
                                 // Re-check the saved draft; disables Submit again if anything still blocks
                                 window.LhdnReadiness?.refresh();
+
+                                // Possible duplicate: warn instead of the success toast (the draft is saved either way)
+                                if (window.EinvDuplicateWarning?.show(response)) return;
 
                                 // Show success message using SweetAlert
                                 const successTitle = response.isUpdate ? 'Draft Updated Successfully!' : 'Draft Saved Successfully!';
@@ -5672,4 +5682,5 @@
     <script type="module" src="~/js/template-invoice.js" asp-append-version="true"></script>
     <script src="~/js/invoices/billing-period.js" asp-append-version="true"></script>
     <script src="~/js/invoices/lhdn-readiness.js" asp-append-version="true"></script>
+    <script src="~/js/invoices/duplicate-warning.js" asp-append-version="true"></script>
 }

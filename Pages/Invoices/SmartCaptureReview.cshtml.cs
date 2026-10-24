@@ -215,6 +215,18 @@ namespace eInvWorld.Pages.Invoices
                 _logger.LogWarning(ex, "Smart Capture: auto-submit evaluation failed for document {DocumentId} — draft {InvoiceNo} was still created successfully; falls back to manual submission.", Document.Id, model.InvoiceNo);
             }
 
+            // Probable duplicate of an invoice already in the system: warn on the draft that opens next (never blocks).
+            try
+            {
+                var duplicates = await EINVWORLD.Helpers.DuplicateInvoiceFinder.FindForSavedAsync(_context, model.InvoiceNo!, ct);
+                if (duplicates.Count > 0)
+                    TempData["DuplicateWarning"] = string.Join(" ", EINVWORLD.Helpers.DuplicateInvoiceFinder.Warnings(duplicates));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Smart Capture: duplicate check failed for draft {InvoiceNo}; the draft was still created.", model.InvoiceNo);
+            }
+
             return RedirectToPage("/Invoices/InvoiceEdit", new { id = model.InvoiceNo });
         }
 
