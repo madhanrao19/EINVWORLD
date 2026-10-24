@@ -89,7 +89,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                     return;
                 }
 
-                var baseUrl = (_configuration["EmailConfiguration:EmailBaseUrls:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}/").TrimEnd('/');
+                var baseUrl = EINVWORLD.Helpers.EmailLinks.Absolute(_configuration, "/").TrimEnd('/'); // configured site address, never the request Host
                 var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
                 var body = await _emailService.LoadEmailTemplate("NewUserRegistration/AdminEmailTemplate.html", new Dictionary<string, string>
                 {

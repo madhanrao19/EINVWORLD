@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.3`** (`AppInfo:Version` in `appsettings.json`). v1.50.3 is a **patch**
+> **Current version: `v1.50.4`** (`AppInfo:Version` in `appsettings.json`). v1.50.4 is a **patch**
+> release: password-reset, confirmation and invitation emails always link to the real site address — see the dated entry below. v1.50.3 was a **patch**
 > release: two-factor sign-in is required for administrators, and demo accounts are no longer created by default — see the dated entry below. v1.50.2 was a **patch**
 > release: far fewer LHDN status calls, so no more one-minute waits on the Invoices list — see the dated entry below. v1.50.1 was a **patch**
 > release: the invoice activity log shows exactly what each edit changed, and every entry shows the right time — see the dated entry below. v1.50.0 was a **minor**
@@ -445,6 +446,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.50.4 (security: email links never follow the request's Host header)
+
+From an external security review of v1.50.1:
+- **Fix (reset-link poisoning):** password-reset, email-confirmation, change-email and company-invitation emails built their
+  link from the Host header of the request that triggered them. Someone reaching the server directly (bypassing Cloudflare)
+  with a forged Host could make a reset email whose link, and token, pointed at their own site. Links now always use the
+  configured site address (`EmailConfiguration:EmailBaseUrls:BaseUrl`: www.einvworld.com on Production,
+  staging.einvworld.com on Staging), and an email is refused rather than sent with a request-based link if that setting is missing.
+- Pages fixed: Forgot Password, Register, Resend confirmation, external-login sign-up, change email (both links), company
+  user invitations, and the Confirm Email welcome message.
+- No database change. Tests check the link building and that every environment has a site address.
 
 ## 📅 2026-10-24 — v1.50.3 (security: admin 2FA required, demo accounts opt-in)
 

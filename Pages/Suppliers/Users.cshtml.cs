@@ -138,8 +138,8 @@ namespace eInvWorld.Pages.Suppliers
 
             var (invitation, rawToken) = await _invitationService.CreateAsync(partyInfoId, email, InviteCompanyRoleId, userId);
 
-            var acceptUrl = Url.Page("/Suppliers/AcceptInvite", pageHandler: null,
-                values: new { id = invitation.CompanyInvitationId, token = rawToken }, protocol: Request.Scheme);
+            var acceptUrl = EINVWORLD.Helpers.EmailLinks.EmailLink(this, Url.Page("/Suppliers/AcceptInvite", pageHandler: null,
+                values: new { id = invitation.CompanyInvitationId, token = rawToken }));
 
             var inviter = await _userManager.FindByIdAsync(userId);
             var roleName = InviteCompanyRoleId.HasValue
