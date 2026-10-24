@@ -47,6 +47,25 @@ namespace EINVWORLD.Helpers
         }
 
         /// <summary>
+        /// LHDN consolidated e-Invoice rule for normal (not self-billed) documents. Classification 004 (Consolidated e-Invoice)
+        /// is only for the General Public buyer (EI00000000010); LHDN rejects it with a real buyer (ERR250, EINV100576 on
+        /// preprod). The reverse: General Public with no buyer ID ("NA") is the consolidated buyer, so it needs 004 (EINV100579/
+        /// 580 came back Invalid with 022). General Public with a real ID (an individual's NRIC/passport) is left alone.
+        /// Null when the combination is allowed.
+        /// </summary>
+        public static string? ConsolidatedClassificationError(string? docTypeCode, string? buyerTin, string? buyerIdNo, string? classificationCode)
+        {
+            if (IsSelfBilledDocType(docTypeCode) || string.IsNullOrWhiteSpace(classificationCode)) return null;
+            bool generalPublic = string.Equals(buyerTin?.Trim(), "EI00000000010", StringComparison.OrdinalIgnoreCase);
+            if (classificationCode == "004" && !generalPublic)
+                return "classification 004 (Consolidated e-Invoice) is only for the General Public buyer (EI00000000010). Choose the item's real classification, or the General Public buyer for a consolidated invoice.";
+            bool noBuyerId = string.IsNullOrWhiteSpace(buyerIdNo) || string.Equals(buyerIdNo.Trim(), "NA", StringComparison.OrdinalIgnoreCase);
+            if (generalPublic && noBuyerId && classificationCode != "004")
+                return "a General Public buyer (EI00000000010) without an ID number is only accepted on a consolidated e-Invoice, which needs classification 004. Use 004, or choose the real buyer.";
+            return null;
+        }
+
+        /// <summary>
         /// The single source of truth for "whose TIN/token acts on this document": for self-billed
         /// documents (11–14) it is the Customer's TIN; otherwise the Supplier's TIN. Consolidates logic
         /// that was previously copy-pasted across the sync helpers and background workers.

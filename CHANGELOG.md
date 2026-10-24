@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.7`** (`AppInfo:Version` in `appsettings.json`). v1.50.7 is a **patch**
+> **Current version: `v1.50.8`** (`AppInfo:Version` in `appsettings.json`). v1.50.8 is a **patch**
+> release: Ready for LHDN catches the consolidated e-Invoice rule (General Public buyer and classification 004) — see the dated entry below. v1.50.7 was a **patch**
 > release: clearing or exporting the system logs is recorded in the audit trail — see the dated entry below. v1.50.6 was a **patch**
 > release: if Cloudflare's CAPTCHA check can't be reached, sign-in and the public forms refuse politely instead of erroring — see the dated entry below. v1.50.5 was a **patch**
 > release: success messages on the Companies and Leads lists are shown as text — see the dated entry below. v1.50.4 was a **patch**
@@ -449,6 +450,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.8 (Ready for LHDN: consolidated e-Invoice rule)
+
+On Staging, EINV100579 and EINV100580 were shown "Ready for LHDN" and then came back Invalid from LHDN. Both had the General
+Public buyer (EI00000000010, no ID number) with classification 022. Earlier, EINV100576 (a real buyer with classification 004)
+was rejected by LHDN with ERR250, "This combination is not applicable for consolidated e-Invoice".
+- The Ready for LHDN check (and so every Submit, bulk submit and background submit) now refuses both combinations on normal,
+  credit, debit and refund notes, and points at the item's Classification:
+  - classification **004 (Consolidated e-Invoice)** with a real buyer;
+  - the **General Public buyer without an ID number** with any classification other than 004.
+- General Public with a real ID number (an individual buyer's NRIC or passport) is not affected. Self-billed documents keep
+  their own existing rule.
+- No database change. Unit tests cover each combination, including a public-customer buyer.
 
 ## 📅 2026-10-25 — v1.50.7 (system logs: clearing and exporting are audited)
 
