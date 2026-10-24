@@ -131,7 +131,7 @@ namespace EINVWORLD.Tests.Integration
     /// behaviour under test.</summary>
     internal sealed class NullAuditService : IAuditService
     {
-        public Task WriteAsync(string action, AuditEntry entry, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<bool> WriteAsync(string action, AuditEntry entry, CancellationToken ct = default) => Task.FromResult(true);
         public Task<AuditVerificationResult> VerifyChainAsync(CancellationToken ct = default) =>
             Task.FromResult(new AuditVerificationResult(true, 0, null, "n/a"));
     }

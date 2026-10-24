@@ -40,7 +40,7 @@ namespace EINVWORLD.Tests.Integration
 
             var audit = CreateService();
 
-            await audit.WriteAsync("Test.RowOne", new AuditEntry { InvoiceNo = "EINV-TEST-1" });
+            Assert.True(await audit.WriteAsync("Test.RowOne", new AuditEntry { InvoiceNo = "EINV-TEST-1" })); // reports success
             await audit.WriteAsync("Test.RowTwo", new AuditEntry { InvoiceNo = "EINV-TEST-2" });
             await audit.WriteAsync("Test.RowThree", new AuditEntry { InvoiceNo = "EINV-TEST-3" });
 
@@ -49,6 +49,19 @@ namespace EINVWORLD.Tests.Integration
             Assert.True(result.Ok, result.Message);
             Assert.Null(result.FirstBrokenId);
             Assert.True(result.RowsChecked >= 3);
+        }
+
+        [Fact]
+        public async Task WriteAsync_Reports_Failure_Instead_Of_Throwing()
+        {
+            // Clearing the system logs is refused when this returns false, so a broken audit store can't hide the deletion.
+            var broken = new AuditService(new ThrowingScopeFactory(), new HttpContextAccessor(), NullLogger<AuditService>.Instance);
+            Assert.False(await broken.WriteAsync("Test.Unwritable", new AuditEntry()));
+        }
+
+        private sealed class ThrowingScopeFactory : IServiceScopeFactory
+        {
+            public IServiceScope CreateScope() => throw new System.InvalidOperationException("audit store unavailable");
         }
     }
 }
