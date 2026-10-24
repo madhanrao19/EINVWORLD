@@ -7,6 +7,10 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+# Least privilege: the job only checks out, builds, tests and uploads an artifact (artifact upload uses its own runtime token).
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: windows-latest
