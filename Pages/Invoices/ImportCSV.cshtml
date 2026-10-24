@@ -197,6 +197,15 @@
                                     else
                                     {
                                         <span class="text-muted">Ready to import and generate JSON</span>
+                                        @if (record.Warnings.Any())
+                                        {
+                                            <ul class="text-warning mb-0 ps-3 small">
+                                                @foreach (var warning in record.Warnings)
+                                                {
+                                                    <li>@warning</li>
+                                                }
+                                            </ul>
+                                        }
                                     }
                                 </td>
                             </tr>
