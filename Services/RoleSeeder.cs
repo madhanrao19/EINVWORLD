@@ -44,7 +44,7 @@ namespace eInvWorld.Services
             // enabled. They ship guessable passwords, so this MUST be off in Production (set
             // Seeding:SeedDefaultUsers=false there). Existing installs are unaffected — SeedUserAsync only
             // creates a user when that email doesn't already exist.
-            if (!_config.GetValue<bool>("Seeding:SeedDefaultUsers", true))
+            if (!_config.GetValue<bool>("Seeding:SeedDefaultUsers", false)) // opt-in: the demo passwords are public
             {
                 _logger.LogInformation("Skipping default-user seeding (Seeding:SeedDefaultUsers=false).");
                 return;

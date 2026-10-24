@@ -37,6 +37,26 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void Admin_2fa_is_enforced_and_demo_users_are_never_seeded()
+        {
+            // The base file used to set EnforceAdminMfa=false, which Production inherited (the code default is true).
+            var config = LoadProduction();
+            Assert.True(config.GetValue("Security:EnforceAdminMfa", false));
+            Assert.False(config.GetValue("Seeding:SeedDefaultUsers", true));
+        }
+
+        [Fact]
+        public void Base_settings_never_seed_demo_users_or_skip_admin_2fa()
+        {
+            // Staging and Development read the base file too, so it must be safe on its own.
+            var dir = new DirectoryInfo(System.AppContext.BaseDirectory);
+            while (dir != null && !File.Exists(Path.Combine(dir.FullName, "EINVWORLD.csproj"))) dir = dir.Parent;
+            var baseOnly = new ConfigurationBuilder().AddJsonFile(Path.Combine(dir!.FullName, "appsettings.json")).Build();
+            Assert.True(baseOnly.GetValue("Security:EnforceAdminMfa", false));
+            Assert.False(baseOnly.GetValue("Seeding:SeedDefaultUsers", true));
+        }
+
+        [Fact]
         public void Production_keeps_both_serilog_sinks()
         {
             var config = LoadProduction();
