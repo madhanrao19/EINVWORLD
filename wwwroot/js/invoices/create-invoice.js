@@ -836,6 +836,8 @@
 
                                 // Refresh the readiness checklist so "Draft Saved" flips green immediately
                                 InvoiceManager.updateSummary();
+                                // Re-check the saved draft; disables Submit again if anything still blocks
+                                window.LhdnReadiness?.refresh();
 
                                 // Show success message using SweetAlert
                                 const successTitle = response.isUpdate ? 'Draft Updated Successfully!' : 'Draft Saved Successfully!';
@@ -1776,6 +1778,15 @@
                 ErrorHandler.show('An error occurred while proceeding to the next step. Please try again.', 'error');
             }
         }
+
+        // Jump straight to a step (Ready for LHDN "Fix" links).
+        window.goToStep = function (n) {
+            if (n < 1 || n > totalSteps || n === currentStep) return;
+            document.getElementById(`step${currentStep}`).classList.add('d-none');
+            currentStep = n;
+            document.getElementById(`step${currentStep}`).classList.remove('d-none');
+            if (InvoiceManager && InvoiceManager.updateProgress) InvoiceManager.updateProgress();
+        };
 
         function prevStep() {
             if (currentStep > 1) {
