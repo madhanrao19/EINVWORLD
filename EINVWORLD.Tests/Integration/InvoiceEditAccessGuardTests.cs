@@ -26,7 +26,7 @@ namespace EINVWORLD.Tests.Integration
         private readonly SqlServerFixture _fx;
         public InvoiceEditAccessGuardTests(SqlServerFixture fx) => _fx = fx;
 
-        private static async Task<PartyInfo> CreateValidPartyInfoAsync(eInvWorld.Data.ApplicationDbContext ctx, string name)
+        internal static async Task<PartyInfo> CreateValidPartyInfoAsync(eInvWorld.Data.ApplicationDbContext ctx, string name)
         {
             const string regTypeCode = "TSTREG";
             const string stateCodeValue = "TSTSTATE";
@@ -56,7 +56,7 @@ namespace EINVWORLD.Tests.Integration
             };
         }
 
-        private static async Task<string> CreateUserAsync(eInvWorld.Data.ApplicationDbContext ctx, string label)
+        internal static async Task<string> CreateUserAsync(eInvWorld.Data.ApplicationDbContext ctx, string label)
         {
             var id = Guid.NewGuid().ToString();
             ctx.Users.Add(new ApplicationUser
@@ -73,14 +73,14 @@ namespace EINVWORLD.Tests.Integration
             return id;
         }
 
-        private static ClaimsPrincipal PrincipalFor(string userId, string userName) =>
+        internal static ClaimsPrincipal PrincipalFor(string userId, string userName) =>
             new(new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId),
                 new Claim(ClaimTypes.Name, userName),
             }, "TestAuth"));
 
-        private static async Task<string> SeedStatusAsync(eInvWorld.Data.ApplicationDbContext ctx)
+        internal static async Task<string> SeedStatusAsync(eInvWorld.Data.ApplicationDbContext ctx)
         {
             var existing = await ctx.Set<Status>().Select(s => s.StatusCode).FirstOrDefaultAsync();
             if (!string.IsNullOrEmpty(existing)) return existing;
