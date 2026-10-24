@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.2`** (`AppInfo:Version` in `appsettings.json`). v1.50.2 is a **patch**
+> **Current version: `v1.50.3`** (`AppInfo:Version` in `appsettings.json`). v1.50.3 is a **patch**
+> release: two-factor sign-in is required for administrators, and demo accounts are no longer created by default — see the dated entry below. v1.50.2 was a **patch**
 > release: far fewer LHDN status calls, so no more one-minute waits on the Invoices list — see the dated entry below. v1.50.1 was a **patch**
 > release: the invoice activity log shows exactly what each edit changed, and every entry shows the right time — see the dated entry below. v1.50.0 was a **minor**
 > release: saving or importing an invoice that looks like one you already have shows a possible-duplicate warning — see the dated entry below. v1.49.3 was a **patch**
@@ -444,6 +445,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.50.3 (security: admin 2FA required, demo accounts opt-in)
+
+From an external security review of v1.50.1:
+- **Admin two-factor sign-in is now required everywhere** (`Security:EnforceAdminMfa = true`). The base settings file turned
+  it off, and Production inherited that. An Admin without 2FA is sent to the authenticator setup after signing in until they
+  enrol; nothing else is blocked and there is no lockout. `Security__EnforceAdminMfa=false` on the server remains the
+  emergency escape hatch.
+- **Demo accounts (admin@ / supplier@ / buyer@einvworld.com) are no longer created unless an environment turns
+  `Seeding:SeedDefaultUsers` on.** Their passwords are public. Accounts that already exist are not touched: on Staging, delete
+  them or change their passwords.
+- Tests now fail if Production or the base file ever turns admin 2FA off or demo seeding on.
+- No database change.
 
 ## 📅 2026-10-24 — v1.50.2 (fewer LHDN calls: no more 429 waits)
 
