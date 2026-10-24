@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.5`** (`AppInfo:Version` in `appsettings.json`). v1.50.5 is a **patch**
+> **Current version: `v1.50.6`** (`AppInfo:Version` in `appsettings.json`). v1.50.6 is a **patch**
+> release: if Cloudflare's CAPTCHA check can't be reached, sign-in and the public forms refuse politely instead of erroring — see the dated entry below. v1.50.5 was a **patch**
 > release: success messages on the Companies and Leads lists are shown as text — see the dated entry below. v1.50.4 was a **patch**
 > release: password-reset, confirmation and invitation emails always link to the real site address — see the dated entry below. v1.50.3 was a **patch**
 > release: two-factor sign-in is required for administrators, and demo accounts are no longer created by default — see the dated entry below. v1.50.2 was a **patch**
@@ -447,6 +448,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.6 (CAPTCHA check: no error page when Cloudflare is unreachable)
+
+From an external security review of v1.50.1:
+- If Cloudflare's Turnstile (CAPTCHA) verification couldn't be reached or answered with something unexpected, sign-in and the
+  other protected forms crashed with an error page. Now the form is refused with the normal "verification failed" message and a
+  warning is logged. It still fails closed: nothing gets through without a successful check.
+- The verification address is read from `Turnstile:VerifyUrl` (it was hardcoded), falling back to Cloudflare's address.
+- No database change. Unit tests cover success, rejection, missing token, outage, bad status, bad response and the address.
 
 ## 📅 2026-10-24 — v1.50.5 (security: success messages shown as text)
 
