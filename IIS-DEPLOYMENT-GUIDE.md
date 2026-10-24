@@ -472,15 +472,12 @@ environment variable).
 
 ## Part 14 — First login + enrol Admin 2FA
 
-The app **supports** two-factor authentication for administrator accounts, but it ships **optional/off**
-(`Security:EnforceAdminMfa = false` in `appsettings.json`) — an admin can sign in normally without ever
-enrolling. **We strongly recommend turning enforcement on for Production** (see the box below).
+Two-factor authentication is **required for administrator accounts** (`Security:EnforceAdminMfa = true` in
+`appsettings.json`, since v1.50.3): an admin without 2FA is sent to the authenticator setup at first sign-in.
 
 1. On the login page, sign in with the **admin** account given to you.
-2. **If enforcement is ON** (see below) and this is the account's first login: you'll be redirected to a
-   **"Configure authenticator app"** page (this is expected, not an error). **If enforcement is OFF**
-   (the shipped default), you land straight on the Dashboard — you can still enrol voluntarily any time
-   from **My Profile → Security**.
+2. On the account's first login you'll be redirected to a **"Configure authenticator app"** page (this is
+   expected, not an error).
 3. On your phone install **Google Authenticator** (or Microsoft Authenticator).
 4. **Scan the QR code** shown on screen, then type the **6-digit code** from the app and submit.
 5. **Save the recovery codes** it shows you somewhere safe — they're your backup if you lose the phone.
@@ -488,10 +485,8 @@ enrolling. **We strongly recommend turning enforcement on for Production** (see 
 
 ✅ **You should see:** the Dashboard after entering the code (or immediately, if 2FA isn't enrolled/enforced).
 
-> **To require 2FA for every admin (recommended for Production):** add the env var
-> `Security__EnforceAdminMfa` = `true` and restart IIS. Any admin without 2FA enabled is then redirected
-> to the authenticator-setup page until they enrol — there is **no hard lockout** either way, they always
-> reach the enrolment page and get recovery codes.
+> **Emergency only:** the env var `Security__EnforceAdminMfa` = `false` (then restart IIS) turns enforcement off.
+> There is **no hard lockout** with it on — admins always reach the enrolment page and get recovery codes.
 
 ---
 
