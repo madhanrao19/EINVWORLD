@@ -48,6 +48,11 @@ namespace EINVWORLD.Helpers
             if (invoice.InternalStatusId != "Draft")
                 return (false, $"Invoice {invoiceNo} is not in Draft status.");
 
+            // Same local pre-submit check as the Submit buttons; never retried, since a retry can't fix the draft.
+            var notReady = InvoiceReadinessCheck.BlockingSummary(await InvoiceReadinessCheck.CheckAsync(_context, invoiceNo) ?? new());
+            if (notReady != null)
+                throw new SubmissionBlockedException($"Invoice {invoiceNo}: {notReady}");
+
             var jsonPath = _jsonFileService.GetExistingFilePath(invoiceNo);
             if (string.IsNullOrEmpty(jsonPath) || !File.Exists(jsonPath))
                 return (false, $"Draft JSON for invoice {invoiceNo} does not exist.");

@@ -723,7 +723,6 @@ namespace eInvWorld.Pages.Invoices
 
                 if (Invoice != null && supplier != null && Invoice.InvoiceLines != null)
                 {
-                    var isSelfBilled = IsSelfBilled(Invoice.DocTypeCode ?? "");
                     var supplierTin = supplier.TIN ?? "";
 
                     var defaultClassificationCode = EINVWORLD.Helpers.TinHelper.DefaultClassificationCode(Invoice.DocTypeCode, supplierTin);
@@ -733,28 +732,9 @@ namespace eInvWorld.Pages.Invoices
                         if (string.IsNullOrWhiteSpace(line.ClassificationCode))
                             line.ClassificationCode = defaultClassificationCode;
 
-                        if (isSelfBilled)
-                        {
-                            var generalPublicValidCodes = new[] { "004" };
-                            var foreignSupplierValidCodes = new[]
-                            {
-                        "010","011","033","034","035","036",
-                        "037","038","039","040","041","045"
-                    };
-
-                            if (supplierTin == "EI00000000010")
-                            {
-                                if (!generalPublicValidCodes.Contains(line.ClassificationCode))
-                                    ModelState.AddModelError("",
-                                        "For self-billed with supplier: General Public, classification code must be 004.");
-                            }
-                            else if (supplierTin == "EI00000000030")
-                            {
-                                if (!foreignSupplierValidCodes.Contains(line.ClassificationCode))
-                                    ModelState.AddModelError("",
-                                        "For self-billed with supplier: Foreign Supplier, classification code must be one of: 010, 011, 033, 034, 035, 036, 037, 038, 039, 040, 041, 045.");
-                            }
-                        }
+                        var selfBilledError = EINVWORLD.Helpers.TinHelper.SelfBilledClassificationError(Invoice.DocTypeCode, supplierTin, line.ClassificationCode);
+                        if (selfBilledError != null)
+                            ModelState.AddModelError("", selfBilledError);
 
                         if (line.Taxes != null)
                         {
@@ -1208,14 +1188,16 @@ namespace eInvWorld.Pages.Invoices
                     return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
                 }
 
-                var issueDate = existingInvoice.IssueDate;
                 var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
-                if ((now - issueDate)?.TotalDays > 3)
+
+                // Ready for LHDN: every local rule LHDN would reject on (includes the 3-day issue-date limit).
+                var readiness = await EINVWORLD.Helpers.InvoiceReadinessCheck.CheckAsync(_context, invoiceNo) ?? new();
+                var notReady = EINVWORLD.Helpers.InvoiceReadinessCheck.BlockingSummary(readiness);
+                if (notReady != null)
                 {
-                    var msg = $"The invoice issue date ({issueDate:dd-MMM-yyyy}) is more than 3 days old. Please create a new invoice.";
-                    _logger.LogWarning("[Validation] Invoice too old to submit: " + msg);
+                    _logger.LogWarning("[Validation] Submit refused for {InvoiceNo}: not ready for LHDN.", invoiceNo);
                     return isAjax
-                        ? new JsonResult(new { success = false, message = msg })
+                        ? new JsonResult(new { success = false, message = notReady, readiness })
                         : Page();
                 }
 
@@ -1385,9 +1367,7 @@ namespace eInvWorld.Pages.Invoices
             return new[] { "11", "12", "13", "14" }.Contains(docTypeCode);
         }
 
-        // Credit / Debit / Refund notes (and their self-billed versions) reference an original invoice's UUID.
-        private static bool IsAdjustment(string? docTypeCode) =>
-            new[] { "02", "03", "04", "12", "13", "14" }.Contains(docTypeCode);
+        private static bool IsAdjustment(string? docTypeCode) => EINVWORLD.Helpers.TinHelper.IsAdjustmentDocType(docTypeCode);
 
         // ✅ Updated signature
         private InputModels.InvoiceHeader CreateInvoiceHeader(
@@ -1892,6 +1872,23 @@ namespace eInvWorld.Pages.Invoices
                     message = "Error checking template name. Please try again."
                 });
             }
+        }
+
+        /// <summary>"Ready for LHDN" check of the saved draft, for the Step 3 panel. The Submit handlers run the same check.</summary>
+        public async Task<JsonResult> OnGetReadinessAsync(string invoiceNo)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceNo) || !await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, invoiceNo))
+                return new JsonResult(new { success = false, message = "Invoice not found." });
+            var items = await EINVWORLD.Helpers.InvoiceReadinessCheck.CheckAsync(_context, invoiceNo, HttpContext.RequestAborted);
+            if (items == null)
+                return new JsonResult(new { success = false, message = "Save the draft first." });
+            return new JsonResult(new
+            {
+                success = true,
+                ready = items.All(i => !i.Blocking),
+                sections = EINVWORLD.Helpers.InvoiceReadinessCheck.Sections,
+                items = items.Select(i => new { section = i.Section, blocking = i.Blocking, message = i.Message, field = i.Field })
+            });
         }
 
         // Shipping Recipient "Validate with LHDN" - same underlying ILHDNApiService.ValidateTaxpayerAsync
