@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.48.1`** (`AppInfo:Version` in `appsettings.json`). v1.48.1 is a **patch**
+> **Current version: `v1.48.2`** (`AppInfo:Version` in `appsettings.json`). v1.48.2 is a **patch**
+> release: Dashboard counts never include other companies' invoices through a shared LHDN placeholder party — see the dated entry below. v1.48.1 was a **patch**
 > release: a "Ready for LHDN" panel on Create and Edit links every problem to its field — see the dated entry below. v1.48.0 was a **minor**
 > release: every submit checks the draft is "Ready for LHDN" first — see the dated entry below. v1.47.54 was a **patch**
 > release: Submit from Edit Invoice uses the issuing company's TIN — see the dated entry below. v1.47.53 was a **patch**
@@ -436,6 +437,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.48.2 (Dashboard counts stay within your own companies)
+
+- **Fix:** a user linked to a shared LHDN placeholder party (General Public, Foreign Buyer / Supplier, Government) had that
+  party counted as one of their companies on the Dashboard, so its cards, charts and Needs Attention counts included other
+  companies' invoices with that party. Those parties are now left out, the same rule the Invoices list already used.
+- No database change. Integration test added.
 
 ## 📅 2026-10-24 — v1.48.1 (Ready for LHDN panel on Create e-Invoice and Edit Invoice)
 
