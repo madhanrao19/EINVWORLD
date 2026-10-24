@@ -440,14 +440,15 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
 
 ## 5. Security
 
-- **Admin 2FA is optional by default** (`Security:EnforceAdminMfa = false` in `appsettings.json`) —
-  Admins can self-enrol voluntarily from My Profile, but are not forced. **Recommended: set
-  `Security__EnforceAdminMfa = true` on Production** so an admin without 2FA is redirected to the
-  authenticator-setup page until they enrol (no hard lockout either way — recovery codes always work).
+- **Admin 2FA is enforced** (`Security:EnforceAdminMfa = true` in `appsettings.json`, since v1.50.3): an Admin without
+  2FA is redirected to the authenticator-setup page after signing in until they enrol. There is no hard lockout (the
+  whole /Identity area stays reachable, recovery codes always work). Emergency escape hatch only:
+  `Security__EnforceAdminMfa = false` as a server environment variable.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
-- **Demo users:** `Seeding:SeedDefaultUsers` defaults to **true** and seeds `admin@`/`supplier@`/`buyer@einvworld.com`
-  with well-known passwords. **Set `Seeding__SeedDefaultUsers = false` on Production.**
+- **Demo users:** `Seeding:SeedDefaultUsers` is **off** by default (v1.50.3). When turned on it seeds `admin@`/`supplier@`/
+  `buyer@einvworld.com` with well-known passwords, so only enable it for a throwaway database. Accounts that already exist
+  are never changed by the setting: on a public site (Staging included) delete the demo accounts or change their passwords.
 - **General-TIN memberships (v1.47.11, once per database):** run `scripts/Remove-GeneralTinMemberships.sql`
   (step 1 preview, then step 2 after a backup). No user should belong to a General Public / Foreign Buyer /
   Foreign Supplier / Government placeholder company.
