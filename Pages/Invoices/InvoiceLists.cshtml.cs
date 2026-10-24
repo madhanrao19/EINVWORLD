@@ -1581,6 +1581,33 @@ namespace eInvWorld.Pages.Invoices
         // (bulk-submit-invoice.js) loops the selected draft rows one request at a time so every invoice is
         // independently claimed, per-TIN authorised and payload-hash idempotent — then aggregates the
         // per-invoice outcome (mirroring the bulk-delete pattern). Drafts only.
+        /// <summary>Most drafts "Check selected" looks at in one request.</summary>
+        public const int MaxBulkReadiness = 100;
+
+        /// <summary>
+        /// "Check selected" on the Draft tab: the same Ready-for-LHDN check Submit runs, for each selected draft, so Finance
+        /// can submit only the ready ones. Read-only; drafts the user can't open are reported as not found.
+        /// </summary>
+        public async Task<IActionResult> OnPostBulkReadinessAsync([FromBody] List<string>? invoiceNos)
+        {
+            var nos = (invoiceNos ?? new()).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct().Take(MaxBulkReadiness).ToList();
+            var results = new List<object>();
+            foreach (var no in nos)
+            {
+                var items = await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(User, _context, no)
+                    ? await EINVWORLD.Helpers.InvoiceReadinessCheck.CheckAsync(_context, no, HttpContext.RequestAborted)
+                    : null;
+                var first = items?.FirstOrDefault(i => i.Blocking);
+                results.Add(new
+                {
+                    invoiceNo = no,
+                    ready = items != null && first == null,
+                    issue = items == null ? "Invoice not found." : first?.Message,
+                });
+            }
+            return new JsonResult(new { success = true, results });
+        }
+
         public async Task<IActionResult> OnPostBulkSubmitOneAsync([FromBody] DeleteInvoiceInput input)
         {
             if (input == null || string.IsNullOrWhiteSpace(input.InvoiceNo))

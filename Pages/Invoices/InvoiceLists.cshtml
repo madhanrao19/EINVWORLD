@@ -582,6 +582,9 @@
                         <span class="einv-bulk-hint d-none d-sm-inline" id="bulkSelectedTotal"></span>
                         @if (Model.invoiceDirection == "Draft")
                         {
+                            <button id="bulkCheckReadyBtn" class="btn btn-outline-primary btn-sm d-none" title="Check whether the selected drafts are ready for LHDN">
+                                <i class="ri-checkbox-multiple-line"></i> Check selected
+                            </button>
                             <button id="bulkSubmitBtn" class="btn btn-primary btn-sm d-none" title="Submit the selected draft invoices to LHDN">
                                 <i class="ri-send-plane-fill"></i> Submit to LHDN
                             </button>
@@ -1310,6 +1313,7 @@
     <script type="module" src="~/js/submit-invoice.js" asp-append-version="true"></script>
 
     <script src="~/js/bulk-submit-invoice.js" asp-append-version="true"></script>
+    <script src="~/js/bulk-check-ready.js" asp-append-version="true"></script>
     <script src="~/js/bulk-validate-invoice.js" asp-append-version="true"></script>
     <script src="~/js/bulk-send-to-buyers.js" asp-append-version="true"></script>
     <script type="module" src="~/js/delete-invoice.js" asp-append-version="true"></script>
@@ -1727,7 +1731,7 @@
     //  2) Make the header "select all" checkbox actually select/deselect every row + reflect an
     //     indeterminate state. No PageModel/query/permission/API change.
     (function () {
-        var bulkIds = ['bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn', 'bulkValidateBtn', 'bulkSendToBuyersBtn'];
+        var bulkIds = ['bulkCheckReadyBtn', 'bulkSubmitBtn', 'bulkDeleteBtn', 'bulkCancelBtn', 'bulkRejectBtn', 'bulkValidateBtn', 'bulkSendToBuyersBtn'];
 
         function rowCheckboxes() { return Array.prototype.slice.call(document.querySelectorAll('.invoice-checkbox')); }
 
