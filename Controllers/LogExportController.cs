@@ -12,10 +12,15 @@ namespace eInvWorld.Controllers
     public class LogExportController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
-        public LogExportController(IConfiguration configuration)
+        /// <summary>Most rows one export returns (newest first); narrow the filters for older logs.</summary>
+        public const int MaxExportRows = 50000;
+
+        public LogExportController(IConfiguration configuration, EINVWORLD.Services.Audit.IAuditService audit)
         {
             _configuration = configuration;
+            _audit = audit;
         }
 
         [HttpGet("download")]
@@ -40,7 +45,7 @@ namespace eInvWorld.Controllers
                 await connection.OpenAsync();
 
                 // Build dynamic SQL using UserName instead of [User]
-                var sql = new StringBuilder("SELECT TimeStamp, UserName, IPAddress, [Level], Message FROM SystemLogs WHERE 1=1 ");
+                var sql = new StringBuilder("SELECT TOP (@max) TimeStamp, UserName, IPAddress, [Level], Message FROM SystemLogs WHERE 1=1 ");
 
                 if (!string.IsNullOrEmpty(searchTerm))
                     sql.Append("AND (Message LIKE @search OR UserName LIKE @search OR IPAddress LIKE @search) ");
@@ -59,6 +64,7 @@ namespace eInvWorld.Controllers
                 using (var command = new SqlCommand(sql.ToString(), connection))
                 {
                     // Add Parameters to prevent SQL Injection
+                    command.Parameters.AddWithValue("@max", MaxExportRows);
                     if (!string.IsNullOrEmpty(searchTerm)) command.Parameters.AddWithValue("@search", $"%{searchTerm}%");
                     if (!string.IsNullOrEmpty(level)) command.Parameters.AddWithValue("@level", level);
                     if (startDate.HasValue) command.Parameters.AddWithValue("@start", startDate.Value);
@@ -86,6 +92,12 @@ namespace eInvWorld.Controllers
                     }
                 }
             }
+
+            // Logs hold user names and IP addresses: record who exported what.
+            await _audit.WriteAsync("SystemLogsExported", new EINVWORLD.Services.Audit.AuditEntry
+            {
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { format, searchTerm, level, startDate, endDate, maxRows = MaxExportRows })
+            }, HttpContext.RequestAborted);
 
             var bytes = Encoding.UTF8.GetBytes(content.ToString());
             string extension = isCsv ? "csv" : "txt";
