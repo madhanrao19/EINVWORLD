@@ -127,6 +127,37 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task Save_Guard_Never_Lets_A_General_Tin_Membership_Issue_Or_Receive_As_Yours()
+        {
+            // InvoiceWriteGuard counted a shared LHDN placeholder party as the user's own company, so a member could save a
+            // normal invoice "from" General Public (or a self-billed one "to" it), which every tenant's invoices carry.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var own = await CreateValidPartyInfoAsync(ctx, "Guard GT Own Co");
+            ctx.PartyInfos.Add(own);
+            var general = await ctx.PartyInfos.FirstOrDefaultAsync(pi => pi.TIN == "EI00000000010");
+            if (general == null)
+            {
+                general = await CreateValidPartyInfoAsync(ctx, "General Public");
+                general.TIN = "EI00000000010";
+                ctx.PartyInfos.Add(general);
+            }
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "guard-gt-user");
+            var userName = (await ctx.Users.FindAsync(userId))!.UserName!;
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = own.PartyInfoId, HasCompanyAccess = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = general.PartyInfoId, HasCompanyAccess = true });
+            await ctx.SaveChangesAsync();
+
+            var user = PrincipalFor(userId, userName);
+            var buyers = new eInvWorld.Services.BuyerService(ctx);
+            Assert.NotNull(await InvoiceWriteGuard.CheckAsync(user, ctx, buyers, null, "01", general.PartyInfoId, own.PartyInfoId, null)); // issue as General Public
+            Assert.NotNull(await InvoiceWriteGuard.CheckAsync(user, ctx, buyers, null, "11", general.PartyInfoId, general.PartyInfoId, null)); // self-billed "to" it
+            Assert.Null(await InvoiceWriteGuard.CheckAsync(user, ctx, buyers, null, "11", general.PartyInfoId, own.PartyInfoId, null));     // own self-billed: fine
+        }
+
+        [Fact]
         public async Task Background_Submit_Refuses_A_Draft_That_Is_Not_Ready_And_Is_Never_Retried()
         {
             // Job submits (retries, recurring and Smart Capture auto-submit) run the same Ready-for-LHDN check as

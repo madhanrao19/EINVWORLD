@@ -839,6 +839,9 @@
                                 // Re-check the saved draft; disables Submit again if anything still blocks
                                 window.LhdnReadiness?.refresh();
 
+                                // Possible duplicate: warn instead of the success toast (the draft is saved either way)
+                                if (window.EinvDuplicateWarning?.show(response)) return;
+
                                 // Show success message using SweetAlert
                                 const successTitle = response.isUpdate ? 'Draft Updated Successfully!' : 'Draft Saved Successfully!';
                                 Swal.fire({
