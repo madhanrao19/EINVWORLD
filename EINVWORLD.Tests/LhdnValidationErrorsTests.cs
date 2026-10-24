@@ -7,9 +7,10 @@ using Xunit;
 namespace EINVWORLD.Tests
 {
     /// <summary>
-    /// LHDN validation output → what the invoice screens show. The samples follow the MyInvois SDK shapes;
-    /// the "errorReference" field is a guess at the 24 Oct 2026 error-reference change and stands in for any
-    /// field LHDN adds later — replace with a captured pre-production response once one is available.
+    /// LHDN validation output → what the invoice screens show. <see cref="Preprod_Err250"/> is a real LHDN
+    /// pre-production response (EINV100576 on Staging, 24 Oct 2026, the day the SDK error-reference change went
+    /// live): the reference arrives inside the inner error's text. The "errorReference" field in DetailsBody
+    /// stays as a defensive case for a field LHDN might add later.
     /// </summary>
     public class LhdnValidationErrorsTests
     {
@@ -52,6 +53,33 @@ namespace EINVWORLD.Tests
             Assert.Equal("CV301", errors[1].errorCode);
             Assert.Empty(errors[1].references);
             Assert.Empty(errors[1].innerErrors);
+        }
+
+        // Captured 2026-10-24 from LHDN pre-production (GET /documents/{uuid}/details → validationResults), as stored.
+        private const string Preprod_Err250 = @"{
+          ""status"": ""Invalid"",
+          ""validationSteps"": [
+            { ""status"": ""Invalid"", ""name"": ""Step05-Taxpayer Profile Validator"",
+              ""error"": { ""propertyName"": null, ""propertyPath"": null, ""errorCode"": ""Error05"",
+                ""error"": ""Step05-Invalid Taxpayer Profile Validator"",
+                ""innerError"": [ { ""propertyName"": ""CustomerIdentity"",
+                  ""propertyPath"": ""document.Invoice.AccountingCustomerParty.Party.PartyIdentification.ID"",
+                  ""errorCode"": ""ERR250"",
+                  ""error"": ""This combination is not applicable for consolidated e-Invoice. Please refer to https://sdk.myinvois.hasil.gov.my/documentvalidationrules/taxpayer-validator-error/#ERR250"" } ] } }
+          ]
+        }";
+
+        [Fact]
+        public void Extract_Real_Preprod_Err250_Keeps_The_Inner_Code_Path_And_SDK_Link()
+        {
+            var e = Assert.Single(LhdnValidationErrors.Extract(JsonConvert.DeserializeObject<ValidationResults>(Preprod_Err250)));
+            Assert.Equal("Step05-Taxpayer Profile Validator", e.step);
+            Assert.Equal("Error05", e.errorCode);
+            var inner = Assert.Single(e.innerErrors);
+            Assert.Equal("ERR250", inner.errorCode);   // the old parser dropped the inner code and path
+            Assert.Equal("document.Invoice.AccountingCustomerParty.Party.PartyIdentification.ID", inner.propertyPath);
+            Assert.EndsWith("https://sdk.myinvois.hasil.gov.my/documentvalidationrules/taxpayer-validator-error/#ERR250", inner.error);
+            Assert.Empty(inner.references);             // no separate reference field in the real response
         }
 
         [Fact]
