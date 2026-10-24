@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.49.0`** (`AppInfo:Version` in `appsettings.json`). v1.49.0 is a **minor**
+> **Current version: `v1.49.1`** (`AppInfo:Version` in `appsettings.json`). v1.49.1 is a **patch**
+> release: bulk-action result messages are shown as text, never as HTML — see the dated entry below. v1.49.0 was a **minor**
 > release: a Today card at the top of the Supplier Dashboard lists what Finance needs to do — see the dated entry below. v1.48.2 was a **patch**
 > release: Dashboard counts never include other companies' invoices through a shared LHDN placeholder party — see the dated entry below. v1.48.1 was a **patch**
 > release: a "Ready for LHDN" panel on Create and Edit links every problem to its field — see the dated entry below. v1.48.0 was a **minor**
@@ -438,6 +439,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.49.1 (security: bulk-action messages shown as text)
+
+- **Fix (XSS):** the result pop-ups of bulk Submit, Send to Buyers, Delete, Cancel and Reject inserted the server's and LHDN's
+  messages as HTML. Since v1.48.0 a "not ready" message can quote what a user typed (for example an item description), so a
+  crafted description could run script in the browser of whoever bulk-submitted it. The messages are now escaped.
+- The same applies to error pop-ups that showed a server message through SweetAlert's short form (whose second argument is
+  HTML): Invoices list saved views, Re-check status, Submit, and the Company page's user/permission actions now use plain text.
+- No server or database change.
 
 ## 📅 2026-10-24 — v1.49.0 (Today on the Dashboard: what Finance needs to do now)
 

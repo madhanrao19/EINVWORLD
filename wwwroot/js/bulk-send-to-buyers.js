@@ -1,3 +1,8 @@
+// Server and LHDN messages can echo what users typed (item descriptions, names): never inject them as HTML.
+function escapeBulkHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // bulk-send-to-buyers.js
 //
 // "Send to Buyers" — manually resends the validated-invoice email (existing template, existing PDF,
@@ -70,7 +75,7 @@ async function executeBulkSendToBuyers(uuids) {
         }
 
         if (data.skippedCount > 0) {
-            const skippedHtml = (data.skipped || []).join('<br>');
+            const skippedHtml = (data.skipped || []).map(escapeBulkHtml).join('<br>');
             Swal.fire({
                 title: 'Sent With Some Skipped',
                 html: `${data.sentCount} email(s) sent successfully.<br><br>` +
