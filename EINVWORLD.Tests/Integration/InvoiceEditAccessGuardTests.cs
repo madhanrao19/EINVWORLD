@@ -547,6 +547,21 @@ namespace EINVWORLD.Tests.Integration
             Assert.False(await check(ctx, mixedId, selfBilled.Id));    // supplier side of a self-billed template
             Assert.False(await check(ctx, editorId, -1));              // unknown template
             Assert.False(await check(ctx, null, normal.Id));
+
+            // A membership of a shared LHDN general-TIN party never counts as owning the issuer.
+            var general = await ctx.PartyInfos.FirstOrDefaultAsync(pi => pi.TIN == "EI00000000010");
+            if (general == null)
+            {
+                general = await CreateValidPartyInfoAsync(ctx, "General Public");
+                general.TIN = "EI00000000010";
+                ctx.PartyInfos.Add(general);
+                await ctx.SaveChangesAsync();
+            }
+            ctx.UserCompanies.Add(new UserCompany { UserId = editorId, PartyInfoId = general.PartyInfoId });
+            var generalTemplate = new eInvWorld.Models.Templates.InvoiceTemplate { TemplateName = "rt-gen", DocTypeCode = "01", SupplierId = general.PartyInfoId };
+            ctx.InvoiceTemplates.Add(generalTemplate);
+            await ctx.SaveChangesAsync();
+            Assert.False(await check(ctx, editorId, generalTemplate.Id));
         }
     }
 }
