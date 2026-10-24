@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.52`** (`AppInfo:Version` in `appsettings.json`). v1.47.52 is a **patch**
+> **Current version: `v1.47.53`** (`AppInfo:Version` in `appsettings.json`). v1.47.53 is a **patch**
+> release: invoice templates keep each line's Fee / Charge and discount — see the dated entry below. v1.47.52 was a **patch**
 > release: recurring invoices get this run's billing period, totals from their lines, and the Tax Type 06 / Classification rules — see the dated entry below. v1.47.51 was a **patch**
 > release: recurring invoices never treat a shared LHDN placeholder company as yours — see the dated entry below. v1.47.50 was a **patch**
 > release: LHDN error details are readable and keep their SDK error links (24 Oct 2026 LHDN change) — see the dated entry below. v1.47.49 was a **patch**
@@ -433,6 +434,20 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-10-24 — v1.47.53 (invoice templates keep Fee / Charge and discount)
+
+- **Fee / Charge:** saving an invoice as a template now keeps each line's Fee / Charge amount and reason. Create from
+  template, Edit template and recurring invoices bring it back, and it is added to the taxable amount as on a normal invoice.
+- **Discount on Update template:** updating a template from Edit Invoice used to drop every line's discount and its line
+  amounts, and opening a template in Edit didn't show its discount. Both now use the same save and load as Create.
+- Updating a template from Edit Invoice now also refreshes its stored totals.
+- **Database change (additive):** `InvoiceTemplateLines.FeeChargeAmount` (decimal(18,2)) and `FeeChargeReason`
+  (nvarchar(200)), both nullable. Existing templates get NULL, meaning no fee, exactly as before.
+  `Deploy-Staging.ps1` backs up and applies `Apply_AddTemplateLineFeeCharge.sql`.
+- Checked paths: Create and Edit Save as template, Edit Update template, Create from template, Edit template load,
+  recurring generation. The LHDN payload and PDF already read Fee / Charge from invoice lines and are unchanged.
+- Templates saved before this release have no Fee / Charge stored: re-save any template that should carry one.
+
 ## 📅 2026-10-24 — v1.47.52 (recurring invoices: correct billing period, totals and line rules)
 
 - **Billing period:** a recurring invoice whose template has a billing period now gets the period of the run.
@@ -446,8 +461,7 @@
     an invoice was only blocked when it was submitted.
 - Create e-Invoice, Edit Invoice and recurring generation now share one default-classification helper
   (`TinHelper.DefaultClassificationCode`).
-- **Known gap:** invoice templates still don't store a line's Fee / Charge, so recurring invoices have none. Storing
-  it needs a database change, which is planned with the central invoice-rules work.
+- **Known gap:** invoice templates still don't store a line's Fee / Charge, so recurring invoices have none. Fixed in v1.47.53.
 - No database change. New unit tests cover the period, the totals and the line rules.
 
 ## 📅 2026-10-24 — v1.47.51 (recurring invoices: shared placeholder companies never count as yours)

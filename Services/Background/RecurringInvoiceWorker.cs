@@ -155,6 +155,8 @@ namespace eInvWorld.Services.Background
                             UnitOfMeasure = tl.UnitOfMeasure,
                             UnitPrice = tl.UnitPrice ?? 0,
                             DiscountAmount = tl.DiscountAmount,
+                            FeeChargeAmount = tl.FeeChargeAmount,
+                            FeeChargeReason = tl.FeeChargeReason,
                             AmountExclTax = tl.AmountExclTax,
                             AmountInclTax = tl.AmountInclTax,
                             InvoiceTaxes = tl.Taxes.Select(tax => new InvoiceTax

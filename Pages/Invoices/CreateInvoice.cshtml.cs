@@ -318,27 +318,7 @@ namespace EINVWORLD.Pages.Invoices
                         InvoicePeriod = template.InvoicePeriod,
                         IssueDate = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow), // stored in MY time; InvoiceMapper converts to UTC
                         InvoiceNo = GenerateNextInvoiceNumber(),
-                        InvoiceLines = template.InvoiceLines.Select((line, i) => new InvoiceLineView
-                        {
-                            LineNumber = i + 1,
-                            ClassificationCode = line.ClassificationCode,
-                            ItemCode = line.ItemCode,
-                            ItemDescription = line.ItemDescription,
-                            Quantity = line.Quantity,
-                            UnitOfMeasure = line.UnitOfMeasure,
-                            UnitPrice = line.UnitPrice,
-                            DiscountAmount = line.DiscountAmount,
-                            Subtotal = line.Subtotal,
-                            AmountExclTax = line.AmountExclTax,
-                            AmountInclTax = line.AmountInclTax,
-                            Taxes = line.Taxes.Select(tax => new InvoiceTaxView
-                            {
-                                TaxCategory = tax.TaxCategory,
-                                TaxPercentage = tax.TaxPercentage,
-                                TaxAmount = tax.TaxAmount,
-                                TaxExemptionReason = tax.TaxExemptionReason
-                            }).ToList()
-                        }).ToList()
+                        InvoiceLines = _invoiceTemplateService.ToLineViews(template.InvoiceLines)
                     };
 
                     TemplateName = template.TemplateName;
