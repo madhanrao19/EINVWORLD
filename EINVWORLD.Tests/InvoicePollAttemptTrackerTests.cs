@@ -91,9 +91,11 @@ namespace EINVWORLD.Tests
         public void UiSession_AfterCooldownExpires_PollsAgain()
         {
             InvoicePollAttemptTracker.RecordAttempt("EINV100291", Now);
-            var afterCooldown = Now.AddSeconds(61);
             var effective = InvoicePollAttemptTracker.GetEffectiveLastChecked("EINV100291", Now.AddDays(-5));
 
+            // Still inside the 10-minute UI window a minute later (was 60 s, which re-polled every recent invoice every minute).
+            Assert.True(InvoiceSyncRules.ShouldSkipValidRefresh("Valid", hasLongId: true, effective, Now.AddSeconds(61), "UISession"));
+            var afterCooldown = Now.AddMinutes(InvoiceSyncRules.UiValidRefreshMinutes).AddSeconds(1);
             Assert.False(InvoiceSyncRules.ShouldSkipValidRefresh("Valid", hasLongId: true, effective, afterCooldown, "UISession"));
         }
 
