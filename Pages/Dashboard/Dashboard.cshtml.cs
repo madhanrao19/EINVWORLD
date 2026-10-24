@@ -74,16 +74,31 @@ namespace eInvWorld.Pages.Invoices
         public int BuyerPendingReviewCount { get; set; }
         public int BuyerUnmatchedCount { get; set; }
         public int BuyerOverdueCount { get; set; }
-        public DashboardModel(ApplicationDbContext context, ILogger<DashboardModel> logger)
+        private readonly eInvWorld.Services.FinanceTodayService _today;
+
+        /// <summary>The Today card (Supplier dashboard); null when it couldn't be loaded.</summary>
+        public eInvWorld.Services.FinanceTodayModel? Today { get; set; }
+
+        public DashboardModel(ApplicationDbContext context, ILogger<DashboardModel> logger, eInvWorld.Services.FinanceTodayService today)
         {
             _context = context;
             _logger = logger;
+            _today = today;
         }
 
         public List<eInvWorld.Models.InputModel.InvoiceHeader> RecentInvoices { get; set; } = new();
 
-        public void OnGet()
+        public async Task OnGetAsync()
         {
+            try
+            {
+                Today = await _today.GetAsync(User, HttpContext.RequestAborted);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Today card failed to load; the rest of the Dashboard still renders.");
+            }
+
             try
             {
                 _logger.LogInformation("📊 Fetching invoice stats for dashboard...");
