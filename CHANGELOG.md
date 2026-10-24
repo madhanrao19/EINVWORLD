@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.0`** (`AppInfo:Version` in `appsettings.json`). v1.50.0 is a **minor**
+> **Current version: `v1.50.1`** (`AppInfo:Version` in `appsettings.json`). v1.50.1 is a **patch**
+> release: the invoice activity log shows exactly what each edit changed, and every entry shows the right time — see the dated entry below. v1.50.0 was a **minor**
 > release: saving or importing an invoice that looks like one you already have shows a possible-duplicate warning — see the dated entry below. v1.49.3 was a **patch**
 > release: "Check selected" on the Draft tab shows which drafts are ready and submits only those — see the dated entry below. v1.49.2 was a **patch**
 > release: the Ready for LHDN panel shows "Changes not checked" with a Save & Check button after any edit — see the dated entry below. v1.49.1 was a **patch**
@@ -442,6 +443,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.50.1 (invoice activity log: what changed, at the right time)
+
+- **Saving a draft again now records what changed** as an "Edited" entry in the invoice's activity log, one change per line,
+  for example: "Buyer: ABC Sdn Bhd → XYZ Bhd", "Item 2 Tax Type: 01 → 06", "Item 2 Tax Rate: 8 → 0", "Total: 1,080.00 → 1,000.00".
+  Covered: buyer, document type, currency, issue date, total, and per item the description, classification, unit, quantity,
+  unit price, discount, fee/charge, tax type and rate, plus items added or removed. A save that changes none of these keeps
+  the plain "Updated" entry.
+- **Fix:** activity entries written by the Invoices list (submit, status sync, failed transmission, delete, resolve), background
+  submits and template deletion were stored in Malaysia time while the page converts every entry from UTC, so they showed
+  8 hours late. All entries are now stored in UTC. Entries written before this release keep their old times.
+- Applies to Create e-Invoice and Edit Invoice (and drafts reopened from either). No database change; changes are stored in the
+  existing Remarks column (up to 1,000 characters). Unit tests cover each kind of change.
 
 ## 📅 2026-10-24 — v1.50.0 (possible-duplicate invoice warning)
 
