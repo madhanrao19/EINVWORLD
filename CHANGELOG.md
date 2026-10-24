@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.53`** (`AppInfo:Version` in `appsettings.json`). v1.47.53 is a **patch**
+> **Current version: `v1.47.54`** (`AppInfo:Version` in `appsettings.json`). v1.47.54 is a **patch**
+> release: Submit from Edit Invoice uses the issuing company's TIN — see the dated entry below. v1.47.53 was a **patch**
 > release: invoice templates keep each line's Fee / Charge and discount — see the dated entry below. v1.47.52 was a **patch**
 > release: recurring invoices get this run's billing period, totals from their lines, and the Tax Type 06 / Classification rules — see the dated entry below. v1.47.51 was a **patch**
 > release: recurring invoices never treat a shared LHDN placeholder company as yours — see the dated entry below. v1.47.50 was a **patch**
@@ -433,6 +434,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.54 (Submit from Edit Invoice uses the issuing company's TIN)
+
+- **Fix:** Submit on Edit Invoice sent the invoice under the user's own primary company TIN and token, not the invoice's
+  issuer. For a user in several companies, or a self-billed invoice (types 11-14, issued by the customer), that was the
+  wrong company. It now uses the issuer's TIN, the same as Create e-Invoice, the Invoices list and background submits,
+  and refuses if the user doesn't own that TIN.
+- No database change.
 
 ## 📅 2026-10-24 — v1.47.53 (invoice templates keep Fee / Charge and discount)
 
