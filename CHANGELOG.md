@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.49.1`** (`AppInfo:Version` in `appsettings.json`). v1.49.1 is a **patch**
+> **Current version: `v1.49.2`** (`AppInfo:Version` in `appsettings.json`). v1.49.2 is a **patch**
+> release: the Ready for LHDN panel shows "Changes not checked" with a Save & Check button after any edit — see the dated entry below. v1.49.1 was a **patch**
 > release: bulk-action result messages are shown as text, never as HTML — see the dated entry below. v1.49.0 was a **minor**
 > release: a Today card at the top of the Supplier Dashboard lists what Finance needs to do — see the dated entry below. v1.48.2 was a **patch**
 > release: Dashboard counts never include other companies' invoices through a shared LHDN placeholder party — see the dated entry below. v1.48.1 was a **patch**
@@ -439,6 +440,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.49.2 (Ready for LHDN: "Changes not checked" and Save & Check)
+
+- As soon as a field changes after the last check, the Ready for LHDN panel shows **Changes not checked** instead of the old
+  result, fades the old list and offers **Save & Check**, which saves the draft and checks it again.
+- **Submit to LHDN is disabled while there are unsaved changes**, because Submit always sends the saved draft. Undoing the
+  edit brings the last result back.
+- The check itself still runs on the server against the saved draft; nothing is validated in the browser only.
+- No server or database change.
 
 ## 📅 2026-10-24 — v1.49.1 (security: bulk-action messages shown as text)
 
