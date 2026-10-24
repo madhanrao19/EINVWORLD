@@ -23,6 +23,17 @@ jobs:
       - name: Restore
         run: dotnet restore EINVWORLD.sln
 
+      # Fails the run when any direct or transitive NuGet package has a known High/Critical advisory.
+      - name: Vulnerable package check
+        shell: pwsh
+        run: |
+          $report = dotnet list EINVWORLD.sln package --vulnerable --include-transitive --format json | ConvertFrom-Json
+          $bad = foreach ($p in $report.projects) { foreach ($f in $p.frameworks) {
+            foreach ($pkg in @($f.topLevelPackages) + @($f.transitivePackages)) {
+              foreach ($v in $pkg.vulnerabilities) { if ($v.severity -in 'High','Critical') { "$($pkg.id) $($pkg.resolvedVersion): $($v.severity) $($v.advisoryurl)" } } } } }
+          if ($bad) { $bad | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
+          Write-Host "No High/Critical vulnerable packages."
+
       - name: Build
         run: dotnet build EINVWORLD.sln --configuration Release --no-restore
 
