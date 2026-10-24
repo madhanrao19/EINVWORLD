@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.48.0`** (`AppInfo:Version` in `appsettings.json`). v1.48.0 is a **minor**
+> **Current version: `v1.48.1`** (`AppInfo:Version` in `appsettings.json`). v1.48.1 is a **patch**
+> release: a "Ready for LHDN" panel on Create and Edit links every problem to its field — see the dated entry below. v1.48.0 was a **minor**
 > release: every submit checks the draft is "Ready for LHDN" first — see the dated entry below. v1.47.54 was a **patch**
 > release: Submit from Edit Invoice uses the issuing company's TIN — see the dated entry below. v1.47.53 was a **patch**
 > release: invoice templates keep each line's Fee / Charge and discount — see the dated entry below. v1.47.52 was a **patch**
@@ -435,6 +436,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.48.1 (Ready for LHDN panel on Create e-Invoice and Edit Invoice)
+
+- **Step 3 now has a "Ready for LHDN" panel** once a draft is saved: a tick or warning per section (Supplier, Buyer, Invoice
+  information, Items, Tax, Totals), then "Needs attention (n)" with each problem in plain words.
+- **Fix** next to a problem opens the step that holds the field and puts the cursor in it (Select2 dropdowns included).
+- **Submit to LHDN stays disabled** while anything blocks. The panel refreshes after every Save Draft and when a draft is reopened,
+  and shows the same check Submit runs on the server (v1.48.0), so it can't say "ready" when Submit would refuse.
+- Warnings (for example saved totals that differ from the items) are shown but don't block.
+- Not on Edit Invoice in template mode. One shared script (`wwwroot/js/invoices/lhdn-readiness.js`) serves both pages.
+- No database change.
 
 ## 📅 2026-10-24 — v1.48.0 (Ready for LHDN: one pre-submit check on every submit path)
 

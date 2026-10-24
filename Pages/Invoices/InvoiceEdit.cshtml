@@ -1488,6 +1488,21 @@
                                 </div>
                             </div>
 
+                            @if (!Model.IsTemplateMode)
+                            {
+                                <div class="card mb-3" id="lhdnReadiness" hidden aria-live="polite">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <h6 class="text-muted mb-0 einv-label">Ready for LHDN</h6>
+                                            <span class="js-readiness-status badge"></span>
+                                        </div>
+                                        <ul class="list-unstyled mb-0 js-readiness-sections"></ul>
+                                        <div class="js-readiness-issues"></div>
+                                        <div class="text-muted small mt-2">Checked on the saved draft. Save again after changes.</div>
+                                    </div>
+                                </div>
+                            }
+
                             <!-- Action Buttons (InvoiceEdit's own handlers — unchanged) -->
                             <div class="d-grid gap-2">
                                 @if (Model.IsTemplateMode)
@@ -2550,6 +2565,8 @@
                                 if (submitBtn) {
                                     submitBtn.disabled = false;
                                 }
+                                // Re-check the saved draft; disables Submit again if anything still blocks
+                                window.LhdnReadiness?.refresh();
 
                                 // Show success message using SweetAlert
                                 const successTitle = response.isUpdate ? 'Draft Updated Successfully!' : 'Draft Saved Successfully!';
@@ -3437,6 +3454,15 @@
                 ErrorHandler.show('An error occurred while proceeding to the next step. Please try again.', 'error');
             }
         }
+
+        // Jump straight to a step (Ready for LHDN "Fix" links).
+        window.goToStep = function (n) {
+            if (n < 1 || n > totalSteps || n === currentStep) return;
+            document.getElementById(`step${currentStep}`).classList.add('d-none');
+            currentStep = n;
+            document.getElementById(`step${currentStep}`).classList.remove('d-none');
+            if (InvoiceManager && InvoiceManager.updateProgress) InvoiceManager.updateProgress();
+        };
 
         function prevStep() {
             if (currentStep > 1) {
@@ -5645,4 +5671,5 @@
     <!-- <script type="module" src="~/js/create-invoice-new.js?v=@DateTime.Now.Ticks"></script> -->
     <script type="module" src="~/js/template-invoice.js" asp-append-version="true"></script>
     <script src="~/js/invoices/billing-period.js" asp-append-version="true"></script>
+    <script src="~/js/invoices/lhdn-readiness.js" asp-append-version="true"></script>
 }
