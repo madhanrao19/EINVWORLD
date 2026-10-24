@@ -17,6 +17,15 @@ namespace EINVWORLD.Helpers
         }
 
         /// <summary>
+        /// Classification code given to an item line left blank: 022 (Others), or for self-billed documents
+        /// 035 when the supplier is the foreign-supplier general TIN and 004 otherwise. Shared by Create,
+        /// Edit and recurring generation so the default can't drift between them.
+        /// </summary>
+        public static string DefaultClassificationCode(string? docTypeCode, string? supplierTin) =>
+            !IsSelfBilledDocType(docTypeCode) ? "022"
+            : supplierTin == "EI00000000030" ? "035" : "004";
+
+        /// <summary>
         /// The single source of truth for "whose TIN/token acts on this document": for self-billed
         /// documents (11–14) it is the Customer's TIN; otherwise the Supplier's TIN. Consolidates logic
         /// that was previously copy-pasted across the sync helpers and background workers.

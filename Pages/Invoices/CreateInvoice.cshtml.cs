@@ -850,9 +850,7 @@ namespace EINVWORLD.Pages.Invoices
                     var isSelfBilled = IsSelfBilled(Invoice.DocTypeCode);
                     var supplierTin = supplier.TIN ?? "";
 
-                    var defaultClassificationCode = "022";
-                    if (isSelfBilled)
-                        defaultClassificationCode = supplierTin == "EI00000000030" ? "035" : "004";
+                    var defaultClassificationCode = EINVWORLD.Helpers.TinHelper.DefaultClassificationCode(Invoice.DocTypeCode, supplierTin);
 
                     foreach (var line in Invoice.InvoiceLines)
                     {
