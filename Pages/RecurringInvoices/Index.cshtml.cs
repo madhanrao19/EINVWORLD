@@ -115,8 +115,10 @@ namespace eInvWorld.Pages.RecurringInvoices
                 .Select(x => new { x.DocTypeCode, x.SupplierId, x.CustomerId })
                 .FirstOrDefaultAsync();
             var issuerId = t == null ? null : TinHelper.IsSelfBilledDocType(t.DocTypeCode) ? t.CustomerId : t.SupplierId;
+            // Like CanManageInvoiceAsync, a shared LHDN general-TIN party (General Public etc.) is never "owned".
             return issuerId != null
-                && await context.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly);
+                && await context.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly)
+                && !GeneralTINHelper.IsGeneralTIN(await context.PartyInfos.Where(pi => pi.PartyInfoId == issuerId).Select(pi => pi.TIN).FirstOrDefaultAsync());
         }
 
         private async Task<bool> MayWriteAsync(string? userId, int templateId) =>

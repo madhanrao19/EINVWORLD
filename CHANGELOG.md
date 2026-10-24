@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.50`** (`AppInfo:Version` in `appsettings.json`). v1.47.50 is a **patch**
+> **Current version: `v1.47.51`** (`AppInfo:Version` in `appsettings.json`). v1.47.51 is a **patch**
+> release: recurring invoices never treat a shared LHDN placeholder company as yours — see the dated entry below. v1.47.50 was a **patch**
 > release: LHDN error details are readable and keep their SDK error links (24 Oct 2026 LHDN change) — see the dated entry below. v1.47.49 was a **patch**
 > release: server-side permission gaps closed (items, buyers, cancel/reject, recurring, exports) — see the dated entry below. v1.47.48 was a **patch**
 > release: view-only members no longer see Cancel / Reject on the invoice page — see the dated entry below. v1.47.47 was a **patch**
@@ -430,6 +431,12 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.51 (recurring invoices: shared placeholder companies never count as yours)
+
+- Follow-up to v1.47.49: being linked to a shared LHDN placeholder company (General Public etc.) no longer counts
+  as edit access to a recurring profile whose template issues under it — the same rule invoices already follow.
+- No database change.
 
 ## 📅 2026-10-24 — v1.47.50 (LHDN error details ready for the 24 Oct 2026 error-reference change)
 
