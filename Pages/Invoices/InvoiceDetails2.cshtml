@@ -872,7 +872,22 @@
                                         <td data-label="Timestamp" class="text-muted small">@h.Timestamp.ToString("yyyy-MM-dd hh:mm:ss tt")</td>
                                         <td data-label="Action"><span>@GetActionIcon(h.Action) @h.Action</span></td>
                                         <td data-label="Performed By"><span class="text-break">@h.PerformedBy</span></td>
-                                        <td data-label="Remarks" title="@h.Remarks"><span class="text-break">@h.Remarks</span></td>
+                                        <td data-label="Remarks" title="@h.Remarks">
+                                            @if (h.Action == "Edited" && h.Remarks != null)
+                                            {
+                                                @* field-level changes from InvoiceChangeSummary, one per line (text-encoded) *@
+                                                <ul class="list-unstyled mb-0 small text-break">
+                                                    @foreach (var change in h.Remarks.Split(EINVWORLD.Helpers.InvoiceChangeSummary.Separator))
+                                                    {
+                                                        <li>@change</li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-break">@h.Remarks</span>
+                                            }
+                                        </td>
                                     </tr>
                                 }
 

@@ -890,10 +890,14 @@ namespace eInvWorld.Pages.Invoices
                 Invoice.CalculateInvoiceTotals();
 
                 var existingDraft = _context.InvoiceHeaders
-                    .Include(ih => ih.InvoiceLines)
+                    .Include(ih => ih.InvoiceLines).ThenInclude(l => l.InvoiceTaxes)
                     .FirstOrDefault(ih => ih.InvoiceNo == Invoice.InvoiceNo);
 
                 bool isUpdate = existingDraft != null;
+                // Taken before the overwrite below, for the field-level activity log entry.
+                var before = isUpdate
+                    ? EINVWORLD.Helpers.InvoiceSnapshot.Of(existingDraft!, EINVWORLD.Helpers.InvoiceChangeSummary.BuyerName(_context, existingDraft!.CustomerId, existingDraft.PublicCustomerId))
+                    : null;
                 _logger.LogDebug("SaveDraft - Invoice {InvoiceNo}: {Action}", Invoice.InvoiceNo, isUpdate ? "UPDATING existing draft" : "CREATING new draft");
 
                 InvoiceHeader draftInvoice;
@@ -1106,10 +1110,15 @@ namespace eInvWorld.Pages.Invoices
                 }
                 System.IO.File.Move(tmpPath, filePath, overwrite: true);
 
-                _invoiceHistoryService.Log(
-                    draftInvoice.InvoiceNo,
-                    isUpdate ? "Updated" : "Created",
-                    isUpdate ? "Invoice draft updated" : "Invoice draft created");
+                if (before == null)
+                    _invoiceHistoryService.Log(draftInvoice.InvoiceNo, "Created", "Invoice draft created");
+                else
+                {
+                    // "Edited" with what changed; a save that changed nothing Finance-relevant keeps the plain entry.
+                    var changes = EINVWORLD.Helpers.InvoiceChangeSummary.Describe(before,
+                        EINVWORLD.Helpers.InvoiceSnapshot.Of(draftInvoice, customer?.CompanyName ?? publicCustomer?.CompanyName));
+                    _invoiceHistoryService.Log(draftInvoice.InvoiceNo, changes == null ? "Updated" : "Edited", changes ?? "Invoice draft updated");
+                }
 
                 HttpContext.Session.SetString("DraftFilePath", filePath);
                 ViewData["DraftFilePath"] = System.IO.Path.GetFileName(filePath);

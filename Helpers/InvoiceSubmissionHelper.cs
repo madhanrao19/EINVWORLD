@@ -122,7 +122,7 @@ namespace EINVWORLD.Helpers
             {
                 InvoiceNo = invoiceNo,
                 Action = "Submitted",
-                Timestamp = GetMYTime(),
+                Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                 PerformedBy = submittedBy,
                 Remarks = $"Submitted via helper. UUID: {accepted.uuid}"
             });
@@ -147,7 +147,7 @@ namespace EINVWORLD.Helpers
                         {
                             InvoiceNo = invoiceNo,
                             Action = "StatusSync",
-                            Timestamp = GetMYTime(),
+                            Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                             PerformedBy = submittedBy,
                             Remarks = $"Polled status from LHDN: {docStatus.status}"
                         });
