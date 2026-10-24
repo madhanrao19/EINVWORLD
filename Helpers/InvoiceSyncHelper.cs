@@ -399,6 +399,16 @@ namespace EINVWORLD.Helpers
                 && summary.dateTimeValidated.Value < DateTime.UtcNow.AddHours(-72);
         }
 
+        /// <summary>
+        /// True when the local copy already matches what LHDN's search result says: same status, and for a Valid
+        /// invoice the QR (LongId) is already stored. Inside the 72h window a cancel or reject changes the status in the
+        /// search result itself, so the expensive document fetch is only needed when the status differs.
+        /// </summary>
+        internal static bool IsUnchangedLocally(DocumentSummary summary, string? localStatus, bool localHasLongId) =>
+            !string.IsNullOrWhiteSpace(summary.status)
+            && string.Equals(summary.status, localStatus, StringComparison.OrdinalIgnoreCase)
+            && (!string.Equals(summary.status, "Valid", StringComparison.OrdinalIgnoreCase) || localHasLongId);
+
         public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3)
         {
             var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
@@ -410,11 +420,12 @@ namespace EINVWORLD.Helpers
             // Only invoices we already have locally can be safely skipped — an unseen UUID always needs
             // the raw-document fetch, since /documents/search never carries line-item content.
             var uuidsInBatch = allSummaries.Select(s => s.uuid).ToList();
-            var existingUuids = (await _context.InvoiceHeaders
+            var existing = (await _context.InvoiceHeaders
                 .Where(i => uuidsInBatch.Contains(i.UUID!))
-                .Select(i => i.UUID)
+                .Select(i => new { i.UUID, i.LHDNStatusId, i.LongId })
                 .ToListAsync())
-                .ToHashSet();
+                .GroupBy(i => i.UUID!)
+                .ToDictionary(g => g.Key, g => g.First());
 
             int imported = 0;
             int skipped = 0;
@@ -423,7 +434,8 @@ namespace EINVWORLD.Helpers
             // REMOVED Parallel.ForEachAsync to prevent 429 DDoS penalties from LHDN
             foreach (var summary in allSummaries)
             {
-                if (existingUuids.Contains(summary.uuid) && IsStable(summary))
+                if (existing.TryGetValue(summary.uuid, out var local)
+                    && (IsStable(summary) || IsUnchangedLocally(summary, local.LHDNStatusId, !string.IsNullOrWhiteSpace(local.LongId))))
                 {
                     // Already synced locally and can no longer change status (per LHDN's own status/
                     // longId/dateTimeValidated from this same search response) — skip the raw-document
