@@ -49,5 +49,18 @@ namespace EINVWORLD.Tests
         [InlineData("")]
         public void Non_terminal_non_valid_status_is_not_stable(string status) =>
             Assert.False(InvoiceSyncHelper.IsStable(Summary(status)));
+
+        // The hourly import re-fetched every recent Valid invoice although LHDN's search result already showed nothing
+        // had changed (15 of 20 per company per cycle on Staging, 24 Oct 2026), tripping the 429 limit.
+        [Theory]
+        [InlineData("Valid", "Valid", true, true)]        // same status, QR stored: nothing to fetch
+        [InlineData("valid", "Valid", true, true)]        // case-insensitive
+        [InlineData("Valid", "Valid", false, false)]      // QR still missing: fetch it
+        [InlineData("Cancelled", "Valid", true, false)]   // cancelled inside 72h: fetch
+        [InlineData("Valid", "Submitted", false, false)]  // validated since the last sync: fetch
+        [InlineData("Submitted", "Submitted", false, true)]
+        [InlineData("", "", false, false)]                // no status in the search result: fetch
+        public void Unchanged_locally_skips_the_document_fetch(string lhdn, string local, bool localHasLongId, bool unchanged) =>
+            Assert.Equal(unchanged, InvoiceSyncHelper.IsUnchangedLocally(Summary(lhdn), local, localHasLongId));
     }
 }

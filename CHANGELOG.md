@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.1`** (`AppInfo:Version` in `appsettings.json`). v1.50.1 is a **patch**
+> **Current version: `v1.50.2`** (`AppInfo:Version` in `appsettings.json`). v1.50.2 is a **patch**
+> release: far fewer LHDN status calls, so no more one-minute waits on the Invoices list — see the dated entry below. v1.50.1 was a **patch**
 > release: the invoice activity log shows exactly what each edit changed, and every entry shows the right time — see the dated entry below. v1.50.0 was a **minor**
 > release: saving or importing an invoice that looks like one you already have shows a possible-duplicate warning — see the dated entry below. v1.49.3 was a **patch**
 > release: "Check selected" on the Draft tab shows which drafts are ready and submits only those — see the dated entry below. v1.49.2 was a **patch**
@@ -443,6 +444,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.50.2 (fewer LHDN calls: no more 429 waits)
+
+From the Staging log of 24 Oct 2026: LHDN answered "429 Too Many Requests" about 45 times in the day, and twice an Invoices
+list status refresh waited out LHDN's penalty for 63 seconds.
+- **Invoices list:** the page refreshes statuses every 30 seconds, and an already-Valid invoice was re-checked with LHDN every
+  60 seconds, so every invoice validated in the last 3 days was polled about once a minute while the list was open. A Valid
+  invoice can now only be re-checked every 10 minutes from the list (only a cancel or reject can still change it).
+  "Submitted" invoices are still checked on every refresh.
+- **Background LHDN import (every ~100 minutes, and after each submission):** it fetched the full document again for every
+  recent Valid invoice, even when LHDN's own search result showed the same status as the local copy. It now skips any invoice
+  whose status already matches, with its QR stored. A cancel or reject changes that status, so it is still picked up.
+  On Staging this removes 15 of 16 document fetches per cycle.
+- Google Analytics data sent to `stats.g.doubleclick.net` was blocked by the Content Security Policy (about 50 reports
+  in the day); it is now allowed.
+- No database change. Unit tests cover the new skip rule and the longer list cooldown.
 
 ## 📅 2026-10-24 — v1.50.1 (invoice activity log: what changed, at the right time)
 

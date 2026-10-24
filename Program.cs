@@ -728,7 +728,7 @@ app.Use(async (context, next) =>
         "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
         "img-src 'self' data: https:",
         // GA4 (Google Signals) also posts to analytics.google.com and the regional Google domain.
-        "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://www.google.com https://www.google.com.my https://cdn.tiny.cloud",
+        "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://www.google.com https://www.google.com.my https://cdn.tiny.cloud",
         "frame-src https://challenges.cloudflare.com https://www.google.com",
         "object-src 'none'",
         "base-uri 'self'",
