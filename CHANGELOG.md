@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.48.2`** (`AppInfo:Version` in `appsettings.json`). v1.48.2 is a **patch**
+> **Current version: `v1.49.0`** (`AppInfo:Version` in `appsettings.json`). v1.49.0 is a **minor**
+> release: a Today card at the top of the Supplier Dashboard lists what Finance needs to do — see the dated entry below. v1.48.2 was a **patch**
 > release: Dashboard counts never include other companies' invoices through a shared LHDN placeholder party — see the dated entry below. v1.48.1 was a **patch**
 > release: a "Ready for LHDN" panel on Create and Edit links every problem to its field — see the dated entry below. v1.48.0 was a **minor**
 > release: every submit checks the draft is "Ready for LHDN" first — see the dated entry below. v1.47.54 was a **patch**
@@ -437,6 +438,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.49.0 (Today on the Dashboard: what Finance needs to do now)
+
+- **The Supplier Dashboard now opens with a Today card**, replacing the Needs Attention banner. It has four counts:
+  Needs your attention, Ready to submit (drafts that pass the Ready-for-LHDN check), Processing with LHDN, and Validated today.
+- Below the counts, up to 10 items each have one button that opens the page that fixes them:
+  - Invoices LHDN rejected, or whose buyer asked to reject them: **Review** opens the invoice page.
+  - Invoices not sent (transmission failed), drafts stuck more than 3 days, and recent drafts that aren't ready for LHDN, with
+    the first problem in plain words: **Fix invoice** opens Edit Invoice.
+  - Recurring invoices whose last run in the past 7 days failed: **Review** opens Recurring Invoices.
+  - Smart Capture documents waiting for review or that couldn't be read: **Review** opens the document.
+- View-only members see the same list with **View** buttons; recurring items only show to people who can change the profile.
+- "See all" still opens the Invoices list's Needs Attention filter. Only the user's own companies are counted; shared LHDN
+  placeholder parties (General Public etc.) never widen the scope.
+- Built only from existing rules (`InvoiceNeedsAttentionFilter`, `InvoiceReadinessCheck`) in `Services/FinanceTodayService`.
+  At most 50 drafts are checked per load, in one batch.
+- No database change. Integration tests cover every group, the scope, view-only members and the "validated today" boundary.
 
 ## 📅 2026-10-24 — v1.48.2 (Dashboard counts stay within your own companies)
 
