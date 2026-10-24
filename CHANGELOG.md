@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.6`** (`AppInfo:Version` in `appsettings.json`). v1.50.6 is a **patch**
+> **Current version: `v1.50.7`** (`AppInfo:Version` in `appsettings.json`). v1.50.7 is a **patch**
+> release: clearing or exporting the system logs is recorded in the audit trail — see the dated entry below. v1.50.6 was a **patch**
 > release: if Cloudflare's CAPTCHA check can't be reached, sign-in and the public forms refuse politely instead of erroring — see the dated entry below. v1.50.5 was a **patch**
 > release: success messages on the Companies and Leads lists are shown as text — see the dated entry below. v1.50.4 was a **patch**
 > release: password-reset, confirmation and invitation emails always link to the real site address — see the dated entry below. v1.50.3 was a **patch**
@@ -448,6 +449,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.7 (system logs: clearing and exporting are audited)
+
+From an external security review of v1.50.1:
+- **Admin → System Logs → Clear All** deleted every log row with no record of who did it. It now writes a "SystemLogsCleared"
+  entry (with the number of rows) to the tamper-evident audit trail before deleting.
+- **Exporting the logs** (CSV / text) is recorded as "SystemLogsExported" with the filters used, because logs contain user names
+  and IP addresses. One export now returns at most the newest 50,000 rows; narrow the dates for older ones.
+- No database change.
 
 ## 📅 2026-10-25 — v1.50.6 (CAPTCHA check: no error page when Cloudflare is unreachable)
 
