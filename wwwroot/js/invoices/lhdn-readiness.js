@@ -11,6 +11,46 @@
 
     function panel() { return document.getElementById('lhdnReadiness'); }
 
+    // The check is of the SAVED draft, so after any edit it no longer describes what Submit would send.
+    let checkedSnapshot = null;
+    let lastResult = null;
+
+    function formSnapshot() {
+        const form = document.getElementById('invoice_form');
+        if (!form) return null;
+        return [...new FormData(form)]
+            .filter(([k, v]) => typeof v === 'string' && k !== '__RequestVerificationToken')
+            .map(([k, v]) => `${k}=${v}`)
+            .join('&');
+    }
+
+    function saveDraftButton() { return document.querySelector('button[name="action"][value="saveDraft"]'); }
+
+    function showChangesNotChecked() {
+        const box = panel();
+        if (!box || box.hidden || checkedSnapshot === null) return;
+        const dirty = formSnapshot() !== checkedSnapshot;
+        const status = box.querySelector('.js-readiness-status');
+        const issues = box.querySelector('.js-readiness-issues');
+        let saveCheck = box.querySelector('.js-readiness-savecheck');
+        if (!saveCheck) {
+            saveCheck = el('button', 'btn btn-sm btn-outline-primary mt-2 js-readiness-savecheck', 'Save & Check');
+            saveCheck.type = 'button';
+            saveCheck.addEventListener('click', () => saveDraftButton()?.click()); // the normal save refreshes this panel
+            box.querySelector('.card-body').appendChild(saveCheck);
+        }
+        saveCheck.hidden = !dirty;
+        if (issues) issues.style.opacity = dirty ? '0.5' : '';
+        const submit = document.getElementById('sa-success-submit-lhdn');
+        if (dirty) {
+            status.textContent = 'Changes not checked';
+            status.className = 'js-readiness-status badge bg-secondary';
+            if (submit) submit.disabled = true; // Submit sends the saved draft, not these edits
+        } else if (lastResult) {
+            render(lastResult);
+        }
+    }
+
     function stepOf(field) {
         const step = field.closest('[id^="step"]');
         const n = step ? parseInt(step.id.replace('step', ''), 10) : NaN;
@@ -83,6 +123,9 @@
 
         const submit = document.getElementById('sa-success-submit-lhdn');
         if (submit) submit.disabled = !data.ready;
+        const saveCheck = box.querySelector('.js-readiness-savecheck');
+        if (saveCheck) saveCheck.hidden = true;
+        if (issues) issues.style.opacity = '';
     }
 
     async function refresh() {
@@ -96,6 +139,8 @@
             const data = await response.json();
             if (!data.success) return;
             box.hidden = false;
+            lastResult = data;
+            checkedSnapshot = formSnapshot();
             render(data);
         } catch (error) {
             console.error('Ready for LHDN check failed:', error); // the Submit handler still runs the check
@@ -103,5 +148,12 @@
     }
 
     window.LhdnReadiness = { refresh, focusField };
-    document.addEventListener('DOMContentLoaded', refresh); // a reopened draft is checked straight away
+    document.addEventListener('DOMContentLoaded', () => {
+        refresh(); // a reopened draft is checked straight away
+        // Select2 changes arrive through jQuery's trigger('change'), which addEventListener never sees.
+        const onEdit = () => setTimeout(showChangesNotChecked, 0);
+        if (window.jQuery) jQuery(document).on('input change', '#invoice_form :input', onEdit);
+        else document.addEventListener('input', onEdit, true);
+        document.getElementById('invoice_form')?.addEventListener('click', onEdit); // add / remove item rows
+    });
 })();
