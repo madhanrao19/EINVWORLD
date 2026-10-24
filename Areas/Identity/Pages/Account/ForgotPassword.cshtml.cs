@@ -111,11 +111,10 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
 
                 // 🟢 CHANGE: Add "email = Input.Email" to the values object
-                var callbackUrl = Url.Page(
+                var callbackUrl = EINVWORLD.Helpers.EmailLinks.EmailLink(this, Url.Page(
                     "/Account/ResetPassword",
                     pageHandler: null,
-                    values: new { area = "Identity", code, email = Input.Email },
-                    protocol: Request.Scheme);
+                    values: new { area = "Identity", code, email = Input.Email }));
 
                 string emailBody = GenerateForgotPasswordEmailBody(callbackUrl);
                 await _emailService.SendEmail(Input.Email, "Reset Your Password", emailBody);
