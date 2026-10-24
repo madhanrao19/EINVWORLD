@@ -42,11 +42,9 @@ namespace eInvWorld.Services.Mappers
             // LHDN SDK (effective 1 Sep 2025): when the invoice currency is not MYR, the payload must
             // carry a real Currency Exchange Rate — submissions without it are rejected. Fail here
             // instead of silently defaulting the rate to 1, which LHDN would accept as wrong tax data.
-            if (!string.IsNullOrEmpty(header.Currency)
-                && !string.Equals(header.Currency, "MYR", StringComparison.OrdinalIgnoreCase)
-                && (!header.ExchangeRate.HasValue || header.ExchangeRate.Value <= 0m))
+            var currencyError = CurrencyError(header);
+            if (currencyError != null)
             {
-                var currencyError = $"Currency Exchange Rate (to MYR) is required and must be greater than zero when the invoice currency is {header.Currency}.";
                 Log.Warning("InvoiceMapper validation: {ErrorMessage}", currencyError);
                 throw new InvalidOperationException($"Validation failed for Invoice: {currencyError}");
             }
@@ -243,11 +241,34 @@ namespace eInvWorld.Services.Mappers
         private static bool IsPassportTooLong(string? regTypeCode, string? regNo)
             => regTypeCode == "PASSPORT" && (regNo?.Length ?? 0) > 12;
 
+        /// <summary>Non-MYR invoices need an exchange rate above zero (LHDN SDK, 1 Sep 2025); null when fine.</summary>
+        internal static string? CurrencyError(InputModel.InvoiceHeader header) =>
+            !string.IsNullOrEmpty(header.Currency)
+            && !string.Equals(header.Currency, "MYR", StringComparison.OrdinalIgnoreCase)
+            && (!header.ExchangeRate.HasValue || header.ExchangeRate.Value <= 0m)
+                ? $"Currency Exchange Rate (to MYR) is required and must be greater than zero when the invoice currency is {header.Currency}."
+                : null;
+
         private void ValidatePartyInfo(PartyInfo party, string role)
         {
             if (party == null)
                 throw new ArgumentNullException(nameof(party), $"{role} information is missing.");
 
+            var errors = PartyErrors(party, role);
+            // 👇 This line replaces the previous email validation
+            party.Email ??= ""; // ✅ Ensures empty string if no email
+
+            if (errors.Any())
+            {
+                var errorMessage = $"Validation failed for {role}: {string.Join(", ", errors)}";
+                Log.Warning("InvoiceMapper validation: {ErrorMessage}", errorMessage);
+                throw new InvalidOperationException(errorMessage);
+            }
+        }
+
+        /// <summary>The LHDN party rules as a list (shared with InvoiceReadinessCheck); role "Customer" is the buyer.</summary>
+        internal static List<string> PartyErrors(PartyInfo party, string role)
+        {
             // Business Description and Postal Code are optional for the Buyer ("Customer" role) —
             // MyInvois does not mandate them for the buyer party, and requiring them here blocked
             // otherwise-valid invoices whose buyer record simply doesn't carry that data. Supplier
@@ -280,15 +301,7 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
             if (IsPassportTooLong(party.RegTypeCode, party.RegNo))
                 errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
-            // 👇 This line replaces the previous email validation
-            party.Email ??= ""; // ✅ Ensures empty string if no email
-
-            if (errors.Any())
-            {
-                var errorMessage = $"Validation failed for {role}: {string.Join(", ", errors)}";
-                Log.Warning("InvoiceMapper validation: {ErrorMessage}", errorMessage);
-                throw new InvalidOperationException(errorMessage);
-            }
+            return errors;
         }
 
 
@@ -1364,6 +1377,22 @@ namespace eInvWorld.Services.Mappers
             if (customer == null)
                 throw new ArgumentNullException(nameof(customer), $"{role} information is missing.");
 
+            var errors = PublicCustomerErrors(customer, role);
+
+            // Ensure email is not null (matching original side-effect logic)
+            customer.Email ??= "";
+
+            if (errors.Any())
+            {
+                var errorMessage = $"Validation failed for {role}: {string.Join(", ", errors)}";
+                Log.Warning("InvoiceMapper validation: {ErrorMessage}", errorMessage);
+                throw new InvalidOperationException(errorMessage);
+            }
+        }
+
+        /// <summary>The LHDN buyer rules for a public customer, as a list (shared with InvoiceReadinessCheck).</summary>
+        internal static List<string> PublicCustomerErrors(InputModel.PublicCustomer customer, string role)
+        {
             var errors = new List<string>();
 
             // Business Description and Postal Code are optional for Buyers — this method only ever
@@ -1382,16 +1411,7 @@ namespace eInvWorld.Services.Mappers
                 errors.Add($"{role} State Code 17 (Not Applicable) is only allowed for consolidated e-Invoices or foreign parties; a Malaysian {role} must use its actual state code.");
             if (IsPassportTooLong(customer.RegTypeCode, customer.RegNo))
                 errors.Add($"{role} Passport Registration Number cannot exceed 12 characters.");
-
-            // Ensure email is not null (matching original side-effect logic)
-            customer.Email ??= "";
-
-            if (errors.Any())
-            {
-                var errorMessage = $"Validation failed for {role}: {string.Join(", ", errors)}";
-                Log.Warning("InvoiceMapper validation: {ErrorMessage}", errorMessage);
-                throw new InvalidOperationException(errorMessage);
-            }
+            return errors;
         }
 
         // ✅ 2. Mapping Logic for PublicCustomer (Mirrors MapCustomer)
