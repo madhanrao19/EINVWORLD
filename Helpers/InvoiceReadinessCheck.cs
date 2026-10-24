@@ -59,6 +59,8 @@ namespace EINVWORLD.Helpers
             var lines = invoice.InvoiceLines.OrderBy(l => l.LineNumber).ToList();
             if (lines.Count == 0) items.Add(new(Items, true, "Add at least one item."));
             var supplierTin = invoice.Supplier?.TIN;
+            var buyerTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN;
+            var buyerIdNo = invoice.Customer != null ? invoice.Customer.RegNo : invoice.PublicCustomer?.RegNo;
             for (int i = 0; i < lines.Count; i++)
             {
                 var l = lines[i];
@@ -71,6 +73,8 @@ namespace EINVWORLD.Helpers
                     items.Add(new(Items, true, $"{item}: classification is required.", f("ClassificationCode")));
                 else if (TinHelper.SelfBilledClassificationError(invoice.DocTypeCode, supplierTin, l.ClassificationCode) is { } sbError)
                     items.Add(new(Items, true, $"{item}: {sbError}", f("ClassificationCode")));
+                else if (TinHelper.ConsolidatedClassificationError(invoice.DocTypeCode, buyerTin, buyerIdNo, l.ClassificationCode) is { } consolidatedError)
+                    items.Add(new(Items, true, $"{item}: {consolidatedError}", f("ClassificationCode")));
                 if (string.IsNullOrWhiteSpace(l.UnitOfMeasure))
                     items.Add(new(Items, true, $"{item}: unit is required.", f("UnitOfMeasure")));
                 else if (activeUnitCodes != null && !activeUnitCodes.Contains(l.UnitOfMeasure))
