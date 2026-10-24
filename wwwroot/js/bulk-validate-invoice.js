@@ -66,7 +66,7 @@ async function executeBulkValidate(uuids) {
         const data = await response.json();
 
         if (!data.success) {
-            Swal.fire('Could Not Check Status', data.message || 'Please try again.', 'warning');
+            Swal.fire({ title: 'Could Not Check Status', text: data.message || 'Please try again.', icon: 'warning' });
             return;
         }
 
