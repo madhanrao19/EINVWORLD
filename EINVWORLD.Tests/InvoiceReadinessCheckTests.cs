@@ -134,6 +134,36 @@ namespace EINVWORLD.Tests
             Assert.Equal(blocked, Run(inv).Any(i => i.Field == "Invoice.InvoiceLines[0].ClassificationCode"));
         }
 
+        // Staging preprod, 24-25 Oct 2026: EINV100576 (real buyer + 004) came back ERR250; EINV100579/580 (General Public "NA" + 022)
+        // came back Invalid while the panel said Ready.
+        [Theory]
+        [InlineData("01", "C2222222222", "202001000001", "004", true)]    // 004 with a real buyer
+        [InlineData("01", "EI00000000010", "NA", "022", true)]            // consolidated buyer without 004
+        [InlineData("01", "EI00000000010", "", "022", true)]
+        [InlineData("01", "EI00000000010", "NA", "004", false)]           // proper consolidated e-Invoice
+        [InlineData("01", "EI00000000010", "900101145566", "022", false)] // individual buyer with an NRIC
+        [InlineData("01", "C2222222222", "202001000001", "022", false)]   // normal B2B
+        [InlineData("02", "C2222222222", "202001000001", "004", true)]    // credit note follows the same rule
+        public void Consolidated_Classification_Matches_The_Buyer(string docType, string buyerTin, string buyerId, string code, bool blocked)
+        {
+            var inv = Ready(); inv.DocTypeCode = docType; inv.RefUUID = "REF";
+            inv.Customer!.TIN = buyerTin; inv.Customer.RegNo = buyerId;
+            inv.InvoiceLines.First().ClassificationCode = code;
+            Assert.Equal(blocked, Run(inv).Any(i => i.Blocking && i.Field == "Invoice.InvoiceLines[0].ClassificationCode"));
+        }
+
+        [Fact]
+        public void Consolidated_Rule_Also_Reads_A_Public_Customer_Buyer()
+        {
+            var inv = Ready(); inv.Customer = null;
+            inv.PublicCustomer = new PublicCustomer
+            {
+                CompanyName = "General Public", TIN = "EI00000000010", RegNo = "NA", IndustryClassificationCode = "00000",
+                Addr1 = "NA", CityName = "NA", StateCode = "17", CountryCode = "MYS", PhoneNo = "NA",
+            };
+            Assert.Contains(Run(inv), i => i.Field == "Invoice.InvoiceLines[0].ClassificationCode" && i.Message.Contains("004"));
+        }
+
         [Fact]
         public void Stale_Totals_Only_Warn_Because_Lhdn_Gets_Totals_From_The_Lines()
         {
