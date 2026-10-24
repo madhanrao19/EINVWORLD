@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.49.2`** (`AppInfo:Version` in `appsettings.json`). v1.49.2 is a **patch**
+> **Current version: `v1.49.3`** (`AppInfo:Version` in `appsettings.json`). v1.49.3 is a **patch**
+> release: "Check selected" on the Draft tab shows which drafts are ready and submits only those — see the dated entry below. v1.49.2 was a **patch**
 > release: the Ready for LHDN panel shows "Changes not checked" with a Save & Check button after any edit — see the dated entry below. v1.49.1 was a **patch**
 > release: bulk-action result messages are shown as text, never as HTML — see the dated entry below. v1.49.0 was a **minor**
 > release: a Today card at the top of the Supplier Dashboard lists what Finance needs to do — see the dated entry below. v1.48.2 was a **patch**
@@ -440,6 +441,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.49.3 (Invoices list: Check selected drafts)
+
+- **New "Check selected" button on the Draft tab.** It runs the Ready-for-LHDN check on up to 100 selected drafts and shows
+  "Ready: n · Needs attention: n", listing each draft that isn't ready with its first problem and a link to fix it.
+- **"Submit the n ready"** leaves only the ready drafts selected and starts the normal bulk Submit, which checks each draft
+  again on the server, so a draft that isn't ready is never sent.
+- Read-only check; drafts the user can't open are reported as not found. Messages are shown as text.
+- No database change.
 
 ## 📅 2026-10-24 — v1.49.2 (Ready for LHDN: "Changes not checked" and Save & Check)
 
