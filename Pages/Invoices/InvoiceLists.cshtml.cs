@@ -2065,6 +2065,21 @@ namespace eInvWorld.Pages.Invoices
         // Bounded by the number of distinct users since the last app restart.
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _sessionSyncGates = new();
 
+        /// <summary>Most invoices one Invoices-list status refresh checks with LHDN (the page refreshes every 30s).</summary>
+        public const int MaxSessionSyncPerTick = 4;
+
+        /// <summary>The invoices one list refresh polls: not on cooldown, Submitted first, then least recently checked, at most MaxSessionSyncPerTick.</summary>
+        internal static List<InvoiceHeader> PickSessionSyncBatch(IEnumerable<InvoiceHeader> candidates, DateTime nowMyt)
+        {
+            DateTime lastChecked(InvoiceHeader i) => EINVWORLD.Helpers.InvoicePollAttemptTracker.GetEffectiveLastChecked(i.InvoiceNo, i.LastUpdated ?? i.CreatedDate);
+            return candidates
+                .Where(i => !EINVWORLD.Helpers.InvoiceSyncRules.ShouldSkipValidRefresh(i.LHDNStatusId, !string.IsNullOrWhiteSpace(i.LongId), lastChecked(i), nowMyt, "UISession"))
+                .OrderBy(i => i.LHDNStatusId == "Submitted" ? 0 : 1)
+                .ThenBy(lastChecked)
+                .Take(MaxSessionSyncPerTick)
+                .ToList();
+        }
+
         public async Task<JsonResult> OnPostSyncActiveSessionAsync([FromBody] List<string> visibleInvoiceNos)
         {
             if (visibleInvoiceNos == null || !visibleInvoiceNos.Any())
@@ -2107,6 +2122,11 @@ namespace eInvWorld.Pages.Invoices
                                  (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
                                  (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
                     .ToListAsync(HttpContext.RequestAborted);
+
+                // A few per tick (the page asks every 30s): right after an app restart the in-memory cooldowns are empty, and
+                // polling every recent invoice in one request tripped LHDN's 429 and held the request ~1 min (Staging, 25 Oct).
+                // Submitted first (waiting for LHDN's verdict), then the least recently checked; the rest follow on the next ticks.
+                invoicesToSync = PickSessionSyncBatch(invoicesToSync, eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow));
 
                 foreach (var invoice in invoicesToSync)
                 {
