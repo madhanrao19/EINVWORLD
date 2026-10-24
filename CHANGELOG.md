@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.54`** (`AppInfo:Version` in `appsettings.json`). v1.47.54 is a **patch**
+> **Current version: `v1.48.0`** (`AppInfo:Version` in `appsettings.json`). v1.48.0 is a **minor**
+> release: every submit checks the draft is "Ready for LHDN" first — see the dated entry below. v1.47.54 was a **patch**
 > release: Submit from Edit Invoice uses the issuing company's TIN — see the dated entry below. v1.47.53 was a **patch**
 > release: invoice templates keep each line's Fee / Charge and discount — see the dated entry below. v1.47.52 was a **patch**
 > release: recurring invoices get this run's billing period, totals from their lines, and the Tax Type 06 / Classification rules — see the dated entry below. v1.47.51 was a **patch**
@@ -434,6 +435,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.48.0 (Ready for LHDN: one pre-submit check on every submit path)
+
+- **New server-side check** (`Helpers/InvoiceReadinessCheck`) of the saved draft, run before anything is sent to LHDN:
+  - Supplier and buyer selected, with the LHDN party fields (the same rules the payload builder already enforced).
+  - Exchange rate for non-MYR invoices; reference UUID for credit, debit and refund notes; issue date set and no more than 3 days old.
+  - Every item has a description, quantity above 0, unit price, classification (including the self-billed General Public /
+    Foreign Supplier codes), an active LHDN unit and a tax type; Tax Type 06 at 0%.
+  - Saved totals that differ from the items are a **warning only**, since LHDN receives totals recalculated from the items.
+- **Every submit path runs it:** Submit on Create e-Invoice and Edit Invoice, Submit / bulk submit from the Invoices list, and
+  background submits (retries, recurring and Smart Capture auto-submit). A draft that isn't ready is refused with the list of
+  problems instead of being sent and rejected. Background submits refused this way are not retried.
+- **Behaviour change:** the Invoices list and background submits now also refuse drafts older than 3 days and drafts saved with
+  missing item details, which previously reached LHDN and came back Invalid.
+- `GET ?handler=Readiness&invoiceNo=` on Create and Edit returns the check for the coming Step 3 panel.
+- The self-billed classification and adjustment rules are now one shared helper (`TinHelper`) instead of copies in Create and Edit.
+- No database change. New unit tests cover each rule; an integration test checks the background submit refuses a draft that isn't ready.
 
 ## 📅 2026-10-24 — v1.47.54 (Submit from Edit Invoice uses the issuing company's TIN)
 

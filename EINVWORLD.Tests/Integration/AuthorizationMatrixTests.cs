@@ -97,5 +97,40 @@ namespace EINVWORLD.Tests.Integration
             if (recurring.HasValue)
                 Assert.Equal(recurring.Value, await eInvWorld.Pages.RecurringInvoices.IndexModel.CanWriteTemplateAsync(ctx, userId, template.Id));
         }
+
+        [Fact]
+        public async Task Background_Submit_Refuses_A_Draft_That_Is_Not_Ready_And_Is_Never_Retried()
+        {
+            // Job submits (retries, recurring and Smart Capture auto-submit) run the same Ready-for-LHDN check as
+            // the Submit buttons, before any JSON, token or LHDN call; the failure is non-retryable.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var issuer = await CreateValidPartyInfoAsync(ctx, "Ready Issuer Co");
+            ctx.PartyInfos.Add(issuer);
+            if (!await ctx.Set<Status>().AnyAsync(s => s.StatusCode == "Draft"))
+                ctx.Set<Status>().Add(new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft" });
+            await ctx.SaveChangesAsync();
+            var invoiceNo = $"INV-RD-{Guid.NewGuid():N}"[..20];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR",
+                CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = "Draft",
+                SupplierId = issuer.PartyInfoId, // no buyer, no lines, no issue date
+            });
+            await ctx.SaveChangesAsync();
+
+            var items = await InvoiceReadinessCheck.CheckAsync(ctx, invoiceNo);
+            Assert.NotNull(items);
+            Assert.Contains(items!, i => i.Section == InvoiceReadinessCheck.Buyer && i.Blocking);
+            Assert.Contains(items!, i => i.Section == InvoiceReadinessCheck.Items && i.Blocking);
+            Assert.Null(await InvoiceReadinessCheck.CheckAsync(ctx, "no-such-invoice"));
+
+            var helper = new InvoiceSubmissionHelper(ctx, null!, null!, null!,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<InvoiceSubmissionHelper>.Instance, null!);
+            var ex = await Assert.ThrowsAsync<SubmissionBlockedException>(() => helper.SubmitInvoiceAsync(invoiceNo));
+            Assert.Contains("Not ready for LHDN", ex.Message);
+            Assert.False(EINVWORLD.Services.Background.DurableSyncJobWorker.ShouldRetry(1, 3, ex));
+        }
     }
 }

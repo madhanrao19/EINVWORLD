@@ -1626,6 +1626,13 @@ namespace eInvWorld.Pages.Invoices
                     return SubmitDraftResult.Fail($"Invoice {invoiceNo} is not in Draft status.");
                 }
 
+                var notReady = EINVWORLD.Helpers.InvoiceReadinessCheck.BlockingSummary(await EINVWORLD.Helpers.InvoiceReadinessCheck.CheckAsync(_context, invoiceNo) ?? new());
+                if (notReady != null)
+                {
+                    _logger.LogWarning("SubmitFromList refused for {InvoiceNo}: not ready for LHDN.", invoiceNo);
+                    return SubmitDraftResult.Fail($"Invoice {invoiceNo}: {notReady}");
+                }
+
                 // Resolve the issuer TIN so submission uses the per-TIN token + onbehalfof header and an
                 // ownership check (consistent with Create Invoice); falls back to the session token below
                 // if it can't be resolved.

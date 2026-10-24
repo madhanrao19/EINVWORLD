@@ -90,7 +90,7 @@ check and test the same behaviour in **every** entry path — server-side, which
 - CSV import (`ImportCSV`, `CsvParserService`) · Bulk Import (`BulkInvoiceImportService`)
 - Smart Capture (`SmartCaptureReview` → `InvoiceDraftService`, `InvoiceSuggestionValidator`)
 - Recurring generation (`RecurringInvoiceWorker.ApplyLineRulesAndTotals`)
-- LHDN payload and submit (`InvoiceMapper`, `LHDNApiService` final checks)
+- LHDN payload and submit (`InvoiceMapper`, `InvoiceReadinessCheck` pre-submit gate, `LHDNApiService` final checks)
 
 Prefer putting the rule in one shared helper (`TaxTypeRules`, `TinHelper.DefaultClassificationCode`) and calling it
 from each path over patching each copy. A central invoice-rules service is planned; until it exists, the PR
