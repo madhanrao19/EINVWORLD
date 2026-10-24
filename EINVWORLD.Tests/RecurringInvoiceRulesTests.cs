@@ -61,6 +61,20 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void ApplyLineRulesAndTotals_Adds_A_Template_Fee_To_The_Taxable_Base_And_Totals()
+        {
+            var line = Line(2, 100m, 20m, "022", "02", 8m);
+            line.FeeChargeAmount = 15m;                   // carried over from the template line
+            var inv = Invoice("01", line);
+
+            RecurringInvoiceWorker.ApplyLineRulesAndTotals(inv, "C1234567890");
+
+            Assert.Equal(195.00m, inv.TotalAmountExclTax);
+            Assert.Equal(15.60m, inv.TotalTaxAmount);
+            Assert.Equal(210.60m, inv.TotalPayableAmount);
+        }
+
+        [Fact]
         public void ApplyLineRulesAndTotals_Keeps_A_Chosen_Classification()
         {
             var inv = Invoice("01", Line(1, 10m, 0m, "008", "01", 10m));

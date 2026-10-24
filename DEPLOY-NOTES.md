@@ -382,6 +382,19 @@ sqlcmd %DB% -i "Migrations\Apply_AddNeedsAttentionResolution.sql"
 
 Verify: the last `__EFMigrationsHistory` row should be `20260930010000_AddNeedsAttentionResolution`.
 
+### v1.47.53 migration — template line Fee / Charge
+
+`scripts\Deploy-Staging.ps1` applies this automatically (backup first). Manual equivalent:
+```bat
+set DB=-S <sql-host> -d <database> -E -b
+sqlcmd %DB% -i "Migrations\Apply_AddTemplateLineFeeCharge.sql"
+```
+
+> **`AddTemplateLineFeeCharge`** adds nullable `InvoiceTemplateLines.FeeChargeAmount` (decimal(18,2)) and
+> `FeeChargeReason` (nvarchar(200)). Purely additive with no backfill: existing template lines have no fee.
+
+Verify: the last `__EFMigrationsHistory` row should be `20261024120000_AddTemplateLineFeeCharge`.
+
 ## 2. Secrets & configuration (never commit these)
 
 Set on the server via environment variables or user-secrets — see `SECRETS-SETUP.md`:
