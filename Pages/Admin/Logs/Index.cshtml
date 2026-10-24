@@ -50,6 +50,10 @@
     </div>
 </div>
 
+@if (TempData["ErrorMessage"] is string logsError)
+{
+    <div class="alert alert-danger" role="alert">@logsError</div>
+}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="mb-0 fw-semibold">Log Results (@Model.TotalLogs found)</h5>

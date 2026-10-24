@@ -21,8 +21,11 @@ namespace EINVWORLD.Services.Audit
     /// <summary>Appends to the tamper-evident audit chain and verifies its integrity.</summary>
     public interface IAuditService
     {
-        /// <summary>Appends an audit row, chaining its hash onto the previous row. Never throws to the caller.</summary>
-        Task WriteAsync(string action, AuditEntry entry, CancellationToken ct = default);
+        /// <summary>
+        /// Appends an audit row, chaining its hash onto the previous row. Never throws to the caller; returns false when the
+        /// row could not be written, so an action that must not happen unaudited (clearing logs) can refuse.
+        /// </summary>
+        Task<bool> WriteAsync(string action, AuditEntry entry, CancellationToken ct = default);
 
         /// <summary>Recomputes the whole chain and reports the first row (if any) that fails verification.</summary>
         Task<AuditVerificationResult> VerifyChainAsync(CancellationToken ct = default);
