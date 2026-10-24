@@ -86,6 +86,7 @@ namespace eInvWorld.Models.Templates
 
             Subtotal = Quantity.Value * UnitPrice.Value;
             DiscountAmount ??= 0;
+            // shortcut: template lines have no FeeChargeAmount column, so fees/charges are lost on save; add it (migration) with the central invoice-rules work.
             AmountExclTax = Subtotal - DiscountAmount;
 
             // ✅ Calculate Total Tax Amount from Associated Taxes
