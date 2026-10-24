@@ -84,7 +84,7 @@ namespace EINVWORLD.Tests.Integration
             var notReady = Add(own.PartyInfoId, buyer.PartyInfoId, "Draft");                       // no lines
             Add(own.PartyInfoId, buyer.PartyInfoId, "Draft", lines: true);                           // ready
             Add(own.PartyInfoId, buyer.PartyInfoId, "Submitted", "Submitted");
-            Add(own.PartyInfoId, buyer.PartyInfoId, "Valid", "Valid", validated: nowMyt.AddMinutes(-5));
+            Add(own.PartyInfoId, buyer.PartyInfoId, "Valid", "Valid", validated: nowMyt.Date.AddSeconds(1)); // today, even just after midnight
             Add(own.PartyInfoId, buyer.PartyInfoId, "Valid", "Valid", validated: nowMyt.Date.AddMinutes(-1)); // yesterday
             var foreign = Add(other.PartyInfoId, buyer.PartyInfoId, "Invalid", "Invalid");            // another tenant
             var viaGeneral = Add(other.PartyInfoId, general.PartyInfoId, "Invalid", "Invalid");       // to General Public
