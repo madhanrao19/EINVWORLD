@@ -99,6 +99,34 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task Dashboard_Company_Scope_Ignores_A_Shared_General_Tin_Membership()
+        {
+            // Dashboard counts invoices by GetUserCompanyIds; a membership of a general-TIN party (on every tenant's
+            // invoices) used to pull other tenants' invoices into the user's counts.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+
+            var own = await CreateValidPartyInfoAsync(ctx, "Scope Own Co");
+            ctx.PartyInfos.Add(own);
+            var general = await ctx.PartyInfos.FirstOrDefaultAsync(pi => pi.TIN == "EI00000000010");
+            if (general == null)
+            {
+                general = await CreateValidPartyInfoAsync(ctx, "General Public");
+                general.TIN = "EI00000000010";
+                ctx.PartyInfos.Add(general);
+            }
+            await ctx.SaveChangesAsync();
+            var userId = await CreateUserAsync(ctx, "scope-user");
+            var user = (await ctx.Users.FindAsync(userId))!;
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = own.PartyInfoId, HasCompanyAccess = true });
+            ctx.UserCompanies.Add(new UserCompany { UserId = userId, PartyInfoId = general.PartyInfoId });
+            await ctx.SaveChangesAsync();
+
+            var ids = PrincipalFor(userId, user.UserName!).GetUserCompanyIds(ctx);
+            Assert.Equal(new[] { own.PartyInfoId }, ids);
+        }
+
+        [Fact]
         public async Task Background_Submit_Refuses_A_Draft_That_Is_Not_Ready_And_Is_Never_Retried()
         {
             // Job submits (retries, recurring and Smart Capture auto-submit) run the same Ready-for-LHDN check as

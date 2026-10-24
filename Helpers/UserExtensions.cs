@@ -66,8 +66,13 @@ namespace EINVWORLD.Helpers
             var userId = user?.Identity?.Name;
             if (string.IsNullOrWhiteSpace(userId)) return new List<int>();
 
+            // A shared LHDN general-TIN party (General Public, Foreign ...) is on every tenant's invoices, so it never
+            // scopes invoices to this user; the Invoice List drops general TINs the same way.
             return dbContext.UserCompanies
                 .Where(uc => uc.User.UserName == userId)
+                .Select(uc => new { uc.PartyInfoId, uc.PartyInfo.TIN })
+                .AsEnumerable()
+                .Where(uc => !GeneralTINHelper.IsGeneralTIN(uc.TIN))
                 .Select(uc => uc.PartyInfoId)
                 .ToList();
         }
