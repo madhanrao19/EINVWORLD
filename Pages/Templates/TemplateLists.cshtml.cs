@@ -210,7 +210,7 @@ namespace eInvWorld.Pages.Templates
                     {
                         InvoiceNo = template.TemplateName ?? "",
                         Action = "DeletedTemplate",
-                        Timestamp = GetMYTime(),
+                        Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                         PerformedBy = userName,
                         Remarks = $"Deleted template ID: {template.Id}"
                     });

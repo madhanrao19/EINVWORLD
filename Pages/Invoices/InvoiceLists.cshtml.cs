@@ -715,7 +715,7 @@ namespace eInvWorld.Pages.Invoices
                 {
                     InvoiceNo = input.InvoiceNo,
                     Action = "Deleted",
-                    Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+                    Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                     PerformedBy = User.Identity?.Name ?? "System",
                     Remarks = "Invoice deleted from invoice list"
                 });
@@ -1554,7 +1554,7 @@ namespace eInvWorld.Pages.Invoices
             {
                 InvoiceNo = invoiceNo,
                 Action = resolve ? "Attention Resolved" : "Attention Reopened",
-                Timestamp = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+                Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                 PerformedBy = performedBy,
                 Remarks = resolve ? "Marked as resolved; removed from Needs Attention" : "Returned to Needs Attention"
             });
@@ -1762,7 +1762,7 @@ namespace eInvWorld.Pages.Invoices
                 {
                     InvoiceNo = invoiceNo,
                     Action = "Submitted",
-                    Timestamp = submittedAt,
+                    Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                     PerformedBy = performedBy,
                     Remarks = $"Submitted from Invoice List. UUID: {accepted.uuid}"
                 });
@@ -1842,7 +1842,7 @@ namespace eInvWorld.Pages.Invoices
                         {
                             InvoiceNo = invoiceNo,
                             Action = "StatusSync",
-                            Timestamp = syncedAt,
+                            Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                             PerformedBy = performedBy,
                             Remarks = $"Fetched LHDN status: {finalStatus}"
                         });
@@ -1886,7 +1886,7 @@ namespace eInvWorld.Pages.Invoices
                     {
                         InvoiceNo = invoiceNo,
                         Action = blocked ? "Submission Blocked" : "LHDN Validation Failed",
-                        Timestamp = GetMYTime(),
+                        Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                         PerformedBy = User.Identity?.Name ?? "System",
                         Remarks = ex.Message.Substring(0, Math.Min(ex.Message.Length, 200))
                     });
@@ -1910,7 +1910,7 @@ namespace eInvWorld.Pages.Invoices
                     {
                         InvoiceNo = invoiceNo,
                         Action = "Transmission Failed",
-                        Timestamp = failedAt,
+                        Timestamp = DateTime.UtcNow, // history is stored in UTC (shown in MYT)
                         PerformedBy = User.Identity?.Name ?? "System",
                         Remarks = $"API Submission failed: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 200))}"
                     });
