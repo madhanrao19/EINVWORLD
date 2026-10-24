@@ -1084,7 +1084,6 @@
     <None Include="wwwroot\assets\libs\nouislider\nouislider.min.js" />
     <None Include="wwwroot\assets\libs\particles.js\particles.js" />
     <None Include="wwwroot\assets\libs\prismjs\prism.js" />
-    <None Include="wwwroot\assets\libs\quill\quill.min.js" />
     <None Include="wwwroot\assets\libs\rater-js\index.js" />
     <None Include="wwwroot\assets\libs\shepherd.js\js\shepherd.min.js" />
     <None Include="wwwroot\assets\libs\simplebar\simplebar.min.js" />
