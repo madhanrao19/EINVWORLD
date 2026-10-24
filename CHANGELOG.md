@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.10`** (`AppInfo:Version` in `appsettings.json`). v1.50.10 is a **patch**
+> **Current version: `v1.50.11`** (`AppInfo:Version` in `appsettings.json`). v1.50.11 is a **patch**
+> release: the system logs are only cleared once the audit entry is safely written — see the dated entry below. v1.50.10 was a **patch**
 > release: the "check your email" page after registering no longer reveals which addresses have accounts — see the dated entry below. v1.50.9 was a **patch**
 > release: the Invoices list checks at most 4 invoices with LHDN per refresh, so it no longer waits out LHDN's penalty after a restart — see the dated entry below. v1.50.8 was a **patch**
 > release: Ready for LHDN catches the consolidated e-Invoice rule (General Public buyer and classification 004) — see the dated entry below. v1.50.7 was a **patch**
@@ -452,6 +453,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.11 (system logs are never cleared without an audit entry)
+
+From the follow-up security review of v1.50.7:
+- The audit trail never interrupts what it records, so if writing the "SystemLogsCleared" entry failed, Clear All still deleted
+  every log. Clearing the logs now goes ahead only when the audit entry was written; otherwise nothing is deleted and the page
+  says so.
+- Internally, writing an audit entry now reports whether it succeeded (still never throws). No database change.
 
 ## 📅 2026-10-25 — v1.50.10 (registration confirmation page hardening)
 

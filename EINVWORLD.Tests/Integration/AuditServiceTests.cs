@@ -23,7 +23,6 @@ namespace EINVWORLD.Tests.Integration
 
         private AuditService CreateService()
         {
-            var services = new ServiceCollection();
             services.AddScoped(_ => _fx.CreateContext());
             var provider = services.BuildServiceProvider();
 
@@ -55,7 +54,6 @@ namespace EINVWORLD.Tests.Integration
         public async Task WriteAsync_Reports_Failure_Instead_Of_Throwing()
         {
             // Clearing the system logs is refused when this returns false, so a broken audit store can't hide the deletion.
-            var services = new ServiceCollection();
             var broken = new AuditService(new ThrowingScopeFactory(), new HttpContextAccessor(), NullLogger<AuditService>.Instance);
             Assert.False(await broken.WriteAsync("Test.Unwritable", new AuditEntry()));
         }
