@@ -1188,7 +1188,10 @@ namespace eInvWorld.Pages.Invoices
                     return new JsonResult(new { success = false, message = "You are not authorized to submit this invoice." });
                 }
 
-                var existingInvoice = _context.InvoiceHeaders.FirstOrDefault(i => i.InvoiceNo == invoiceNo);
+                var existingInvoice = await _context.InvoiceHeaders
+                    .Include(i => i.Supplier)
+                    .Include(i => i.Customer)
+                    .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo);
                 if (existingInvoice == null)
                 {
                     var msg = $"Invoice {invoiceNo} not found.";
@@ -1233,7 +1236,21 @@ namespace eInvWorld.Pages.Invoices
                     new Documents("JSON", documentHash, invoiceNo, encodedDocument)
                 };
 
-                tin = await _tokenService.GetUserAssignedTINAsync(); // Secure source
+                // Submit as the invoice's issuer (customer for self-billed 11-14), like Create and the list/job paths.
+                // The user's assigned TIN is only their primary company, which is wrong for a multi-company user.
+                tin = EINVWORLD.Helpers.TinHelper.ResolveSubmitterTin(existingInvoice);
+                if (string.IsNullOrWhiteSpace(tin))
+                {
+                    var tinType = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(existingInvoice.DocTypeCode) ? "customer" : "supplier";
+                    var msg = $"Missing {tinType} TIN for document type {existingInvoice.DocTypeCode}. Cannot submit to LHDN.";
+                    _logger.LogError("Submit blocked for {InvoiceNo}: {Message}", invoiceNo, msg);
+                    return isAjax ? new JsonResult(new { success = false, message = msg }) : Page();
+                }
+                if (!await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(User, _context, tin))
+                {
+                    _logger.LogWarning("SubmitDocuments denied: user {User} does not own issuer TIN {Tin} of {InvoiceNo}.", User.Identity?.Name, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin), invoiceNo);
+                    return new JsonResult(new { success = false, message = "You are not authorized to submit this invoice." });
+                }
 
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
 
