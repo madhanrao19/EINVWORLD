@@ -35,7 +35,7 @@ namespace EINVWORLD.Services.Audit
             _log = log;
         }
 
-        public async Task WriteAsync(string action, AuditEntry entry, CancellationToken ct = default)
+        public async Task<bool> WriteAsync(string action, AuditEntry entry, CancellationToken ct = default)
         {
             try
             {
@@ -78,11 +78,13 @@ namespace EINVWORLD.Services.Audit
                 {
                     ChainLock.Release();
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 // Auditing must never break the audited operation; log and move on.
                 _log.LogError(ex, "Failed to write audit entry for action {Action}", action);
+                return false;
             }
         }
 
