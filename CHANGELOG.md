@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.47.51`** (`AppInfo:Version` in `appsettings.json`). v1.47.51 is a **patch**
+> **Current version: `v1.47.52`** (`AppInfo:Version` in `appsettings.json`). v1.47.52 is a **patch**
+> release: recurring invoices get this run's billing period, totals from their lines, and the Tax Type 06 / Classification rules — see the dated entry below. v1.47.51 was a **patch**
 > release: recurring invoices never treat a shared LHDN placeholder company as yours — see the dated entry below. v1.47.50 was a **patch**
 > release: LHDN error details are readable and keep their SDK error links (24 Oct 2026 LHDN change) — see the dated entry below. v1.47.49 was a **patch**
 > release: server-side permission gaps closed (items, buyers, cancel/reject, recurring, exports) — see the dated entry below. v1.47.48 was a **patch**
@@ -431,6 +432,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.47.52 (recurring invoices: correct billing period, totals and line rules)
+
+- **Billing period:** a recurring invoice whose template has a billing period now gets the period of the run.
+  - Monthly: 1st to the last day of the run's month. Weekly: Monday to Sunday. Daily: that day. Annually: that year.
+  - Before, every generated invoice repeated the template's original dates.
+- **Totals:** a generated invoice's totals are now added up from its recalculated lines. Before, the template's stored
+  totals were copied and could disagree with the lines, and with what LHDN receives.
+- **Same line rules as Create / Edit:**
+  - A blank Classification gets the default code: 022, or 004 / 035 for self-billed documents.
+  - Tax Type 06 (Not Applicable) is always 0%, even for templates saved before that rule existed. Before, such
+    an invoice was only blocked when it was submitted.
+- Create e-Invoice, Edit Invoice and recurring generation now share one default-classification helper
+  (`TinHelper.DefaultClassificationCode`).
+- **Known gap:** invoice templates still don't store a line's Fee / Charge, so recurring invoices have none. Storing
+  it needs a database change, which is planned with the central invoice-rules work.
+- No database change. New unit tests cover the period, the totals and the line rules.
 
 ## 📅 2026-10-24 — v1.47.51 (recurring invoices: shared placeholder companies never count as yours)
 

@@ -134,17 +134,8 @@ namespace eInvWorld.Services.Background
                         LastUpdated = mytNow,
 
                         InvoicePeriod = profile.InvoiceTemplate.InvoicePeriod,
-                        StartDate = profile.InvoiceTemplate.StartDate,
-                        EndDate = profile.InvoiceTemplate.EndDate,
                         OriginalInvoiceDate = profile.InvoiceTemplate.OriginalInvoiceDate,
                         Notes = "Recurring invoice generated via Automation",
-
-                        TotalDiscountAmount = profile.InvoiceTemplate.TotalDiscountAmount,
-                        TotalAmountExclTax = profile.InvoiceTemplate.TotalAmountExclTax,
-                        TotalTaxAmount = profile.InvoiceTemplate.TotalTaxAmount,
-                        TotalAmountIncTax = profile.InvoiceTemplate.TotalAmountIncTax,
-                        TotalNetAmount = profile.InvoiceTemplate.TotalNetAmount,
-                        TotalPayableAmount = profile.InvoiceTemplate.TotalPayableAmount ?? profile.InvoiceTemplate.TotalAmountIncTax,
 
                         PaymentTerms = profile.InvoiceTemplate.PaymentTerms ?? "",
                         BankAccountNo = profile.InvoiceTemplate.BankAccountNo,
@@ -179,10 +170,13 @@ namespace eInvWorld.Services.Background
                     };
 
                     foreach (var line in newInvoice.InvoiceLines)
-                    {
                         line.InvoiceHeader = newInvoice;
-                        line.CalculateAmounts();
-                    }
+
+                    // A template with a billing period gets the period of this run, not the template's old dates.
+                    if (profile.InvoiceTemplate.StartDate.HasValue || profile.InvoiceTemplate.EndDate.HasValue)
+                        (newInvoice.StartDate, newInvoice.EndDate) = BillingPeriodFor(mytNow, profile.Frequency);
+
+                    ApplyLineRulesAndTotals(newInvoice, profile.InvoiceTemplate.Supplier?.TIN);
 
                     context.InvoiceHeaders.Add(newInvoice);
                     historyLog.GeneratedInvoiceNo = newInvoiceNo;
@@ -283,6 +277,54 @@ namespace eInvWorld.Services.Background
             }
 
             return next;
+        }
+
+        /// <summary>
+        /// The calendar period a run falls in (business rule 2026-10-24): Daily → that day, Weekly → Monday–Sunday,
+        /// Monthly → 1st–last day, Annually → 1 Jan–31 Dec. Unknown frequencies are treated as Monthly, like AdvanceOnce.
+        /// </summary>
+        internal static (DateTime Start, DateTime End) BillingPeriodFor(DateTime runDate, string frequency)
+        {
+            var d = runDate.Date;
+            switch (frequency)
+            {
+                case "Daily":
+                    return (d, d);
+                case "Weekly":
+                    var monday = d.AddDays(-(((int)d.DayOfWeek + 6) % 7));
+                    return (monday, monday.AddDays(6));
+                case "Annually":
+                    return (new DateTime(d.Year, 1, 1), new DateTime(d.Year, 12, 31));
+                default:
+                    var first = new DateTime(d.Year, d.Month, 1);
+                    return (first, first.AddMonths(1).AddDays(-1));
+            }
+        }
+
+        /// <summary>
+        /// The same line rules Create/Edit apply before saving, for templates saved before those rules existed:
+        /// a blank classification gets the default code, Tax Type 06 is always 0%, line amounts are recalculated,
+        /// and the header totals are summed from those lines (not copied from the template, which could disagree).
+        /// </summary>
+        internal static void ApplyLineRulesAndTotals(InvoiceHeader invoice, string? supplierTin)
+        {
+            var defaultCode = EINVWORLD.Helpers.TinHelper.DefaultClassificationCode(invoice.DocTypeCode, supplierTin);
+            foreach (var line in invoice.InvoiceLines)
+            {
+                if (string.IsNullOrWhiteSpace(line.ClassificationCode))
+                    line.ClassificationCode = defaultCode;
+                foreach (var tax in line.InvoiceTaxes)
+                    if (eInvWorld.Helpers.TaxTypeRules.IsInvalidNotApplicable(tax.TaxCategory, tax.TaxPercentage, tax.TaxAmount))
+                        tax.TaxPercentage = 0m; // CalculateAmounts below recomputes TaxAmount from the rate
+                line.CalculateAmounts();
+            }
+
+            invoice.TotalAmountExclTax = invoice.InvoiceLines.Sum(l => l.AmountExclTax ?? 0);
+            invoice.TotalTaxAmount = invoice.InvoiceLines.Sum(l => l.InvoiceTaxes.Sum(t => t.TaxAmount ?? 0));
+            invoice.TotalAmountIncTax = invoice.InvoiceLines.Sum(l => l.AmountInclTax ?? 0);
+            invoice.TotalDiscountAmount = invoice.InvoiceLines.Sum(l => l.DiscountAmount ?? 0);
+            invoice.TotalPayableAmount = invoice.TotalAmountIncTax;
+            invoice.TotalNetAmount = invoice.TotalAmountIncTax;
         }
 
         private static DateTime AdvanceOnce(DateTime date, string frequency) => frequency switch
