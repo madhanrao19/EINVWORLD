@@ -46,7 +46,7 @@
         @if (TempData["ResultSummary"] != null)
         {
             <div class="alert alert-info mt-2 mb-0" role="alert">
-                @Html.Raw(TempData["ResultSummary"])
+                @TempData["ResultSummary"]
             </div>
         }
     </div>
