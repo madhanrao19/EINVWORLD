@@ -79,6 +79,23 @@ Exception handling · structured logging · validation · null-checks · config-
 DI · unit/integration testable · secure defaults · no magic strings/paths · no duplication · XML docs on
 public surfaces · clean names.
 
+### Invoice-rule parity (mandatory whenever an invoice rule changes)
+Invoice rules (tax type/rate, classification, unit, line/tax/total calculation, billing period, issue date,
+reference documents) are still implemented in several places, and fixes have repeatedly landed in one workflow
+but not the others (Tax Type 06, Classification persistence, totals, billing period). So whenever a rule changes,
+check and test the same behaviour in **every** entry path — server-side, which is authoritative, and in both JS copies:
+- Create e-Invoice (`CreateInvoice.cshtml.cs` + `wwwroot/js/invoices/create-invoice.js`)
+- Edit Invoice and **draft reopen** (`InvoiceEdit.cshtml.cs` + the inline script in `InvoiceEdit.cshtml`)
+- Copy / Resend (Create's `ResentFromInvoiceNo` path) · Template save and template load (`InvoiceTemplateService`)
+- CSV import (`ImportCSV`, `CsvParserService`) · Bulk Import (`BulkInvoiceImportService`)
+- Smart Capture (`SmartCaptureReview` → `InvoiceDraftService`, `InvoiceSuggestionValidator`)
+- Recurring generation (`RecurringInvoiceWorker.ApplyLineRulesAndTotals`)
+- LHDN payload and submit (`InvoiceMapper`, `LHDNApiService` final checks)
+
+Prefer putting the rule in one shared helper (`TaxTypeRules`, `TinHelper.DefaultClassificationCode`) and calling it
+from each path over patching each copy. A central invoice-rules service is planned; until it exists, the PR
+description must list which paths were checked.
+
 ## Security (mandatory review)
 SQLi · XSS · CSRF · SSRF · authN bypass · authZ/IDOR · sensitive logging (no secrets/PII/tokens) · secrets
 in code · file-upload/path-traversal · DoS/rate-limiting · encryption/DataProtection · token lifecycle ·
