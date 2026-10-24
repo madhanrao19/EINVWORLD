@@ -1,4 +1,9 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+﻿// Server and LHDN messages can echo what users typed (item descriptions, names): never inject them as HTML.
+function escapeBulkHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
     console.log("📌 DOM fully loaded and ready!");
 
     // Reject Invoice button functionality - InvoiceDetails
@@ -254,8 +259,8 @@
 
                     return `<div style="background: rgba(255, 77, 79, 0.1); padding: 12px; border-radius: 6px; 
                 margin-bottom: 6px; border-left: 4px solid #ff4d4f;">
-                <small style="color: #ff4d4f; font-weight: bold;">Invoice(s): ${invoiceText}</small><br>
-                <span style="font-size: 13px; color: #555;">${message}</span>
+                <small style="color: #ff4d4f; font-weight: bold;">Invoice(s): ${escapeBulkHtml(invoiceText)}</small><br>
+                <span style="font-size: 13px; color: #555;">${escapeBulkHtml(message)}</span>
             </div>`;
                 }).join("") : "";
 

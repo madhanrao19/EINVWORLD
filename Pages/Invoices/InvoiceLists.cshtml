@@ -1490,7 +1490,7 @@
                     if (result.success) {
                         location.reload();
                     } else {
-                        Swal.fire('Could Not Save', result.message || 'Please try again.', 'warning');
+                        Swal.fire({ title: 'Could Not Save', text: result.message || 'Please try again.', icon: 'warning' });
                     }
                 } catch (error) {
                     console.error('Save view error:', error);
@@ -1525,7 +1525,7 @@
                     if (result.success) {
                         btn.closest('.saved-view-pill')?.remove();
                     } else {
-                        Swal.fire('Could Not Delete', result.message || 'Please try again.', 'warning');
+                        Swal.fire({ title: 'Could Not Delete', text: result.message || 'Please try again.', icon: 'warning' });
                     }
                 } catch (error) {
                     console.error('Delete saved view error:', error);

@@ -1,4 +1,9 @@
-﻿// delete-invoice.js
+﻿// Server and LHDN messages can echo what users typed (item descriptions, names): never inject them as HTML.
+function escapeBulkHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// delete-invoice.js
 
 window.confirmDelete = function (invoiceNo) {
     Swal.fire({
@@ -100,7 +105,7 @@ async function executeDelete(invoiceNumbers) {
 
     // Resolve results
     if (errorMessages.length > 0) {
-        let errorHtml = errorMessages.join('<br>');
+        let errorHtml = errorMessages.map(escapeBulkHtml).join('<br>');
         Swal.fire({
             title: 'Partial Success',
             html: `${successCount} invoice(s) deleted successfully.<br><br><b style="color:red">Errors:</b><br><small>${errorHtml}</small>`,

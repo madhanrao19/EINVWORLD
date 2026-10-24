@@ -130,7 +130,7 @@ export async function handleSubmit(submitButton) {
     } catch (err) {
         if (err !== "Cancelled") {
             console.error("❌ Submission error:", err);
-            Swal.fire("Error!", err.message || err, "error");
+            Swal.fire({ title: "Error!", text: String(err.message || err), icon: "error" });
         }
     } finally {
         isSubmitting = false;

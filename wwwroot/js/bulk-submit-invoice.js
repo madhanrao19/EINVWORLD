@@ -1,3 +1,8 @@
+// Server and LHDN messages can echo what users typed (item descriptions, names): never inject them as HTML.
+function escapeBulkHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 // bulk-submit-invoice.js
 //
 // "Submit to LHDN" bulk action for Draft invoices. Mirrors delete-invoice.js: it loops the checked
@@ -85,7 +90,7 @@ async function executeBulkSubmit(invoiceNumbers) {
     }
 
     if (errorMessages.length > 0) {
-        const errorHtml = errorMessages.join('<br>');
+        const errorHtml = errorMessages.map(escapeBulkHtml).join('<br>');
         Swal.fire({
             title: 'Submission Completed with Issues',
             html: `${successCount} invoice(s) submitted successfully.<br><br>` +
