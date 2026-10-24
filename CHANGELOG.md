@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.8`** (`AppInfo:Version` in `appsettings.json`). v1.50.8 is a **patch**
+> **Current version: `v1.50.9`** (`AppInfo:Version` in `appsettings.json`). v1.50.9 is a **patch**
+> release: the Invoices list checks at most 4 invoices with LHDN per refresh, so it no longer waits out LHDN's penalty after a restart — see the dated entry below. v1.50.8 was a **patch**
 > release: Ready for LHDN catches the consolidated e-Invoice rule (General Public buyer and classification 004) — see the dated entry below. v1.50.7 was a **patch**
 > release: clearing or exporting the system logs is recorded in the audit trail — see the dated entry below. v1.50.6 was a **patch**
 > release: if Cloudflare's CAPTCHA check can't be reached, sign-in and the public forms refuse politely instead of erroring — see the dated entry below. v1.50.5 was a **patch**
@@ -450,6 +451,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.9 (Invoices list: no LHDN burst after a restart)
+
+Staging log, 25 Oct 2026 01:33, on v1.50.7: the first Invoices list status refresh after the deploy checked 13 recent invoices
+with LHDN back to back, hit "429 Too Many Requests" and waited 48 seconds (the request took 74 s). The 10-minute cooldown from
+v1.50.2 is kept in memory, so right after a restart every recent invoice looked due at once.
+- Each refresh (the page asks every 30 seconds) now checks at most **4** invoices: "Submitted" ones first, then the ones checked
+  longest ago. The rest follow on the next refreshes. Invoices still inside their cooldown don't take a place.
+- No database change. Unit tests cover the cap, the order and the cooldown.
 
 ## 📅 2026-10-25 — v1.50.8 (Ready for LHDN: consolidated e-Invoice rule)
 
