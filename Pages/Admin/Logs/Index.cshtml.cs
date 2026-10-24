@@ -104,10 +104,16 @@ namespace eInvWorld.Pages.Admin.Logs
             // Note: This still clears everything, ignoring filters (which is usually intended behavior for "Clear All")
             // Recorded in the tamper-evident audit trail first, so clearing the logs can't hide who did it.
             var rows = await _context.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS [Value] FROM [SystemLogs]").SingleAsync();
-            await _audit.WriteAsync("SystemLogsCleared", new EINVWORLD.Services.Audit.AuditEntry
+            var audited = await _audit.WriteAsync("SystemLogsCleared", new EINVWORLD.Services.Audit.AuditEntry
             {
                 NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { rowsDeleted = rows })
             });
+            if (!audited)
+            {
+                // Never erase the logs without a record of who did it.
+                TempData["ErrorMessage"] = "The logs were not cleared because the audit entry could not be written. Please try again.";
+                return RedirectToPage();
+            }
             await _context.Database.ExecuteSqlRawAsync("DELETE FROM [SystemLogs]");
             return RedirectToPage();
         }
