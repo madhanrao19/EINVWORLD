@@ -43,7 +43,10 @@ namespace EINVWORLD.Helpers
 
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             // View-only memberships can't issue or receive (self-billed) invoices: view, print and download only.
-            var ownCompanyIds = await db.UserCompanies.Where(uc => uc.UserId == userId && !uc.IsViewOnly).Select(uc => uc.PartyInfoId).ToListAsync();
+            // A shared LHDN general-TIN party (General Public, Foreign ...) is never "your" company either (same rule as OwnsTinAsync).
+            var ownCompanyIds = (await db.UserCompanies.Where(uc => uc.UserId == userId && !uc.IsViewOnly)
+                    .Select(uc => new { uc.PartyInfoId, uc.PartyInfo.TIN }).ToListAsync())
+                .Where(uc => !GeneralTINHelper.IsGeneralTIN(uc.TIN)).Select(uc => uc.PartyInfoId).ToList();
             bool selfBilled = SelfBilledTypes.Contains(docTypeCode);
 
             if (supplierId is int sid)

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.49.3`** (`AppInfo:Version` in `appsettings.json`). v1.49.3 is a **patch**
+> **Current version: `v1.50.0`** (`AppInfo:Version` in `appsettings.json`). v1.50.0 is a **minor**
+> release: saving or importing an invoice that looks like one you already have shows a possible-duplicate warning — see the dated entry below. v1.49.3 was a **patch**
 > release: "Check selected" on the Draft tab shows which drafts are ready and submits only those — see the dated entry below. v1.49.2 was a **patch**
 > release: the Ready for LHDN panel shows "Changes not checked" with a Save & Check button after any edit — see the dated entry below. v1.49.1 was a **patch**
 > release: bulk-action result messages are shown as text, never as HTML — see the dated entry below. v1.49.0 was a **minor**
@@ -441,6 +442,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-24 — v1.50.0 (possible-duplicate invoice warning)
+
+- **A probable duplicate** is another invoice with the same supplier, buyer, document type, currency and total (±0.01) that also
+  has the same PO/DO number, the same reference number or the same issue date. Cancelled and LHDN-invalid invoices are ignored.
+- **It only warns, never blocks** (legitimate repeats exist):
+  - **Create e-Invoice / Edit Invoice:** after Save Draft, a "Possible duplicate invoice" message names the existing invoice(s)
+    with a "View existing invoice" link and a "Continue anyway" button. The draft is already saved.
+  - **Import Invoices (CSV/Excel):** the preview warns on rows already imported before (same invoice number for the same buyer).
+    They can still be imported.
+  - **Smart Capture:** the draft that opens after Confirm shows the warning at the top.
+  - **Recurring invoices are not checked**, because every run repeats the template's PO, reference and total by design.
+- Fixed: the "Draft Updated" / "Draft Saved" title after Save Draft was always "Updated".
+- **Security fix:** saving an invoice treated a shared LHDN placeholder party (General Public, Foreign …) that a user was
+  linked to as one of their own companies, so they could save invoices issued "from" it. Those parties no longer count.
+- No database change; the check uses the existing supplier and buyer indexes. Integration tests cover each matching rule.
 
 ## 📅 2026-10-24 — v1.49.3 (Invoices list: Check selected drafts)
 
