@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.9`** (`AppInfo:Version` in `appsettings.json`). v1.50.9 is a **patch**
+> **Current version: `v1.50.10`** (`AppInfo:Version` in `appsettings.json`). v1.50.10 is a **patch**
+> release: the "check your email" page after registering no longer reveals which addresses have accounts — see the dated entry below. v1.50.9 was a **patch**
 > release: the Invoices list checks at most 4 invoices with LHDN per refresh, so it no longer waits out LHDN's penalty after a restart — see the dated entry below. v1.50.8 was a **patch**
 > release: Ready for LHDN catches the consolidated e-Invoice rule (General Public buyer and classification 004) — see the dated entry below. v1.50.7 was a **patch**
 > release: clearing or exporting the system logs is recorded in the audit trail — see the dated entry below. v1.50.6 was a **patch**
@@ -451,6 +452,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-10-25 — v1.50.10 (registration confirmation page hardening)
+
+From the follow-up security review:
+- The "A confirmation email has been sent" page answered "not found" for an address with no account, so anyone could check which
+  email addresses are registered. It now shows the same page for every address.
+- It also created a valid email-confirmation code for any address it was given (left over from the ASP.NET Identity template).
+  The page never displayed it, but nothing now creates one on request; the link is only ever sent by email.
+- Also cleared two build warnings introduced in v1.50.0. No database change.
 
 ## 📅 2026-10-25 — v1.50.9 (Invoices list: no LHDN burst after a restart)
 

@@ -822,7 +822,7 @@ namespace eInvWorld.Pages.Invoices
                         if (SaveDraft(invoiceJson, supplier!, customer, publicCustomer))
                         {
                             // Probable duplicates only warn: the draft is saved and the user decides.
-                            var duplicates = await EINVWORLD.Helpers.DuplicateInvoiceFinder.FindForSavedAsync(_context, Invoice!.InvoiceNo, HttpContext.RequestAborted);
+                            var duplicates = await EINVWORLD.Helpers.DuplicateInvoiceFinder.FindForSavedAsync(_context, Invoice!.InvoiceNo!, HttpContext.RequestAborted);
 
                             return new JsonResult(new
                             {
