@@ -1811,30 +1811,15 @@ namespace eInvWorld.Pages.Invoices
                     existingTemplate.InvoiceLines.SelectMany(l => l.Taxes));
                 _context.InvoiceTemplateLines.RemoveRange(existingTemplate.InvoiceLines);
 
-                // Add updated lines
-                existingTemplate.InvoiceLines = Invoice.InvoiceLines?.Select((line, i) =>
-                {
-                    var templateLine = new InvoiceTemplateLine
-                    {
-                        ClassificationCode = line.ClassificationCode,
-                        ItemCode = line.ItemCode,
-                        ItemDescription = line.ItemDescription,
-                        Quantity = line.Quantity,
-                        UnitOfMeasure = line.UnitOfMeasure,
-                        UnitPrice = line.UnitPrice,
-                        AmountExclTax = line.Subtotal // Map to the correct property
-                    };
-
-                    templateLine.Taxes = line.Taxes?.Select(tax => new InvoiceTemplateTax
-                    {
-                        TaxCategory = tax.TaxCategory,
-                        TaxPercentage = tax.TaxPercentage,
-                        TaxAmount = tax.TaxAmount,
-                        TaxExemptionReason = tax.TaxExemptionReason
-                    }).ToList() ?? new List<InvoiceTemplateTax>();
-
-                    return templateLine;
-                }).ToList() ?? new List<InvoiceTemplateLine>();
+                // Same mapping as Save as template, so discount, fee/charge and line amounts survive an update
+                existingTemplate.InvoiceLines = _invoiceTemplateService.MapToTemplateLines(Invoice.InvoiceLines ?? new List<InvoiceLineView>());
+                existingTemplate.TotalAmountExclTax = Invoice.TotalAmountExclTax;
+                existingTemplate.TotalTaxAmount = Invoice.TotalTaxAmount;
+                existingTemplate.TotalAmountIncTax = Invoice.TotalAmountIncTax;
+                existingTemplate.TotalDiscountAmount = Invoice.TotalDiscountAmount;
+                existingTemplate.TotalPayableAmount = Invoice.TotalPayableAmount;
+                existingTemplate.TotalNetAmount = Invoice.TotalNetAmount;
+                existingTemplate.UpdatedByUserId = userId;
 
                 await _context.SaveChangesAsync();
 
@@ -1959,24 +1944,7 @@ namespace eInvWorld.Pages.Invoices
                     InvoicePeriod = existingTemplate.InvoicePeriod,
                     IssueDate = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow), // stored in MY time; InvoiceMapper converts to UTC
                     InvoiceNo = "",
-                    InvoiceLines = existingTemplate.InvoiceLines?.Select((line, i) => new InvoiceLineView
-                    {
-                        LineNumber = i + 1,
-                        ClassificationCode = line.ClassificationCode,
-                        ItemCode = line.ItemCode,
-                        ItemDescription = line.ItemDescription,
-                        Quantity = line.Quantity,
-                        UnitOfMeasure = line.UnitOfMeasure,
-                        UnitPrice = line.UnitPrice,
-                        Subtotal = line.AmountExclTax,
-                        Taxes = line.Taxes?.Select(tax => new InvoiceTaxView
-                        {
-                            TaxCategory = tax.TaxCategory,
-                            TaxPercentage = tax.TaxPercentage,
-                            TaxAmount = tax.TaxAmount,
-                            TaxExemptionReason = tax.TaxExemptionReason
-                        }).ToList() ?? new List<InvoiceTaxView>()
-                    }).ToList() ?? new List<InvoiceLineView>()
+                    InvoiceLines = _invoiceTemplateService.ToLineViews(existingTemplate.InvoiceLines)
                 };
 
                 if (existingTemplate.CustomerId > 0)

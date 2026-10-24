@@ -74,6 +74,10 @@ namespace eInvWorld.Models.Templates
         public decimal? AmountInclTax { get; set; }  // Amount including tax
         public decimal? AmountExclTax { get; set; }  // Amount excluding tax
         public decimal? DiscountAmount { get; set; }  // Discount applied to the line
+        public decimal? FeeChargeAmount { get; set; }  // Line-level fee/charge, added to the taxable base
+
+        [StringLength(200)]
+        public string? FeeChargeReason { get; set; }
 
         public List<InvoiceTemplateTax> Taxes { get; set; } = new();
 
@@ -86,8 +90,8 @@ namespace eInvWorld.Models.Templates
 
             Subtotal = Quantity.Value * UnitPrice.Value;
             DiscountAmount ??= 0;
-            // shortcut: template lines have no FeeChargeAmount column, so fees/charges are lost on save; add it (migration) with the central invoice-rules work.
-            AmountExclTax = Subtotal - DiscountAmount;
+            FeeChargeAmount ??= 0;
+            AmountExclTax = Subtotal - DiscountAmount + FeeChargeAmount;
 
             // ✅ Calculate Total Tax Amount from Associated Taxes
             decimal totalTax = 0;
