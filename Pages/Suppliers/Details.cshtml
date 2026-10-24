@@ -553,7 +553,7 @@
         .then(response => response.json())
         .then(data => {
             if (!data.success) {
-                Swal.fire("Error", data.message, "error").then(() => location.reload());
+                Swal.fire({ title: "Error", text: data.message, icon: "error" }).then(() => location.reload());
             }
         })
         .catch(() => {
@@ -578,7 +578,7 @@
             if (data.success) {
                 Swal.fire({ title: "Updated!", icon: "success", timer: 1000, showConfirmButton: false });
             } else {
-                Swal.fire("Error!", data.message || "Failed to update.", "error");
+                Swal.fire({ title: "Error!", text: data.message || "Failed to update.", icon: "error" });
             }
         })
         .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
@@ -604,7 +604,7 @@
                         Swal.fire("Updated!", "Primary company has been updated.", "success")
                             .then(() => location.reload()); // Reload to reflect the change
                     } else {
-                        Swal.fire("Error!", data.message, "error");
+                        Swal.fire({ title: "Error!", text: data.message, icon: "error" });
                     }
                 })
                 .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
@@ -675,7 +675,7 @@
                         Swal.fire("Success", "Buyer removed successfully.", "success")
                             .then(() => location.reload());
                     } else {
-                        Swal.fire("Error", data.message, "error");
+                        Swal.fire({ title: "Error", text: data.message, icon: "error" });
                     }
                 })
                 .catch(() => Swal.fire("Error", "Unexpected error occurred.", "error"));
@@ -707,7 +707,7 @@
                     if (data.success) {
                         Swal.fire("Success!", "User assigned successfully!", "success").then(() => location.reload());
                     } else {
-                        Swal.fire("Error!", data.message, "error");
+                        Swal.fire({ title: "Error!", text: data.message, icon: "error" });
                     }
                 } catch (error) {
                     console.error("❌ ERROR: Invalid JSON response:", text);
@@ -745,7 +745,7 @@
                                 Swal.fire("Success!", "User removed successfully.", "success")
                                     .then(() => location.reload());
                             } else {
-                                Swal.fire("Error!", data.message || "Failed to unassign user.", "error");
+                                Swal.fire({ title: "Error!", text: data.message || "Failed to unassign user.", icon: "error" });
                             }
                         } catch (error) {
                             console.error("❌ ERROR: Invalid JSON response:", text);
@@ -821,7 +821,7 @@
                 Swal.fire({ icon: "success", title: "Role Updated!", text: data.message, timer: 1500, showConfirmButton: false })
                 .then(() => location.reload());
             } else {
-                Swal.fire("Error!", data.message, "error");
+                Swal.fire({ title: "Error!", text: data.message, icon: "error" });
             }
         })
         .catch(error => Swal.fire("Error!", "Unexpected error occurred.", "error"));
