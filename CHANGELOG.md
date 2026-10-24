@@ -455,6 +455,8 @@
   - **Smart Capture:** the draft that opens after Confirm shows the warning at the top.
   - **Recurring invoices are not checked**, because every run repeats the template's PO, reference and total by design.
 - Fixed: the "Draft Updated" / "Draft Saved" title after Save Draft was always "Updated".
+- **Security fix:** saving an invoice treated a shared LHDN placeholder party (General Public, Foreign …) that a user was
+  linked to as one of their own companies, so they could save invoices issued "from" it. Those parties no longer count.
 - No database change; the check uses the existing supplier and buyer indexes. Integration tests cover each matching rule.
 
 ## 📅 2026-10-24 — v1.49.3 (Invoices list: Check selected drafts)
