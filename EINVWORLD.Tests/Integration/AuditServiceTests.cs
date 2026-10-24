@@ -23,6 +23,7 @@ namespace EINVWORLD.Tests.Integration
 
         private AuditService CreateService()
         {
+            var services = new ServiceCollection();
             services.AddScoped(_ => _fx.CreateContext());
             var provider = services.BuildServiceProvider();
 
