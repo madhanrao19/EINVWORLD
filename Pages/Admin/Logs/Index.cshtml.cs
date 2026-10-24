@@ -15,10 +15,12 @@ namespace eInvWorld.Pages.Admin.Logs
     public class IndexModel : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
-        public IndexModel(ApplicationDbContext context)
+        public IndexModel(ApplicationDbContext context, EINVWORLD.Services.Audit.IAuditService audit)
         {
             _context = context;
+            _audit = audit;
         }
 
         public IList<SystemLog> Logs { get; set; } = new List<SystemLog>();
@@ -100,6 +102,12 @@ namespace eInvWorld.Pages.Admin.Logs
         public async Task<IActionResult> OnPostClearAllAsync()
         {
             // Note: This still clears everything, ignoring filters (which is usually intended behavior for "Clear All")
+            // Recorded in the tamper-evident audit trail first, so clearing the logs can't hide who did it.
+            var rows = await _context.Database.SqlQueryRaw<int>("SELECT COUNT(*) AS [Value] FROM [SystemLogs]").SingleAsync();
+            await _audit.WriteAsync("SystemLogsCleared", new EINVWORLD.Services.Audit.AuditEntry
+            {
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { rowsDeleted = rows })
+            });
             await _context.Database.ExecuteSqlRawAsync("DELETE FROM [SystemLogs]");
             return RedirectToPage();
         }
