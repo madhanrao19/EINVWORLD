@@ -22,7 +22,9 @@ namespace eInvWorld.Services
                     UnitOfMeasure = line.UnitOfMeasure,
                     UnitPrice = line.UnitPrice,
                     DiscountAmount = line.DiscountAmount,
-                    Taxes = line.Taxes.Select(tax => new InvoiceTemplateTax
+                    FeeChargeAmount = line.FeeChargeAmount,
+                    FeeChargeReason = line.FeeChargeReason,
+                    Taxes = (line.Taxes ?? new List<InvoiceTaxView>()).Select(tax => new InvoiceTemplateTax
                     {
                         TaxCategory = tax.TaxCategory,
                         TaxPercentage = tax.TaxPercentage,
@@ -35,6 +37,37 @@ namespace eInvWorld.Services
                 templateLine.CalculateAmounts();
 
                 return templateLine;
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Template lines back to editable invoice lines (Create from template, Edit template). The one place
+        /// a template line is read, so discount and fee/charge can't be dropped by one caller and kept by another.
+        /// </summary>
+        public List<InvoiceLineView> ToLineViews(IEnumerable<InvoiceTemplateLine>? lines)
+        {
+            return (lines ?? Enumerable.Empty<InvoiceTemplateLine>()).Select((line, i) => new InvoiceLineView
+            {
+                LineNumber = i + 1,
+                ClassificationCode = line.ClassificationCode,
+                ItemCode = line.ItemCode,
+                ItemDescription = line.ItemDescription,
+                Quantity = line.Quantity,
+                UnitOfMeasure = line.UnitOfMeasure,
+                UnitPrice = line.UnitPrice,
+                DiscountAmount = line.DiscountAmount,
+                FeeChargeAmount = line.FeeChargeAmount,
+                FeeChargeReason = line.FeeChargeReason,
+                Subtotal = line.Subtotal,
+                AmountExclTax = line.AmountExclTax,
+                AmountInclTax = line.AmountInclTax,
+                Taxes = (line.Taxes ?? new List<InvoiceTemplateTax>()).Select(tax => new InvoiceTaxView
+                {
+                    TaxCategory = tax.TaxCategory,
+                    TaxPercentage = tax.TaxPercentage,
+                    TaxAmount = tax.TaxAmount,
+                    TaxExemptionReason = tax.TaxExemptionReason
+                }).ToList()
             }).ToList();
         }
 
