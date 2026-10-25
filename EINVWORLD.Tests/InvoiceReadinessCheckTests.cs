@@ -47,7 +47,7 @@ namespace EINVWORLD.Tests
         [Fact]
         public void Missing_Parties_Point_To_The_Pickers()
         {
-            var inv = Ready(); inv.Supplier = null!; inv.Customer = null;
+            var inv = Ready(); inv.Supplier = null!; inv.Customer = null!;
             var items = Run(inv);
             Assert.Contains(items, i => i.Section == "Supplier" && i.Blocking && i.Field == "Invoice.SupplierId");
             Assert.Contains(items, i => i.Section == "Buyer" && i.Blocking && i.Field == "SelectedBuyerId");
@@ -65,7 +65,7 @@ namespace EINVWORLD.Tests
         [Fact]
         public void Public_Customer_Is_Checked_When_There_Is_No_Registered_Buyer()
         {
-            var inv = Ready(); inv.Customer = null;
+            var inv = Ready(); inv.Customer = null!;
             inv.PublicCustomer = new PublicCustomer
             {
                 CompanyName = "Walk-in", TIN = "EI00000000010", RegNo = "NA", IndustryClassificationCode = "00000",
@@ -155,7 +155,7 @@ namespace EINVWORLD.Tests
         [Fact]
         public void Consolidated_Rule_Also_Reads_A_Public_Customer_Buyer()
         {
-            var inv = Ready(); inv.Customer = null;
+            var inv = Ready(); inv.Customer = null!;
             inv.PublicCustomer = new PublicCustomer
             {
                 CompanyName = "General Public", TIN = "EI00000000010", RegNo = "NA", IndustryClassificationCode = "00000",
