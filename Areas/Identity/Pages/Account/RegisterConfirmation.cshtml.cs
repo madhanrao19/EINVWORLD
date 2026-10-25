@@ -3,7 +3,6 @@
 #nullable disable
 
 using System;
-using System.Text;
 using System.Threading.Tasks;
 using eInvWorld.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +10,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace eInvWorld.Areas.Identity.Pages.Account
 {
@@ -39,11 +37,6 @@ namespace eInvWorld.Areas.Identity.Pages.Account
         /// </summary>
         public bool DisplayConfirmAccountLink { get; set; }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public string EmailConfirmationUrl { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string email, string returnUrl = null)
         {
