@@ -22,7 +22,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <!-- Real SQL Server provider for the LocalDB-backed integration tests (version-matched to the app). -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
