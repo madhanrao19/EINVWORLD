@@ -308,7 +308,7 @@
     <PackageReference Include="PDFtoImage" Version="5.4.0" />
     <!-- Security pin: Microsoft.Data.SqlClient 7.0.1 (via EF Core SqlServer) pulls Pkcs 9.0.13, which has CVE-2026-84008/CVE-2026-70162 (DoS).
          ponytail: drop this pin once EF Core SqlServer brings a SqlClient that references a patched Pkcs. -->
-    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <!-- Removed unused packages (no code references): 'toastr' (CDN-loaded, pulled vulnerable jQuery 1.6.3),
          OpenTK, CopilotDev.NET.Api, Microsoft.EntityFrameworkCore.Sqlite, Razor.Templating.Core
          (a custom IRazorViewToStringRenderer is used instead), and X.PagedList / X.PagedList.Mvc.Core /
