@@ -6,6 +6,11 @@
     Layout = "_LayoutTabler";
     ViewData["Title"] = "Edit Invoice";
     ViewData["IsEditMode"] = true;
+    if (Model.Invoice != null)
+    {
+        (Model.Invoice.ShippingRecipientCountryCode, Model.Invoice.ShippingRecipientState) =
+            eInvWorld.Helpers.DropdownHelper.DefaultAddress(Model.Invoice.ShippingRecipientCountryCode, Model.Invoice.ShippingRecipientState);
+    }
 
     // Display-only 2dp formatting for TaxPercentage (stored decimal(18,2)). Quantity, UnitPrice and
     // ExchangeRate use InvoiceFormatting.FmtNum/FmtRate instead so their extra stored digits aren't rounded.
