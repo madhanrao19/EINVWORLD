@@ -128,7 +128,7 @@ public class LHDNApiService : ILHDNApiService
 
             //string accessToken = await LoginAsTaxpayerAsync();
 
-            var requestUri = $"api/v1.0/taxpayer/validate/{tin}?idType={idType}&idValue={idValue}";
+            var requestUri = $"api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}";
             var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
             // Log only the method + URI, never the HttpRequestMessage itself (avoids leaking headers/token).
             _logger.LogDebug("Outgoing LHDN request: {Method} {Uri}", request.Method, request.RequestUri);

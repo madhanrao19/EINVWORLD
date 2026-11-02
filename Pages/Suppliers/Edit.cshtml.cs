@@ -130,6 +130,7 @@ namespace eInvWorld.Pages.Suppliers
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("ModelState is invalid during Edit operation.");
+                TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == PartyInfo.PartyInfoId);
                 LoadDropdownOptions();
                 return Page();
             }
@@ -200,6 +201,8 @@ namespace eInvWorld.Pages.Suppliers
                 if (logoExt == null)
                 {
                     ModelState.AddModelError(nameof(LogoFile), "The logo must be a PNG or JPG image.");
+                    MaskedBankAccountNo = MaskingHelper.MaskLast4(existingParty.BankAccountNo);
+                    LoadDropdownOptions();
                     return Page();
                 }
 
@@ -248,6 +251,7 @@ namespace eInvWorld.Pages.Suppliers
             }
             existingParty.BankName = PartyInfo.BankName;
             existingParty.Attention = PartyInfo.Attention;
+            existingParty.PaymentTerms = PartyInfo.PaymentTerms;
 
             bool logoChanged = LogoFile != null && LogoFile.Length > 0;
 

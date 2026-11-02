@@ -319,7 +319,7 @@ namespace eInvWorld.Pages.Suppliers
         {
             try
             {
-                string requestUrl = $"{baseUrl}/api/v1.0/taxpayer/validate/{tin}?idType={idType}&idValue={idNo}";
+                string requestUrl = $"{baseUrl}/api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idNo)}";
                 var client = _httpClientFactory.CreateClient();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 

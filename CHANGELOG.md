@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.11`** (`AppInfo:Version` in `appsettings.json`). v1.50.11 is a **patch**
+> **Current version: `v1.50.12`** (`AppInfo:Version` in `appsettings.json`). v1.50.12 is a **patch**
+> release: Edit Buyer and Edit Company have the same fields, checks and "Validate with LHDN" button as their Add forms — see the dated entry below. v1.50.11 was a **patch**
 > release: the system logs are only cleared once the audit entry is safely written — see the dated entry below. v1.50.10 was a **patch**
 > release: the "check your email" page after registering no longer reveals which addresses have accounts — see the dated entry below. v1.50.9 was a **patch**
 > release: the Invoices list checks at most 4 invoices with LHDN per refresh, so it no longer waits out LHDN's penalty after a restart — see the dated entry below. v1.50.8 was a **patch**
@@ -453,6 +454,27 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.12 (Edit forms match their Add forms)
+
+Staging feedback: Edit Buyer had no "Validate with LHDN" button, so a changed TIN could be saved unchecked. All Create/Edit pairs
+were compared; Items, Recurring Invoices, Notifications and Resource Types already matched. Fixed:
+- **Edit Buyer** now matches Add Buyer: "Validate with LHDN" next to the TIN (with the general-TIN list), searchable dropdowns,
+  the same required fields, phone format and hints, the logo picker with preview, and Business Description filled from the MSIC
+  code. Saving is blocked only once the TIN, Registration Type or Registration Number is changed and not yet validated.
+- Edit Buyer now refuses a TIN that another buyer of the same company already has (Add Buyer already did).
+- Edit Buyer's logo upload now gets the same checks as Add Buyer (real PNG/JPG only, stored outside the web folder). Before, it
+  saved any file type into the public web folder.
+- **Edit Company** gets the same "Validate with LHDN" button and required-field/phone checks as Add Company, searchable
+  dropdowns, and a Contact Details card. **Default Payment Terms** can now be edited (it was only on Add). The
+  "Certified Exporter Auth No." field is removed: it was never saved. The Certified Exporter number is entered on the invoice.
+- Older buyer or company records may not meet these checks (for example a phone number without "+", or a company with no
+  email). Edit Buyer and Edit Company now highlight those fields as soon as the page opens, with a note naming them, instead of
+  only complaining at Save.
+- Changing Registration Type in a searchable dropdown now resets "Validated" on Add Buyer and Add Company too. The validation
+  script is now shared by all four forms.
+- The LHDN TIN check (Add/Edit forms, buyer and company imports, invoice pages) now escapes the TIN, ID type and ID number
+  in the request address, so a stray "/", "?" or "&" can't change which LHDN address is called. No database change.
 
 ## 📅 2026-10-25 — v1.50.11 (system logs are never cleared without an audit entry)
 

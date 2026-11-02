@@ -296,112 +296,15 @@
 <script src="/assets/libs/select2/js/select2.min.js"></script>
 <script src="~/js/create-company.js" asp-append-version="true"></script>
 <script src="~/js/state-by-country.js" asp-append-version="true"></script>
+<script src="~/js/lhdn-tin-validate.js" asp-append-version="true"></script>
 
 @section Scripts {
     <script>
         $(function () { bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text'); });
 
-        let isLhdnValidated = false;
-
-        // Reset validation state if user edits TIN, RegNo, or ID Type
-        function resetValidation() {
-            isLhdnValidated = false;
-            document.querySelectorAll('.btn-validate').forEach(btn => {
-                // Remove success or danger states
-                btn.classList.remove('btn-success', 'btn-danger');
-                btn.classList.add('btn-info');
-                btn.innerHTML = 'Validate with LHDN';
-            });
-        }
-
-        async function validateLHDN() {
-            const tin = document.getElementById('PublicCustomer_TIN').value;
-            const regType = document.getElementById('PublicCustomer_RegTypeCode').value;
-            const regNo = document.getElementById('PublicCustomer_RegNo').value;
-
-            // Basic required fields check before API call
-            if (!tin || !regType || !regNo) {
-                markAsFailed("Missing Info - Retry");
-                return;
-            }
-
-            // Skip validation for general TINs
-            const generalTins = ["EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040"];
-            if (generalTins.includes(tin)) {
-                isLhdnValidated = true;
-                markAsValidated();
-                return;
-            }
-
-            // UI Feedback during validation for ALL buttons
-            const btns = document.querySelectorAll('.btn-validate');
-            btns.forEach(btn => {
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validating...';
-                btn.disabled = true;
-                btn.classList.remove('btn-danger', 'btn-success', 'btn-info');
-                btn.classList.add('btn-info');
-            });
-
-            try {
-                // Call our Razor Page backend handler
-                const response = await fetch(`?handler=ValidateTIN&tin=${encodeURIComponent(tin)}&idType=${encodeURIComponent(regType)}&idNo=${encodeURIComponent(regNo)}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    isLhdnValidated = true;
-                    markAsValidated();
-                } else {
-                    isLhdnValidated = false;
-                    markAsFailed("Failed - Retry");
-                    console.warn(data.message); // Log the reason
-                }
-            } catch (error) {
-                console.error("Validation Error:", error);
-                isLhdnValidated = false;
-                markAsFailed("Error - Retry");
-            } finally {
-                btns.forEach(btn => btn.disabled = false);
-            }
-        }
-
-        function markAsValidated() {
-            document.querySelectorAll('.btn-validate').forEach(btn => {
-                btn.classList.remove('btn-info', 'btn-danger');
-                btn.classList.add('btn-success');
-                btn.innerHTML = '<i class="ri-check-line align-bottom"></i> Validated';
-            });
-        }
-
-        function markAsFailed(text) {
-            document.querySelectorAll('.btn-validate').forEach(btn => {
-                btn.classList.remove('btn-info', 'btn-success');
-                btn.classList.add('btn-danger'); // Makes the button red
-                btn.innerHTML = `<i class="ri-close-line align-bottom"></i> ${text}`;
-            });
-        }
-
-        // Form Submission Gatekeeper
-        function checkValidationBeforeSubmit() {
-            const tin = document.getElementById('PublicCustomer_TIN').value;
-            const generalTins = ["EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040"];
-
-            if (generalTins.includes(tin)) {
-                isLhdnValidated = true; // Auto-pass general TINs
-            }
-
-            if (!isLhdnValidated) {
-                alert("Please validate the Buyer Info (TIN, Reg No, ID Type) before saving.");
-                return false; // Blocks form submission
-            }
-            return true; // Allows form submission
-        }
+        initLhdnTinValidation({ tinId: 'PublicCustomer_TIN', regTypeId: 'PublicCustomer_RegTypeCode', regNoId: 'PublicCustomer_RegNo', url: '?handler=ValidateTIN', entityLabel: 'Buyer' });
 
         document.addEventListener("DOMContentLoaded", function () {
-            // Attach input listeners to reset validation if fields change
-            document.getElementById('PublicCustomer_TIN').addEventListener('input', resetValidation);
-            document.getElementById('PublicCustomer_RegTypeCode').addEventListener('change', resetValidation);
-            document.getElementById('PublicCustomer_RegNo').addEventListener('input', resetValidation);
-
             // Existing success/error toasts
             const successMessage = '@TempData["SuccessMessage"]';
             if (successMessage) {
