@@ -101,5 +101,7 @@ $(function () {
     }
 
     $('#msicSelect').on('change select2:select', updateBizDescription);
-    updateBizDescription(); // run once on load
+    // On load keep a saved/posted-back description (Edit forms, failed POST); only fill when empty.
+    const savedDesc = $('#PartyInfo_BizDescription').val();
+    if (savedDesc) $('#bizDescPreview').text(savedDesc); else updateBizDescription();
 });

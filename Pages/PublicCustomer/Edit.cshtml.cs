@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
 using eInvWorld.Data;
 using eInvWorld.Helpers;
+using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
+using EINVWORLD.Helpers;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,17 +17,17 @@ namespace eInvWorld.Pages.PublicCustomer
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _environment;
         private readonly DropdownHelper _dropdownHelper;
+        private readonly FilePathConfig _filePathConfig;
 
         public EditModel(
             ApplicationDbContext context,
-            IWebHostEnvironment environment,
-            DropdownHelper dropdownHelper)
+            DropdownHelper dropdownHelper,
+            IOptions<FilePathConfig> filePathConfig)
         {
             _context = context;
-            _environment = environment;
             _dropdownHelper = dropdownHelper;
+            _filePathConfig = filePathConfig.Value;
         }
 
         [BindProperty]
@@ -135,8 +138,27 @@ namespace eInvWorld.Pages.PublicCustomer
                 }
             }
 
+            // Same per-company TIN uniqueness rule as Create, excluding this buyer itself.
+            if (!GeneralTINHelper.IsGeneralTIN(PublicCustomer.TIN)
+                && await _context.PublicCustomers.AnyAsync(p => p.TIN == PublicCustomer.TIN
+                    && p.CreatedByCompanyId == existing.CreatedByCompanyId
+                    && p.PublicCustomerId != existing.PublicCustomerId))
+            {
+                ModelState.AddModelError("PublicCustomer.TIN", "A record with this TIN already exists for your company.");
+            }
+
+            // Same logo check as Create: content-sniffed PNG/JPG only, stored outside wwwroot.
+            string? logoExt = null;
+            if (LogoUpload != null && LogoUpload.Length > 0)
+            {
+                using (var probe = LogoUpload.OpenReadStream()) logoExt = LogoImage.DetectExtension(probe);
+                if (logoExt == null)
+                    ModelState.AddModelError(nameof(LogoUpload), "The logo must be a PNG or JPG image.");
+            }
+
             if (!ModelState.IsValid)
             {
+                PublicCustomer.LogoPath = existing.LogoPath;
                 PopulateDropdowns();
                 return Page();
             }
@@ -170,22 +192,18 @@ namespace eInvWorld.Pages.PublicCustomer
             existing.IndustryClassificationCode = PublicCustomer.IndustryClassificationCode;
             existing.BizDescription = PublicCustomer.BizDescription ?? "";
 
-            if (LogoUpload != null && LogoUpload.Length > 0)
+            if (logoExt != null)
             {
-                var uploadFolder = Path.Combine(
-                    _environment.WebRootPath,
-                    "uploads",
-                    "publiccustomer");
+                var uploadsFolder = _filePathConfig.CompanyLogosFolder;
+                Directory.CreateDirectory(uploadsFolder);
 
-                Directory.CreateDirectory(uploadFolder);
+                var fileName = $"{Guid.NewGuid()}{logoExt}";
+                using (var stream = new FileStream(Path.Combine(uploadsFolder, fileName), FileMode.Create))
+                {
+                    await LogoUpload!.CopyToAsync(stream);
+                }
 
-                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(LogoUpload.FileName)}";
-                var filePath = Path.Combine(uploadFolder, fileName);
-
-                using var stream = new FileStream(filePath, FileMode.Create);
-                await LogoUpload.CopyToAsync(stream);
-
-                existing.LogoPath = $"/uploads/publiccustomer/{fileName}";
+                existing.LogoPath = $"/api/companies/logos/{fileName}";
             }
 
             var malaysiaTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur"));
