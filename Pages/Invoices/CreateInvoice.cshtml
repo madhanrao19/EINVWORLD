@@ -1188,16 +1188,16 @@
             }
         `;
 
-        // Saved-item dropdown options HTML for dynamic item creation
-        window.savedItemsOptionsHtml = `
-            @if (Model.SavedItems != null && Model.SavedItems.Any())
-            {
-                        foreach (var item in Model.SavedItems)
-                        {
-                                    <option value="@(item.Value?.Replace("\\", "\\\\").Replace("`", "\\`"))">@(item.Text?.Replace("`", "\\`"))</option>
-                        }
-            }
-        `;
+        // Saved-item dropdown options HTML for dynamic item creation. Item code/description are user data, so they
+        // arrive as JSON and go in via value/textContent (as in InvoiceEdit): inside a template literal, Razor's HTML
+        // encoding would leave "${...}" free to run as script.
+        window.savedItemsOptionsHtml = (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SavedItems ?? new List<SelectListItem>())))
+            .map(item => {
+                const opt = document.createElement('option');
+                opt.value = item.Value ?? '';
+                opt.textContent = item.Text ?? '';
+                return opt.outerHTML;
+            }).join('');
 
         // Server-side values read by create-invoice.js for RefUUID document-type detection.
         // create-invoice.js cannot contain Razor syntax, so these are bridged via window.*.

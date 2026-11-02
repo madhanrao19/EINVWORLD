@@ -1,3 +1,4 @@
+using System.Linq;
 using Serilog.Context;
 
 namespace eInvWorld.Services.Middleware
@@ -17,10 +18,17 @@ namespace eInvWorld.Services.Middleware
 
         public CorrelationIdMiddleware(RequestDelegate next) => _next = next;
 
+        /// <summary>1-64 characters of letters, digits and - _ . : only.</summary>
+        internal static bool IsValidId(string? value) =>
+            !string.IsNullOrEmpty(value) && value.Length <= 64
+            && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or ':');
+
         public async Task Invoke(HttpContext context)
         {
+            // A caller-supplied id is kept only if it looks like an id: it is logged, audited and shown to users as
+            // the support reference, so free text (log forging, huge values) falls back to our own id.
             var correlationId = context.Request.Headers.TryGetValue(HeaderName, out var incoming)
-                                && !string.IsNullOrWhiteSpace(incoming)
+                                && IsValidId(incoming.ToString())
                 ? incoming.ToString()
                 : context.TraceIdentifier;
 

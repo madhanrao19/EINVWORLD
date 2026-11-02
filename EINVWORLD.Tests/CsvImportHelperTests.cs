@@ -232,6 +232,13 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void ReadRows_RepeatedHeader_FirstColumnWins()
+        {
+            var row = Assert.Single(CsvImportHelper.ReadRows(Csv("Description,Description\nfirst,second\n")));
+            Assert.Equal("first", row["Description"]);
+        }
+
+        [Fact]
         public void ReadRows_EmptyFile_GivesNoRows()
         {
             Assert.Empty(CsvImportHelper.ReadRows(Csv("")));

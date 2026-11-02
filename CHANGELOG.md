@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.18`** (`AppInfo:Version` in `appsettings.json`). v1.50.18 is a **patch**
+> **Current version: `v1.50.19`** (`AppInfo:Version` in `appsettings.json`). v1.50.19 is a **patch**
+> release: daily review: personal data and test pages no longer public, two script-injection holes closed, shipping state no longer defaulted on existing recipients — see the dated entry below. v1.50.18 was a **patch**
 > release: the Invoice Details side panel follows the Ledger design — see the dated entry below. v1.50.17 was a **patch**
 > release: error pages and the maintenance page use the Ledger design — see the dated entry below. v1.50.16 was a **patch**
 > release: new addresses start on Malaysia / Selangor — see the dated entry below. v1.50.15 was a **patch**
@@ -460,6 +461,25 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.19 (Daily review security and regression fixes)
+
+- **Personal data no longer public:** three 2024 draft invoices (containing a person's NRIC, TIN, email and phone) and
+  thirteen sample upload CSVs had been committed under `wwwroot/Drafts` and `wwwroot/tempcsv`, and three debug pages
+  (`test-sorting.html`, `test-column-debug.html`, `theme-test.html`) under `wwwroot`. Anything there is served without
+  signing in. They are removed; the next deploy deletes them from the server. A test now fails if such files return.
+  Live drafts were never affected: the app writes them to `FilePathConfig:DraftFolder`, outside `wwwroot`.
+- **Script injection (stored XSS) closed in two places:** an item code/description containing `${...}` ran as script on
+  Create e-Invoice (it was placed inside a JavaScript template literal); a user's name or email containing HTML ran as
+  script in the top-bar search results (seen by Admins). Both now insert the text as text.
+- **Shipping Recipient:** the Malaysia / Selangor default (v1.50.16) now applies only to a recipient not entered yet. An
+  imported draft with a recipient but no state no longer gets Selangor on save (which LHDN would have received).
+- **Invoice Details:** "Emailed" in the Buyer panel counts only emails to the buyer, not the supplier copy.
+- **Bulk Import:** with a repeated column header, the first column is used again (as before v1.50.15).
+- **Hardening:** `Permissions-Policy` header (no camera, microphone, location or payment); TempData cookie marked Secure;
+  a caller-sent `X-Correlation-ID` is used only if it looks like an id (letters, digits, `-_.:`, up to 64), otherwise the
+  app's own id is used; a direct request to `/Error` is rate-limited like any page (only re-executed error pages are exempt).
+- No database change.
 
 ## 📅 2026-11-02 — v1.50.18 (Invoice Details side panel (Ledger design))
 
