@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.13`** (`AppInfo:Version` in `appsettings.json`). v1.50.13 is a **patch**
+> **Current version: `v1.50.14`** (`AppInfo:Version` in `appsettings.json`). v1.50.14 is a **patch**
+> release: the Fax Number hint on the Buyer and Company forms shows the format that is actually accepted — see the dated entry below. v1.50.13 was a **patch**
 > release: a company's or buyer's "Authorisation Number" is no longer sent to LHDN as an extra passport ID — see the dated entry below. v1.50.12 was a **patch**
 > release: Edit Buyer and Edit Company have the same fields, checks and "Validate with LHDN" button as their Add forms — see the dated entry below. v1.50.11 was a **patch**
 > release: the system logs are only cleared once the audit entry is safely written — see the dated entry below. v1.50.10 was a **patch**
@@ -455,6 +456,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.14 (Fax Number hint matches what is accepted)
+
+- Add/Edit Buyer and Add/Edit Company suggested a fax like "(603) 7660-2323", but saving only ever accepted "+" followed by
+  digits (the same rule as Phone Number), so following the hint ended in an error. The hint is now "e.g. +60376602323", and the
+  form checks the format as you type, like Phone Number. Fax stays optional.
+- Edit Buyer / Edit Company also highlight a saved fax in the old format when the page opens (Staging had none). No database
+  change.
 
 ## 📅 2026-11-02 — v1.50.13 (LHDN payload: no stray "PASSPORT" ID)
 

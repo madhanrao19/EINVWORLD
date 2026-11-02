@@ -218,7 +218,7 @@
                             <label asp-for="PublicCustomer.FaxNo" class="form-label">Fax Number</label>
                             <input asp-for="PublicCustomer.FaxNo" class="form-control"
                                    maxlength="20"
-                                   placeholder="e.g. (603) 7660-2323" />
+                                   placeholder="e.g. +60376602323" pattern="^\+[0-9]{8,14}$" title="Enter a valid fax number starting with + and numbers only (e.g. +60376602323)" />
                             <span asp-validation-for="PublicCustomer.FaxNo" class="text-danger"></span>
                         </div>
                     </div>
