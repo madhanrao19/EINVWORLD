@@ -970,6 +970,40 @@ namespace EINVWORLD.Tests
             Assert.Equal("CertEX", accountId.GetProperty("schemeAgencyName").GetString());
         }
 
+        // A party's AuthorisationNumber is not a PartyIdentification: it used to be emitted as an extra
+        // "PASSPORT" ID next to the real BRN/NRIC/PASSPORT one. The Certified Exporter number travels
+        // only as the invoice-level AdditionalAccountID (CertEX) above.
+        private static List<string?> SchemeIds(JsonElement party) =>
+            party.GetProperty("Party")[0].GetProperty("PartyIdentification").EnumerateArray()
+                .Select(p => p.GetProperty("ID")[0].GetProperty("schemeID").GetString()).ToList();
+
+        [Fact]
+        public void Map_SupplierAuthorisationNumber_NotEmittedAsPassportId()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.Supplier.AuthorisationNumber = "CPT-CCN-W-211111-KL-000002";
+
+            using var doc = JsonDocument.Parse(new InvoiceMapper().MapToJsonModel(header));
+            var supplier = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AccountingSupplierParty")[0];
+
+            Assert.DoesNotContain("PASSPORT", SchemeIds(supplier));
+            Assert.False(supplier.TryGetProperty("AdditionalAccountID", out _));
+        }
+
+        [Fact]
+        public void Map_PublicCustomerAuthorisationNumber_NotEmittedAsPassportId()
+        {
+            var header = Header("01", LineWithTax(1, 100, 0));
+            header.Customer = null!;
+            header.PublicCustomer = ValidPublicCustomer("EI00000000010", "Walk-in Buyer");
+            header.PublicCustomer.AuthorisationNumber = "CPT-CCN-W-211111-KL-000002";
+
+            using var doc = JsonDocument.Parse(new InvoiceMapper().MapToJsonModel(header));
+            var customer = doc.RootElement.GetProperty("Invoice")[0].GetProperty("AccountingCustomerParty")[0];
+
+            Assert.DoesNotContain("PASSPORT", SchemeIds(customer));
+        }
+
         // ── Incoterms relocation (moved from Delivery.Shipment.ID to the top-level
         // AdditionalDocumentReference list, matching a real LHDN sample invoice) ────────────────────
 
