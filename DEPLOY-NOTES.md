@@ -35,6 +35,8 @@ changes are additive and AI/features stay off unless already enabled.
    migrations are pending). Any problem shows as a warning. It also covers step 2 itself: it drops
    `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
    you don't need to stop the site by hand.
+   The page users see meanwhile is `scripts/app_offline.htm` (Ledger maintenance page: start time,
+   expected finish, reloads itself when the site is back); edit that file, not the script, to change it.
    It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
    `App\.deploy-manifest.txt` (outside `wwwroot`, never served) and the next run deletes only files on
    that list that the new publish output lacks. Files it never shipped — uploads under `wwwroot`,
