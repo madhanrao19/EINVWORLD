@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.19`** (`AppInfo:Version` in `appsettings.json`). v1.50.19 is a **patch**
+> **Current version: `v1.50.20`** (`AppInfo:Version` in `appsettings.json`). v1.50.20 is a **patch**
+> release: the deploy script no longer re-ships files removed from the build — see the dated entry below. v1.50.19 was a **patch**
 > release: daily review: personal data and test pages no longer public, two script-injection holes closed, shipping state no longer defaulted on existing recipients — see the dated entry below. v1.50.18 was a **patch**
 > release: the Invoice Details side panel follows the Ledger design — see the dated entry below. v1.50.17 was a **patch**
 > release: error pages and the maintenance page use the Ledger design — see the dated entry below. v1.50.16 was a **patch**
@@ -461,6 +462,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.20 (Deploy script ships only the current build)
+
+- **Removed files really leave the server:** `scripts/Deploy-Staging.ps1` published into the same folder every time, and
+  `dotnet publish` never deletes from it, so files dropped from the build (the v1.50.19 draft invoices, sample CSVs and
+  debug pages) were still copied to the server and stayed public after the v1.50.19 Staging deploy. The script now empties
+  its publish folder first (only when it is inside the repo's `bin\`), so the next deploy's stale-file clean-up removes them.
 
 ## 📅 2026-11-02 — v1.50.19 (Daily review security and regression fixes)
 
