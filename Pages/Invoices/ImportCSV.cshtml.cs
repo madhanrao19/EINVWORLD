@@ -1,6 +1,4 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using eInvWorld.Data;
+﻿using eInvWorld.Data;
 using eInvWorld.Models;
 using eInvWorld.Models.InputModel;
 using eInvWorld.Services.Extensions;
@@ -142,14 +140,7 @@ namespace EINVWORLD.Pages.Invoices
                 return ParseXlsxRecords(file);
 
             // CSV (default). Lenient: trims, ignores missing/extra columns.
-            using var reader = new StreamReader(file.OpenReadStream());
-            using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                TrimOptions = TrimOptions.Trim,
-                HeaderValidated = null,
-                MissingFieldFound = null
-            });
-            return csv.GetRecords<InvoiceCsvDto>().ToList();
+            return CsvImportHelper.ReadRecords<InvoiceCsvDto>(file.OpenReadStream());
         }
 
         // Map an .xlsx (first worksheet, header row) onto InvoiceCsvDto by matching header text to property

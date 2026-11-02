@@ -6,9 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
-using CsvHelper;
 using eInvWorld.Data;
 using Microsoft.EntityFrameworkCore;
+using EINVWORLD.Helpers;
 
 namespace EINVWORLD.Services.Import
 {
@@ -107,7 +107,7 @@ namespace EINVWORLD.Services.Import
             List<Dictionary<string, string>> rows;
             try
             {
-                rows = isCsv ? ParseCsv(file) : ParseXlsx(file);
+                rows = isCsv ? CsvImportHelper.ReadRows(file) : ParseXlsx(file);
             }
             catch (Exception ex)
             {
@@ -256,28 +256,5 @@ namespace EINVWORLD.Services.Import
             return result;
         }
 
-        private static List<Dictionary<string, string>> ParseCsv(Stream file)
-        {
-            using var reader = new StreamReader(file);
-            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-            var result = new List<Dictionary<string, string>>();
-
-            if (!csv.Read()) return result;
-            csv.ReadHeader();
-            var headers = csv.HeaderRecord ?? Array.Empty<string>();
-
-            while (csv.Read())
-            {
-                var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var h in headers)
-                {
-                    if (string.IsNullOrWhiteSpace(h)) continue;
-                    dict[h.Trim()] = (csv.GetField(h) ?? string.Empty).Trim();
-                }
-                if (dict.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
-                    result.Add(dict);
-            }
-            return result;
-        }
     }
 }
