@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.17`** (`AppInfo:Version` in `appsettings.json`). v1.50.17 is a **patch**
+> **Current version: `v1.50.18`** (`AppInfo:Version` in `appsettings.json`). v1.50.18 is a **patch**
+> release: the Invoice Details side panel follows the Ledger design — see the dated entry below. v1.50.17 was a **patch**
 > release: error pages and the maintenance page use the Ledger design — see the dated entry below. v1.50.16 was a **patch**
 > release: new addresses start on Malaysia / Selangor — see the dated entry below. v1.50.15 was a **patch**
 > release: CSV imports run on CsvHelper 34, with clearer messages when a number can't be read — see the dated entry below. v1.50.14 was a **patch**
@@ -459,6 +460,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.18 (Invoice Details side panel (Ledger design))
+
+- The **LHDN status** panel shows the larger Ledger validation seal (date and time, MYT) for a Valid invoice, or the
+  status badge otherwise, with **Status, UUID, Long ID, Validated, Cancel until** (with days / hours left, while the
+  72-hour window is open) and **Total payable** underneath.
+- A new **Buyer** panel shows the buyer's name, TIN, email and when the invoice was last emailed (from the activity log).
+- The Cancel / Request rejection buttons are unchanged. The mockup's "Version" row is left out: the version sent to
+  LHDN is not stored per invoice, so it could show the wrong value. No database change.
 
 ## 📅 2026-11-02 — v1.50.17 (Ledger error and maintenance pages)
 
