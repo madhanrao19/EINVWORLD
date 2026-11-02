@@ -59,3 +59,9 @@ Properties/PublishProfiles/IISProfile.pubxml
 # with stale personal machine paths going back to 2024. Keep FolderProfile.pubxml itself tracked
 # (it's the one in active use); ignore any future numbered duplicates.
 Properties/PublishProfiles/FolderProfile[0-9]*.pubxml
+
+# Invoice data and debug pages must never be committed under wwwroot (served without sign-in).
+wwwroot/Drafts/
+wwwroot/tempcsv/
+wwwroot/test-*.html
+wwwroot/theme-test.html

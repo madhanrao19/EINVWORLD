@@ -102,7 +102,7 @@ namespace EINVWORLD.Helpers
                 {
                     var h = csv.Headers[i];
                     if (string.IsNullOrWhiteSpace(h)) continue;
-                    dict[h.Trim()] = csv.GetString(i).Trim();
+                    dict.TryAdd(h.Trim(), csv.GetString(i).Trim()); // a repeated header: the first column wins, as before
                 }
                 if (dict.Values.Any(v => !string.IsNullOrWhiteSpace(v)))
                     result.Add(dict);

@@ -29,6 +29,21 @@ namespace eInvWorld.Helpers
             return (c, s);
         }
 
+        /// <summary>
+        /// Starts a Shipping Recipient that hasn't been entered yet (no name, no address) on Malaysia / Selangor.
+        /// An existing recipient, e.g. one from CSV import, keeps its blanks, so saving never sends LHDN a state
+        /// nobody chose.
+        /// </summary>
+        public static void DefaultShippingAddress(eInvWorld.Models.ViewModels.InvoiceHeaderView? invoice)
+        {
+            if (invoice == null
+                || !string.IsNullOrWhiteSpace(invoice.ShippingRecipientName)
+                || !string.IsNullOrWhiteSpace(invoice.ShippingRecipientAddrLine1))
+                return;
+            (invoice.ShippingRecipientCountryCode, invoice.ShippingRecipientState) =
+                DefaultAddress(invoice.ShippingRecipientCountryCode, invoice.ShippingRecipientState);
+        }
+
         // Method to populate state options
         public List<SelectListItem> GetStateOptions()
         {

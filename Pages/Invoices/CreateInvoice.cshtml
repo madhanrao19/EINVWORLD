@@ -1156,48 +1156,16 @@
         // Track the currently selected supplier TIN (used for self-billed classification rules)
         window.currentSupplierTIN = null;
 
-        // Classification options HTML for dynamic item creation
-        window.classificationOptionsHtml = `
-            @foreach (var c in Model.ClassificationCodes)
-            {
-                    <option value="@c.Value">@c.Text</option>
-            }
-        `;
-
-        // Unit options HTML for new item rows: the Finance-approved units only, Each preselected.
-        window.unitOptionsHtml = `
-            @foreach (var unit in eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions.Any(o => o.Value == u.Code)))
-            {
-                    <option value="@unit.Code" selected="@(unit.Code == "EA")">@unit.Name</option>
-            }
-        `;
-
-        // Tax category options HTML for dynamic item creation
-        window.taxCategoryOptionsHtml = `
-            @foreach (var tax in Model.TaxCategoryOptions)
-            {
-                    <option value="@tax.Value">@tax.Text</option>
-            }
-        `;
-
-        // Country of Origin options HTML for dynamic item creation (line-level Additional Information)
-        window.countryOptionsHtml = `
-            @foreach (var c in Model.CountryOptions)
-            {
-                    <option value="@c.Value">@c.Text</option>
-            }
-        `;
-
-        // Saved-item dropdown options HTML for dynamic item creation
-        window.savedItemsOptionsHtml = `
-            @if (Model.SavedItems != null && Model.SavedItems.Any())
-            {
-                        foreach (var item in Model.SavedItems)
-                        {
-                                    <option value="@(item.Value?.Replace("\\", "\\\\").Replace("`", "\\`"))">@(item.Text?.Replace("`", "\\`"))</option>
-                        }
-            }
-        `;
+        // Option lists for new item rows. Data arrives as JSON and einvworld.optionsHtml builds the markup (the one
+        // safe pattern, see einvworld-ui.js): Razor output inside a template literal would let "${...}" run as script.
+        window.classificationOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClassificationCodes ?? new List<SelectListItem>())));
+        // Finance-approved units only, Each preselected.
+        window.unitOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions.Any(o => o.Value == u.Code)).Select(u => new { Value = u.Code, Text = u.Name })))), "EA");
+        window.taxCategoryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TaxCategoryOptions ?? new List<SelectListItem>())));
+        // Country of Origin (line-level Additional Information)
+        window.countryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CountryOptions ?? new List<SelectListItem>())));
+        // Saved items: the value is the item as JSON, the text is its code and description (user data).
+        window.savedItemsOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SavedItems ?? new List<SelectListItem>())));
 
         // Server-side values read by create-invoice.js for RefUUID document-type detection.
         // create-invoice.js cannot contain Razor syntax, so these are bridged via window.*.

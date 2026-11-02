@@ -75,7 +75,7 @@ namespace eInvWorld.Pages.Items
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             var userCompany = await context.UserCompanies
                 .Where(uc => uc.UserId == userId)
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync();
 
             if (userCompany == null || !userCompany.HasCompanyAccess || userCompany.IsViewOnly) return (false, null);

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.18`** (`AppInfo:Version` in `appsettings.json`). v1.50.18 is a **patch**
+> **Current version: `v1.50.19`** (`AppInfo:Version` in `appsettings.json`). v1.50.19 is a **patch**
+> release: daily review: personal data and test pages no longer public, two script-injection holes closed, shipping state no longer defaulted on existing recipients — see the dated entry below. v1.50.18 was a **patch**
 > release: the Invoice Details side panel follows the Ledger design — see the dated entry below. v1.50.17 was a **patch**
 > release: error pages and the maintenance page use the Ledger design — see the dated entry below. v1.50.16 was a **patch**
 > release: new addresses start on Malaysia / Selangor — see the dated entry below. v1.50.15 was a **patch**
@@ -460,6 +461,42 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.19 (Daily review security and regression fixes)
+
+- **Personal data no longer public:** three 2024 draft invoices (containing a person's NRIC, TIN, email and phone) and
+  thirteen sample upload CSVs had been committed under `wwwroot/Drafts` and `wwwroot/tempcsv`, and three debug pages
+  (`test-sorting.html`, `test-column-debug.html`, `theme-test.html`) under `wwwroot`. Anything there is served without
+  signing in. They are removed; the next deploy deletes them from the server. A test now fails if such files return.
+  Live drafts were never affected: the app writes them to `FilePathConfig:DraftFolder`, outside `wwwroot`.
+- **Script injection (stored XSS) closed in two places:** an item code/description containing `${...}` ran as script on
+  Create e-Invoice (it was placed inside a JavaScript template literal); a user's name or email containing HTML ran as
+  script in the top-bar search results (seen by Admins). Both now insert the text as text.
+- **Shipping Recipient:** the Malaysia / Selangor default (v1.50.16) now applies only to a recipient not entered yet. An
+  imported draft with a recipient but no state no longer gets Selangor on save (which LHDN would have received).
+- **Invoice Details:** "Emailed" in the Buyer panel counts only emails to the buyer, not the supplier copy.
+- **Bulk Import:** with a repeated column header, the first column is used again (as before v1.50.15).
+- **Hardening:** `Permissions-Policy` header (no camera, microphone, location or payment); TempData cookie marked Secure;
+  a caller-sent `X-Correlation-ID` is used only if it looks like an id (letters, digits, `-_.:`, up to 64), otherwise the
+  app's own id is used; a direct request to `/Error` is rate-limited like any page (only re-executed error pages are exempt).
+- **Company access on Supplier pages (items, buyers, invoices, templates, company settings):** the access check now uses
+  the company the page actually reads or changes. Before, it used whatever company an `?id=` in the address named, so
+  someone view-only on their main company but an editor of another could add `?id=<other>` and still change the main
+  one. Company-settings pages check the company their own form or link names. Every "my company" lookup now picks the
+  same company (main company first, then the oldest membership, as before). Tested against SQL Server for editor, view-only, no-access,
+  outsider, multi-company and Admin users.
+- **Antiforgery cookie is Secure on HTTPS:** its framework default never set the flag. Behind the tunnel a request
+  counts as HTTPS only when the `X-Forwarded-Proto` header comes from a trusted proxy (loopback or
+  `ForwardedHeaders:KnownProxies`); the same header from anyone else is ignored. Local plain-HTTP development keeps working.
+- **One safe way to put data into page script:** option lists on Create / Edit Invoice (classification, unit, tax
+  type, country, saved items) and the Templates toast now pass data as JSON and build markup with
+  `einvworld.optionsHtml` / `einvworld.escapeHtml` (`einvworld-ui.js`). A test fails if Razor output appears
+  inside a JavaScript template literal again.
+- **Never published:** `wwwroot/Drafts`, `wwwroot/tempcsv`, `wwwroot/test-*.html` and `theme-test.html` are excluded from
+  publish (checked with a probe publish) and ignored by git, besides the test that fails if they are committed.
+- CSP stays report-only: the recent reports come from the old layout (lordicon CDN, a broken `null` image) or from
+  Google Analytics hosts the policy now allows; none came from the current pages checked.
+- No database change.
 
 ## 📅 2026-11-02 — v1.50.18 (Invoice Details side panel (Ledger design))
 

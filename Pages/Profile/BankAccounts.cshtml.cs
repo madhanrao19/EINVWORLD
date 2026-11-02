@@ -152,7 +152,7 @@ namespace eInvWorld.Pages.Profile
 
             var membership = await _context.UserCompanies.AsNoTracking()
                 .Where(uc => uc.UserId == userId && (CompanyId == null ? true : uc.PartyInfoId == CompanyId))
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync(ct);
             if (membership == null) return CompanyId == null; // no company at all -> 404; someone else's -> 403
 
