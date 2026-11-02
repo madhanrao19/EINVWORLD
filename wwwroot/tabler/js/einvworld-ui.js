@@ -166,8 +166,34 @@
     panel.addEventListener("shown.bs.collapse", function () { input.focus(); });
   }
 
+  // The one way to put server or user data into HTML from script: pages pass data as JSON
+  // (@Html.Raw(JsonSerializer.Serialize(...)), which escapes <, >, &, quotes and backticks), and these
+  // build the markup from it. Never place Razor output inside a JavaScript template literal: Razor's
+  // HTML encoding leaves "${...}" alone, so it runs as script there.
+  function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // <option> markup from [{ Value, Text }] (SelectListItem as serialized) or [{ value, text }].
+  // Only selectedValue marks an option selected (a SelectListItem's own Selected flag is ignored).
+  function optionsHtml(items, selectedValue) {
+    return (items || []).map(function (item) {
+      var opt = document.createElement("option");
+      opt.value = item.Value != null ? item.Value : (item.value != null ? item.value : "");
+      opt.textContent = item.Text != null ? item.Text : (item.text != null ? item.text : "");
+      if (selectedValue != null && opt.value === String(selectedValue)) {
+        opt.setAttribute("selected", "selected");
+      }
+      return opt.outerHTML;
+    }).join("");
+  }
+
   window.einvworld = window.einvworld || {};
   window.einvworld.toast = makeToast;
+  window.einvworld.escapeHtml = escapeHtml;
+  window.einvworld.optionsHtml = optionsHtml;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", function () {

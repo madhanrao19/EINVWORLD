@@ -1992,6 +1992,12 @@ namespace EINVWORLD.Pages.Invoices
                 }
                 else
                 {
+                    // The supplier here is the issuing company: only its members (or an Admin) may list its buyers.
+                    // Without this, any supplier could read another tenant's buyer list by changing supplierId.
+                    var callerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (!User.IsInRole("Admin") && !await _context.UserCompanies.AnyAsync(uc => uc.UserId == callerId && uc.PartyInfoId == supplierId))
+                        return new JsonResult(new List<SelectListItem>());
+
                     var resultList = await _buyerService.GetCombinedBuyersBySupplierAsync(supplierId);
                     _logger.LogDebug("Buyer count: {Count}", resultList?.Count ?? 0);
 

@@ -770,7 +770,11 @@
         var sideBuyerName = invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName;
         var sideBuyerTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN;
         var sideBuyerEmail = invoice.Customer?.Email ?? invoice.PublicCustomer?.Email;
-        var lastEmailed = Model.InvoiceHistories.Where(h => h.Action == "EmailSent").Select(h => (DateTime?)h.Timestamp).Max();
+        // Emails to the supplier are logged as EmailSent too, so only count entries naming the buyer's address.
+        var lastEmailed = string.IsNullOrWhiteSpace(sideBuyerEmail) ? null
+            : Model.InvoiceHistories.Where(h => h.Action == "EmailSent" && h.Remarks != null
+                    && h.Remarks.Contains(sideBuyerEmail, StringComparison.OrdinalIgnoreCase))
+                .Select(h => (DateTime?)h.Timestamp).Max();
         DateTime? cancelUntil = displayStatus == "Valid" && !isOver72Hours ? invoice.DateTimeValidated?.AddHours(72) : null;
         string? cancelLeft = null;
         if (cancelUntil.HasValue)

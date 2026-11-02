@@ -222,7 +222,7 @@ namespace EINVWORLD.Pages.Invoices
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userCompany = await _context.UserCompanies.Include(uc => uc.PartyInfo)
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync(uc => uc.UserId == userId);
 
             if (userCompany == null)
@@ -398,7 +398,7 @@ namespace EINVWORLD.Pages.Invoices
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userCompany = await _context.UserCompanies.Include(uc => uc.PartyInfo)
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync(uc => uc.UserId == userId);
 
             int successCount = 0;

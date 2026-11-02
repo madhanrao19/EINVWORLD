@@ -19,6 +19,9 @@ namespace eInvWorld.Pages.Suppliers
     [Authorize(Roles = "Admin,Supplier")]
     public class RolesPermissionsModel : SupplierBasePage
     {
+        // The gate authorises against the company these handlers act on (their own argument), not a query string.
+        protected override string[] TargetCompanyArguments => new[] { "partyInfoId", "id" };
+
         private new readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ICompanyAuthorizationService _companyAuth;
