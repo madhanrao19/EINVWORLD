@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.14`** (`AppInfo:Version` in `appsettings.json`). v1.50.14 is a **patch**
+> **Current version: `v1.50.15`** (`AppInfo:Version` in `appsettings.json`). v1.50.15 is a **patch**
+> release: CSV imports run on CsvHelper 34, with clearer messages when a number can't be read — see the dated entry below. v1.50.14 was a **patch**
 > release: the Fax Number hint on the Buyer and Company forms shows the format that is actually accepted — see the dated entry below. v1.50.13 was a **patch**
 > release: a company's or buyer's "Authorisation Number" is no longer sent to LHDN as an extra passport ID — see the dated entry below. v1.50.12 was a **patch**
 > release: Edit Buyer and Edit Company have the same fields, checks and "Validate with LHDN" button as their Add forms — see the dated entry below. v1.50.11 was a **patch**
@@ -456,6 +457,17 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.15 (CSV imports on CsvHelper 34)
+
+CsvHelper 34 (Dependabot #423) replaced the API the imports used, so the upgrade was done in two steps:
+- All CSV reading for the **Items, Buyers, Companies and Invoice CSV imports** and the **Bulk Invoice import** now goes
+  through one shared helper. Tests written against the old version (21 cases: trimming, missing and extra columns, empty
+  cells, decimals including "1,234.50", quoting, line breaks in cells, blank lines, UTF-8 BOM, short rows, header case) pass
+  unchanged on the new one, so files import exactly as before.
+- When a number cell can't be read, the error now names the row, column and value (e.g. "Row 3: 'two' in column Quantity is
+  not a number"). A header row that matches none of the expected columns says so.
+- Excel (.xlsx) imports are unchanged. Removed two unused CSV parser classes. No database change.
 
 ## 📅 2026-11-02 — v1.50.14 (Fax Number hint matches what is accepted)
 

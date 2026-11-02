@@ -1,5 +1,3 @@
-using CsvHelper;
-using CsvHelper.Configuration;
 using eInvWorld.Data;
 using eInvWorld.Models;
 using eInvWorld.Models.Audit;
@@ -118,18 +116,11 @@ namespace eInvWorld.Pages.PublicCustomer
             PreviewRecords = new List<PreviewRecordModel>();
             var validRecordsToKeep = new List<PublicCustomerCsvDto>();
 
-            using (var reader = new StreamReader(UploadFile.OpenReadStream()))
-            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null,
-                TrimOptions = TrimOptions.Trim,
-            }))
             {
                 List<PublicCustomerCsvDto> records;
                 try
                 {
-                    records = csv.GetRecords<PublicCustomerCsvDto>().ToList();
+                    records = CsvImportHelper.ReadRecords<PublicCustomerCsvDto>(UploadFile.OpenReadStream());
                 }
                 catch (Exception ex)
                 {
