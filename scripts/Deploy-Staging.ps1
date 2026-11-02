@@ -294,6 +294,13 @@ if (-not $SkipPublish) {
     }
     if ($PSCmdlet.ShouldProcess($repoRoot, 'dotnet publish (Release, win-x64)')) {
         Write-Host "Publishing..." -ForegroundColor Cyan
+        # dotnet publish never deletes old files from -o, so files dropped or excluded from the build
+        # (v1.50.19: wwwroot\Drafts with personal data) kept shipping. Start from an empty folder, but only
+        # inside this repo, so a mistyped -SourcePublishPath can never wipe anything else.
+        $fullPublish = [IO.Path]::GetFullPath($SourcePublishPath)
+        if ((Test-Path -LiteralPath $fullPublish) -and $fullPublish.StartsWith((Join-Path $repoRoot 'bin\'), [StringComparison]::OrdinalIgnoreCase)) {
+            Remove-Item -LiteralPath $fullPublish -Recurse -Force
+        }
         Push-Location $repoRoot
         try {
             dotnet publish EINVWORLD.csproj -c Release -r win-x64 --self-contained false -o $SourcePublishPath
