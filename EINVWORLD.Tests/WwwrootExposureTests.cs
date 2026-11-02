@@ -30,6 +30,18 @@ namespace EINVWORLD.Tests
                 $"wwwroot/{folder} holds files, and anything under wwwroot is public.");
         }
 
+        [Theory]
+        [InlineData(@"wwwroot\Drafts\**")]
+        [InlineData(@"wwwroot\tempcsv\**")]
+        [InlineData(@"wwwroot\test-*.html")]
+        [InlineData(@"wwwroot\theme-test.html")]
+        public void PublishExcludesDataAndDebugFiles(string pattern)
+        {
+            // A stray local file must never reach a deploy (verified with a probe publish when added).
+            var csproj = File.ReadAllText(Path.Combine(Directory.GetParent(WebRoot())!.FullName, "EINVWORLD.csproj"));
+            Assert.Contains($"<Content Remove=\"{pattern}\" />", csproj);
+        }
+
         [Fact]
         public void NoDebugPagesUnderWwwroot()
         {

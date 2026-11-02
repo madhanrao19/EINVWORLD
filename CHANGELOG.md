@@ -479,6 +479,23 @@
 - **Hardening:** `Permissions-Policy` header (no camera, microphone, location or payment); TempData cookie marked Secure;
   a caller-sent `X-Correlation-ID` is used only if it looks like an id (letters, digits, `-_.:`, up to 64), otherwise the
   app's own id is used; a direct request to `/Error` is rate-limited like any page (only re-executed error pages are exempt).
+- **Company access on Supplier pages (items, buyers, invoices, templates, company settings):** the access check now uses
+  the company the page actually reads or changes. Before, it used whatever company an `?id=` in the address named, so
+  someone view-only on their main company but an editor of another could add `?id=<other>` and still change the main
+  one. Company-settings pages check the company their own form or link names. Every "my company" lookup now picks the
+  same company (main company first, then the oldest membership, as before). Tested against SQL Server for editor, view-only, no-access,
+  outsider, multi-company and Admin users.
+- **Antiforgery cookie is Secure on HTTPS:** its framework default never set the flag. Behind the tunnel a request
+  counts as HTTPS only when the `X-Forwarded-Proto` header comes from a trusted proxy (loopback or
+  `ForwardedHeaders:KnownProxies`); the same header from anyone else is ignored. Local plain-HTTP development keeps working.
+- **One safe way to put data into page script:** option lists on Create / Edit Invoice (classification, unit, tax
+  type, country, saved items) and the Templates toast now pass data as JSON and build markup with
+  `einvworld.optionsHtml` / `einvworld.escapeHtml` (`einvworld-ui.js`). A test fails if Razor output appears
+  inside a JavaScript template literal again.
+- **Never published:** `wwwroot/Drafts`, `wwwroot/tempcsv`, `wwwroot/test-*.html` and `theme-test.html` are excluded from
+  publish (checked with a probe publish) and ignored by git, besides the test that fails if they are committed.
+- CSP stays report-only: the recent reports come from the old layout (lordicon CDN, a broken `null` image) or from
+  Google Analytics hosts the policy now allows; none came from the current pages checked.
 - No database change.
 
 ## 📅 2026-11-02 — v1.50.18 (Invoice Details side panel (Ledger design))

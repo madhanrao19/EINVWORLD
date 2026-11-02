@@ -525,9 +525,12 @@ builder.Services.AddSession(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// TempData cookie: Secure like the auth and session cookies (behind the Cloudflare Tunnel the app sees plain HTTP,
-// so the default SameAsRequest left it without the flag). Not done for the antiforgery cookie: with
-// SecurePolicy.Always antiforgery throws on any request it sees as HTTP, i.e. every form behind the tunnel.
+// Antiforgery cookie: Secure whenever the request is HTTPS. Its framework default is None (never Secure). Behind the
+// tunnel the request counts as HTTPS only via X-Forwarded-Proto from a trusted proxy (ForwardedHeaders above:
+// loopback + ForwardedHeaders:KnownProxies). SameAsRequest, not Always: antiforgery throws on a plain-HTTP request
+// with Always, which would break every form in local development.
+builder.Services.AddAntiforgery(options => options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
+// TempData cookie: Secure like the auth and session cookies (Always just sets the flag; it never throws).
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always);
 

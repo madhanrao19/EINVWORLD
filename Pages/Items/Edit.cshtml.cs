@@ -41,7 +41,7 @@ namespace eInvWorld.Pages.Items
             if (!User.IsInRole("Admin"))
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var userCompany = await _context.UserCompanies.Where(uc => uc.UserId == userId).OrderByDescending(uc => uc.IsPrimaryCompany).FirstOrDefaultAsync();
+                var userCompany = await _context.UserCompanies.Where(uc => uc.UserId == userId).OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id).FirstOrDefaultAsync();
 
                 if (userCompany == null || itemdescription.CreatedByCompanyId != userCompany.PartyInfoId)
                 {

@@ -1674,58 +1674,16 @@
             return div.innerHTML;
         }
 
-        // Classification options HTML for dynamic item creation
-        const classificationOptionsHtml = `
-            @if (Model.ClassificationCodes != null)
-            {
-                @foreach (var c in Model.ClassificationCodes)
-                {
-                            <option value="@c.Value">@c.Text</option>
-                }
-            }
-        `;
-
-        // Unit options HTML for new item rows: the Finance-approved units only, Each preselected.
-        const unitOptionsHtml = `
-            @foreach (var unit in eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions?.Any(o => o.Value == u.Code) == true))
-            {
-                            <option value="@unit.Code" selected="@(unit.Code == "EA")">@unit.Name</option>
-            }
-        `;
-
-        // Tax category options HTML for dynamic item creation
-        const taxCategoryOptionsHtml = `
-            @if (Model.TaxCategoryOptions != null)
-            {
-                @foreach (var tax in Model.TaxCategoryOptions)
-                {
-                            <option value="@tax.Value">@tax.Text</option>
-                }
-            }
-        `;
-
-        // Country of Origin options HTML for dynamic item creation (line-level Additional Information)
-        const countryOptionsHtml = `
-            @if (Model.CountryOptions != null)
-            {
-                @foreach (var c in Model.CountryOptions)
-                {
-                            <option value="@c.Value">@c.Text</option>
-                }
-            }
-        `;
-
-        const savedItemsList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SavedItems ?? new List<SelectListItem>()));
-
-        let savedItemsOptionsHtml = '';
-        if (savedItemsList && Array.isArray(savedItemsList)) {
-            savedItemsList.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.Value; // The JSON string
-                opt.textContent = item.Text; // The display text
-                savedItemsOptionsHtml += opt.outerHTML;
-            });
-        }
+        // Option lists for new item rows. Data arrives as JSON and einvworld.optionsHtml builds the markup (the one
+        // safe pattern, see einvworld-ui.js): Razor output inside a template literal would let "${...}" run as script.
+        const classificationOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClassificationCodes ?? new List<SelectListItem>())));
+        // Finance-approved units only, Each preselected.
+        const unitOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions?.Any(o => o.Value == u.Code) == true).Select(u => new { Value = u.Code, Text = u.Name })))), "EA");
+        const taxCategoryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TaxCategoryOptions ?? new List<SelectListItem>())));
+        // Country of Origin (line-level Additional Information)
+        const countryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CountryOptions ?? new List<SelectListItem>())));
+        // Saved items: the value is the item as JSON, the text is its code and description (user data).
+        const savedItemsOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SavedItems ?? new List<SelectListItem>())));
 
         // Debug: Log dropdown data immediately
         console.log('🔍 Dropdown HTML generated:', {

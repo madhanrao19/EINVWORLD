@@ -241,7 +241,7 @@
                         return acc;
                     }, {});
                     // Results carry user data (names, emails, buyer names), so every value is escaped before it goes into HTML.
-                    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                    const esc = window.einvworld.escapeHtml;
                     for (const [type, items] of Object.entries(grouped)) {
                         resultsContainer.innerHTML += `<div class="dropdown-header mt-2"><h6 class="text-muted mb-1 text-uppercase">${esc(type)}s</h6></div>`;
                         items.forEach(item => {

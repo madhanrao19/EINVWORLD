@@ -115,7 +115,7 @@ namespace eInvWorld.Pages.PublicCustomer
             {
                 var userCompany = await _context.UserCompanies
                      .Where(uc => uc.UserId == userId)
-                     .OrderByDescending(uc => uc.IsPrimaryCompany)
+                     .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                      .FirstOrDefaultAsync();
 
                 if (userCompany != null)
@@ -145,7 +145,7 @@ namespace eInvWorld.Pages.PublicCustomer
             {
                 var userCompany = await _context.UserCompanies
                     .Where(uc => uc.UserId == userId)
-                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                     .FirstOrDefaultAsync();
                 kpiScope = userCompany != null
                     ? kpiScope.Where(p => p.CreatedByCompanyId == userCompany.PartyInfoId)
@@ -252,7 +252,7 @@ namespace eInvWorld.Pages.PublicCustomer
             {
                 var userCompany = await _context.UserCompanies
                     .Where(uc => uc.UserId == userId)
-                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                     .FirstOrDefaultAsync();
 
                 query = userCompany != null
@@ -369,7 +369,7 @@ namespace eInvWorld.Pages.PublicCustomer
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var userCompany = await _context.UserCompanies
                     .Where(uc => uc.UserId == userId)
-                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                     .FirstOrDefaultAsync();
 
                 if (userCompany == null)
@@ -429,7 +429,7 @@ namespace eInvWorld.Pages.PublicCustomer
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var userCompany = await _context.UserCompanies
                     .Where(uc => uc.UserId == userId)
-                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                     .FirstOrDefaultAsync();
 
                 if (userCompany != null) supplierIdToLink = userCompany.PartyInfoId;
@@ -488,7 +488,7 @@ namespace eInvWorld.Pages.PublicCustomer
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var userCompany = await _context.UserCompanies
                     .Where(uc => uc.UserId == userId)
-                    .OrderByDescending(uc => uc.IsPrimaryCompany)
+                    .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                     .FirstOrDefaultAsync();
 
                 if (userCompany != null) supplierIdToUnlink = userCompany.PartyInfoId;
