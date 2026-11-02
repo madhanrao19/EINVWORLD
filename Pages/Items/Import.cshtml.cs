@@ -1,5 +1,3 @@
-using CsvHelper;
-using CsvHelper.Configuration;
 using eInvWorld.Data;
 using eInvWorld.Models.InputModel;
 using EINVWORLD.Helpers;
@@ -91,18 +89,11 @@ namespace eInvWorld.Pages.Items
             PreviewRecords = new List<PreviewRecordModel>();
             var validRecordsToKeep = new List<ItemCsvDto>();
 
-            using (var reader = new StreamReader(UploadFile.OpenReadStream()))
-            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null,
-                TrimOptions = TrimOptions.Trim,
-            }))
             {
                 List<ItemCsvDto> records;
                 try
                 {
-                    records = csv.GetRecords<ItemCsvDto>().ToList();
+                    records = CsvImportHelper.ReadRecords<ItemCsvDto>(UploadFile.OpenReadStream());
                 }
                 catch (Exception ex)
                 {
