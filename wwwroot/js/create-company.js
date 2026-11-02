@@ -101,5 +101,29 @@ $(function () {
     }
 
     $('#msicSelect').on('change select2:select', updateBizDescription);
-    updateBizDescription(); // run once on load
+    // On load keep a saved/posted-back description (Edit forms, failed POST); only fill when empty.
+    const savedDesc = $('#PartyInfo_BizDescription').val();
+    if (savedDesc) $('#bizDescPreview').text(savedDesc); else updateBizDescription();
 });
+
+// Edit forms only: saved records can pre-date today's checks (e.g. a phone without "+", no email).
+// Highlight those fields and show #saved-data-notice on load, instead of surprising the user at Save.
+function flagInvalidSavedFields(form) {
+    const fields = [...form.querySelectorAll('input, select, textarea')]
+        .filter(el => !el.disabled && el.type !== 'hidden' && el.type !== 'file');
+    const mark = el => {
+        const bad = !el.checkValidity();
+        el.classList.toggle('is-invalid', bad);
+        // Select2 hides the real <select>; mark its visible box too.
+        $(el).next('.select2-container').find('.select2-selection').toggleClass('is-invalid', bad);
+        return bad;
+    };
+    const invalid = fields.filter(mark);
+    invalid.forEach(el => $(el).on('input change', () => mark(el)));
+    const notice = document.getElementById('saved-data-notice');
+    if (notice && invalid.length) {
+        const names = invalid.map(el => (form.querySelector(`label[for="${el.id}"]`)?.textContent || el.name).trim());
+        notice.querySelector('.saved-data-fields').textContent = names.join(', ');
+        notice.classList.remove('d-none');
+    }
+}
