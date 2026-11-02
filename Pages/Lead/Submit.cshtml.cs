@@ -85,7 +85,7 @@ namespace eInvWorld.Pages.Lead
 
         public async Task<IActionResult> OnGetAsync()
         {
-            Input ??= new PartyInfo();
+            Input ??= new PartyInfo { CountryCode = DropdownHelper.DefaultCountryCode, StateCode = DropdownHelper.DefaultStateCode };
             PopulateDropdowns();
             return Page();
         }
