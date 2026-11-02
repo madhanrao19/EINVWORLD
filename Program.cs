@@ -555,7 +555,8 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
-        if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health"))
+        // /Error is exempt so a 429 can still show its error page when it is re-executed.
+        if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health") || httpContext.Request.Path.StartsWithSegments("/Error"))
             return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("exempt");
 
         var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -705,6 +706,20 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// An empty 4xx/5xx response to a page visit shows the Ledger error page (/Error/{code}). API and AJAX calls
+// (no text/html in Accept) keep their own status and body, so their JavaScript sees exactly what it did before.
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api")
+        || !context.Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase))
+    {
+        var statusPages = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IStatusCodePagesFeature>();
+        if (statusPages != null) statusPages.Enabled = false;
+    }
+    await next();
+});
 
 // Security response headers — applied to ALL responses (placed before static files).
 app.Use(async (context, next) =>

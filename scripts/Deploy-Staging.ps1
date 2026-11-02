@@ -473,7 +473,18 @@ if ($WhatIfPreference) { $rcArgs += '/L' }
 # even if the copy fails - removing it brings the site back up on the next request.
 $offlineFile = Join-Path $DestAppPath 'app_offline.htm'
 if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server-only files)')) {
-    Set-Content -Path $offlineFile -Value '<html><body><h2>EINVWORLD is being updated - back in a minute.</h2></body></html>' -Encoding utf8
+    # Maintenance page (scripts\app_offline.htm, self-contained): it shows when the update started and the
+    # expected finish, and reloads itself once the site answers again.
+    $offlineTemplate = Join-Path $PSScriptRoot 'app_offline.htm'
+    $offlineHtml = '<html><body><h2>EINVWORLD is being updated - back in a minute.</h2></body></html>'
+    if (Test-Path $offlineTemplate) {
+        $offlineStart = [DateTimeOffset]::Now
+        $offlineHtml = (Get-Content -Path $offlineTemplate -Raw -Encoding UTF8).
+            Replace('{{START}}', $offlineStart.ToString('o')).
+            Replace('{{END}}', $offlineStart.AddMinutes(5).ToString('o')).
+            Replace('{{REF}}', 'DEPLOY-' + $offlineStart.ToString('yyyyMMdd-HHmm'))
+    }
+    Set-Content -Path $offlineFile -Value $offlineHtml -Encoding utf8
     try {
         Start-Sleep -Seconds 5   # give ANCM time to shut the app down
         robocopy @rcArgs | Select-Object -Last 8
