@@ -1,6 +1,11 @@
 @model EINVWORLD.Pages.Invoices.CreateInvoiceModel
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @using eInvWorld.Helpers
+@if (Model.Invoice != null)
+{
+    (Model.Invoice.ShippingRecipientCountryCode, Model.Invoice.ShippingRecipientState) =
+        DropdownHelper.DefaultAddress(Model.Invoice.ShippingRecipientCountryCode, Model.Invoice.ShippingRecipientState);
+}
 <div class="card mb-3" id="step1">
                 <div class="card-header einv-step-h d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">

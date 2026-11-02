@@ -109,6 +109,7 @@ namespace eInvWorld.Pages.Suppliers
             }
 
             PartyInfo = partyInfo;
+            (PartyInfo.CountryCode, PartyInfo.StateCode) = DropdownHelper.DefaultAddress(PartyInfo.CountryCode, PartyInfo.StateCode);
 
             // Mask the bank account for display; never render the decrypted value into the page.
             MaskedBankAccountNo = MaskingHelper.MaskLast4(PartyInfo.BankAccountNo);

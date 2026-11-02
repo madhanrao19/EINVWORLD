@@ -67,7 +67,9 @@ namespace eInvWorld.Pages.PublicCustomer
             PublicCustomer = new eInvWorld.Models.InputModel.PublicCustomer
             {
                 IsAdminCreated = User.IsInRole("Admin"),
-                IsApproved = true
+                IsApproved = true,
+                CountryCode = DropdownHelper.DefaultCountryCode,
+                StateCode = DropdownHelper.DefaultStateCode
             };
 
             PopulateDropdowns();

@@ -56,6 +56,7 @@ namespace eInvWorld.Pages.PublicCustomer
 
             if (entity == null)
                 return NotFound();
+            (entity.CountryCode, entity.StateCode) = DropdownHelper.DefaultAddress(entity.CountryCode, entity.StateCode);
 
             // Admin can edit anything
             if (User.IsInRole("Admin"))
