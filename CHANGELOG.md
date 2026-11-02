@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.16`** (`AppInfo:Version` in `appsettings.json`). v1.50.16 is a **patch**
+> **Current version: `v1.50.17`** (`AppInfo:Version` in `appsettings.json`). v1.50.17 is a **patch**
+> release: error pages and the maintenance page use the Ledger design — see the dated entry below. v1.50.16 was a **patch**
 > release: new addresses start on Malaysia / Selangor — see the dated entry below. v1.50.15 was a **patch**
 > release: CSV imports run on CsvHelper 34, with clearer messages when a number can't be read — see the dated entry below. v1.50.14 was a **patch**
 > release: the Fax Number hint on the Buyer and Company forms shows the format that is actually accepted — see the dated entry below. v1.50.13 was a **patch**
@@ -458,6 +459,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.17 (Ledger error and maintenance pages)
+
+- **Error pages:** "page not found", "no access", "something went wrong", "too many requests" and the other
+  errors now show the Ledger design: what happened, what to do next, the right button (Go to dashboard, Open Invoice
+  Management, Sign in again, Try again), English / Bahasa Malaysia, and a **reference** to quote to support (the same id
+  as in the system logs). Pages for "too many requests" and "temporarily unavailable" retry by themselves.
+- Error pages only replace **empty** error responses to page visits. API calls and in-page (AJAX) requests keep their own
+  status and message, so no screen's error handling changes. Signed-out visitors to an unknown address still go to
+  sign-in.
+- **Maintenance page:** during a deploy the site shows "EinvWorld is being updated" with start time, expected finish,
+  a progress bar and a link to the MyInvois portal, and it reloads itself as soon as the site is back
+  (`scripts/app_offline.htm`, used by `Deploy-Staging.ps1`).
+- Removed four old, unused error pages from the previous theme. No database change.
 
 ## 📅 2026-11-02 — v1.50.16 (Address forms start on Malaysia / Selangor)
 
