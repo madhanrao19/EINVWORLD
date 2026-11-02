@@ -606,15 +606,9 @@ namespace eInvWorld.Services.Mappers
                 });
             }
 
-            // 5. Authorisation Number (ONLY add if it has a value)
-            if (!string.IsNullOrWhiteSpace(party.AuthorisationNumber))
-            {
-                ids.Add(new JsonModels.PartyIdentification
-                {
-                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = party.AuthorisationNumber, schemeID = "PASSPORT" } }
-                });
-            }
-
+            // A party's AuthorisationNumber is NOT added as an ID: it used to go out as a second "PASSPORT"
+            // ID next to the real BRN/NRIC/PASSPORT one. The Certified Exporter number is sent only as the
+            // invoice-level AccountingSupplierParty.AdditionalAccountID (CertEX) — see MapSupplier.
             return ids;
         }
         private List<JsonModels.AllowanceCharge> MapAllowanceCharges(InputModel.InvoiceHeader header)
@@ -1532,15 +1526,7 @@ namespace eInvWorld.Services.Mappers
                 });
             }
 
-            // 5. Authorisation Number
-            if (!string.IsNullOrWhiteSpace(party.AuthorisationNumber))
-            {
-                ids.Add(new JsonModels.PartyIdentification
-                {
-                    ID = new List<JsonModels.ID> { new JsonModels.ID { _ = party.AuthorisationNumber, schemeID = "PASSPORT" } }
-                });
-            }
-
+            // AuthorisationNumber is deliberately not an ID here — see BuildPartyIdentifications(PartyInfo, ...).
             return ids;
         }
     }

@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.12`** (`AppInfo:Version` in `appsettings.json`). v1.50.12 is a **patch**
+> **Current version: `v1.50.13`** (`AppInfo:Version` in `appsettings.json`). v1.50.13 is a **patch**
+> release: a company's or buyer's "Authorisation Number" is no longer sent to LHDN as an extra passport ID — see the dated entry below. v1.50.12 was a **patch**
 > release: Edit Buyer and Edit Company have the same fields, checks and "Validate with LHDN" button as their Add forms — see the dated entry below. v1.50.11 was a **patch**
 > release: the system logs are only cleared once the audit entry is safely written — see the dated entry below. v1.50.10 was a **patch**
 > release: the "check your email" page after registering no longer reveals which addresses have accounts — see the dated entry below. v1.50.9 was a **patch**
@@ -455,6 +456,15 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-02 — v1.50.13 (LHDN payload: no stray "PASSPORT" ID)
+
+Found while checking the Edit Company form (v1.50.12):
+- If a company or buyer record had an **Authorisation Number** saved, the LHDN invoice data listed it as a second "PASSPORT"
+  ID next to the party's real BRN / NRIC / passport number. It is no longer sent as an ID.
+- The Certified Exporter authorisation number is still sent as before, from the invoice's own **Certified Exporter
+  Authorization Number** field (AdditionalAccountID, scheme "CertEX"). Nothing in the app sets a party's Authorisation Number
+  any more, so only older records were affected.
+- Unit tests cover suppliers and walk-in buyers. No database change.
 ## 📅 2026-11-02 — v1.50.12 (Edit forms match their Add forms)
 
 Staging feedback: Edit Buyer had no "Validate with LHDN" button, so a changed TIN could be saved unchecked. All Create/Edit pairs
