@@ -1180,11 +1180,12 @@ th.text-end .einv-sort { flex-direction: row-reverse; }
 /* LHDN validation seal (Invoice Details only — the one place the seal gold appears). */
 :root, [data-bs-theme="light"] { --einv-seal: #b8862f; }
 [data-bs-theme="dark"] { --einv-seal: #d4a24e; }
-.einv-seal { width: 112px; height: 112px; flex: none; color: var(--einv-primary); }
+.einv-seal { width: 156px; height: 156px; flex: none; color: var(--einv-primary); }
 .einv-seal .einv-seal-rim { stroke: var(--einv-seal); }
-.einv-seal .einv-seal-ring { fill: var(--einv-seal); font: 700 15px var(--einv-font-sans); letter-spacing: .12em; }
+.einv-seal .einv-seal-ring { fill: var(--einv-seal); font: 600 10.5px var(--einv-font-sans); letter-spacing: .18em; }
 .einv-seal .einv-seal-core { fill: var(--einv-status-valid-bg); stroke: var(--einv-primary); }
-.einv-seal .einv-seal-date { fill: var(--einv-text); font: 700 17px var(--einv-font-sans); }
+.einv-seal .einv-seal-date { fill: var(--einv-text); font: 600 13px var(--einv-font-sans); font-variant-numeric: tabular-nums; }
+.einv-seal .einv-seal-sub { fill: var(--einv-text-muted); font: 400 9px var(--einv-font-sans); }
 @media (prefers-reduced-motion: no-preference) {
   .einv-seal { animation: einv-stamp .5s cubic-bezier(.2, 1.4, .4, 1) both; }
 }
