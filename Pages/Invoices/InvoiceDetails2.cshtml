@@ -765,38 +765,83 @@
         </div>
     </div>
 
-    <aside class="einv-det-side d-print-none" aria-label="Status and actions">
-        <section class="einv-panel">
-            <div class="einv-panel-h"><h2>LHDN status</h2></div>
+    @{
+        // Ledger mockup "Details" sidebar: LHDN seal + document IDs, then the buyer.
+        var sideBuyerName = invoice.Customer?.CompanyName ?? invoice.PublicCustomer?.CompanyName;
+        var sideBuyerTin = invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN;
+        var sideBuyerEmail = invoice.Customer?.Email ?? invoice.PublicCustomer?.Email;
+        var lastEmailed = Model.InvoiceHistories.Where(h => h.Action == "EmailSent").Select(h => (DateTime?)h.Timestamp).Max();
+        DateTime? cancelUntil = displayStatus == "Valid" && !isOver72Hours ? invoice.DateTimeValidated?.AddHours(72) : null;
+        string? cancelLeft = null;
+        if (cancelUntil.HasValue)
+        {
+            var left = cancelUntil.Value - eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
+            cancelLeft = left.TotalHours >= 24 ? $"{(int)left.TotalDays} day{((int)left.TotalDays == 1 ? "" : "s")} left"
+                       : left.TotalHours >= 1 ? $"{(int)left.TotalHours} h left" : "under 1 h left";
+        }
+    }
+    <aside class="einv-det-side d-print-none" aria-label="Status and buyer">
+        <section class="einv-panel" aria-label="LHDN status">
             <div class="einv-panel-b einv-det-status">
                 @if (displayStatus == "Valid" && invoice.DateTimeValidated.HasValue)
                 {
                     <partial name="_LhdnSeal" model="invoice.DateTimeValidated.Value" />
                 }
-                <div class="einv-badge-lg @InvoiceStatusBadge.CssClass(Model!.DisplayStatusName)">
-                    @if (InvoiceStatusBadge.Icon(Model!.DisplayStatusName) is string statusIcon)
+                else
+                {
+                    <div class="einv-badge-lg @InvoiceStatusBadge.CssClass(Model!.DisplayStatusName)">
+                        @if (InvoiceStatusBadge.Icon(Model!.DisplayStatusName) is string statusIcon)
+                        {
+                            <i class="@statusIcon" aria-hidden="true"></i>
+                        }
+                        @displayStatus
+                    </div>
+                }
+                <dl class="einv-kv w-100 text-start">
+                    <dt>Status</dt>
+                    <dd>@displayStatus</dd>
+                    @if (!string.IsNullOrEmpty(invoice.UUID))
                     {
-                        <i class="@statusIcon" aria-hidden="true"></i>
+                        <dt>UUID</dt>
+                        <dd class="einv-num text-start">@invoice.UUID</dd>
                     }
-                    @displayStatus
-                </div>
+                    @if (!string.IsNullOrEmpty(invoice.LongId))
+                    {
+                        <dt>Long ID</dt>
+                        <dd class="einv-num text-start">@invoice.LongId</dd>
+                    }
+                    @if (invoice.DateTimeValidated.HasValue)
+                    {
+                        <dt>Validated</dt>
+                        <dd>@invoice.DateTimeValidated.Value.ToString("d MMM yyyy, HH:mm")</dd>
+                    }
+                    @if (cancelUntil.HasValue)
+                    {
+                        <dt>Cancel until</dt>
+                        <dd>@cancelUntil.Value.ToString("d MMM yyyy, HH:mm") (@cancelLeft)</dd>
+                    }
+                    <dt>Total payable</dt>
+                    <dd class="einv-num text-start fw-semibold">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</dd>
+                </dl>
             </div>
         </section>
 
         <section class="einv-panel">
-            <div class="einv-panel-h"><h2>Summary</h2></div>
+            <div class="einv-panel-h"><h2>Buyer</h2></div>
             <dl class="einv-kv einv-panel-b">
-                <dt>Total payable</dt>
-                <dd class="einv-num fw-semibold">@invoice.Currency @(invoice.TotalPayableAmount?.ToString("N2") ?? invoice.TotalAmountIncTax?.ToString("N2") ?? "0.00")</dd>
-                @if (!string.IsNullOrEmpty(invoice.UUID))
+                <dt>Name</dt>
+                <dd>@(sideBuyerName ?? "-")</dd>
+                <dt>TIN</dt>
+                <dd class="einv-num text-start">@(sideBuyerTin ?? "-")</dd>
+                @if (!string.IsNullOrEmpty(sideBuyerEmail))
                 {
-                    <dt>UUID</dt>
-                    <dd class="font-monospace small">@invoice.UUID</dd>
+                    <dt>Email</dt>
+                    <dd>@sideBuyerEmail</dd>
                 }
-                @if (invoice.DateTimeValidated.HasValue)
+                @if (lastEmailed.HasValue)
                 {
-                    <dt>Validated</dt>
-                    <dd class="einv-num">@invoice.DateTimeValidated.Value.ToString("dd MMM yyyy, HH:mm")</dd>
+                    <dt>Emailed</dt>
+                    <dd>@lastEmailed.Value.ToString("d MMM yyyy, HH:mm")</dd>
                 }
             </dl>
         </section>
