@@ -35,6 +35,12 @@
     <Content Remove="publish\**" />
     <Content Remove="wwwroot\js\pages\**" />
     <Content Remove="wwwroot\lib\**" />
+    <!-- Never publish invoice data or debug pages: everything under wwwroot is served without sign-in.
+         WwwrootExposureTests fails if such files are committed; this keeps a stray local copy out of a deploy too. -->
+    <Content Remove="wwwroot\Drafts\**" />
+    <Content Remove="wwwroot\tempcsv\**" />
+    <Content Remove="wwwroot\test-*.html" />
+    <Content Remove="wwwroot\theme-test.html" />
     <EmbeddedResource Remove="EINVWORLD.Tests\**" />
     <EmbeddedResource Remove="csharp Helpers\**" />
     <EmbeddedResource Remove="Documents\**" />

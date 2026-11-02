@@ -55,7 +55,7 @@ namespace eInvWorld.Pages.PublicCustomer
 
             var userCompany = await _context.UserCompanies
                 .Where(uc => uc.UserId == userId)
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync();
 
             if (userCompany == null)

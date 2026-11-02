@@ -19,5 +19,27 @@ namespace EINVWORLD.Tests
             Assert.Equal(expCountry, c);
             Assert.Equal(expState, s);
         }
+
+        [Fact]
+        public void DefaultShippingAddress_NewRecipient_StartsOnMalaysiaSelangor()
+        {
+            var inv = new eInvWorld.Models.ViewModels.InvoiceHeaderView();
+            DropdownHelper.DefaultShippingAddress(inv);
+            Assert.Equal("MYS", inv.ShippingRecipientCountryCode);
+            Assert.Equal("10", inv.ShippingRecipientState);
+        }
+
+        [Fact]
+        public void DefaultShippingAddress_ExistingRecipientWithBlankState_IsLeftAlone()
+        {
+            // e.g. a CSV-imported draft: the state must not silently become Selangor and go to LHDN.
+            var inv = new eInvWorld.Models.ViewModels.InvoiceHeaderView { ShippingRecipientName = "Penang Warehouse", ShippingRecipientAddrLine1 = "1 Jalan Penang" };
+            DropdownHelper.DefaultShippingAddress(inv);
+            Assert.Null(inv.ShippingRecipientCountryCode);
+            Assert.Null(inv.ShippingRecipientState);
+        }
+
+        [Fact]
+        public void DefaultShippingAddress_Null_DoesNothing() => DropdownHelper.DefaultShippingAddress(null);
     }
 }

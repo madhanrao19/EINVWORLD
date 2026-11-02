@@ -206,11 +206,11 @@
             toast.setAttribute("role", "alert");
             toast.innerHTML = `
                         <div class="d-flex">
-                            <div class="toast-body">
-        @TempData["StatusMessage"]
-                            </div>
+                            <div class="toast-body"></div>
                             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                         </div>`;
+            // The message goes in as text (JSON, then textContent), never inside the template literal.
+            toast.querySelector(".toast-body").textContent = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["StatusMessage"]?.ToString() ?? ""));
             document.body.appendChild(toast);
             new bootstrap.Toast(toast).show();
         });

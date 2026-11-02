@@ -525,6 +525,15 @@ builder.Services.AddSession(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
+// Antiforgery cookie: Secure whenever the request is HTTPS. Its framework default is None (never Secure). Behind the
+// tunnel the request counts as HTTPS only via X-Forwarded-Proto from a trusted proxy (ForwardedHeaders above:
+// loopback + ForwardedHeaders:KnownProxies). SameAsRequest, not Always: antiforgery throws on a plain-HTTP request
+// with Always, which would break every form in local development.
+builder.Services.AddAntiforgery(options => options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest);
+// TempData cookie: Secure like the auth and session cookies (Always just sets the flag; it never throws).
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.CookieTempDataProviderOptions>(options =>
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always);
+
 // Add authentication cookie
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -555,8 +564,11 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
     {
-        // /Error is exempt so a 429 can still show its error page when it is re-executed.
-        if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health") || httpContext.Request.Path.StartsWithSegments("/Error"))
+        // An error page re-executed for a 429 (or an exception) is exempt so it can still render; a direct
+        // request to /Error is limited like any other page.
+        if (!rateLimitEnabled || httpContext.Request.Path.StartsWithSegments("/health")
+            || httpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IStatusCodeReExecuteFeature>() != null
+            || httpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>() != null)
             return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("exempt");
 
         var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -729,6 +741,8 @@ app.Use(async (context, next) =>
     headers["X-Frame-Options"] = "SAMEORIGIN";
     headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     headers["X-Permitted-Cross-Domain-Policies"] = "none";
+    // No page uses the camera, microphone, location or payment APIs; deny them to the page and any embedded frame.
+    headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
 
     // Content-Security-Policy is shipped in REPORT-ONLY mode first: it never blocks, only reports
     // violations, so it cannot break the (CDN-heavy, inline-script) UI. It documents the current

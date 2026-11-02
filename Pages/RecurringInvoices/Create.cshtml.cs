@@ -69,7 +69,7 @@ namespace eInvWorld.Pages.RecurringInvoices
             Input.Frequency = "Monthly";
             var userCompany = await _context.UserCompanies
             .Where(uc => uc.UserId == userId)
-            .OrderByDescending(uc => uc.IsPrimaryCompany)
+            .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
             .FirstOrDefaultAsync();
 
             // Added a null check here (userCompany != null) to prevent a NullReferenceException 

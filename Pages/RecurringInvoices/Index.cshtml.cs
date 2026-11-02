@@ -84,7 +84,7 @@ namespace eInvWorld.Pages.RecurringInvoices
             var userCompany = await _context.UserCompanies
                 .Include(uc => uc.CompanyRole)
                 .Where(uc => uc.UserId == userId)
-                .OrderByDescending(uc => uc.IsPrimaryCompany)
+                .OrderByDescending(uc => uc.IsPrimaryCompany).ThenBy(uc => uc.Id)
                 .FirstOrDefaultAsync();
 
             // A CompanyRole assignment (Owner/Admin/Editor/Viewer) always grants at least read
