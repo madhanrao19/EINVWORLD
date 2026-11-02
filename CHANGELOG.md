@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.15`** (`AppInfo:Version` in `appsettings.json`). v1.50.15 is a **patch**
+> **Current version: `v1.50.16`** (`AppInfo:Version` in `appsettings.json`). v1.50.16 is a **patch**
+> release: new addresses start on Malaysia / Selangor — see the dated entry below. v1.50.15 was a **patch**
 > release: CSV imports run on CsvHelper 34, with clearer messages when a number can't be read — see the dated entry below. v1.50.14 was a **patch**
 > release: the Fax Number hint on the Buyer and Company forms shows the format that is actually accepted — see the dated entry below. v1.50.13 was a **patch**
 > release: a company's or buyer's "Authorisation Number" is no longer sent to LHDN as an extra passport ID — see the dated entry below. v1.50.12 was a **patch**
@@ -457,6 +458,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-02 — v1.50.16 (Address forms start on Malaysia / Selangor)
+
+- **Add Company, Add Buyer, the public registration form** and the **Shipping Recipient** on Create / Edit Invoice now open
+  with **Country = Malaysia** and **State = Selangor** already selected. Pick another country or state as before.
+- **Edit Company / Edit Buyer** only fill these in when the saved record has no country or state; saved values are never
+  changed. A foreign address with no state is not given a Malaysian one.
+- The Shipping Recipient is still only sent to LHDN when a recipient name is entered. No database change.
 
 ## 📅 2026-11-02 — v1.50.15 (CSV imports on CsvHelper 34)
 

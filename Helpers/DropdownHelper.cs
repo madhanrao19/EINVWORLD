@@ -13,6 +13,22 @@ namespace eInvWorld.Helpers
             _context = context;
         }
 
+        /// <summary>Country every address form starts on when none is saved (Malaysia).</summary>
+        public const string DefaultCountryCode = "MYS";
+        /// <summary>State every Malaysian address form starts on when none is saved (Selangor).</summary>
+        public const string DefaultStateCode = "10";
+
+        /// <summary>
+        /// Fills an empty country with Malaysia, and an empty state of a Malaysian address with Selangor.
+        /// Saved values are returned unchanged.
+        /// </summary>
+        public static (string Country, string State) DefaultAddress(string? country, string? state)
+        {
+            var c = string.IsNullOrWhiteSpace(country) ? DefaultCountryCode : country;
+            var s = string.IsNullOrWhiteSpace(state) && c == DefaultCountryCode ? DefaultStateCode : state ?? "";
+            return (c, s);
+        }
+
         // Method to populate state options
         public List<SelectListItem> GetStateOptions()
         {

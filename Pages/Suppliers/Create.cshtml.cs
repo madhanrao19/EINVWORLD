@@ -71,7 +71,9 @@ namespace eInvWorld.Pages.Suppliers
             PartyInfo = new PartyInfo
             {
                 IsAdminCreated = User.IsInRole("Admin"),
-                IsApproved = DetermineApprovalFlag(from)
+                IsApproved = DetermineApprovalFlag(from),
+                CountryCode = DropdownHelper.DefaultCountryCode,
+                StateCode = DropdownHelper.DefaultStateCode
             };
 
             PopulateDropdowns();
