@@ -22,6 +22,10 @@
 <form method="post" enctype="multipart/form-data" onsubmit="return checkValidationBeforeSubmit();">
     <input type="hidden" asp-for="PublicCustomer.PublicCustomerId" />
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
+    <div id="saved-data-notice" class="alert alert-warning d-none" role="alert">
+        <i class="ri-error-warning-line align-bottom me-1"></i>
+        Some saved details don't meet the current rules. Please correct the highlighted fields before saving: <strong class="saved-data-fields"></strong>
+    </div>
 
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body text-center">
@@ -276,7 +280,10 @@
     <script src="~/js/state-by-country.js" asp-append-version="true"></script>
     <script src="~/js/lhdn-tin-validate.js" asp-append-version="true"></script>
     <script>
-        $(function () { bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text'); });
+        $(function () {
+            bindStateToCountry('PublicCustomer_CountryCode', 'PublicCustomer_StateCode', 'PublicCustomer_StateCode_Text');
+            flagInvalidSavedFields(document.getElementById('saved-data-notice').closest('form'));
+        });
         // The saved TIN/ID were validated when the buyer was created; saving is gated again only once they change.
         initLhdnTinValidation({ tinId: 'PublicCustomer_TIN', regTypeId: 'PublicCustomer_RegTypeCode', regNoId: 'PublicCustomer_RegNo', url: '@Url.Page("/PublicCustomer/Create", "ValidateTIN")', entityLabel: 'Buyer', startValidated: @(HttpMethods.IsGet(ViewContext.HttpContext.Request.Method) ? "true" : "false") });
     </script>

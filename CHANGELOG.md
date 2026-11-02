@@ -467,9 +467,14 @@ were compared; Items, Recurring Invoices, Notifications and Resource Types alrea
   saved any file type into the public web folder.
 - **Edit Company** gets the same "Validate with LHDN" button and required-field/phone checks as Add Company, searchable
   dropdowns, and a Contact Details card. **Default Payment Terms** can now be edited (it was only on Add). The
-  "Certified Exporter Auth No." field is removed: it was never saved, and turning it on would change the LHDN invoice data.
+  "Certified Exporter Auth No." field is removed: it was never saved. The Certified Exporter number is entered on the invoice.
+- Older buyer or company records may not meet these checks (for example a phone number without "+", or a company with no
+  email). Edit Buyer and Edit Company now highlight those fields as soon as the page opens, with a note naming them, instead of
+  only complaining at Save.
 - Changing Registration Type in a searchable dropdown now resets "Validated" on Add Buyer and Add Company too. The validation
-  script is now shared by all four forms. No database change.
+  script is now shared by all four forms.
+- The LHDN TIN check (Add/Edit forms, buyer and company imports, invoice pages) now escapes the TIN, ID type and ID number
+  in the request address, so a stray "/", "?" or "&" can't change which LHDN address is called. No database change.
 
 ## 📅 2026-10-25 — v1.50.11 (system logs are never cleared without an audit entry)
 
