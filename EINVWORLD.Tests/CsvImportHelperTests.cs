@@ -186,6 +186,30 @@ namespace EINVWORLD.Tests
             Assert.Null(r.FaxNo);
         }
 
+        [Fact]
+        public void ReadRecords_RepeatedHeader_FirstColumnWins()
+        {
+            var r = Assert.Single(CsvImportHelper.ReadRecords<InvoiceRow>(Csv("InvoiceNo,InvoiceNo\nFIRST,SECOND\n")));
+            Assert.Equal("FIRST", r.InvoiceNo);
+        }
+
+        private class IntRow { public int Count { get; set; } }
+
+        [Fact]
+        public void ReadRecords_UnsupportedPropertyType_FailsLoudly()
+        {
+            Assert.Throws<NotSupportedException>(() => CsvImportHelper.ReadRecords<IntRow>(Csv("Count\n1\n")));
+        }
+
+        [Fact]
+        public void ReadRecords_BadNumber_MessageNamesTheColumn()
+        {
+            var ex = Assert.ThrowsAny<Exception>(() => CsvImportHelper.ReadRecords<InvoiceRow>(Csv("InvoiceNo,Quantity\nINV-14,two\n")));
+            Assert.Contains("Quantity", ex.Message);
+            Assert.Contains("two", ex.Message);
+            Assert.Contains("Row 2:", ex.Message); // spreadsheet row: header is row 1
+        }
+
         // ── ReadRows (Bulk Invoice import) ─────────────────────────────────────────────────────────
 
         [Fact]
