@@ -623,6 +623,7 @@ builder.Services.AddRateLimiter(options =>
 // wwwroot). Built into the framework, no new dependency. EnableForHttps is safe here — the app
 // only ever serves HTTPS via an edge/tunnel that already terminates TLS (see ForwardedHeaders
 // above), so this process's own HTTPS responses (if any) aren't subject to BREACH-style concerns.
+builder.Services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365)); // see UseHsts below
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -734,7 +735,7 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // HSTS max-age 365 days (default is 30). No includeSubDomains: not every einvworld.com subdomain is known to be HTTPS-only.
     app.UseHsts();
 }
 

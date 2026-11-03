@@ -66,3 +66,5 @@ wwwroot/tempcsv/
 wwwroot/test-*.html
 wwwroot/theme-test.html
 wwwroot/json/
+# Company logos live in FilePathConfig's logos folder (outside wwwroot), served by /api/companies/logos.
+wwwroot/uploads/logos/
