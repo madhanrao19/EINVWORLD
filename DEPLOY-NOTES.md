@@ -43,6 +43,13 @@ changes are additive and AI/features stay off unless already enabled.
    `web.config`, the key ring — are never touched, and the pre-deploy
    backup keeps every removed file. The first run after this change deletes nothing; it lists the
    `wwwroot` files not in the release so you can delete old build files by hand (not uploads).
+   **Stale-file guards (v1.50.21, `scripts\DeployGuards.ps1`):** the script publishes only into an
+   empty folder (it empties its default `bin\...\publish`; any other non-empty folder is refused) and
+   records the file list. Nothing is copied unless the folder still matches that list and the repo's
+   version, so `-SkipPublish` on a reused or hand-edited folder stops with a message: re-run without it.
+   Files that must never be public (`wwwroot\Drafts`, `wwwroot\tempcsv`, `wwwroot\test-*.html`,
+   `wwwroot\theme-test.html`) stop the deploy if they are in the build, and are deleted from the server
+   after the copy whoever put them there (the pre-deploy backup keeps them).
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
    **If you're deploying from a CI artifact** (or any pre-built output), run it with

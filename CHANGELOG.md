@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.20`** (`AppInfo:Version` in `appsettings.json`). v1.50.20 is a **patch**
+> **Current version: `v1.50.21`** (`AppInfo:Version` in `appsettings.json`). v1.50.21 is a **patch**
+> release: the deploy script refuses stale build folders and removes never-public files from the server — see the dated entry below. v1.50.20 was a **patch**
 > release: the deploy script no longer re-ships files removed from the build — see the dated entry below. v1.50.19 was a **patch**
 > release: daily review: personal data and test pages no longer public, two script-injection holes closed, shipping state no longer defaulted on existing recipients — see the dated entry below. v1.50.18 was a **patch**
 > release: the Invoice Details side panel follows the Ledger design — see the dated entry below. v1.50.17 was a **patch**
@@ -462,6 +463,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.21 (Deploy script fails safe on stale files)
+
+- **Stale builds can't ship:** `scripts/Deploy-Staging.ps1` records the file list of each clean publish and copies nothing
+  unless the publish folder still matches it and the repo's version. `-SkipPublish` on a reused, hand-edited or
+  old folder now stops before any copy; a non-empty `-SourcePublishPath` outside the repo's `bin\` is refused, never deleted.
+- **Never-public files are removed from the server:** `wwwroot\Drafts`, `wwwroot	empcsv` and the old test pages stop the
+  deploy if they are in the build, and are deleted from the server after the copy even when no earlier deploy shipped
+  them (Production still had 60 such files, which its deploy manifest would never have removed). The backup keeps them.
+- Guards live in `scripts/DeployGuards.ps1`; `DeployGuardsTests` runs them in PowerShell in CI.
 
 ## 📅 2026-11-03 — v1.50.20 (Deploy script ships only the current build)
 
