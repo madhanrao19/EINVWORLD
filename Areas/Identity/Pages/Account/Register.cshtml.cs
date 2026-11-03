@@ -104,6 +104,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             //public string UserName { get; set; }
 
             [Required]
+            [StringLength(100, ErrorMessage = "Full name must be maximum {1} characters long.")]
             [Display(Name = "Full Name")]
             public string FullName { get; set; }  // ✅ Add Full Name
 
@@ -268,7 +269,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             string template = LoadEmailTemplate("RegisterEmailTemplate.html");
 
             return template
-                .Replace("{{RecipientName}}", recipientName)
+                .Replace("{{RecipientName}}", HtmlEncoder.Default.Encode(recipientName ?? ""))
                 .Replace("{{ConfirmLink}}", confirmLink)
                 .Replace("{{LogoUrl}}", "cid:einvworld-logo")
                 .Replace("{{AccountLink}}", accountLink ?? "#")
