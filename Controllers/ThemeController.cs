@@ -94,21 +94,5 @@ namespace eInvWorld.Controllers
                 return StatusCode(500, new { message = "Error saving theme settings.", success = false });
             }
         }
-
-        /// <summary>
-        /// Test endpoint to check authentication
-        /// </summary>
-        [HttpGet("test-auth")]
-        [Authorize]
-        public IActionResult TestAuth()
-        {
-            return Ok(new 
-            { 
-                user = User?.Identity?.Name,
-                isAuthenticated = User?.Identity?.IsAuthenticated,
-                isAdmin = User?.IsInRole("Admin"),
-                claims = User?.Claims?.Select(c => new { c.Type, c.Value })
-            });
-        }
     }
 }
