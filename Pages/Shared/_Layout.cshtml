@@ -1441,12 +1441,15 @@
                             </div>`;
 
                         // Add Items
+                        // Search results carry company/invoice names: escape them (same as _LayoutTabler).
+                        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
                         items.forEach(item => {
                             const icon = item.icon || (type === 'User' ? 'ri-user-line' : type === 'Invoice' ? 'ri-file-list-3-line' : 'ri-search-line');
+                            const link = /^\/(?!\/)/.test(item.link || '') ? item.link : '#';
                             resultsContainer.innerHTML += `
-                                <a href="${item.link}" class="dropdown-item notify-item">
-                                    <i class="${icon} align-middle fs-18 text-muted me-2"></i>
-                                    <span>${item.title} <small class="text-muted ms-1">${item.subtitle || ''}</small></span>
+                                <a href="${esc(link)}" class="dropdown-item notify-item">
+                                    <i class="${esc(icon)} align-middle fs-18 text-muted me-2"></i>
+                                    <span>${esc(item.title)} <small class="text-muted ms-1">${esc(item.subtitle)}</small></span>
                                 </a>`;
                         });
                     }

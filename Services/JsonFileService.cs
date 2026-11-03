@@ -37,7 +37,7 @@ namespace eInvWorld.Services
         {
             try
             {
-                var sourcePath = Path.Combine(_filePathConfig.DraftFolder, $"{invoiceNo}.json");
+                var sourcePath = EINVWORLD.Helpers.SafePath.FileIn(_filePathConfig.DraftFolder, $"{invoiceNo}.json");
 
                 var targetFolder = status switch
                 {
@@ -48,7 +48,7 @@ namespace eInvWorld.Services
                     _ => _filePathConfig.DraftFolder
                 };
 
-                var targetPath = Path.Combine(targetFolder, $"{invoiceNo}.json");
+                var targetPath = EINVWORLD.Helpers.SafePath.FileIn(targetFolder, $"{invoiceNo}.json");
 
                 if (!Directory.Exists(targetFolder))
                     Directory.CreateDirectory(targetFolder);
@@ -99,8 +99,8 @@ namespace eInvWorld.Services
 
             foreach (var folder in possibleFolders)
             {
-                var fullPath = Path.Combine(folder, $"{invoiceNo}.json");
-                if (File.Exists(fullPath))
+                // A lookup: a number that isn't a safe file name (e.g. a synced "INV/2026/01") simply has no file.
+                if (EINVWORLD.Helpers.SafePath.TryResolve(folder, out var fullPath, $"{invoiceNo}.json") && File.Exists(fullPath))
                 {
                     _logger.LogInformation("✅ Found {InvoiceNo}.json in: {Folder}", invoiceNo, folder);
                     return fullPath;

@@ -3,6 +3,8 @@
 
 let isSubmitting = false;
 
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 export async function handleSubmit(submitButton) {
     if (!submitButton || isSubmitting) return;
 
@@ -85,13 +87,13 @@ export async function handleSubmit(submitButton) {
                         <div class="row">
                             <div class="col-12 mb-2">
                                 <strong><i class="ri-bill-line me-2"></i>Invoice Number:</strong> 
-                                <span class="text-primary">${invoiceNo}</span>
+                                <span class="text-primary">${esc(invoiceNo)}</span>
                             </div>
                             
                             <div class="col-12 mb-2">
                                 <strong><i class="ri-fingerprint-line me-2"></i>Document UUID:</strong>
                                 <div class="input-group input-group-sm mt-1">
-                                    <input type="text" class="form-control" id="uuidText" value="${json.uuid || "N/A"}" readonly>
+                                    <input type="text" class="form-control" id="uuidText" value="${esc(json.uuid || "N/A")}" readonly>
                                     <button onclick="copyUUID()" class="btn btn-outline-primary" type="button">
                                         <i class="ri-file-copy-line"></i> Copy
                                     </button>
@@ -100,7 +102,7 @@ export async function handleSubmit(submitButton) {
                             
                             <div class="col-12 mb-2">
                                 <strong><i class="ri-send-plane-line me-2"></i>Submission UID:</strong> 
-                                <span class="text-info">${json.submissionUid || "N/A"}</span>
+                                <span class="text-info">${esc(json.submissionUid || "N/A")}</span>
                             </div>
                             
                             <div class="col-12 mb-2">

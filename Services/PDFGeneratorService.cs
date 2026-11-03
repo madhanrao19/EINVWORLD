@@ -83,7 +83,8 @@ namespace eInvWorld.Services
 
                 if (!string.IsNullOrEmpty(dbLogoString) && dbLogoString.StartsWith("data:image"))
                 {
-                    string safeTin = viewModel.InvoiceDetail?.Supplier?.TIN ?? "UnknownTIN";
+                    // Goes into a file name: keep letters and digits only (a TIN is never anything else).
+                    string safeTin = new string((viewModel.InvoiceDetail?.Supplier?.TIN ?? "UnknownTIN").Where(char.IsLetterOrDigit).ToArray());
                     // Data URI is "data:image/...;base64,<data>" — split on the first comma; if absent, treat the whole string as the payload.
                     var commaParts = dbLogoString.Split(',', 2);
                     var base64Data = commaParts.Length > 1 ? commaParts[1] : commaParts[0];

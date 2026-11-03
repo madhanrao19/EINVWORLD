@@ -113,7 +113,7 @@ namespace eInvWorld.Services
 
                 _context.SaveChanges();
 
-                var filePath = Path.Combine(_filePathConfig.DraftFolder, $"{model.InvoiceNo}.json");
+                var filePath = EINVWORLD.Helpers.SafePath.FileIn(_filePathConfig.DraftFolder, $"{model.InvoiceNo}.json");
                 Directory.CreateDirectory(_filePathConfig.DraftFolder);
                 File.WriteAllText(filePath, invoiceJson);
                 session.SetString("DraftFilePath", filePath);
@@ -188,7 +188,7 @@ namespace eInvWorld.Services
                 _context.SaveChanges();
 
                 // Save JSON file
-                var draftPath = Path.Combine(_filePathConfig.DraftFolder, $"{model.InvoiceNo}.json");
+                var draftPath = EINVWORLD.Helpers.SafePath.FileIn(_filePathConfig.DraftFolder, $"{model.InvoiceNo}.json");
                 File.WriteAllText(draftPath, json);
                 session.SetString("DraftFilePath", draftPath);
 
