@@ -14,12 +14,11 @@ jobs:
   analyze:
     name: Analyze (csharp)
     runs-on: windows-latest
-    # NON-BLOCKING for now: this is a PRIVATE repo, and uploading CodeQL results requires GitHub
-    # Advanced Security ("Code scanning is not enabled for this repository"). The scan itself runs and
-    # its findings are in the job log/SARIF, but the upload step fails until GHAS is enabled in
-    # Settings -> Security -> Code security and analysis. Once enabled, delete this continue-on-error
-    # so CodeQL becomes a required, blocking check.
-    continue-on-error: true
+    # Skipped while the repo is private: code scanning on private repos needs the paid GitHub Code
+    # Security add-on, so every run fails with "Code scanning is not enabled for this repository".
+    # Runs again automatically if the repo goes public (or remove this line once Code Security is enabled).
+    # Compared to 'public' so a payload without repository info skips rather than fails.
+    if: github.event.repository.visibility == 'public'
     permissions:
       contents: read
       security-events: write
