@@ -276,7 +276,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                             _logger.LogError("No TIN found for user {UserName}.", Input.UserName);
                             return await SignOutAndShowErrorAsync("Your company TIN is missing. Please contact support.");
                         }
-                        _logger.LogInformation("User {UserName} is assigned to TIN: {TIN}", Input.UserName, userTin);
+                        _logger.LogInformation("User {UserName} is assigned to TIN: {TIN}", Input.UserName, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                         HttpContext.Session.SetString("UserTIN", userTin);
 
                         try
