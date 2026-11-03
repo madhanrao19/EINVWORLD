@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.30`** (`AppInfo:Version` in `appsettings.json`). v1.50.30 is a **patch**
+> **Current version: `v1.50.31`** (`AppInfo:Version` in `appsettings.json`). v1.50.31 is a **patch**
+> release: "Sign out of all devices", shorter password-reset links and encrypted keys — see the dated entry below. v1.50.30 was a **patch**
 > release: users get an email when their password is changed — see the dated entry below. v1.50.29 was a **patch**
 > release: sign-in and registration no longer reveal which accounts exist — see the dated entry below. v1.50.28 was a **patch**
 > release: cancel/reject, user account changes and folder deletes are recorded in the audit trail — see the dated entry below. v1.50.27 was a **patch**
@@ -472,6 +473,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.31 (Sessions and reset links)
+
+- **My Account → Sign out of all devices** ends every sign-in, including this one. A normal logout still signs out only
+  that browser.
+- Other devices notice a password change, "sign out of all devices" or an administrator disapproving or deactivating the
+  account within **5 minutes** (was 30).
+- **Password-reset links last 2 hours** (were 1 day); email-confirmation links keep their day. Reset links sent before
+  this version no longer work.
+- New encryption keys are protected with Windows DPAPI on the server (`DataProtection:ProtectKeysWithDpapi`).
 
 ## 📅 2026-11-03 — v1.50.30 (Password-changed email)
 

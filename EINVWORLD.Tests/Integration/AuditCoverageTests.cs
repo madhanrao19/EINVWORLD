@@ -43,7 +43,10 @@ namespace EINVWORLD.Tests.Integration
             };
 
             await page.OnPostApproveAsync(targetId, 1, "", "", "", "");
+            var stampBefore = (await users.FindByIdAsync(targetId))!.SecurityStamp;
             await page.OnPostDisapproveAsync(targetId, 1, "", "", "", "");
+            ctx.ChangeTracker.Clear();
+            Assert.NotEqual(stampBefore, (await users.FindByIdAsync(targetId))!.SecurityStamp); // their sessions end
             await page.OnPostDeleteAsync(targetId, 1, "", "", "", "");
 
             Assert.Equal(new[] { "UserApproved", "UserDisapproved", "UserDeleted" }, audit.Rows.ConvertAll(r => r.Action));

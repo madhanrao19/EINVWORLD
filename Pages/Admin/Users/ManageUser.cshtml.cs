@@ -170,6 +170,7 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedBy = User.Identity?.Name ?? "Admin";
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                await _userManager.UpdateSecurityStampAsync(user); // ends their open sessions within 5 minutes
                 await Audit("UserDisapproved", user);
             }
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
@@ -198,6 +199,7 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedBy = actor;
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                if (!user.IsApproved) await _userManager.UpdateSecurityStampAsync(user); // ends their open sessions
                 await Audit(user.IsApproved ? "UserApproved" : "UserDisapproved", user, new { bulk = true });
             }
 
