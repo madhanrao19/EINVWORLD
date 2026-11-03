@@ -192,6 +192,8 @@ namespace EINVWORLD.Pages.Invoices
                         EndDate = oldInvoice.EndDate,
                         PoDoNo = oldInvoice.PoDoNo,
                         RefDocumentNo = oldInvoice.RefDocumentNo,
+                        // A resent credit/debit/refund note still adjusts the same original invoice.
+                        RefUUID = oldInvoice.RefUUID,
 
                         // Links the copy to its original so the original leaves "Needs Attention" once this is Valid.
                         ResentFromInvoiceNo = oldInvoice.InvoiceNo,
@@ -770,6 +772,14 @@ namespace EINVWORLD.Pages.Invoices
                 if (Invoice == null)
                     ModelState.AddModelError("", "Invoice payload is missing.");
 
+                // CN/DN/RN must reference the original invoice (same rule as Edit): without it LHDN gets UUID "NA".
+                if (Invoice != null)
+                {
+                    Invoice.RefUUID = TinHelper.IsAdjustmentDocType(Invoice.DocTypeCode) ? Invoice.RefUUID?.Trim() : null;
+                    if (TinHelper.IsAdjustmentDocType(Invoice.DocTypeCode) && string.IsNullOrEmpty(Invoice.RefUUID))
+                        ModelState.AddModelError("Invoice.RefUUID", "Reference UUID is required for credit, debit and refund notes.");
+                }
+
                 if (Invoice != null)
                 {
                     if (string.IsNullOrWhiteSpace(Invoice.InvoiceNo))
@@ -990,6 +1000,7 @@ namespace EINVWORLD.Pages.Invoices
 
                     // Update header fields
                     draftInvoice.RefDocumentNo = Invoice.RefDocumentNo;
+                    draftInvoice.RefUUID = Invoice.RefUUID;
                     draftInvoice.UUID = Invoice.UUID;
                     draftInvoice.ForeignCurrency = Invoice.Currency ?? "MYR";
                     draftInvoice.ExchangeRate = Invoice.ExchangeRate;
@@ -1056,6 +1067,7 @@ namespace EINVWORLD.Pages.Invoices
                         InvoiceNo = Invoice.InvoiceNo,
                         PrefixedID = Invoice.InvoiceNo,
                         RefDocumentNo = Invoice.RefDocumentNo,
+                        RefUUID = Invoice.RefUUID,
                         ResentFromInvoiceNo = Invoice.ResentFromInvoiceNo,
                         UUID = Invoice.UUID,
                         ForeignCurrency = Invoice.Currency ?? "MYR",
@@ -1567,6 +1579,7 @@ namespace EINVWORLD.Pages.Invoices
             {
                 InvoiceNo = Invoice.InvoiceNo ?? "",
                 RefDocumentNo = Invoice.RefDocumentNo,
+                RefUUID = Invoice.RefUUID,
                 IssueDate = Invoice.IssueDate,
                 DocTypeCode = Invoice.DocTypeCode,
                 InvoicePeriod = Invoice.InvoicePeriod,

@@ -472,6 +472,11 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
   or deactivating the user ends that user's other sessions within 5 minutes. A normal logout signs out only that browser.
   New data-protection keys are DPAPI-encrypted (machine scope); see `DataProtection:ProtectKeysWithDpapi` before
   moving the key ring to another server.
+- **Adjustment notes without a reference (v1.50.32, once per database):** before v1.50.32, Create e-Invoice never saved
+  a credit/debit/refund note's Reference UUID, so notes submitted from there reached LHDN with the reference "NA". List
+  them with `SELECT InvoiceNo, DocTypeCode, LHDNStatusId, IssueDate FROM InvoiceHeaders WHERE DocTypeCode IN
+  ('02','03','04','12','13','14') AND ISNULL(RefUUID,'') = '' AND ISNULL(UUID,'') <> '' ORDER BY IssueDate` and decide
+  with the accountant whether each needs cancelling and re-issuing against the right original invoice.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 - **Demo users:** `Seeding:SeedDefaultUsers` is **off** by default (v1.50.3). When turned on it seeds `admin@`/`supplier@`/

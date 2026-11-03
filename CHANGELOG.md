@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.31`** (`AppInfo:Version` in `appsettings.json`). v1.50.31 is a **patch**
+> **Current version: `v1.50.32`** (`AppInfo:Version` in `appsettings.json`). v1.50.32 is a **patch**
+> release: credit, debit and refund notes created from the Invoices list can be submitted again — see the dated entry below. v1.50.31 was a **patch**
 > release: "Sign out of all devices", shorter password-reset links and encrypted keys — see the dated entry below. v1.50.30 was a **patch**
 > release: users get an email when their password is changed — see the dated entry below. v1.50.29 was a **patch**
 > release: sign-in and registration no longer reveal which accounts exist — see the dated entry below. v1.50.28 was a **patch**
@@ -473,6 +474,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.32 (Credit/debit/refund notes keep their Reference UUID)
+
+- **Fixed:** a credit, debit or refund note started from the Invoices list (or Create e-Invoice) lost its Reference UUID
+  when saved, so Ready for LHDN refused it with "Reference UUID is required for credit, debit and refund notes". Before
+  that check existed, such notes reached LHDN with the reference "NA". Create e-Invoice now saves the Reference UUID on
+  every save and submit, asks for it like Edit Invoice does, keeps it when a note is copied or resent, and a UUID picked
+  from the list is no longer overwritten by the empty display field.
+- Checked 4 Nov 2026: no credit/debit/refund note on Staging or Production was submitted without a reference (only
+  unsubmitted drafts, which now ask for it). The query is in `DEPLOY-NOTES.md` §5.
 
 ## 📅 2026-11-03 — v1.50.31 (Sessions and reset links)
 
