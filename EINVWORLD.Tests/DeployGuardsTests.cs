@@ -206,6 +206,82 @@ if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { thro
             Assert.Equal(22, rows.Count(r => r.StartsWith("ROW PASS 302")));
         }
 
+        // ---- Disk-space preflight, health check and post-deploy clean-up ----
+
+        [Fact] public void DiskSpaceVerdicts() => Passes(@"
+$cases = @(@($null, 1GB, 'UNKNOWN'), @(5GB, 10GB, 'BLOCK'), @(15GB, 1GB, 'WARN'), @(30GB, 1GB, 'OK'), @(19GB, 25GB, 'BLOCK'))
+foreach ($c in $cases) { $v = Get-DiskSpaceVerdict $c[0] $c[1]; if ($v -ne $c[2]) { throw ""$($c[0]) / $($c[1]) -> $v, want $($c[2])"" } }
+$free = Get-FreeSpaceBytes ""$repo\not\created\yet""
+if (-not ($free -gt 0)) { throw ""free space of a missing folder's volume: $free"" }");
+
+        [Fact] public void Cleanup_DeletesOnlyFoldersInsideRepoBinAndObj() => Passes(@"
+$obj = ""$repo\obj\Release\net10.0\win-x64""; New-Item -ItemType Directory -Force $obj | Out-Null; Set-Content ""$obj\a.dll"" 'x'
+$other = ""$repo\..\elsewhere""; New-Item -ItemType Directory $other | Out-Null; Set-Content ""$other\keep.txt"" 'x'
+$r = @(Remove-DeployArtifacts @($pub, $obj, $other, ""$repo\bin"", ""$repo\bin\..\Pages"", ""$repo\bin\gone"") $repo)
+$got = ($r | ForEach-Object { $_.Result }) -join ','
+if ($got -ne 'REMOVED,REMOVED,REFUSED,REFUSED,REFUSED,ABSENT') { throw ""results: $got"" }
+if ((Test-Path $pub) -or (Test-Path $obj)) { throw 'build output not deleted' }
+if (-not (Test-Path ""$other\keep.txt"") -or -not (Test-Path ""$repo\bin"")) { throw 'deleted something outside the approved folders' }");
+
+        [Fact] public void Cleanup_RefusesAFolderHoldingAJunction_AndKeepsItsTarget() => Passes(@"
+$target = ""$repo\..\target""; New-Item -ItemType Directory $target | Out-Null; Set-Content ""$target\keep.txt"" 'x'
+New-Item -ItemType Junction -Path ""$pub\link"" -Value $target | Out-Null
+$r = @(Remove-DeployArtifacts @($pub) $repo)
+if ($r[0].Result -ne 'REFUSED') { throw ""result: $($r[0].Result)"" }
+if (-not (Test-Path ""$target\keep.txt"")) { throw 'junction target deleted' }
+(Get-Item ""$pub\link"").Delete()");
+
+        [Fact] public void Health_RetriesUntil200_AndReportsAnUnhealthySite() => Passes(@"
+$script:n = 0
+$probe = { param($url) $script:n++; [pscustomobject]@{ Status = $(if ($script:n -eq 1) { 503 } else { 200 }); Cache = '' } }
+$r = @(Test-HealthUrls -BaseUrl 'https://x/' -Probe $probe -DelayMs 0)
+if ($r.Count -ne 2 -or -not $r[0].Healthy -or $r[0].Attempts -ne 2 -or $r[1].Url -ne 'https://x/health/ready' -or -not $r[1].Healthy) { throw ""first: $($r[0].Status)/$($r[0].Attempts)"" }
+$down = { param($url) [pscustomobject]@{ Status = 503; Cache = '' } }
+$r = @(Test-HealthUrls -BaseUrl 'https://x' -Probe $down -DelayMs 0 -MaxAttempts 3)
+if ($r[0].Healthy -or $r[0].Attempts -ne 3) { throw ""down: $($r[0].Healthy) after $($r[0].Attempts)"" }");
+
+        // The real Deploy-Staging.ps1 in an isolated fake repo (its own scripts\, bin\, obj\) deploying to a local
+        // App folder, with a local site standing in for the public one.
+        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond)
+        {
+            using var server = new FakeSite(respond);
+            var scripts = Path.GetDirectoryName(Guards())!;
+            var body = @"
+$e = ""$repo\..\e2e""; $r2 = ""$e\repo""; $p2 = ""$r2\bin\Release\net10.0\win-x64\publish""; $o2 = ""$r2\obj\Release\net10.0\win-x64""
+New-Item -ItemType Directory -Force ""$r2\scripts"", $p2, $o2, ""$e\App"" | Out-Null
+Copy-Item 'SCRIPTS\Deploy-Staging.ps1', 'SCRIPTS\DeployGuards.ps1', 'SCRIPTS\app_offline.htm' ""$r2\scripts""
+Copy-Item 'SCRIPTS\..\EINVWORLD.csproj' $r2
+Set-Content ""$r2\scripts\never-public-known-paths.txt"" 'wwwroot/Drafts/EINV00149.json'
+Copy-Item ""$repo\appsettings.json"" $r2; Copy-Item ""$repo\appsettings.json"" $p2
+Set-Content ""$p2\EINVWORLD.exe"" 'x'; Write-PublishStamp $p2; Set-Content ""$o2\a.obj"" 'x'
+Set-Content ""$e\App\web.config"" '<configuration />'
+try { & ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish -SkipMigrations -SkipRuntimeCheck -PublicBaseUrl 'http://127.0.0.1:PORT' -Confirm:$false 6>&1 | Out-Null; 'DEPLOY:OK' }
+catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
+'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />')"
+                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString());
+            Run(body);
+            return _lastOutput;
+        }
+
+        [Fact]
+        public void Deploy_Succeeds_ThenDeletesOnlyTheLocalBuildOutput()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
+            Assert.Contains("DEPLOY:OK", output);
+            Assert.Contains("STATE deployed=True publish=False obj=False webconfig=True", output);
+        }
+
+        [Fact]
+        public void Deploy_FailingTheSecurityCheck_KeepsTheBuildOutputForDiagnosis()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd((path, _) => path == "/Drafts/EINV00149.json" || path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
+            Assert.Contains("DEPLOY:FAILED SECURITY VERIFICATION FAILED", output);
+            Assert.Contains("STATE deployed=True publish=True obj=True webconfig=True", output);
+            Assert.DoesNotContain(Secret, output);
+        }
+
         /// <summary>Minimal HTTP/1.1 server on a free loopback port. Status 0 = close without answering (curl sees 000).</summary>
         private sealed class FakeSite : IDisposable
         {

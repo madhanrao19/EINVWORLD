@@ -40,6 +40,13 @@
     The site is taken offline only for the copy step, via `app_offline.htm` (no IIS admin rights
     needed), and comes back on the next request.
 
+    Disk space and clean-up: before anything changes, the server disk must hold a full backup of
+    App\ plus 1 GB and this PC's disk 3 GB (else the deploy stops; below 20 GB free it warns). After
+    the copy, the public security check and a /health/live + /health/ready check (both through the
+    public site), and only if all passed, the local publish output and obj\Release\*\win-x64 are
+    deleted - never anything outside the repo's bin\ and obj\, never the NuGet cache or the server
+    backups. A failed run keeps them for diagnosis; -KeepPublishOutput keeps them on purpose.
+
 .PARAMETER DestAppPath
     UNC (or local) path to the target `App\` folder. Defaults to the Staging deployment path from
     Properties\PublishProfiles\EINVWORLD STAGING.pubxml.
@@ -84,6 +91,10 @@
     any other target skips the check with a warning unless this is given. After the copy, every known
     never-public path (scripts\never-public-known-paths.txt) and every never-public file this deploy removed
     is requested; any content (2xx) or Cloudflare cache hit - or no answer after retries - fails the run.
+
+.PARAMETER KeepPublishOutput
+    Keep the local publish output after a successful deploy (normally deleted, see "Disk space and clean-up"),
+    e.g. to deploy the same build to Production next with -SkipPublish.
 
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
@@ -132,7 +143,9 @@ param(
 
     [switch]$SkipRuntimeCheck,
 
-    [string]$PublicBaseUrl
+    [string]$PublicBaseUrl,
+
+    [switch]$KeepPublishOutput
 )
 
 $ErrorActionPreference = 'Stop'
@@ -170,6 +183,28 @@ if ($WhatIfPreference) {
         $probe = Join-Path $dir ".deploy-whatif-probe-$PID.tmp"
         try { [IO.File]::WriteAllText($probe, 'probe'); [IO.File]::Delete($probe); Write-Host "Preflight: can write to $dir - OK." -ForegroundColor Green }
         catch { Write-Warning "Preflight: can't write to $dir ($($_.Exception.Message)) - the real run's backup/copy will fail." }
+    }
+}
+
+# Disk space: the server needs room for the backup (a full App\ copy) and the copy; this PC for the publish.
+# Below what a step needs the deploy stops before changing anything; below 20 GB it only warns.
+$appBytes = 0
+if (-not $SkipBackup) {
+    try { $appBytes = [int64](((New-Object IO.DirectoryInfo $DestAppPath).GetFiles('*', [IO.SearchOption]::AllDirectories) | Measure-Object Length -Sum).Sum) }
+    catch { Write-Warning "Can't size $DestAppPath ($($_.Exception.Message)) - the disk check below assumes the backup needs nothing extra." }
+}
+foreach ($disk in @(@{ Name = 'Server'; Path = $DestAppPath; Need = $appBytes + 1GB },
+                    @{ Name = 'Local'; Path = $SourcePublishPath; Need = $(if ($SkipPublish) { 0 } else { 2GB }) + 1GB })) {
+    $free = Get-FreeSpaceBytes $disk.Path
+    $msg = "$($disk.Name) disk ($($disk.Path)): $('{0:N1}' -f ($free / 1GB)) GB free, needs $('{0:N1}' -f ($disk.Need / 1GB)) GB"
+    switch (Get-DiskSpaceVerdict $free $disk.Need) {
+        'BLOCK' {
+            if ($WhatIfPreference) { Write-Warning "Preflight: $msg - the real run will stop here." }
+            else { throw "Not enough disk space. $msg. Nothing was changed - free some space and re-run." }
+        }
+        'WARN' { Write-Warning "$msg - below 20 GB, free some space soon." }
+        'UNKNOWN' { Write-Warning "Can't read free space for $($disk.Path) - check it by hand." }
+        default { Write-Host "$msg - OK." -ForegroundColor Green }
     }
 }
 
@@ -588,9 +623,37 @@ if ($PublicBaseUrl) {
         throw "SECURITY VERIFICATION FAILED: $($bad.Count) of $($results.Count) never-public path(s) are served, cached at Cloudflare, or could not be verified. The app files ARE deployed. Remove the files from the server, purge the Cloudflare cache, then re-run the check: . .\scripts\DeployGuards.ps1; Test-NeverPublicUrls -BaseUrl $PublicBaseUrl -RelativePaths (Get-KnownNeverPublicPaths)"
     }
     Write-Host "Public security check: PASS ($($results.Count) path(s), none served or cached)." -ForegroundColor Green
+
+    # -- 5. Health check through the same public hostname ---------------------------------------------
+    $health = @(Test-HealthUrls -BaseUrl $PublicBaseUrl)
+    $health | ForEach-Object { Write-Host ("  {0,3} after {1} attempt(s)  {2}" -f $_.Status, $_.Attempts, $_.Url) }
+    if (@($health | Where-Object { -not $_.Healthy }).Count) {
+        throw "HEALTH CHECK FAILED: the app files ARE deployed but the site is not healthy. Check SystemLogs / the stdout log, or roll back from the backup. Local build output kept for diagnosis."
+    }
+    Write-Host "Health check: PASS." -ForegroundColor Green
 }
 else {
-    Write-Warning "No public hostname for $DestAppPath - post-deploy public security check skipped (pass -PublicBaseUrl to run it)."
+    Write-Warning "No public hostname for $DestAppPath - post-deploy public security and health checks skipped (pass -PublicBaseUrl to run them)."
+}
+
+# -- 6. Local clean-up: only now that the deploy, the public security check and the health check all passed ----
+# A failed run stops before this, so its build output stays for diagnosis. Only folders inside the repo's bin\
+# and obj\ are deleted (Remove-DeployArtifacts refuses anything else); the NuGet cache and backups are never touched.
+if ($WhatIfPreference) { Write-Host "Local clean-up skipped (-WhatIf)." -ForegroundColor Yellow }
+elseif (-not $PublicBaseUrl) { Write-Host "Local clean-up skipped: the public checks did not run." -ForegroundColor Yellow }
+elseif ($KeepPublishOutput) { Write-Host "Publish output kept (-KeepPublishOutput): $SourcePublishPath" -ForegroundColor Yellow }
+else {
+    $ridObj = @(Get-ChildItem (Join-Path $repoRoot 'obj\Release') -Directory -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.FullName 'win-x64' })
+    try {
+        foreach ($r in @(Remove-DeployArtifacts (@($SourcePublishPath) + $ridObj) $repoRoot)) {
+            switch ($r.Result) {
+                'REMOVED' { Write-Host ("  removed {0} ({1:N0} MB)" -f $r.Path, ($r.Bytes / 1MB)) }
+                'REFUSED' { Write-Host "  kept $($r.Path) (outside the repo's bin\/obj\, or holds a link)" -ForegroundColor Yellow }
+            }
+        }
+        Write-Host "Local clean-up done; the next deploy publishes into a fresh folder." -ForegroundColor Green
+    }
+    catch { Write-Warning "Local clean-up failed (the deploy itself succeeded): $($_.Exception.Message)" }
 }
 
 Write-Host ""

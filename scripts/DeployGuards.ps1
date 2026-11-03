@@ -164,6 +164,74 @@ function Test-NeverPublicUrls {
     }
 }
 
+# Post-deploy health check: GET /health/live and /health/ready through the public site until each answers 200.
+# The app starts on the first request after the copy, so a slow or failed first answer is retried with growing gaps.
+function Test-HealthUrls {
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [scriptblock]$Probe = $InvokeStatusProbe,
+        [int]$DelayMs = 3000,
+        [int]$MaxAttempts = 6
+    )
+    foreach ($path in '/health/live', '/health/ready') {
+        $url = $BaseUrl.TrimEnd('/') + $path
+        $status = 0
+        for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+            $status = [int](& $Probe $url).Status
+            if ($status -eq 200 -or $attempt -eq $MaxAttempts) { break }
+            if ($DelayMs -gt 0) { Start-Sleep -Milliseconds ($DelayMs * $attempt) }
+        }
+        [pscustomobject]@{ Url = $url; Status = $status; Attempts = $attempt; Healthy = ($status -eq 200) }
+    }
+}
+
+# Free bytes on the volume holding $path, local or UNC ([IO.DriveInfo] can't read shares). The nearest existing
+# parent is used, since the publish folder may not exist yet. $null when it can't be read.
+if (-not ('DeployGuards.Disk' -as [type])) {
+    Add-Type -Namespace DeployGuards -Name Disk -MemberDefinition '[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern bool GetDiskFreeSpaceEx(string dir, out ulong freeToCaller, out ulong total, out ulong totalFree);'
+}
+function Get-FreeSpaceBytes([string]$path) {
+    $dir = [IO.Path]::GetFullPath($path)
+    while ($dir -and -not [IO.Directory]::Exists($dir)) { $dir = [IO.Path]::GetDirectoryName($dir) }
+    $free = [uint64]0; $total = [uint64]0; $totalFree = [uint64]0
+    if (-not $dir -or -not [DeployGuards.Disk]::GetDiskFreeSpaceEx($dir, [ref]$free, [ref]$total, [ref]$totalFree)) { return $null }
+    [int64]$free
+}
+
+# BLOCK below what the step needs, WARN below 20 GB, UNKNOWN if free space could not be read.
+$DiskWarnBytes = 20GB
+function Get-DiskSpaceVerdict($freeBytes, [int64]$neededBytes) {
+    if ($null -eq $freeBytes) { return 'UNKNOWN' }
+    if ([int64]$freeBytes -lt $neededBytes) { return 'BLOCK' }
+    if ([int64]$freeBytes -lt $DiskWarnBytes) { return 'WARN' }
+    'OK'
+}
+
+# Deletes local build output after a fully verified deploy. Only folders strictly inside the repo's bin\ or obj\
+# are deleted; anything else (a custom -SourcePublishPath, bin\ itself, a folder holding a junction, whose target
+# Remove-Item -Recurse would follow on PowerShell 5.1) is REFUSED and kept. One row per path.
+function Remove-DeployArtifacts([string[]]$paths, [string]$repoRoot) {
+    $roots = foreach ($d in 'bin', 'obj') { [IO.Path]::GetFullPath((Join-Path $repoRoot $d)).TrimEnd('\') + '\' }
+    foreach ($p in $paths) {
+        $full = [IO.Path]::GetFullPath($p).TrimEnd('\')
+        $result = 'REMOVED'; $bytes = [int64]0
+        if (-not @($roots | Where-Object { $full.StartsWith($_, [StringComparison]::OrdinalIgnoreCase) }).Count) { $result = 'REFUSED' }
+        elseif (-not (Test-Path -LiteralPath $full -PathType Container)) { $result = 'ABSENT' }
+        else {
+            $dir = New-Object IO.DirectoryInfo $full
+            if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+                @($dir.GetDirectories('*', [IO.SearchOption]::AllDirectories) | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }).Count) {
+                $result = 'REFUSED'
+            }
+            else {
+                $bytes = [int64](($dir.GetFiles('*', [IO.SearchOption]::AllDirectories) | Measure-Object Length -Sum).Sum)
+                Remove-Item -LiteralPath $full -Recurse -Force
+            }
+        }
+        [pscustomobject]@{ Path = $full; Result = $result; Bytes = $bytes }
+    }
+}
+
 # Public hostname for a deploy target; $null for a target with no known public site (e.g. a local test folder).
 function Get-DefaultPublicBaseUrl([string]$destAppPath) {
     switch -Regex ($destAppPath) {

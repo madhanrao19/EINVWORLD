@@ -62,6 +62,17 @@ changes are additive and AI/features stay off unless already enabled.
    "SECURITY VERIFICATION FAILED" - the app files are already deployed at that point, so remove the files
    from the server, purge the Cloudflare cache (Caching -> Purge), and re-run the check as the message
    shows. A run takes about 1-3 minutes.
+   **Disk space, health check, clean-up (v1.50.33):**
+   - **Before anything changes:** the server disk must hold a full `App\` backup plus 1 GB, and this PC 3 GB for the
+     publish. Otherwise the deploy stops with "Not enough disk space", and `-WhatIf` reports it. Below 20 GB free it warns.
+   - **After the public check:** `/health/live` and `/health/ready` must return 200 through the public site, or the run
+     fails with "HEALTH CHECK FAILED". The files are deployed by then, so check the logs or roll back from the backup.
+   - **Only if everything passed:** the local `bin\Release\net10.0\win-x64\publish` and `obj\Release\*\win-x64` are
+     deleted. Nothing outside the repo's `bin\` and `obj\` is ever deleted, and neither are the NuGet cache or the server
+     backups.
+   - **Deploying the same build to Staging and then Production:** run the Staging deploy with `-KeepPublishOutput`,
+     then Production with `-SkipPublish`.
+   - **A failed run keeps the build output** for diagnosis.
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
    **If you're deploying from a CI artifact** (or any pre-built output), run it with
