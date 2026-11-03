@@ -21,14 +21,17 @@ namespace eInvWorld.Pages.Admin.Users
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ApplicationDbContext _db;
         private readonly ILogger<AddEditUserModel> _logger;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
         public AddEditUserModel(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             IUserStore<ApplicationUser> userStore,
             ApplicationDbContext db,
-            ILogger<AddEditUserModel> logger)
+            ILogger<AddEditUserModel> logger,
+            EINVWORLD.Services.Audit.IAuditService audit)
         {
+            _audit = audit;
             _userManager = userManager;
             _roleManager = roleManager;
             _userStore = userStore;
@@ -214,6 +217,14 @@ namespace eInvWorld.Pages.Admin.Users
                 }
             }
 
+            await _audit.WriteAsync(isNew ? "UserCreated" : "UserEdited", new EINVWORLD.Services.Audit.AuditEntry
+            {
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    userId = user.Id, userName = user.UserName, role = SelectedRole, user.IsApproved, user.IsActive,
+                    passwordReset = !isNew && EnablePasswordChange && !string.IsNullOrWhiteSpace(Password)
+                })
+            });
             await _db.SaveChangesAsync();
             return RedirectToPage("/Admin/Users/ManageUser");
         }
