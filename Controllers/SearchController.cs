@@ -57,6 +57,8 @@ namespace eInvWorld.Controllers
                     .Select(uc => uc.PartyInfo.TIN)
                     .Distinct()
                     .ToListAsync();
+                // A shared LHDN placeholder party (General Public...) is on every tenant's invoices: never a scope.
+                userTINs = userTINs.Where(t => !EINVWORLD.Helpers.GeneralTINHelper.IsGeneralTIN(t)).ToList();
             }
 
             // ==========================================

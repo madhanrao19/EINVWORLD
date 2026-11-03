@@ -11,38 +11,6 @@ namespace EINVWORLD.Helpers
     public static class UserExtensions
     {
         /// <summary>
-        /// ✅ Returns the first TIN (Taxpayer Identification Number) associated with the user.
-        /// Use this when you expect only one company per user.
-        /// </summary>
-        public static string? GetUserTIN(this ClaimsPrincipal user, ApplicationDbContext dbContext)
-        {
-            var userId = user?.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(userId)) return null;
-
-            return dbContext.UserCompanies
-                .Include(uc => uc.PartyInfo)
-                .Where(uc => uc.User.UserName == userId)
-                .Select(uc => uc.PartyInfo.TIN)
-                .FirstOrDefault(); // ⛔ Returns only the first if multiple exist
-        }
-
-        /// <summary>
-        /// ✅ Returns the first PartyInfoId (company ID) associated with the user.
-        /// Use this only if the user is guaranteed to be linked to a single company.
-        /// </summary>
-        public static int? GetUserPartyInfoId(this ClaimsPrincipal user, ApplicationDbContext dbContext)
-        {
-            var userId = user?.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(userId)) return null;
-
-            return dbContext.UserCompanies
-                .Include(uc => uc.PartyInfo)
-                .Where(uc => uc.User.UserName == userId)
-                .Select(uc => uc.PartyInfo.PartyInfoId)
-                .FirstOrDefault(); // ⛔ Only returns one ID
-        }
-
-        /// <summary>
         /// ✅ Returns true if the user is marked as a Buyer (based on UserType).
         /// Used for role-based dashboard or page access.
         /// </summary>
@@ -93,10 +61,14 @@ namespace EINVWORLD.Helpers
                 .ToList();
         }
 
+        /// <summary>
+        /// Admin for invoice/company data checks. Page gates use the Identity role, so both the role and
+        /// UserType must say Admin: if they ever drift apart, the user gets less access, never more.
+        /// </summary>
         public static bool IsAdmin(this ClaimsPrincipal user, ApplicationDbContext dbContext)
         {
             var userId = user?.Identity?.Name;
-            if (string.IsNullOrWhiteSpace(userId)) return false;
+            if (string.IsNullOrWhiteSpace(userId) || !user!.IsInRole("Admin")) return false;
 
             return dbContext.Users
                 .Where(u => u.UserName == userId)

@@ -321,7 +321,7 @@ namespace EINVWORLD.Pages.Invoices
         // PUT /Invoices/InvoiceDetails2?handler=RejectDocument (Direct API like InvoiceLists)
         public async Task<IActionResult> OnPutRejectDocumentAsync(string documentId, string rejectionReason, string tin)
         {
-            _logger.LogInformation("🚀 InvoiceDetails2 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, tin);
+            _logger.LogInformation("🚀 InvoiceDetails2 RejectDocument handler called with documentId: {documentId}, reason: {rejectionReason}, frontend tin: {tin}", documentId, rejectionReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // Only the recipient may reject, acting as the recipient's TIN (not the user's first membership).
             var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
@@ -351,10 +351,10 @@ namespace EINVWORLD.Pages.Invoices
                 var windowError = await CancelRejectWindowErrorAsync(documentId, rejecting: true);
                 if (windowError != null) return BadRequest(windowError);
 
-                _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", userTin, tin);
+                _logger.LogInformation("🔑 Using logged-in user's TIN for LHDN API: {userTin} (instead of frontend TIN: {tin})", EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin), EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
                 // Call LHDN API to reject the document using user's TIN
-                _logger.LogInformation("📡 Calling LHDN RejectDocument API for document {documentId} with user TIN {userTin}...", documentId, userTin);
+                _logger.LogInformation("📡 Calling LHDN RejectDocument API for document {documentId} with user TIN {userTin}...", documentId, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                 string apiResponse;
                 try
                 {
@@ -448,7 +448,7 @@ namespace EINVWORLD.Pages.Invoices
         // PUT /Invoices/InvoiceDetails2?handler=CancelDocument (Direct API like InvoiceLists)
         public async Task<IActionResult> OnPutCancelDocumentAsync(string documentId, string cancellationReason, string tin)
         {
-            _logger.LogInformation("🚀 InvoiceDetails2 CancelDocument handler called with documentId: {documentId}, reason: {cancellationReason}, tin: {tin}", documentId, cancellationReason, tin);
+            _logger.LogInformation("🚀 InvoiceDetails2 CancelDocument handler called with documentId: {documentId}, reason: {cancellationReason}, tin: {tin}", documentId, cancellationReason, EINVWORLD.Helpers.LogSanitizer.MaskTin(tin));
 
             // Only the issuer may cancel (the recipient rejects instead), acting as the issuer's TIN.
             var parties = await EINVWORLD.Helpers.UserExtensions.GetDocumentPartiesAsync(_context, documentId);
@@ -484,7 +484,7 @@ namespace EINVWORLD.Pages.Invoices
                 if (windowError != null) return BadRequest(windowError);
 
                 // Call LHDN API to cancel document
-                _logger.LogInformation($"📡 Calling LHDN CancelDocument API for document {documentId} with user TIN {userTin}...");
+                _logger.LogInformation("📡 Calling LHDN CancelDocument API for document {documentId} with user TIN {userTin}...", documentId, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                 string response = await _lhdnApiService.CancelDocumentAsync(documentId, cancellationReason, userTin);
                 _logger.LogInformation($"✅ LHDN API cancellation successful for document {documentId}");
 

@@ -180,7 +180,7 @@ namespace EINVWORLD.Services.Background
                 job.LockedBy = null;
                 job.LockedUntilUtc = null;
                 await db.SaveChangesAsync(ct);
-                _log.LogInformation("Sync job {JobId} ({JobType}, TIN {Tin}) completed.", job.Id, job.JobType, job.Tin);
+                _log.LogInformation("Sync job {JobId} ({JobType}, TIN {Tin}) completed.", job.Id, job.JobType, EINVWORLD.Helpers.LogSanitizer.MaskTin(job.Tin));
             }
             catch (Exception ex)
             {

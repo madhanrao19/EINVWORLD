@@ -178,9 +178,12 @@
                         <a asp-page="/Suppliers/Users" asp-route-id="@Model.PartyInfo.PartyInfoId" class="btn btn-primary btn-sm">
                             <i class="ri-mail-send-line me-1 align-bottom"></i> Invite User
                         </a>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
-                            <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
-                        </button>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#assignUsersModal">
+                                <i class="ri-share-line me-1 align-bottom"></i> Assign Existing
+                            </button>
+                        }
                     </div>
                 </div>
                 <div class="table-responsive einv-table-scroll-x">
@@ -396,14 +399,6 @@
                                     <option value="@user.Id">@user.FullName</option>
                                 }
                             </select>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">User Email Address</label>
-                            <input type="email" class="form-control" name="UserEmail" id="UserEmail" placeholder="Enter existing user's email" required />
-                            <div class="form-text text-muted">Enter the email address of the user you want to assign. The user must already exist in the system.</div>
                         </div>
                     }
 

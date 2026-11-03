@@ -333,7 +333,6 @@
 
   <ItemGroup>
     <None Include="Pages\Dashboard\Dashboard.cshtml" />
-    <None Include="Pages\Dashboard\DashboardBuyer.cshtml" />
     <None Include="wwwroot\assets\fonts\boxicons.woff2" />
     <None Include="wwwroot\assets\fonts\boxiconsd41d.svg" />
     <None Include="wwwroot\assets\fonts\la-brands-400.svg" />

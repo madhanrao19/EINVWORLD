@@ -81,7 +81,7 @@
                             </div>
                             @if (Model.TinLocked)
                             {
-                                <div class="form-text text-warning">Locked — this company has already submitted invoices to LHDN.</div>
+                                <div class="form-text text-warning">Locked — the TIN identifies this company on every invoice. Ask an administrator to change it.</div>
                             }
                             <span asp-validation-for="PartyInfo.TIN" class="text-danger"></span>
                         </div>

@@ -73,12 +73,12 @@ namespace EINVWORLD.Tests.Integration
             return id;
         }
 
-        internal static ClaimsPrincipal PrincipalFor(string userId, string userName) =>
+        internal static ClaimsPrincipal PrincipalFor(string userId, string userName, params string[] roles) =>
             new(new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId),
                 new Claim(ClaimTypes.Name, userName),
-            }, "TestAuth"));
+            }.Concat(roles.Select(r => new Claim(ClaimTypes.Role, r))), "TestAuth"));
 
         internal static async Task<string> SeedStatusAsync(eInvWorld.Data.ApplicationDbContext ctx)
         {

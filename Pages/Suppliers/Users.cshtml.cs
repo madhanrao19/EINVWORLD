@@ -139,6 +139,14 @@ namespace eInvWorld.Pages.Suppliers
             var partyInfo = await _context.PartyInfos.FirstOrDefaultAsync(p => p.PartyInfoId == partyInfoId);
             if (partyInfo == null || userId == null) return NotFound();
 
+            // Same scope as RolesPermissions.OnPostAssignRoleAsync: a system role or this company's own custom role.
+            if (InviteCompanyRoleId.HasValue && !await _context.CompanyRoles.AnyAsync(r => r.CompanyRoleId == InviteCompanyRoleId.Value
+                    && (r.PartyInfoId == null || r.PartyInfoId == partyInfoId)))
+            {
+                TempData["ErrorMessage"] = "Selected role does not exist.";
+                return RedirectToPage(new { id = partyInfoId });
+            }
+
             var (invitation, rawToken) = await _invitationService.CreateAsync(partyInfoId, email, InviteCompanyRoleId, userId);
 
             var acceptUrl = EINVWORLD.Helpers.EmailLinks.EmailLink(this, Url.Page("/Suppliers/AcceptInvite", pageHandler: null,

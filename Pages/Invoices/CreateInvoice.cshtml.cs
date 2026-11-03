@@ -604,9 +604,11 @@ namespace EINVWORLD.Pages.Invoices
                         .ThenInclude(l => l.InvoiceTaxes)
                     .FirstOrDefaultAsync(i => i.UUID == originalUuid);
 
-                if (originalInvoice == null)
+                // UUIDs are identifiers, not secrets (printed on PDFs and QR codes): only the issuer may base an
+                // adjustment on an invoice. Same response as "not found" so nothing about other tenants leaks.
+                if (originalInvoice == null || !await User.CanManageInvoiceAsync(_context, originalInvoice.InvoiceNo))
                 {
-                    _logger.LogWarning("❌ Original invoice not found for UUID: {uuid}", originalUuid);
+                    _logger.LogWarning("❌ Original invoice not found or not manageable for UUID: {uuid}", originalUuid);
                     return;
                 }
 

@@ -42,6 +42,29 @@ namespace EINVWORLD.Services.Mappers
             _filePathConfig = filePathConfig.Value;
         }
 
+        private static readonly string[] LogoExtensions = { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
+
+        /// <summary>
+        /// Physical file for a stored logo path, or null. Logo files ("/api/companies/logos/x.png", or a legacy
+        /// absolute server path) resolve by file name inside <paramref name="logosFolder"/>; web paths
+        /// ("/assets/x.png", "~/x.png") inside <paramref name="webRoot"/>. Only image extensions, never outside
+        /// either folder: LogoPath was once settable from the public lead form.
+        /// </summary>
+        internal static string? ResolveLogoFile(string? logoPath, string? logosFolder, string webRoot)
+        {
+            if (string.IsNullOrWhiteSpace(logoPath)) return null;
+            var parts = logoPath.Trim().Split('\\', '/');
+            if (!LogoExtensions.Contains(Path.GetExtension(parts[^1]).ToLowerInvariant())) return null;
+
+            bool inLogosFolder = logoPath.StartsWith("/api/companies/logos/", StringComparison.OrdinalIgnoreCase)
+                || Path.IsPathRooted(logoPath) && !logoPath.StartsWith('/') && !logoPath.StartsWith('\\');
+            if (inLogosFolder)
+                return !string.IsNullOrWhiteSpace(logosFolder) && EINVWORLD.Helpers.SafePath.TryResolve(logosFolder, out var logoFile, parts[^1]) ? logoFile : null;
+
+            var segments = logoPath.TrimStart('~').Split('/', StringSplitOptions.RemoveEmptyEntries);
+            return EINVWORLD.Helpers.SafePath.TryResolve(webRoot, out var webFile, segments) ? webFile : null;
+        }
+
         public async Task<PdfTemplate_v2ViewModel?> CreateViewModelAsync(string invoiceNo)
         {
             // 1. Fetch Invoice with all necessary relationships. AsNoTracking: always read the row as stored.
@@ -94,24 +117,11 @@ namespace EINVWORLD.Services.Mappers
             {
                 try
                 {
-                    string fullLogoPath = string.Empty;
-
-                    // CASE A: Newer API-based path format (e.g., /api/companies/logos/filename.png)
-                    if (invoice.Supplier.LogoPath.StartsWith("/api/companies/logos/", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string fileName = Path.GetFileName(invoice.Supplier.LogoPath);
-                        fullLogoPath = Path.Combine(_filePathConfig.CompanyLogosFolder, fileName);
-                    }
-                    // CASE B: Legacy path format inside wwwroot (e.g., ~/images/logo.png or /images/logo.png)
-                    else
-                    {
-                        string webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-                        string cleanPath = invoice.Supplier.LogoPath.TrimStart('~', '/').Replace("/", Path.DirectorySeparatorChar.ToString());
-                        fullLogoPath = Path.Combine(webRoot, cleanPath);
-                    }
+                    string webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    string? fullLogoPath = ResolveLogoFile(invoice.Supplier.LogoPath, _filePathConfig.CompanyLogosFolder, webRoot);
 
                     // Read file and convert to Base64 to bake it into the PDF HTML
-                    if (File.Exists(fullLogoPath))
+                    if (fullLogoPath != null && File.Exists(fullLogoPath))
                     {
                         var logoBytes = await File.ReadAllBytesAsync(fullLogoPath);
                         string base64String = Convert.ToBase64String(logoBytes);
@@ -124,12 +134,15 @@ namespace EINVWORLD.Services.Mappers
                     }
                     else
                     {
-                        _logger.LogWarning($"Logo file not found physically at: {fullLogoPath}");
+                        // Never hand an unresolved value to the PDF engine: it would fetch it as a URL or local file.
+                        _logger.LogWarning("Logo not embedded for supplier {SupplierId}: not an image inside the logos folder or wwwroot", invoice.Supplier.PartyInfoId);
+                        invoice.Supplier.LogoPath = null;
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning($"⚠️ Failed to embed logo for PDF: {ex.Message}");
+                    invoice.Supplier.LogoPath = null;
                 }
             }
 

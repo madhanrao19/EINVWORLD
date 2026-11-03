@@ -549,7 +549,7 @@ namespace EINVWORLD.Pages.Invoices
                     imported.Add($"{systemInvoiceNo} (Ref: {firstLine.InvoiceNo})");
 
                     var invoiceJson = _invoiceMapper.MapToJsonModel(invoiceHeader);
-                    var filePath = Path.Combine(draftsFolder, $"{systemInvoiceNo}.json");
+                    var filePath = EINVWORLD.Helpers.SafePath.FileIn(draftsFolder, $"{systemInvoiceNo}.json");
                     await System.IO.File.WriteAllTextAsync(filePath, invoiceJson);
 
                     _invoiceHistoryService.Log(systemInvoiceNo, "Created", $"Invoice draft created via CSV Import (Ref: {firstLine.InvoiceNo})");
