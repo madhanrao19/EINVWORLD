@@ -52,6 +52,13 @@ namespace EINVWORLD.Pages.Admin.Resources
         {
             LoadTypeOptions();
 
+            var imageError = ImageFile == null ? null : LogoImage.Reject(ImageFile, LogoImage.MaxResourceImageBytes);
+            if (imageError != null)
+            {
+                ModelState.AddModelError(nameof(ImageFile), imageError);
+                return Page();
+            }
+
             var existing = await _context.Resources.FindAsync(Resource.Id);
             if (existing == null)
                 return NotFound();
@@ -199,16 +206,20 @@ namespace EINVWORLD.Pages.Admin.Resources
         {
             if (image == null || image.Length == 0)
                 return BadRequest(new { error = "No image uploaded" });
+            var imageError = LogoImage.Reject(image, LogoImage.MaxResourceImageBytes);
+            if (imageError != null)
+                return BadRequest(new { error = imageError });
 
             // Use external path from configuration
             var folder = _filePathConfig.EditorUploadsFolder;
             Directory.CreateDirectory(folder);
 
-            var fileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
+            await using var input = image.OpenReadStream();
+            var fileName = Guid.NewGuid() + LogoImage.DetectExtension(input); // from the bytes, never the client's name
             var savePath = Path.Combine(folder, fileName);
 
             using var stream = new FileStream(savePath, FileMode.Create);
-            await image.CopyToAsync(stream);
+            await input.CopyToAsync(stream);
 
             // Return the API URL to be served via ResourcesApiController
             return new JsonResult(new { location = $"/api/resources/editor/{fileName}" });

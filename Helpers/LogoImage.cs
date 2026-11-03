@@ -19,5 +19,20 @@ namespace EINVWORLD.Helpers
             if (read >= 3 && head[0] == 0xFF && head[1] == 0xD8 && head[2] == 0xFF) return ".jpg";
             return null;
         }
+
+        /// <summary>Size cap for an admin resource (article/editor) image.</summary>
+        public const long MaxResourceImageBytes = 5 * 1024 * 1024;
+
+        /// <summary>
+        /// Message to show, or null when the upload is a real PNG/JPEG no larger than <paramref name="maxBytes"/>.
+        /// Checked before ImageMagick decodes anything, and so no SVG/HTML is ever stored.
+        /// </summary>
+        public static string? Reject(Microsoft.AspNetCore.Http.IFormFile file, long maxBytes)
+        {
+            if (file.Length == 0) return "No image uploaded.";
+            if (file.Length > maxBytes) return $"Image must be {maxBytes / (1024 * 1024)} MB or smaller.";
+            using var stream = file.OpenReadStream();
+            return DetectExtension(stream) == null ? "Only PNG or JPEG images are allowed." : null;
+        }
     }
 }
