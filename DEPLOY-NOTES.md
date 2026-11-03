@@ -466,6 +466,12 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
   2FA is redirected to the authenticator-setup page after signing in until they enrol. There is no hard lockout (the
   whole /Identity area stays reachable, recovery codes always work). Emergency escape hatch only:
   `Security__EnforceAdminMfa = false` as a server environment variable.
+- **Sessions and reset links (v1.50.31):** password-reset links last 2 hours and use their own token provider, so
+  reset links emailed before the upgrade stop working (users request a new one). Signed-in devices re-check the
+  account every 5 minutes: a password change, **My Account → Sign out of all devices**, or an administrator disapproving
+  or deactivating the user ends that user's other sessions within 5 minutes. A normal logout signs out only that browser.
+  New data-protection keys are DPAPI-encrypted (machine scope); see `DataProtection:ProtectKeysWithDpapi` before
+  moving the key ring to another server.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
 - **Demo users:** `Seeding:SeedDefaultUsers` is **off** by default (v1.50.3). When turned on it seeds `admin@`/`supplier@`/

@@ -237,6 +237,24 @@ namespace eInvWorld.Pages.Profile
             }
             return Page();
         }
+
+        /// <summary>
+        /// "Sign out of all devices": a new security stamp invalidates every existing sign-in cookie (other devices
+        /// drop at their next stamp check, at most 5 minutes) and this one is signed out now. A normal logout
+        /// deliberately doesn't do this, so signing out on one device leaves the others alone.
+        /// </summary>
+        public async Task<IActionResult> OnPostSignOutEverywhereAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToPage("/Index");
+
+            await _userManager.UpdateSecurityStampAsync(user);
+            await _signInManager.ForgetTwoFactorClientAsync(); // "remember this device" for 2FA goes too
+            await _signInManager.SignOutAsync();
+            HttpContext.Session.Clear();
+            _logger.LogInformation("User {UserId} signed out of all devices.", user.Id);
+            return Redirect("/login?logoutReason=all-devices");
+        }
     }
 
 }
