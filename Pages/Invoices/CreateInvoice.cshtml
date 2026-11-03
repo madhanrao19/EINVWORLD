@@ -1160,7 +1160,7 @@
         // safe pattern, see einvworld-ui.js): Razor output inside a template literal would let "${...}" run as script.
         window.classificationOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ClassificationCodes ?? new List<SelectListItem>())));
         // Finance-approved units only, Each preselected.
-        window.unitOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions.Any(o => o.Value == u.Code)).Select(u => new { Value = u.Code, Text = u.Name })))), "EA");
+        window.unitOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(eInvWorld.Helpers.DropdownHelper.FinanceUnits.Where(u => Model.UnitOptions.Any(o => o.Value == u.Code)).Select(u => new { Value = u.Code, Text = u.Name }))), "EA");
         window.taxCategoryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TaxCategoryOptions ?? new List<SelectListItem>())));
         // Country of Origin (line-level Additional Information)
         window.countryOptionsHtml = einvworld.optionsHtml(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CountryOptions ?? new List<SelectListItem>())));
