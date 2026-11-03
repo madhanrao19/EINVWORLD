@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.32`** (`AppInfo:Version` in `appsettings.json`). v1.50.32 is a **patch**
+> **Current version: `v1.50.33`** (`AppInfo:Version` in `appsettings.json`). v1.50.33 is a **patch**
+> release: deploys check disk space first, check site health, and clean up the local build afterwards — see the dated entry below. v1.50.32 was a **patch**
 > release: credit, debit and refund notes created from the Invoices list can be submitted again — see the dated entry below. v1.50.31 was a **patch**
 > release: "Sign out of all devices", shorter password-reset links and encrypted keys — see the dated entry below. v1.50.30 was a **patch**
 > release: users get an email when their password is changed — see the dated entry below. v1.50.29 was a **patch**
@@ -474,6 +475,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.33 (Deploy: disk space, health check, local clean-up)
+
+- **Deploy script (`scripts\Deploy-Staging.ps1`), operators only; the app is unchanged:**
+  - **Disk-space preflight:** before anything changes, the deploy checks free space on the server (room for the backup:
+    a full `App\` copy plus 1 GB) and on this PC (3 GB for the publish). If either is short it stops with "Not enough
+    disk space"; below 20 GB free it warns.
+  - **Health check:** after the public security check, `/health/live` and `/health/ready` must answer 200 through the
+    public site (retried while the app starts). Otherwise the run fails with "HEALTH CHECK FAILED".
+  - **Local clean-up:** only when the deploy, the security check and the health check all passed, the script deletes
+    the local publish output and `obj\Release\*\win-x64`. Then the next deploy starts from a fresh folder.
+    - It never touches anything outside the repo's `bin\` and `obj\`, the NuGet cache, or the server backups.
+    - A failed run keeps everything for diagnosis.
+    - Pass `-KeepPublishOutput` to keep the build, e.g. to deploy the same build to Production next with `-SkipPublish`.
 
 ## 📅 2026-11-04 — v1.50.32 (Credit/debit/refund notes keep their Reference UUID)
 
