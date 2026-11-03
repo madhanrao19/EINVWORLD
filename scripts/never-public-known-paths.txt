@@ -1,0 +1,24 @@
+# Paths that were publicly served before v1.50.19 (file names only, no content). The post-deploy check in
+# scripts\DeployGuards.ps1 requests each one through the public hostname after every deploy, together with any
+# never-public file that deploy removed. Every line must match a NeverPublicPath pattern in EINVWORLD.csproj
+# (WwwrootExposureTests checks this). Relative to App\, forward slashes.
+wwwroot/Drafts/EINV00149.json
+wwwroot/Drafts/EINV00150.json
+wwwroot/Drafts/EINV00153.json
+wwwroot/tempcsv/invoice-upload-0b8e79d4-3176-4e0c-bb15-e0f9f435a60d.csv
+wwwroot/tempcsv/invoice-upload-0db32004-310d-4745-9aea-d45c11bf0d75.csv
+wwwroot/tempcsv/invoice-upload-0e728231-43b2-488f-a37b-4cbb440d63bd.csv
+wwwroot/tempcsv/invoice-upload-10709af2-be3b-46e2-9df9-0aeba04dfceb.csv
+wwwroot/tempcsv/invoice-upload-14c70137-bade-4807-96c6-f74840f991c2.csv
+wwwroot/tempcsv/invoice-upload-45a83602-a4bc-4374-a649-772cfe4c7fb4.csv
+wwwroot/tempcsv/invoice-upload-475b121c-9879-4d6c-8dd1-0503a7724713.csv
+wwwroot/tempcsv/invoice-upload-62924129-6a12-43a9-99fa-6aca4281a6af.csv
+wwwroot/tempcsv/invoice-upload-77d464ca-82ae-46e2-a70e-842cee796108.csv
+wwwroot/tempcsv/invoice-upload-9bd09f81-2f4a-4704-af88-c6a1299dffb3.csv
+wwwroot/tempcsv/invoice-upload-e340d8fe-68a9-452a-99b6-827be76add91.csv
+wwwroot/tempcsv/invoice-upload-fecb3e8e-aefa-46e1-a471-b91717b7bf66.csv
+wwwroot/tempcsv/invoice-upload-ff2de221-5c0b-400c-a9d6-90e64ee64e47.csv
+wwwroot/test-column-debug.html
+wwwroot/test-columns.html
+wwwroot/test-sorting.html
+wwwroot/theme-test.html
