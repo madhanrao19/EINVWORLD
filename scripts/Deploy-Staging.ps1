@@ -46,10 +46,15 @@
 
 .PARAMETER SourcePublishPath
     Where `dotnet publish` writes its output. Defaults to bin\Release\net10.0\win-x64\publish under
-    the repo root. Combine with -SkipPublish to reuse an existing publish output as-is.
+    the repo root. Combine with -SkipPublish to reuse an existing publish output as-is. Emptied before
+    each publish when it is inside the repo's bin\; any other folder must be empty or new.
 
 .PARAMETER SkipPublish
-    Skip the `dotnet publish` step and copy whatever is already at -SourcePublishPath.
+    Skip the `dotnet publish` step and copy the output already at -SourcePublishPath. Only accepted when
+    that folder still holds exactly the files this script's last clean publish recorded
+    (.deploy-publish-files.txt) and the repo's version - otherwise the deploy stops before any copy.
+    Files that must never be public (wwwroot\Drafts, wwwroot\tempcsv, test pages) are refused at the
+    source and removed from the server after the copy (scripts\DeployGuards.ps1).
 
 .PARAMETER SkipBackup
     Skip backing up the current server App folder first. Not recommended - only use this if you
@@ -123,13 +128,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
+. (Join-Path $PSScriptRoot 'DeployGuards.ps1')   # stale-file guards: Initialize-PublishFolder, Assert-PublishOutput, ...
 
 if (-not $SourcePublishPath) {
     $SourcePublishPath = Join-Path $repoRoot 'bin\Release\net10.0\win-x64\publish'
 }
 
 # Files that must never be overwritten on the server - see .DESCRIPTION above.
-$excludeFiles = @('web.config') + $ExtraExcludeFiles
+$excludeFiles = @('web.config', $PublishStampName) + $ExtraExcludeFiles
 
 Write-Host "=== EINVWORLD Staging Deploy ===" -ForegroundColor Cyan
 Write-Host "Source (publish output): $SourcePublishPath"
@@ -294,17 +300,14 @@ if (-not $SkipPublish) {
     }
     if ($PSCmdlet.ShouldProcess($repoRoot, 'dotnet publish (Release, win-x64)')) {
         Write-Host "Publishing..." -ForegroundColor Cyan
-        # dotnet publish never deletes old files from -o, so files dropped or excluded from the build
-        # (v1.50.19: wwwroot\Drafts with personal data) kept shipping. Start from an empty folder, but only
-        # inside this repo, so a mistyped -SourcePublishPath can never wipe anything else.
-        $fullPublish = [IO.Path]::GetFullPath($SourcePublishPath)
-        if ((Test-Path -LiteralPath $fullPublish) -and $fullPublish.StartsWith((Join-Path $repoRoot 'bin\'), [StringComparison]::OrdinalIgnoreCase)) {
-            Remove-Item -LiteralPath $fullPublish -Recurse -Force
-        }
+        # dotnet publish never deletes old files from -o (v1.50.19 shipped old draft invoices that way):
+        # publish into an empty folder and record what it produced.
+        Initialize-PublishFolder $SourcePublishPath $repoRoot
         Push-Location $repoRoot
         try {
             dotnet publish EINVWORLD.csproj -c Release -r win-x64 --self-contained false -o $SourcePublishPath
             if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
+            Write-PublishStamp $SourcePublishPath
         }
         finally {
             Pop-Location
@@ -316,6 +319,20 @@ else {
     if (-not (Test-Path (Join-Path $SourcePublishPath 'EINVWORLD.exe'))) {
         throw "No EINVWORLD.exe found at $SourcePublishPath - nothing to deploy. Run without -SkipPublish first."
     }
+}
+
+# Copy gate (also for -SkipPublish): exactly the clean publish's files, this repo's version, nothing forbidden.
+if ($WhatIfPreference -and -not $SkipPublish) {
+    Write-Host "Publish output check skipped (-WhatIf did not publish)." -ForegroundColor Yellow
+}
+else {
+    Assert-PublishOutput $SourcePublishPath $repoRoot
+    Write-Host "Publish output check: matches the clean publish, version $(Get-AppVersion (Join-Path $SourcePublishPath 'appsettings.json'))." -ForegroundColor Green
+}
+$forbiddenOnServer = Find-ForbiddenServerFiles $DestAppPath
+if ($forbiddenOnServer.Count) {
+    Write-Host "$($forbiddenOnServer.Count) file(s) on the server must not be public and will be removed after the copy (the backup keeps them):" -ForegroundColor Yellow
+    $forbiddenOnServer | Select-Object -First 20 | ForEach-Object { Write-Host "    $_" }
 }
 
 # -- 2. Backup -----------------------------------------------------------------------------------
@@ -502,14 +519,6 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
         # manifest this script wrote last time, so anything it never shipped (uploads under wwwroot,
         # server-only files, the backup) is never touched. The pre-deploy backup still has every file.
         $manifestPath = Join-Path $DestAppPath '.deploy-manifest.txt'
-        # .NET enumeration: child paths always start with the root's own FullName (Get-ChildItem can
-        # return long names under a short 8.3 root, which would break the relative paths).
-        function Get-RelativeFiles([string]$root) {
-            $dir = New-Object IO.DirectoryInfo $root
-            if (-not $dir.Exists) { return @() }
-            $prefix = $dir.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar).Length + 1
-            $dir.GetFiles('*', [IO.SearchOption]::AllDirectories) | ForEach-Object { $_.FullName.Substring($prefix) }
-        }
         $shipped = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
         Get-RelativeFiles $SourcePublishPath | ForEach-Object {
             if ($excludeFiles -notcontains (Split-Path $_ -Leaf)) { [void]$shipped.Add($_) }
@@ -541,6 +550,15 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
             }
         }
         Set-Content -Path $manifestPath -Value ($shipped | Sort-Object) -Encoding utf8
+
+        # Never-public files this script did not ship (an old build or a hand copy left them, so the manifest
+        # can't remove them - Production's Drafts\ and tempcsv\). The pre-deploy backup keeps a copy.
+        foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) {
+            Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force
+            Write-Host "  removed (must not be public): $rel"
+        }
+        $left = Find-ForbiddenServerFiles $DestAppPath
+        if ($left.Count) { throw "These files must not be public and are still on the server: $($left -join ', ')" }
     }
     finally {
         Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
