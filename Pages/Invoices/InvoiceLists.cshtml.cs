@@ -176,7 +176,7 @@ namespace eInvWorld.Pages.Invoices
                 // Try Document Details endpoint first
                 if (!string.IsNullOrEmpty(uuid))
                 {
-                    var requestUrl = $"{baseUrl}/api/v1.0/documents/{uuid}/details";
+                    var requestUrl = $"{baseUrl}/api/v1.0/documents/{Uri.EscapeDataString(uuid)}/details";
                     var response = await client.GetAsync(requestUrl);
                     if (response.IsSuccessStatusCode)
                     {
@@ -186,10 +186,12 @@ namespace eInvWorld.Pages.Invoices
                     }
                 }
 
-                // Fallback: Try Submission endpoint
+                // Fallback: Try Submission endpoint. The request carries this party's LHDN token, so the path uses the
+                // submission stored on the invoice, never the query string (which could steer it to other LHDN GETs).
+                submissionId = invoice?.SubmissionID ?? "";
                 if (!errors.Any() && !string.IsNullOrEmpty(submissionId))
                 {
-                    var requestUrl = $"{baseUrl}/api/v1.0/documentsubmissions/{submissionId}";
+                    var requestUrl = $"{baseUrl}/api/v1.0/documentsubmissions/{Uri.EscapeDataString(submissionId)}";
                     var response = await client.GetAsync(requestUrl);
                     if (response.IsSuccessStatusCode)
                     {
