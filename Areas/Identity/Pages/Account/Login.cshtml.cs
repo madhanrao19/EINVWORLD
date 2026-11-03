@@ -181,32 +181,36 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             {
                 // 1. Fetch User (Declaration #1 - Keep this one)
                 var user = await _signInManager.UserManager.FindByNameAsync(Input.UserName);
+                string logData = $"Username: {Input.UserName}, RememberMe: {Input.RememberMe}";
                 if (user == null)
                 {
-                    ModelState.AddModelError(string.Empty, "Invalid username/password.");
-                    return Page();
+                    // Same work and the same answer as a wrong password, so the form doesn't reveal which accounts exist.
+                    _signInManager.UserManager.PasswordHasher.HashPassword(new ApplicationUser(), Input.Password ?? "");
+                    return await LoginFailedAsync(logData);
                 }
 
-                // Check if the user is approved
+                // Password first (counts towards lockout, signs nothing in); account status is only shown to
+                // someone who knows the password.
+                var check = await _signInManager.CheckPasswordSignInAsync(user, Input.Password, lockoutOnFailure: true);
+                if (check.IsLockedOut)
+                    return await LockedOutAsync(logData);
+                if (!check.Succeeded)
+                    return await LoginFailedAsync(logData);
+
                 if (!user.IsApproved)
                 {
                     ModelState.AddModelError(string.Empty, "Your account is not approved. Please contact the administrator.");
                     return Page();
                 }
 
-                // Check if the user is active
                 if (!user.IsActive)
                 {
                     ModelState.AddModelError(string.Empty, "Your account is inactive. Please contact the administrator.");
                     return Page();
                 }
 
-                // ✅ Prepare activity log metadata before login attempt
-                string logData = $"Username: {Input.UserName}, RememberMe: {Input.RememberMe}";
-
-                // ✅ Authenticate the user FIRST
                 // lockoutOnFailure: count wrong passwords so IdentityLockout (5 tries / 15 min) actually applies.
-                var result = await _signInManager.PasswordSignInAsync(Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+                var result = await _signInManager.PasswordSignInAsync(user, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
                 // -----------------------------------------------------------
                 // 1️⃣ CHECK FOR 2FA FIRST (Priority Check)
@@ -227,16 +231,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 // 2️⃣ CHECK FOR LOCKOUT
                 // -----------------------------------------------------------
                 if (result.IsLockedOut)
-                {
-                    _logger.LogWarning("User account locked out.");
-                    await UserActivityLogger.LogAsync(
-                        _context, HttpContext,
-                        action: "LoginLockedOut",
-                        module: "Authentication",
-                        data: logData
-                    );
-                    return RedirectToPage("./Lockout");
-                }
+                    return await LockedOutAsync(logData);
 
                 // -----------------------------------------------------------
                 // 3️⃣ CHECK FOR SUCCESS
@@ -261,7 +256,10 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                         .Select(uc => uc.PartyInfo.TIN)
                         .FirstOrDefaultAsync();
 
-                    bool isAdmin = user.UserName.Equals("admin@einvworld.com", StringComparison.OrdinalIgnoreCase);
+                    bool isAdmin = roles.Contains("Admin");
+
+                    // Nothing from an earlier session (another user on this browser) carries over.
+                    HttpContext.Session.Clear();
 
                     if (isAdmin)
                     {
@@ -298,7 +296,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                         HttpContext,
                         action: "Login",
                         module: "Authentication",
-                        data: isAdmin ? "User: admin@einvworld.com" : $"TIN: {userTin}"
+                        data: isAdmin ? $"User: {user.UserName}" : $"TIN: {EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin)}"
                     );
 
                     // ✅ If login comes from email, redirect to InvoiceDetails
@@ -315,20 +313,30 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 // -----------------------------------------------------------
                 // 4️⃣ HANDLE FAILURE (If we reached here, login failed)
                 // -----------------------------------------------------------
-                await UserActivityLogger.LogAsync(
-                    _context, HttpContext,
-                    action: "LoginFailed",
-                    module: "Authentication",
-                    data: logData
-                );
-                _logger.LogWarning("Invalid login attempt for user {UserName}.", Input.UserName);
-
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                return Page();
+                return await LoginFailedAsync(logData);
             }
 
             // If we got this far, something failed, redisplay form
             return Page();
         }
+
+        /// <summary>One answer for an unknown user, a wrong password or a sign-in that isn't allowed.</summary>
+        private async Task<IActionResult> LoginFailedAsync(string logData)
+        {
+            await UserActivityLogger.LogAsync(_context, HttpContext, action: "LoginFailed", module: "Authentication", data: logData);
+            _logger.LogWarning("Invalid login attempt for user {UserName}.", Input.UserName);
+            ModelState.AddModelError(string.Empty, InvalidLoginMessage);
+            return Page();
+        }
+
+        private async Task<IActionResult> LockedOutAsync(string logData)
+        {
+            _logger.LogWarning("User account locked out.");
+            await UserActivityLogger.LogAsync(_context, HttpContext, action: "LoginLockedOut", module: "Authentication", data: logData);
+            return RedirectToPage("./Lockout");
+        }
+
+        /// <summary>Shown for an unknown user and a wrong password alike.</summary>
+        internal const string InvalidLoginMessage = "Invalid username or password.";
     }
 }
