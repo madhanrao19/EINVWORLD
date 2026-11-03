@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.28`** (`AppInfo:Version` in `appsettings.json`). v1.50.28 is a **patch**
+> **Current version: `v1.50.29`** (`AppInfo:Version` in `appsettings.json`). v1.50.29 is a **patch**
+> release: sign-in and registration no longer reveal which accounts exist — see the dated entry below. v1.50.28 was a **patch**
 > release: cancel/reject, user account changes and folder deletes are recorded in the audit trail — see the dated entry below. v1.50.27 was a **patch**
 > release: security pass 2 — public form limits, contact form, admin image uploads and least-privilege SQL — see the dated entry below. v1.50.26 was a **patch**
 > release: security pass 1 — tenant isolation, the public lead form and log hygiene — see the dated entry below. v1.50.25 was a **patch**
@@ -470,6 +471,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.29 (Sign-in and registration don't reveal accounts)
+
+- **Sign-in** shows "Invalid username or password." for an unknown user and a wrong password alike. "Not approved" and
+  "inactive" are shown only after the correct password.
+- **Register** with an address that already has an account shows the same "check your email" page as a new one.
+- Administrators are recognised by the Admin role, not by one fixed user name; the session starts empty at sign-in.
+- An administrator without two-factor sign-in can no longer reach app endpoints whose address merely looks like a file.
 
 ## 📅 2026-11-03 — v1.50.28 (Audit trail coverage)
 
