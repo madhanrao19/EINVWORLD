@@ -31,8 +31,8 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                 return "User Roles is missing. Please contact support.";
             }
 
-            bool isAdmin = user.UserName != null &&
-                user.UserName.Equals("admin@einvworld.com", StringComparison.OrdinalIgnoreCase);
+            bool isAdmin = roles.Contains("Admin");
+            http.Session.Clear(); // nothing from an earlier session on this browser carries over
             if (isAdmin)
             {
                 http.Session.SetString("UserTIN", "ADMIN");

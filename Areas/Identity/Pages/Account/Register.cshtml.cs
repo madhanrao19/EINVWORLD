@@ -253,7 +253,16 @@ namespace eInvWorld.Areas.Identity.Pages.Account
                         return LocalRedirect(returnUrl);
                     }
                 }
-                foreach (var error in result.Errors)
+                // An address that already has an account gets the same "check your email" page as a new one, so
+                // the form doesn't reveal who is registered. The owner can still sign in or reset their password.
+                // Other errors (e.g. a weak password) are shown either way, without the duplicate ones.
+                var shown = result.Errors.Where(e => !IsDuplicateError(e)).ToList();
+                if (shown.Count == 0)
+                {
+                    _logger.LogInformation("Registration attempted for an existing account.");
+                    return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
+                }
+                foreach (var error in shown)
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
@@ -262,6 +271,9 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             // If we got this far, something failed, redisplay form
             return Page();
         }
+
+        internal static bool IsDuplicateError(IdentityError e) =>
+            e.Code is nameof(IdentityErrorDescriber.DuplicateUserName) or nameof(IdentityErrorDescriber.DuplicateEmail);
 
         private string GenerateRegisterAccEmailBody(string recipientName, string confirmLink, string accountLink, string contactLink)
         {

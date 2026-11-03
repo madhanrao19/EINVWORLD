@@ -61,9 +61,9 @@ namespace eInvWorld.Services.Middleware
                 return true;
             }
 
-            // Any request for a file (has an extension, e.g. .css/.js/.png/.ico) is a static asset.
-            var value = path.Value;
-            return !string.IsNullOrEmpty(value) && System.IO.Path.HasExtension(value);
+            // Real static files are served by UseStaticFiles before this runs; anything else that merely looks
+            // like a file (e.g. /api/.../x.png) is an app endpoint and must not skip the 2FA requirement.
+            return false;
         }
     }
 }
