@@ -190,13 +190,14 @@ namespace eInvWorld.Pages.Suppliers
             // Define the IDs that should be permanently hidden from the available buyers list
             var excludedBuyerIds = new List<int> { 2, 3, 4, 5, id.Value };
 
-            // Step 2: Fetch all regular available buyers
-            var regularBuyers = await _context.PartyInfos
-                .Where(p => !_context.SupplierBuyers.Any(sb => sb.SupplierId == id && sb.BuyerId == p.PartyInfoId)
-                            && !excludedBuyerIds.Contains(p.PartyInfoId))
-                .ToListAsync();
-
-            // Step 3: Merge General TINs and Regular Buyers (Excluding the mandatory ones)
+            // Linking registered companies is Admin-only (OnPostAssignBuyerAsync): never list every company to others.
+            if (!User.IsInRole("Admin"))
+            {
+                AvailableBuyers = generalTINs.ToList();
+                AvailableSuppliers = generalTINs.ToList();
+            }
+            else
+            {
             var availableBuyers = await _context.PartyInfos
                 .Where(p => !_context.SupplierBuyers.Any(sb => sb.SupplierId == id && sb.BuyerId == p.PartyInfoId)
                             && p.TIN != "EI0000000030"
@@ -209,6 +210,7 @@ namespace eInvWorld.Pages.Suppliers
 
             AvailableBuyers = generalTINs.Concat(availableBuyers).ToList();
             AvailableSuppliers = generalTINs.Concat(availableSuppliers).ToList();
+            }
 
             // New Public Buyers
             var assignedTINs = AssignedBuyers.Select(b => b.TIN).ToHashSet();
@@ -272,6 +274,11 @@ namespace eInvWorld.Pages.Suppliers
             {
                 return new JsonResult(new { success = false, message = "Invalid user ID." });
             }
+
+            // The primary company is the user's acting company across all their memberships, so a manager of one
+            // company may not change it for someone else.
+            if (userId != _userManager.GetUserId(User) && !User.IsInRole("Admin"))
+                return new JsonResult(new { success = false, message = "Only the user (or an administrator) can change their primary company." });
 
             var userCompany = await _context.UserCompanies
                 .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.PartyInfoId == companyId);
@@ -361,12 +368,9 @@ namespace eInvWorld.Pages.Suppliers
             }
             else
             {
-                if (string.IsNullOrEmpty(UserEmail))
-                {
-                    return new JsonResult(new { success = false, message = "Please enter an email address." });
-                }
-
-                user = await _userManager.FindByEmailAsync(UserEmail);
+                // Adding someone by email joined them without consent and told the caller whether the address had an
+                // account. Members join through the emailed invitation (Suppliers/Users), which they must accept.
+                return new JsonResult(new { success = false, message = "Invite people from the Users tab: they join once they accept the email invitation." });
             }
 
             // Check if a user was successfully found
@@ -444,6 +448,8 @@ namespace eInvWorld.Pages.Suppliers
         public async Task<IActionResult> OnPostAssignBuyerAsync(int supplierId)
         {
             if (!await MayAsync(supplierId, CompanyPermission.EditProfile)) return Forbid();
+            // A link makes the buyer's profile readable (PartyBankAccess), so only an Admin may link a registered company.
+            if (!User.IsInRole("Admin")) return Forbid();
 
             if (SelectedBuyerIds == null || !SelectedBuyerIds.Any())
             {

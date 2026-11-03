@@ -10,10 +10,18 @@ const FORMS = [
   { name: 'PublicCustomer', url: '/PublicCustomer/Create', field: '#PublicCustomer_CompanyName' },
   // Templates: the scaffolded /Templates/Create page was removed in v1.47.13 (templates are made with
   // Save as template on the invoice form), so it has no create page to check here.
-  // Suppliers create is reachable by a Supplier only via the lead-conversion flow (by design;
-  // direct access is AccessDenied). Use that legitimate entry path.
-  { name: 'Suppliers', url: '/Suppliers/Create?from=lead', field: '#PartyInfo_CompanyName' },
+  // Suppliers/Create is Admin-only since v1.50.26 (a new company reserves its TIN platform-wide): see below.
 ];
+
+test('crud-form: a Supplier cannot open company or lead create (v1.50.26)', async ({ page }) => {
+  await login(page, 'supplier');
+  for (const url of ['/Suppliers/Create', '/Suppliers/Create?from=lead']) {
+    const resp = await page.goto(url, { waitUntil: 'domcontentloaded' });
+    const denied = resp.status() === 403 || /accessdenied/i.test(page.url());
+    expect(denied, `${url} must be denied to a Supplier`).toBe(true);
+    await expect(page.locator('#PartyInfo_CompanyName')).toHaveCount(0);
+  }
+});
 
 for (const f of FORMS) {
   test(`crud-form: ${f.name} create page loads and accepts input (supplier)`, async ({ page }) => {

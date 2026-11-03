@@ -188,10 +188,12 @@ namespace eInvWorld.Pages.Lead
             }
 
 
-            _context.PartyInfos.Add(Input!);
+            var lead = NewLeadFrom(Input!, User?.Identity?.Name ?? "CustomerInfo");
+            _context.PartyInfos.Add(lead);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("✅ PartyInfo saved successfully with ID: {Id}", Input!.PartyInfoId);
+            _logger.LogInformation("✅ PartyInfo saved successfully with ID: {Id}", lead.PartyInfoId);
+            Input = lead; // the email and the register redirect below use what was saved
 
 
             // 📧 Send email to Finance team if enabled
@@ -274,6 +276,36 @@ namespace eInvWorld.Pages.Lead
         //{
         //    public bool success { get; set; }
         //}
+
+        /// <summary>
+        /// The record an anonymous visitor may create: only the fields this form shows, plus server-set
+        /// state. Input is bound to the whole entity, so anything else (LogoPath, InviteCode, IsActive, bank
+        /// fields, UserCompanies, AssignedBuyers...) in the POST is dropped here.
+        /// </summary>
+        internal static PartyInfo NewLeadFrom(PartyInfo posted, string createdBy = "CustomerInfo") => new()
+        {
+            CompanyName = posted.CompanyName,
+            TIN = posted.TIN,
+            OldRegNo = posted.OldRegNo,
+            RegNo = posted.RegNo,
+            RegTypeCode = posted.RegTypeCode,
+            SST = posted.SST,
+            TTX = posted.TTX,
+            IndustryClassificationCode = posted.IndustryClassificationCode,
+            BizDescription = posted.BizDescription ?? "",
+            Email = posted.Email,
+            PhoneNo = posted.PhoneNo,
+            Addr1 = posted.Addr1,
+            Addr2 = posted.Addr2,
+            CityName = posted.CityName,
+            PostalCode = posted.PostalCode,
+            StateCode = posted.StateCode,
+            CountryCode = posted.CountryCode,
+            CreatedBy = createdBy,
+            CreatedDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Kuala_Lumpur")),
+            IsAdminCreated = false,
+            IsApproved = false,
+        };
 
         private string GenerateCustomerSummaryHtml(PartyInfo input)
         {

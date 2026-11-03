@@ -918,6 +918,9 @@
 
                                 // Add submission details if available
                                 if (response.submissionUid || response.uuid) {
+                                    // LHDN ids are alphanumeric; anything else is dropped before it reaches HTML or onclick.
+                                    response.submissionUid = String(response.submissionUid || '').replace(/[^A-Za-z0-9-]/g, '');
+                                    response.uuid = String(response.uuid || '').replace(/[^A-Za-z0-9-]/g, '');
                                     htmlMessage += '<div class="submission-details mt-3">';
                                     htmlMessage += '<h6 class="text-muted mb-2"><i class="ri-information-line me-1"></i>Submission Details:</h6>';
 

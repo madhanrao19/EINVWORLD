@@ -178,15 +178,15 @@ namespace EINVWORLD.Pages.Admin.Resources
             {
                 var parts = url.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 // parts will be: [0]api, [1]resources, [2]images, [3]{category}, [4]{size}, [5]{fileName}
-                if (parts.Length >= 6)
-                {
-                    path = Path.Combine(_filePathConfig.ResourceImagesFolder, parts[3], parts[4], parts[5]);
-                }
+                // The URL comes from the database: never delete outside the images folder.
+                if (parts.Length >= 6 && !EINVWORLD.Helpers.SafePath.TryResolve(_filePathConfig.ResourceImagesFolder, out path, parts[3], parts[4], parts[5]))
+                    path = "";
             }
             // If it's an old webroot image
             else if (url.StartsWith("/images/"))
             {
-                path = Path.Combine(_env.WebRootPath, url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (!EINVWORLD.Helpers.SafePath.TryResolve(_env.WebRootPath, out path, url.Split('/', StringSplitOptions.RemoveEmptyEntries)))
+                    path = "";
             }
 
             if (!string.IsNullOrEmpty(path) && global::System.IO.File.Exists(path))

@@ -10,6 +10,15 @@ namespace EINVWORLD.Helpers
     public static class SafePath
     {
         /// <summary>
+        /// <paramref name="fileName"/> inside <paramref name="baseFolder"/>; throws instead of returning a path that
+        /// could leave the folder (e.g. an invoice number containing "..\").
+        /// </summary>
+        public static string FileIn(string baseFolder, string fileName) =>
+            TryResolve(baseFolder, out var fullPath, fileName)
+                ? fullPath
+                : throw new System.ArgumentException($"Unsafe file name '{fileName}'.", nameof(fileName));
+
+        /// <summary>
         /// Combines <paramref name="baseFolder"/> with the user-supplied <paramref name="segments"/> and
         /// guarantees the resolved path stays inside the base folder. Rejects empty segments and any segment
         /// containing directory separators or traversal sequences (e.g. "..", "..%2f"), defeating

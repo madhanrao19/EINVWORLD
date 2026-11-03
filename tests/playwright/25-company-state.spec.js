@@ -22,7 +22,8 @@ const forms = [
 for (const f of forms) {
   test(`${f.title}: Malaysia shows the LHDN State list, another country a free-text State / Province`, async ({ page }) => {
     test.setTimeout(90000);
-    await loginOrSkip(page, 'supplier');
+    // Create Company is Admin-only since v1.50.26.
+    await loginOrSkip(page, f.url && f.url.startsWith('/Suppliers/Create') ? 'admin' : 'supplier');
     let url = f.url;
     if (!url) { // the supplier's own company, via its sidebar Company page
       await page.goto('/Dashboard/Dashboard', { waitUntil: 'domcontentloaded' });
@@ -46,7 +47,7 @@ for (const f of forms) {
 
 test('Create Company keeps a typed foreign State after a validation error', async ({ page }) => {
   test.setTimeout(90000);
-  await loginOrSkip(page, 'supplier');
+  await loginOrSkip(page, 'admin'); // Create Company is Admin-only since v1.50.26
   await page.goto('/Suppliers/Create?from=lead', { waitUntil: 'domcontentloaded' });
   const foreign = await foreignCountry(page, '#PartyInfo_CountryCode');
   await setCountry(page, '#PartyInfo_CountryCode', foreign);
