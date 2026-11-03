@@ -26,3 +26,12 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+
+  # npm: the Playwright QA tooling (package.json). The vendored front-end libraries under wwwroot/assets/libs
+  # and libman.json are not a format Dependabot reads; check those by hand when updating them.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
