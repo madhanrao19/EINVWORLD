@@ -29,6 +29,15 @@ namespace EINVWORLD.Helpers
         public static bool IsAdjustmentDocType(string? docTypeCode) =>
             docTypeCode is "02" or "03" or "04" or "12" or "13" or "14";
 
+        /// <summary>
+        /// The original invoice's UUID to show for an adjustment document, or null: a standalone invoice (01/11) has
+        /// no reference, and an adjustment without a real one stored (blank, or "NA", LHDN's placeholder) shows nothing.
+        /// </summary>
+        public static string? DisplayReferenceUuid(string? docTypeCode, string? refUuid) =>
+            IsAdjustmentDocType(docTypeCode) && !string.IsNullOrWhiteSpace(refUuid)
+                && !refUuid.Trim().Equals("NA", StringComparison.OrdinalIgnoreCase)
+                ? refUuid.Trim() : null;
+
         private static readonly string[] ForeignSupplierClassifications =
             { "010", "011", "033", "034", "035", "036", "037", "038", "039", "040", "041", "045" };
 
