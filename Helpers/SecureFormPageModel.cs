@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 
 namespace eInvWorld.Helpers
 {
+    // Every anonymous form (login, register, forgot/resend, contact, customer info) gets the per-IP POST limit.
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("public-forms")]
     public abstract class SecureFormPageModel : PageModel
     {
         private readonly IConfiguration _config;
