@@ -119,7 +119,7 @@ if (($found -join '|') -ne ($want -join '|')) { throw ""found: $($found -join ',
         // ---- Single source of truth: the guards read <NeverPublicPath> from EINVWORLD.csproj ----
 
         [Fact] public void Patterns_ComeFromTheCsproj() => Passes(@"
-$want = 'wwwroot\Drafts\*|wwwroot\tempcsv\*|wwwroot\test-*.html*|wwwroot\theme-test.html*'
+$want = 'wwwroot\Drafts\*|wwwroot\tempcsv\*|wwwroot\test-*.html*|wwwroot\theme-test.html*|wwwroot\json\*'
 if (($ForbiddenPublishPatterns -join '|') -ne $want) { throw ""patterns: $($ForbiddenPublishPatterns -join '|')"" }");
 
         [Fact] public void CsprojWithoutTheList_IsRefused() =>
@@ -153,7 +153,7 @@ $seen = New-Object System.Collections.ArrayList
 $probe = { param($url) [void]$seen.Add($url); [pscustomobject]@{ Status = 302; Cache = 'DYNAMIC' } }
 $paths = @(Get-KnownNeverPublicPaths) + @('wwwroot\Drafts\EINV00149.json.br', 'wwwroot\Drafts\EINV00149.json')
 $r = @(Test-NeverPublicUrls -BaseUrl 'https://www.einvworld.com/' -RelativePaths $paths -Probe $probe -DelayMs 0)
-if ($r.Count -ne 20 -or $seen.Count -ne 20) { throw ""rows $($r.Count), requests $($seen.Count)"" }
+if ($r.Count -ne 22 -or $seen.Count -ne 22) { throw ""rows $($r.Count), requests $($seen.Count)"" }
 if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { throw ""urls: $($seen[0])"" }");
 
         // Real HTTP: a local server stands in for the public site and the verifier runs real curl against it.
@@ -174,7 +174,7 @@ if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { thro
         {
             if (!OperatingSystem.IsWindows()) return;
             var (output, rows) = CheckAgainstServer((path, _) => path == "/Drafts/EINV00149.json" ? (200, null) : (302, "DYNAMIC"));
-            Assert.Equal(20, rows.Length);
+            Assert.Equal(22, rows.Length);
             Assert.Equal(new[] { @"ROW FAIL 200 wwwroot\Drafts\EINV00149.json" }, rows.Where(r => !r.StartsWith("ROW PASS")).ToArray());
             Assert.DoesNotContain(Secret, output);
         }
@@ -185,7 +185,7 @@ if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { thro
             if (!OperatingSystem.IsWindows()) return;
             var (_, rows) = CheckAgainstServer((path, _) => path.StartsWith("/tempcsv/") ? (302, "HIT") : (302, "BYPASS"));
             Assert.Equal(13, rows.Count(r => r.StartsWith("ROW FAIL 302 wwwroot\\tempcsv\\")));
-            Assert.Equal(7, rows.Count(r => r.StartsWith("ROW PASS")));
+            Assert.Equal(9, rows.Count(r => r.StartsWith("ROW PASS")));
         }
 
         [Fact]
@@ -195,7 +195,7 @@ if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { thro
             // Every path drops its first request; theme-test.html never answers.
             var (_, rows) = CheckAgainstServer((path, hit) => hit == 1 || path == "/theme-test.html" ? (0, null) : (302, "DYNAMIC"));
             Assert.Equal(new[] { @"ROW UNVERIFIED 0 wwwroot\theme-test.html" }, rows.Where(r => !r.StartsWith("ROW PASS")).ToArray());
-            Assert.Equal(19, rows.Count(r => r.StartsWith("ROW PASS 302")));
+            Assert.Equal(21, rows.Count(r => r.StartsWith("ROW PASS 302")));
         }
 
         [Fact]
@@ -203,7 +203,7 @@ if ($seen -notcontains 'https://www.einvworld.com/Drafts/EINV00149.json') { thro
         {
             if (!OperatingSystem.IsWindows()) return;
             var (_, rows) = CheckAgainstServer((_, _) => (302, "DYNAMIC"));
-            Assert.Equal(20, rows.Count(r => r.StartsWith("ROW PASS 302")));
+            Assert.Equal(22, rows.Count(r => r.StartsWith("ROW PASS 302")));
         }
 
         /// <summary>Minimal HTTP/1.1 server on a free loopback port. Status 0 = close without answering (curl sees 000).</summary>

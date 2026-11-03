@@ -43,6 +43,7 @@
     <NeverPublicPath Include="wwwroot\tempcsv\**" />
     <NeverPublicPath Include="wwwroot\test-*.html" />
     <NeverPublicPath Include="wwwroot\theme-test.html" />
+    <NeverPublicPath Include="wwwroot\json\**" />
     <Content Remove="@(NeverPublicPath)" />
     <EmbeddedResource Remove="EINVWORLD.Tests\**" />
     <EmbeddedResource Remove="csharp Helpers\**" />
