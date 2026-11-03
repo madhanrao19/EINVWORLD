@@ -33,6 +33,7 @@ namespace eInvWorld.Controllers
         [HttpPost("/csp-report")]
         [AllowAnonymous]
         [IgnoreAntiforgeryToken] // cross-origin browser report, no antiforgery token
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("public-forms")]
         public async Task<IActionResult> Report()
         {
             try

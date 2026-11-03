@@ -82,6 +82,7 @@
                         }
                         <label class="form-label">Upload New Image (optional)</label>
                         <input type="file" asp-for="ImageFile" class="form-control" accept="image/*" onchange="compressAndPreviewImage(event)" />
+                        <span asp-validation-for="ImageFile" class="text-danger"></span>
                         <img id="imagePreview" class="img-fluid rounded shadow-sm d-none mt-3" style="max-height: 200px;" />
                     </div>
 

@@ -87,6 +87,7 @@
                     <h1 class="mb-4">Have Any Query? Please Contact Us!</h1>
                     <form method="post">
                         @Html.AntiForgeryToken()
+                        <input type="text" name="Website" style="display:none;" tabindex="-1" autocomplete="off" /> <!-- Honeypot -->
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-floating">

@@ -58,7 +58,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
 
             _logger.LogInformation("User logged out and session cleared.");
 
-            return Redirect($"/login?logoutReason={logoutReason}");
+            return Redirect($"/login?logoutReason={Uri.EscapeDataString(logoutReason ?? "")}"); // a value can't add its own query parameters
         }
 
         public async Task<IActionResult> OnPost(string logoutReason = null)
@@ -69,7 +69,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
 
             _logger.LogInformation("User logged out and session cleared.");
 
-            return Redirect($"/login?logoutReason={logoutReason}");
+            return Redirect($"/login?logoutReason={Uri.EscapeDataString(logoutReason ?? "")}"); // a value can't add its own query parameters
         }
 
     }

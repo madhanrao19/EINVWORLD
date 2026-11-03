@@ -11,6 +11,7 @@ namespace EINVWORLD.Controllers
     [Route("api/resources-migration")]
     [ApiController]
     [Authorize(Roles = "Admin")]
+    [AutoValidateAntiforgeryToken] // cookie-authenticated: SameSite=Lax doesn't cover sibling subdomains
     public class ResourcesMigrationController : ControllerBase
     {
         private readonly FilePathConfig _filePathConfig;

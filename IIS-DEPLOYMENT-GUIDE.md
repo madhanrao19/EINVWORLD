@@ -185,7 +185,7 @@ The app uses **two** databases on the same SQL Server:
 Open **SSMS** and connect to the SQL Server.
 
 - **Brand-new install:** right-click **Databases → New Database…** → create `EINVWORLD`, then again for
-  `EINVWORLDWEBSITE`. (The app creates the tables itself on first run — Part 13.)
+  `EINVWORLDWEBSITE`. (The tables are created on the first run with the deploy login — Part 13.)
 - **Migrating an existing DB:** right-click **Databases → Restore Database…** → **Device** → pick the
   `.bak` → restore it as `EINVWORLD`.
 
@@ -196,14 +196,17 @@ Open **SSMS** and connect to the SQL Server.
 3. Select **SQL Server authentication**, set a **strong password**, untick "Enforce password policy" if
    it blocks you, click the **User Mapping** page.
 4. Tick **both** `EINVWORLD` and `EINVWORLDWEBSITE`. For each, in the **role membership** list below tick:
-   - **`db_datareader`**, **`db_datawriter`**, and **`db_ddladmin`**.
+   - **`db_datareader`** and **`db_datawriter`** only. The running site never changes the schema.
 5. Click **OK**.
+6. Create a **second** login the same way for database changes only, e.g. `einvworlddeploy`, with
+   **`db_owner`** on both databases. It is used by the deploy script (`-MigrationCredential`) or when you
+   run the `Apply_*.sql` scripts by hand, never by the site. Keep its password out of the server's
+   environment variables.
 
-> 🔎 **Why `db_ddladmin`?** On first run (and on each upgrade) the app **creates/updates its own
-> tables automatically**. That needs schema permission. If your security policy forbids this, see the
-> "manual migrations" note in **Part 13**.
+> 🔎 **Why two logins?** If the site's login could change the schema, a bug or an attacker inside the app
+> could too. Schema changes run as a separate, deliberate deploy step (Part 13).
 
-✅ **You should see:** `einvworldusr` under **Security → Logins**, mapped to both databases.
+✅ **You should see:** `einvworldusr` and `einvworlddeploy` under **Security → Logins**, mapped to both databases.
 
 ---
 
@@ -445,8 +448,12 @@ tables automatically**. A backup is your safety net.
 
 1. In **IIS Manager**, click the **EINVWORLD** site → on the right, under **Manage Website**, click
    **Restart** (or run `iisreset` in an Admin Command Prompt).
-2. Wait ~30–60 seconds — on the **first** start the app creates/updates the database tables (this makes
-   the first start slower than usual). That's normal.
+2. **Brand-new database only:** the tables must exist before the site starts with its read/write login.
+   For this first start only, either point `ConnectionStrings__DefaultConnection` and
+   `ConnectionStrings__WebsiteDb` at the `einvworlddeploy` login with `DatabaseSettings__AutoMigrateOnStartup=true`,
+   wait for the login page, then switch both back to `einvworldusr` and `false` and restart. Or create the
+   tables beforehand by running the `Apply_*.sql` scripts in order as `einvworlddeploy`.
+   Wait ~30–60 seconds — the first start is slower than usual. That's normal.
 3. Open a browser and go to your domain:
    ```
    https://einvworld.com
