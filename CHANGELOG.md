@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.22`** (`AppInfo:Version` in `appsettings.json`). v1.50.22 is a **patch**
+> **Current version: `v1.50.23`** (`AppInfo:Version` in `appsettings.json`). v1.50.23 is a **patch**
+> release: every deploy now checks through the public site that no never-public file is served or cached — see the dated entry below. v1.50.22 was a **patch**
 > release: Create e-Invoice and Edit Invoice scripts run again (new lines get their dropdowns) — see the dated entry below. v1.50.21 was a **patch**
 > release: the deploy script refuses stale build folders and removes never-public files from the server — see the dated entry below. v1.50.20 was a **patch**
 > release: the deploy script no longer re-ships files removed from the build — see the dated entry below. v1.50.19 was a **patch**
@@ -464,6 +465,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.23 (Post-deploy public security check)
+
+- **Deploys verify what a stranger can fetch:** after copying, `scripts/Deploy-Staging.ps1` requests every known leaked path
+  (`scripts/never-public-known-paths.txt`) and every never-public file it removed through the real public hostname, so a copy
+  cached at Cloudflare counts. Any content (2xx), any Cloudflare cache hit, or a path that never answers fails the run with
+  "SECURITY VERIFICATION FAILED". Requests are spaced and no-answers retried with back-off; only the status code and
+  `cf-cache-status` are logged, never file contents. Prompted by the 3 Nov incident, where a deleted CSV was still served
+  from the Cloudflare cache.
+- **One never-public list:** the `<NeverPublicPath>` items in `EINVWORLD.csproj` now drive the publish exclusion, the deploy
+  guards and the post-deploy check; tests fail if `.gitignore` or the known-paths list drift from it.
+- No change to the application itself.
 
 ## 📅 2026-11-03 — v1.50.22 (Create / Edit Invoice script fix)
 
