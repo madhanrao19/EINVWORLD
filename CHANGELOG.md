@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.24`** (`AppInfo:Version` in `appsettings.json`). v1.50.24 is a **patch**
+> **Current version: `v1.50.25`** (`AppInfo:Version` in `appsettings.json`). v1.50.25 is a **patch**
+> release: two sample e-invoice files with personal data are no longer public — see the dated entry below. v1.50.24 was a **patch**
 > release: the Invoice Details side panel shows the original invoice's UUID on credit, debit and refund notes — see the dated entry below. v1.50.23 was a **patch**
 > release: every deploy now checks through the public site that no never-public file is served or cached — see the dated entry below. v1.50.22 was a **patch**
 > release: Create e-Invoice and Edit Invoice scripts run again (new lines get their dropdowns) — see the dated entry below. v1.50.21 was a **patch**
@@ -466,6 +467,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.25 (Sample e-invoice files no longer public)
+
+- **Security:** `wwwroot/json/JsonWithoutSignatureDM.json` and `JsonWithoutSignatureDM1.json`, two early UBL sample
+  files containing personal data, were served publicly at `/json/…` on Production and Staging. No code used them. They
+  are removed from the repo, `wwwroot\json\**` joins the never-public list in `EINVWORLD.csproj` (excluded from
+  publish, refused and removed by the deploy guards, covered by `WwwrootExposureTests`), and both paths join
+  `scripts/never-public-known-paths.txt` so every deploy checks them through the public site.
 
 ## 📅 2026-11-03 — v1.50.24 (Original invoice UUID in the Invoice Details side panel)
 

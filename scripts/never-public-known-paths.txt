@@ -22,3 +22,5 @@ wwwroot/test-column-debug.html
 wwwroot/test-columns.html
 wwwroot/test-sorting.html
 wwwroot/theme-test.html
+wwwroot/json/JsonWithoutSignatureDM.json
+wwwroot/json/JsonWithoutSignatureDM1.json
