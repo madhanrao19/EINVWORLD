@@ -50,6 +50,18 @@ changes are additive and AI/features stay off unless already enabled.
    Files that must never be public (`wwwroot\Drafts`, `wwwroot\tempcsv`, `wwwroot\test-*.html`,
    `wwwroot\theme-test.html`) stop the deploy if they are in the build, and are deleted from the server
    after the copy whoever put them there (the pre-deploy backup keeps them).
+   **The never-public list lives in one place:** the `<NeverPublicPath>` items in `EINVWORLD.csproj`
+   (publish excludes them; the deploy guards, `.gitignore` check and tests all read them). Add a new
+   pattern there, plus its `.gitignore` line; `WwwrootExposureTests` fails until both agree.
+   **Public security check (v1.50.23):** after the copy, the script requests every known leaked path
+   (`scripts\never-public-known-paths.txt`) and every never-public file it just removed through the real
+   public site (Staging: `https://staging.einvworld.com`, Production: `https://www.einvworld.com`;
+   `-PublicBaseUrl` overrides). It records only the status code and `cf-cache-status`, never the body.
+   Requests are spaced (1.5 s, growing on retries) and a no-answer or 5xx is retried up to 4 times.
+   **Any 2xx, any Cloudflare cache hit, or a path that never answers fails the run** with
+   "SECURITY VERIFICATION FAILED" - the app files are already deployed at that point, so remove the files
+   from the server, purge the Cloudflare cache (Caching -> Purge), and re-run the check as the message
+   shows. A run takes about 1-3 minutes.
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
    **If you're deploying from a CI artifact** (or any pre-built output), run it with

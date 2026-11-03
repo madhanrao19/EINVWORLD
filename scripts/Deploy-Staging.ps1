@@ -78,6 +78,13 @@
 .PARAMETER SkipRuntimeCheck
     Skip step 0, the server .NET runtime check (see the "Server .NET runtime" section in the script).
 
+.PARAMETER PublicBaseUrl
+    Public site the post-deploy security check goes through (Cloudflare included). Defaults to
+    https://staging.einvworld.com for the Staging App folder and https://www.einvworld.com for Production;
+    any other target skips the check with a warning unless this is given. After the copy, every known
+    never-public path (scripts\never-public-known-paths.txt) and every never-public file this deploy removed
+    is requested; any content (2xx) or Cloudflare cache hit - or no answer after retries - fails the run.
+
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
     Pending migrations are still listed (read-only query). Also runs read-only preflight checks and
@@ -123,7 +130,9 @@ param(
 
     [string]$SqlServer,
 
-    [switch]$SkipRuntimeCheck
+    [switch]$SkipRuntimeCheck,
+
+    [string]$PublicBaseUrl
 )
 
 $ErrorActionPreference = 'Stop'
@@ -564,6 +573,24 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
         Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
         Write-Host "Site back online (app_offline.htm removed)." -ForegroundColor Green
     }
+}
+
+# -- 4. Public security verification (through the real hostname, so a Cloudflare-cached copy counts) ---------
+if (-not $PublicBaseUrl) { $PublicBaseUrl = Get-DefaultPublicBaseUrl $DestAppPath }
+if ($PublicBaseUrl) {
+    $checkPaths = @(Get-KnownNeverPublicPaths) + @($forbiddenOnServer)
+    Write-Host ""
+    Write-Host "Public security check: never-public paths through $PublicBaseUrl (status and cache only, never content) ..." -ForegroundColor Cyan
+    $results = @(Test-NeverPublicUrls -BaseUrl $PublicBaseUrl -RelativePaths $checkPaths)
+    $results | ForEach-Object { Write-Host ("  {0,-10} {1,3} {2,-8} {3}" -f $_.Verdict, $_.Status, $(if ($_.Cache) { $_.Cache } else { '-' }), $_.Url) }
+    $bad = @($results | Where-Object { $_.Verdict -ne 'PASS' })
+    if ($bad.Count) {
+        throw "SECURITY VERIFICATION FAILED: $($bad.Count) of $($results.Count) never-public path(s) are served, cached at Cloudflare, or could not be verified. The app files ARE deployed. Remove the files from the server, purge the Cloudflare cache, then re-run the check: . .\scripts\DeployGuards.ps1; Test-NeverPublicUrls -BaseUrl $PublicBaseUrl -RelativePaths (Get-KnownNeverPublicPaths)"
+    }
+    Write-Host "Public security check: PASS ($($results.Count) path(s), none served or cached)." -ForegroundColor Green
+}
+else {
+    Write-Warning "No public hostname for $DestAppPath - post-deploy public security check skipped (pass -PublicBaseUrl to run it)."
 }
 
 Write-Host ""

@@ -35,12 +35,15 @@
     <Content Remove="publish\**" />
     <Content Remove="wwwroot\js\pages\**" />
     <Content Remove="wwwroot\lib\**" />
-    <!-- Never publish invoice data or debug pages: everything under wwwroot is served without sign-in.
-         WwwrootExposureTests fails if such files are committed; this keeps a stray local copy out of a deploy too. -->
-    <Content Remove="wwwroot\Drafts\**" />
-    <Content Remove="wwwroot\tempcsv\**" />
-    <Content Remove="wwwroot\test-*.html" />
-    <Content Remove="wwwroot\theme-test.html" />
+    <!-- Never-public paths: everything under wwwroot is served without sign-in, so invoice data and debug pages must
+         never be published. This list is the single source of truth: publish excludes it here, and
+         scripts\DeployGuards.ps1 (build check, server clean-up, post-deploy public URL check), .gitignore checks and
+         WwwrootExposureTests all read these NeverPublicPath items. Add new patterns here only. -->
+    <NeverPublicPath Include="wwwroot\Drafts\**" />
+    <NeverPublicPath Include="wwwroot\tempcsv\**" />
+    <NeverPublicPath Include="wwwroot\test-*.html" />
+    <NeverPublicPath Include="wwwroot\theme-test.html" />
+    <Content Remove="@(NeverPublicPath)" />
     <EmbeddedResource Remove="EINVWORLD.Tests\**" />
     <EmbeddedResource Remove="csharp Helpers\**" />
     <EmbeddedResource Remove="Documents\**" />
