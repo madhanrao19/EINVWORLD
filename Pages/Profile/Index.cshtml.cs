@@ -23,8 +23,11 @@ namespace eInvWorld.Pages.Profile
         private readonly ApplicationDbContext _context;
         private readonly ILogger<IndexModel> _logger;
 
-        public IndexModel(UserManager<ApplicationUser> userManager, IConfiguration configuration, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, ILogger<IndexModel> logger)
+        private readonly eInvWorld.Services.EmailService _email;
+
+        public IndexModel(UserManager<ApplicationUser> userManager, IConfiguration configuration, SignInManager<ApplicationUser> signInManager, ApplicationDbContext context, ILogger<IndexModel> logger, eInvWorld.Services.EmailService email)
         {
+            _email = email;
             _userManager = userManager;
             _configuration = configuration;
             _signInManager = signInManager;
@@ -207,6 +210,7 @@ namespace eInvWorld.Pages.Profile
                 if (result.Succeeded)
                 {
                     TempData["SuccessMessage"] = "Password changed successfully!";
+                    await EINVWORLD.Helpers.PasswordChangedEmail.SendAsync(_email, user, _logger);
                 }
                 else
                 {

@@ -19,11 +19,15 @@ namespace eInvWorld.Areas.Identity.Pages.Account.Manage
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<ChangePasswordModel> _logger;
 
+        private readonly eInvWorld.Services.EmailService _email;
+
         public ChangePasswordModel(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<ChangePasswordModel> logger)
+            ILogger<ChangePasswordModel> logger,
+            eInvWorld.Services.EmailService email)
         {
+            _email = email;
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
@@ -120,6 +124,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account.Manage
 
             await _signInManager.RefreshSignInAsync(user);
             _logger.LogInformation("User changed their password successfully.");
+            await EINVWORLD.Helpers.PasswordChangedEmail.SendAsync(_email, user, _logger);
             StatusMessage = "Your password has been changed.";
 
             return RedirectToPage();
