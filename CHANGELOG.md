@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.21`** (`AppInfo:Version` in `appsettings.json`). v1.50.21 is a **patch**
+> **Current version: `v1.50.22`** (`AppInfo:Version` in `appsettings.json`). v1.50.22 is a **patch**
+> release: Create e-Invoice and Edit Invoice scripts run again (new lines get their dropdowns) — see the dated entry below. v1.50.21 was a **patch**
 > release: the deploy script refuses stale build folders and removes never-public files from the server — see the dated entry below. v1.50.20 was a **patch**
 > release: the deploy script no longer re-ships files removed from the build — see the dated entry below. v1.50.19 was a **patch**
 > release: daily review: personal data and test pages no longer public, two script-injection holes closed, shipping state no longer defaulted on existing recipients — see the dated entry below. v1.50.18 was a **patch**
@@ -463,6 +464,14 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.22 (Create / Edit Invoice script fix)
+
+- **New invoice lines get their dropdowns again:** v1.50.19 left one extra `)` after the unit list on Create e-Invoice and
+  Edit Invoice. That JavaScript syntax error stopped the page's whole setup script, so lines added with "Add item" had no
+  classification, unit, tax or country options, and `create-invoice.js` failed on load (found in the signed-in Staging
+  check). The first line, drawn by the server, was unaffected. A test now checks that every `@Html.Raw(...)` inside a
+  script leaves balanced JavaScript.
 
 ## 📅 2026-11-03 — v1.50.21 (Deploy script fails safe on stale files)
 
