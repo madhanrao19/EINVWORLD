@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.25`** (`AppInfo:Version` in `appsettings.json`). v1.50.25 is a **patch**
+> **Current version: `v1.50.26`** (`AppInfo:Version` in `appsettings.json`). v1.50.26 is a **patch**
+> release: security pass 1 — tenant isolation, the public lead form and log hygiene — see the dated entry below. v1.50.25 was a **patch**
 > release: two sample e-invoice files with personal data are no longer public — see the dated entry below. v1.50.24 was a **patch**
 > release: the Invoice Details side panel shows the original invoice's UUID on credit, debit and refund notes — see the dated entry below. v1.50.23 was a **patch**
 > release: every deploy now checks through the public site that no never-public file is served or cached — see the dated entry below. v1.50.22 was a **patch**
@@ -467,6 +468,27 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.26 (Security pass 1: tenant isolation)
+
+- **Public customer form saves only its own fields:** a lead is built from the fields the form shows; anything else
+  in the post (logo path, invite code, active flag, bank details, user or buyer links) is dropped.
+- **Company logos in PDFs:** a stored logo path is read only if it is an image inside the logos folder or `wwwroot`;
+  anything else is left out of the PDF instead of being passed to the PDF engine.
+- **A company's TIN can only be changed by an administrator**, and not once the company appears on any invoice. The
+  TIN decides which invoices a company sees.
+- **Credit/debit/refund notes** can only be started from an invoice you may manage; another tenant's UUID shows
+  nothing.
+- **Linking a registered company as a buyer is administrator-only**, and the company list is no longer sent to
+  other users. **Members join by invitation only:** "Assign existing" by email is administrator-only (it added
+  people without consent and revealed whether an address had an account). **Creating a company or lead is
+  administrator-only.**
+- A company manager can no longer change another user's primary company or assign another company's custom role.
+  Invoice-level administrator checks need both the Admin role and the Admin user type.
+- Removed: the unused `/Dashboard/DashboardBuyer` page (showed platform-wide totals to any signed-in user) and the
+  `/api/theme/test-auth` debug endpoint.
+- LHDN validation details use the submission ID stored on the invoice; full TINs no longer appear in logs; invoice
+  file paths and LHDN ids shown in submit messages are checked or escaped.
 
 ## 📅 2026-11-03 — v1.50.25 (Sample e-invoice files no longer public)
 
