@@ -67,4 +67,4 @@ jobs:
         with:
           name: einvworld-app
           path: publish
-          retention-days: 30
+          retention-days: 7   # 412 MB per main build; 30 days filled the storage quota (Nov 2026)
