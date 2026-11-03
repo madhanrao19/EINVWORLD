@@ -171,8 +171,9 @@ in this release are **additive** (new tables/columns/indexes — no `Up()` drops
 preserved regardless of which path you use. Before the first start on a version bump you MUST:
 
 1. **Take a full DB backup** (your rollback).
-2. Ensure the app's SQL login (`einvworldusr`) has **DDL rights** (`db_ddladmin`/`db_owner`) — or use a
-   separate migration login for the manual path (see §7 exception).
+2. Run migrations with the **separate deploy login** (`-MigrationCredential`, a `db_owner` login such as
+   `einvworlddeploy`). The site's own login (`einvworldusr`) needs only `db_datareader` + `db_datawriter`;
+   if it still has `db_ddladmin` from an older setup, remove it once this release is live (§7).
 3. Deploy in a **low-traffic window** (the first boot runs the schema changes and briefly locks the
    affected tables) and keep the app pool at a **single worker process**.
 
@@ -500,9 +501,11 @@ only loaded for the `DinkToPdf` engine.
 - Use **encrypted backups** — and back up the encryption certificate/key separately (without it the
   backup can't be restored).
 - Runtime login: least privilege (`db_datareader` + `db_datawriter` + execute), **not** `sa`/`db_owner`.
-  Exception: with **auto-migrate on**, the runtime login also needs `db_ddladmin` (to create/alter
-  schema on boot). For strict least-privilege, set `AutoMigrateOnStartup=false` and run the
-  `Apply_*.sql` scripts with a separate DDL login instead.
+  Keep `AutoMigrateOnStartup=false` and run the `Apply_*.sql` scripts with the separate deploy login
+  (`-MigrationCredential`). The only runtime DDL left is the Serilog sink creating `SystemLogs` when it is
+  missing, which happens once on a new database (IIS-DEPLOYMENT-GUIDE Part 13). To check an existing
+  server: `SELECT r.name FROM sys.database_role_members m JOIN sys.database_principals r ON r.principal_id = m.role_principal_id JOIN sys.database_principals u ON u.principal_id = m.member_principal_id WHERE u.name = 'einvworldusr'`
+  should list only `db_datareader` and `db_datawriter`; `ALTER ROLE db_ddladmin DROP MEMBER einvworldusr;` removes the extra role.
 
 ## 8. Log retention (`SystemLogs` table)
 
