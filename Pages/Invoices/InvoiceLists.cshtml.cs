@@ -86,6 +86,8 @@ namespace eInvWorld.Pages.Invoices
 
         private static readonly List<string> AllStatuses = new() { "Draft", "Valid", "Submitted", "Cancelled", "Invalid" };
 
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
+
         public InvoiceListsModel(ApplicationDbContext context,
                                  IConfiguration configuration,
                                  ILHDNApiService apiService,
@@ -100,8 +102,10 @@ namespace eInvWorld.Pages.Invoices
                                  InvoiceSyncHelper invoiceSyncHelper,
                                  ISyncJobTracker jobTracker,
                                  IInvoiceFinalizer invoiceFinalizer,
-                                 Microsoft.Extensions.Options.IOptions<FilePathConfig> filePathConfig)
+                                 Microsoft.Extensions.Options.IOptions<FilePathConfig> filePathConfig,
+                                 EINVWORLD.Services.Audit.IAuditService audit)
         {
+            _audit = audit;
             _context = context;
             _configuration = configuration;
             _lhdnApiService = apiService;
@@ -824,6 +828,7 @@ namespace eInvWorld.Pages.Invoices
                 }
 
                 _logger.LogInformation(" Document {documentId} successfully rejected in both LHDN API and local database", documentId);
+                await _audit.WriteAsync("InvoiceRejected", new EINVWORLD.Services.Audit.AuditEntry { Uuid = documentId, Tin = userTin, NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { reason = rejectionReason }) });
                 return new JsonResult(new { message = "Document rejection successfully processed." });
             }
             catch (Exception ex)
@@ -927,6 +932,7 @@ namespace eInvWorld.Pages.Invoices
                     _logger.LogWarning(dbEx, $"⚠️ Database update failed for cancelled document {documentId}, but LHDN API succeeded. Showing success to user.");
                 }
 
+                await _audit.WriteAsync("InvoiceCancelled", new EINVWORLD.Services.Audit.AuditEntry { Uuid = documentId, Tin = issuerTin, NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { reason = cancellationReason }) });
                 return new JsonResult(new { success = true, message = "Document cancellation successfully processed." });
             }
             catch (Exception ex)

@@ -19,14 +19,17 @@ namespace EINVWORLD.Controllers
         private readonly WebsiteDbContext _websiteContext;
         private readonly ApplicationDbContext _appContext;
         private readonly ILogger<ResourcesMigrationController> _logger;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
         public ResourcesMigrationController(
             IOptions<FilePathConfig> filePathConfig,
             IWebHostEnvironment env,
             WebsiteDbContext websiteContext,
             ApplicationDbContext appContext,
-            ILogger<ResourcesMigrationController> logger)
+            ILogger<ResourcesMigrationController> logger,
+            EINVWORLD.Services.Audit.IAuditService audit)
         {
+            _audit = audit;
             _filePathConfig = filePathConfig.Value;
             _env = env;
             _websiteContext = websiteContext;
@@ -279,7 +282,7 @@ namespace EINVWORLD.Controllers
         }
 
         [HttpPost("cleanup-old-images")]
-        public IActionResult CleanupOldImages()
+        public async Task<IActionResult> CleanupOldImages()
         {
             try
             {
@@ -292,6 +295,7 @@ namespace EINVWORLD.Controllers
 
                 // Delete the entire resources folder from wwwroot
                 Directory.Delete(sourceBasePath, recursive: true);
+                await _audit.WriteAsync("ResourceFolderDeleted", new EINVWORLD.Services.Audit.AuditEntry { NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { folder = "wwwroot/images/resources" }) });
                 
                 _logger.LogInformation($"✅ Cleaned up old resources folder: {sourceBasePath}");
                 
@@ -308,7 +312,7 @@ namespace EINVWORLD.Controllers
         }
 
         [HttpPost("cleanup-old-company-logos")]
-        public IActionResult CleanupOldCompanyLogos()
+        public async Task<IActionResult> CleanupOldCompanyLogos()
         {
             try
             {
@@ -321,6 +325,7 @@ namespace EINVWORLD.Controllers
 
                 // Delete the entire logos folder from wwwroot
                 Directory.Delete(sourceBasePath, recursive: true);
+                await _audit.WriteAsync("ResourceFolderDeleted", new EINVWORLD.Services.Audit.AuditEntry { NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { folder = "wwwroot/uploads/logos" }) });
                 
                 _logger.LogInformation($"✅ Cleaned up old company logos folder: {sourceBasePath}");
                 

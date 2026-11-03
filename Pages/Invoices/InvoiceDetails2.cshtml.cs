@@ -396,6 +396,7 @@ namespace EINVWORLD.Pages.Invoices
                     Timestamp = DateTime.UtcNow
                 };
                 _context.InvoiceHistories.Add(history);
+                await _audit.WriteAsync("InvoiceRejected", new EINVWORLD.Services.Audit.AuditEntry { Uuid = documentId, Tin = userTin, NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { reason = rejectionReason }) });
 
                 // Must succeed regardless of the email outcome below — LHDN already accepted the
                 // rejection, so this save is not allowed to be skipped or rolled back by an email
@@ -515,6 +516,7 @@ namespace EINVWORLD.Pages.Invoices
                     Timestamp = DateTime.UtcNow
                 };
                 _context.InvoiceHistories.Add(history);
+                await _audit.WriteAsync("InvoiceCancelled", new EINVWORLD.Services.Audit.AuditEntry { Uuid = documentId, Tin = userTin, NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { reason = cancellationReason }) });
 
                 // Must succeed regardless of the email outcome below — see the matching fix in the
                 // reject handler above.

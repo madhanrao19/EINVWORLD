@@ -16,15 +16,24 @@ namespace eInvWorld.Pages.Admin.Users
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly EINVWORLD.Services.Audit.IAuditService _audit;
 
         /// <summary>The signed-in admin; their own row gets no bulk checkbox.</summary>
         public string? CurrentUserId => _userManager.GetUserId(User);
 
-        public ManageUserModel(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        public ManageUserModel(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, EINVWORLD.Services.Audit.IAuditService audit)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _audit = audit;
         }
+
+        // Account, role and approval changes go into the tamper-evident audit chain (who did what to whom).
+        private Task Audit(string action, ApplicationUser target, object? detail = null) =>
+            _audit.WriteAsync(action, new EINVWORLD.Services.Audit.AuditEntry
+            {
+                NewValueJson = System.Text.Json.JsonSerializer.Serialize(new { userId = target.Id, userName = target.UserName, detail })
+            });
 
         public IList<ApplicationUser> Users { get; set; } = new List<ApplicationUser>();
         public IDictionary<string, IList<string>> UserRoles { get; set; } = new Dictionary<string, IList<string>>();
@@ -111,6 +120,7 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedBy = User.Identity?.Name ?? "Admin";
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                await Audit("UserRoleAssigned", user, new { removed = currentRoles, added = roleName });
             }
             return RedirectToPage(new { CurrentPage, SortBy, SortOrder, SearchName, SearchEmail });
         }
@@ -123,6 +133,7 @@ namespace eInvWorld.Pages.Admin.Users
                 if (await _userManager.IsInRoleAsync(user, roleName))
                 {
                     await _userManager.RemoveFromRoleAsync(user, roleName);
+                    await Audit("UserRoleRemoved", user, new { removed = roleName });
 
                     if (user.UserType == roleName)
                     {
@@ -145,6 +156,7 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedBy = User.Identity?.Name ?? "Admin";
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                await Audit("UserApproved", user);
             }
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
         }
@@ -158,6 +170,7 @@ namespace eInvWorld.Pages.Admin.Users
                 user.UpdatedBy = User.Identity?.Name ?? "Admin";
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                await Audit("UserDisapproved", user);
             }
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
         }
@@ -178,12 +191,14 @@ namespace eInvWorld.Pages.Admin.Users
                 if (bulkAction == "delete")
                 {
                     await _userManager.DeleteAsync(user);
+                    await Audit("UserDeleted", user, new { bulk = true });
                     continue;
                 }
                 user.IsApproved = bulkAction == "approve";
                 user.UpdatedBy = actor;
                 user.UpdatedDate = DateTime.Now;
                 await _userManager.UpdateAsync(user);
+                await Audit(user.IsApproved ? "UserApproved" : "UserDisapproved", user, new { bulk = true });
             }
 
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
@@ -192,7 +207,11 @@ namespace eInvWorld.Pages.Admin.Users
         public async Task<IActionResult> OnPostDeleteAsync(string id, int currentPage, string sortBy, string sortOrder, string searchName, string searchEmail)
         {
             var user = await _userManager.FindByIdAsync(id);
-            if (user != null) await _userManager.DeleteAsync(user);
+            if (user != null)
+            {
+                await _userManager.DeleteAsync(user);
+                await Audit("UserDeleted", user);
+            }
             return RedirectToPage(new { CurrentPage = currentPage, SortBy = sortBy, SortOrder = sortOrder, SearchName = searchName, SearchEmail = searchEmail });
         }
     }
