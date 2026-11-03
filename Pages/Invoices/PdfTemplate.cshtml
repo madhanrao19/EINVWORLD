@@ -1,5 +1,6 @@
 ﻿@page
 @model eInvWorld.Pages.Invoices.PdfTemplateModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
 @{
     Layout = null;
     var invoice = Model.InvoiceDetail;
@@ -399,6 +400,7 @@
                 fetch("/api/invoice/save-pdf", {
                     // fetch("https://localhost:7073/api/invoice/save-pdf", {  To test only -> Ensure correct URL
                     method: "POST",
+                    headers: { "RequestVerificationToken": "@Xsrf.GetAndStoreTokens(HttpContext).RequestToken" },
                     body: formData
                 })
                     .then(response => {

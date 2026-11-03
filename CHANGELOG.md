@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.26`** (`AppInfo:Version` in `appsettings.json`). v1.50.26 is a **patch**
+> **Current version: `v1.50.27`** (`AppInfo:Version` in `appsettings.json`). v1.50.27 is a **patch**
+> release: security pass 2 — public form limits, contact form, admin image uploads and least-privilege SQL — see the dated entry below. v1.50.26 was a **patch**
 > release: security pass 1 — tenant isolation, the public lead form and log hygiene — see the dated entry below. v1.50.25 was a **patch**
 > release: two sample e-invoice files with personal data are no longer public — see the dated entry below. v1.50.24 was a **patch**
 > release: the Invoice Details side panel shows the original invoice's UUID on credit, debit and refund notes — see the dated entry below. v1.50.23 was a **patch**
@@ -468,6 +469,25 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.27 (Security pass 2: public forms and hardening)
+
+- **Public forms are rate-limited:** at most 20 posts a minute per IP to each of sign-in, register, forgot password,
+  resend confirmation, contact, customer info and the CSP report endpoint (`RateLimiting:PublicFormsPerMinute`).
+  Page loads are not limited.
+- **Contact form:** length limits and the same bot trap and CAPTCHA check as the other public forms. It no longer
+  emails a copy to the address typed in the form (anyone could type someone else's); the team still gets the
+  message.
+- **Register:** the full name is limited to 100 characters and encoded in the confirmation email.
+- **Admin resource images** must be real PNG or JPEG files up to 5 MB (cover image and editor uploads).
+- The PDF save and resource-maintenance APIs check the antiforgery token; Turnstile gets the visitor's IP;
+  the logout reason is escaped in the redirect.
+- The version number on public pages is shown to administrators only. HSTS lasts 365 days.
+- Sample CSV templates use fictional example.com contacts. Old customer logos under `wwwroot/uploads/logos`
+  are no longer in the repository.
+- Removed unused packages: iTextSharp.LGPLv2.Core, NToastNotify, Serilog.Expressions.
+- **Operators:** the site's SQL login needs only `db_datareader` + `db_datawriter`; migrations run with a separate
+  deploy login (`IIS-DEPLOYMENT-GUIDE.md` Step 5.2, `DEPLOY-NOTES.md` §7).
 
 ## 📅 2026-11-03 — v1.50.26 (Security pass 1: tenant isolation)
 

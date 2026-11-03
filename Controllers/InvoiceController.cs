@@ -13,6 +13,7 @@ namespace eInvWorld.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin,Supplier")]
+    [AutoValidateAntiforgeryToken] // cookie-authenticated: SameSite=Lax doesn't cover sibling subdomains
     public class InvoiceController : ControllerBase
     {
         private readonly IConfiguration _configuration;

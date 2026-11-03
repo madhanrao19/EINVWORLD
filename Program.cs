@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using NToastNotify;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -330,16 +329,6 @@ builder.Services.AddScoped<InvoiceFullSyncHelper>();
 
 
 
-// ToastNotify
-builder.Services.AddRazorPages()
-    .AddNToastNotifyToastr(new ToastrOptions()
-    {
-        ProgressBar = true,
-        PositionClass = ToastPositions.TopCenter,
-        PreventDuplicates = true,
-        CloseButton = true
-    });
-
 // Configuration bindings
 builder.Services.Configure<FilePathConfig>(builder.Configuration.GetSection("FilePathConfig"));
 builder.Services.PostConfigure<FilePathConfig>(config =>
@@ -598,12 +587,32 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             });
     });
+
+    // Anonymous form POSTs (login, register, forgot/resend, contact, customer info, CSP reports): per IP and per
+    // path, so one form's traffic never uses up another's (CSP reports can't block a login). GETs are not limited.
+    // Configurable via RateLimiting:PublicFormsPerMinute (default 20, leaving room for an office behind one NAT IP).
+    var publicFormsPerMinute = builder.Configuration.GetValue("RateLimiting:PublicFormsPerMinute", 20);
+    options.AddPolicy("public-forms", httpContext =>
+    {
+        if (!rateLimitEnabled || !HttpMethods.IsPost(httpContext.Request.Method))
+            return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("not-a-post");
+        var key = (httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown") + "|" + httpContext.Request.Path.Value?.ToLowerInvariant();
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(key,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = publicFormsPerMinute <= 0 ? 20 : publicFormsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
 });
 
 // Gzip/Brotli compress responses (HTML + the ~6.7 MB of unminified-transfer CSS/JS/fonts under
 // wwwroot). Built into the framework, no new dependency. EnableForHttps is safe here — the app
 // only ever serves HTTPS via an edge/tunnel that already terminates TLS (see ForwardedHeaders
 // above), so this process's own HTTPS responses (if any) aren't subject to BREACH-style concerns.
+builder.Services.AddHsts(options => options.MaxAge = TimeSpan.FromDays(365)); // see UseHsts below
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -715,7 +724,7 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // HSTS max-age 365 days (default is 30). No includeSubDomains: not every einvworld.com subdomain is known to be HTTPS-only.
     app.UseHsts();
 }
 

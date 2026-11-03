@@ -166,7 +166,8 @@
                         <div>
                             <p class="copy-rights mb-0">
                                 <script>document.write(new Date().getFullYear())</script> © eInvWorld 
-                                | Version @Configuration["AppInfo:Version"]
+                                @* Version is Admin-only, as in _Layout: a build number only helps fingerprinting. *@
+                                @if (User.IsInRole("Admin")) { <text>| Version @Configuration["AppInfo:Version"]</text> }
                                 | Designed by
                                 <a href="https://www.datamationgroup.com/"
                                    target="_blank"

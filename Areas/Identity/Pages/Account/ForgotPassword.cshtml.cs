@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace eInvWorld.Areas.Identity.Pages.Account
 {
