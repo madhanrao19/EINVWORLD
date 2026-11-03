@@ -164,6 +164,7 @@ namespace eInvWorld.Pages.Admin.Users
                 if (user == null)
                     return NotFound();
 
+                var wasAllowedIn = user.IsApproved && user.IsActive;
                 user.UserName = AppUser.UserName;
                 user.Email = AppUser.Email;
                 user.FullName = AppUser.FullName;
@@ -190,6 +191,8 @@ namespace eInvWorld.Pages.Admin.Users
                 }
 
                 await _userManager.UpdateAsync(user);
+                if (wasAllowedIn && !(user.IsApproved && user.IsActive))
+                    await _userManager.UpdateSecurityStampAsync(user); // deactivated/disapproved: end their open sessions
 
                 Log.Information("✏️ Admin '{Admin}' updated user '{User}' (ID: {Id})",
                     HttpContext.User.Identity?.Name ?? "Unknown", user.Email, user.Id);

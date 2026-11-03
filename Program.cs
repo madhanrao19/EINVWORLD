@@ -97,9 +97,15 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
            // Identity's default is 6. Enforced server-side for every password set (create user, register,
            // reset, change); the forms' StringLength(MinimumLength = 8) shows the same rule client-side.
            options.Password.RequiredLength = 8;
+           options.Tokens.PasswordResetTokenProvider = EINVWORLD.Helpers.PasswordResetTokenProvider<ApplicationUser>.ProviderName;
        })
        .AddRoles<IdentityRole>()  // Adding roles
-       .AddEntityFrameworkStores<ApplicationDbContext>();
+       .AddEntityFrameworkStores<ApplicationDbContext>()
+       .AddTokenProvider<EINVWORLD.Helpers.PasswordResetTokenProvider<ApplicationUser>>(EINVWORLD.Helpers.PasswordResetTokenProvider<ApplicationUser>.ProviderName);
+
+// Other devices notice a security-stamp change (password change, "Sign out of all devices", an admin
+// disapproving or deleting the account) within 5 minutes instead of Identity's default 30.
+builder.Services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(5));
 
 builder.Services.AddScoped<EINVWORLD.Services.Background.ISyncJobTracker, EINVWORLD.Services.Background.SyncJobTracker>();
 
@@ -141,9 +147,13 @@ var dataProtectionDir = builder.Configuration["DataProtection:KeyRingPath"];
 if (string.IsNullOrWhiteSpace(dataProtectionDir))
     dataProtectionDir = Path.Combine(Directory.GetCurrentDirectory(), "DataProtectionKeys");
 Directory.CreateDirectory(dataProtectionDir); // Ensure it exists
-builder.Services.AddDataProtection()
+var dataProtection = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionDir))
     .SetApplicationName("eInvWorld");
+// New keys are encrypted at rest with machine-scope DPAPI (works without a loaded app-pool profile), so a copied
+// key file or backup can't be used elsewhere. Existing plain keys are still read. Off: DataProtection:ProtectKeysWithDpapi=false.
+if (OperatingSystem.IsWindows() && builder.Configuration.GetValue("DataProtection:ProtectKeysWithDpapi", true))
+    dataProtection.ProtectKeysWithDpapi(protectToLocalMachine: true);
 
 
 // Core services

@@ -67,6 +67,7 @@
                 const reason = document.body.getAttribute("data-logout-reason");
                 if (reason === "timeout" && window.toastr) { toastr.info("You were logged out due to inactivity.", "Session Ended"); }
                 else if (reason === "manual" && window.toastr) { toastr.success("You have successfully logged out.", "Logged Out"); }
+                else if (reason === "all-devices" && window.toastr) { toastr.success("You've been signed out of all devices.", "Signed Out"); }
                 if (reason) { window.history.replaceState({}, document.title, window.location.pathname); }
             });
         </script>
