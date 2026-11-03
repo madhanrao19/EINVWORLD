@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.27`** (`AppInfo:Version` in `appsettings.json`). v1.50.27 is a **patch**
+> **Current version: `v1.50.28`** (`AppInfo:Version` in `appsettings.json`). v1.50.28 is a **patch**
+> release: cancel/reject, user account changes and folder deletes are recorded in the audit trail — see the dated entry below. v1.50.27 was a **patch**
 > release: security pass 2 — public form limits, contact form, admin image uploads and least-privilege SQL — see the dated entry below. v1.50.26 was a **patch**
 > release: security pass 1 — tenant isolation, the public lead form and log hygiene — see the dated entry below. v1.50.25 was a **patch**
 > release: two sample e-invoice files with personal data are no longer public — see the dated entry below. v1.50.24 was a **patch**
@@ -469,6 +470,12 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.28 (Audit trail coverage)
+
+- **The tamper-evident audit trail now records:** cancelling or rejecting an invoice (from the Invoices list and from
+  Invoice Details, with the reason); an administrator creating, editing, approving, disapproving or deleting a user,
+  and assigning or removing a role; and the resource-maintenance folder deletes.
 
 ## 📅 2026-11-03 — v1.50.27 (Security pass 2: public forms and hardening)
 
