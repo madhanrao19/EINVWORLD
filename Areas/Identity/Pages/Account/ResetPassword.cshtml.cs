@@ -20,9 +20,14 @@ namespace eInvWorld.Areas.Identity.Pages.Account
     {
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public ResetPasswordModel(UserManager<ApplicationUser> userManager)
+        private readonly eInvWorld.Services.EmailService _email;
+        private readonly Microsoft.Extensions.Logging.ILogger<ResetPasswordModel> _logger;
+
+        public ResetPasswordModel(UserManager<ApplicationUser> userManager, eInvWorld.Services.EmailService email, Microsoft.Extensions.Logging.ILogger<ResetPasswordModel> logger)
         {
             _userManager = userManager;
+            _email = email;
+            _logger = logger;
         }
 
         /// <summary>
@@ -107,6 +112,7 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
             if (result.Succeeded)
             {
+                await EINVWORLD.Helpers.PasswordChangedEmail.SendAsync(_email, user, _logger);
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 

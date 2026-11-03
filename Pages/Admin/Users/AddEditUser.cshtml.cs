@@ -22,6 +22,7 @@ namespace eInvWorld.Pages.Admin.Users
         private readonly ApplicationDbContext _db;
         private readonly ILogger<AddEditUserModel> _logger;
         private readonly EINVWORLD.Services.Audit.IAuditService _audit;
+        private readonly eInvWorld.Services.EmailService _email;
 
         public AddEditUserModel(
             UserManager<ApplicationUser> userManager,
@@ -29,9 +30,11 @@ namespace eInvWorld.Pages.Admin.Users
             IUserStore<ApplicationUser> userStore,
             ApplicationDbContext db,
             ILogger<AddEditUserModel> logger,
-            EINVWORLD.Services.Audit.IAuditService audit)
+            EINVWORLD.Services.Audit.IAuditService audit,
+            eInvWorld.Services.EmailService email)
         {
             _audit = audit;
+            _email = email;
             _userManager = userManager;
             _roleManager = roleManager;
             _userStore = userStore;
@@ -183,6 +186,7 @@ namespace eInvWorld.Pages.Admin.Users
                             ModelState.AddModelError("", $"Password update failed: {error.Description}");
                         return Page();
                     }
+                    await EINVWORLD.Helpers.PasswordChangedEmail.SendAsync(_email, user, _logger);
                 }
 
                 await _userManager.UpdateAsync(user);

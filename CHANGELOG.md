@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.29`** (`AppInfo:Version` in `appsettings.json`). v1.50.29 is a **patch**
+> **Current version: `v1.50.30`** (`AppInfo:Version` in `appsettings.json`). v1.50.30 is a **patch**
+> release: users get an email when their password is changed — see the dated entry below. v1.50.29 was a **patch**
 > release: sign-in and registration no longer reveal which accounts exist — see the dated entry below. v1.50.28 was a **patch**
 > release: cancel/reject, user account changes and folder deletes are recorded in the audit trail — see the dated entry below. v1.50.27 was a **patch**
 > release: security pass 2 — public form limits, contact form, admin image uploads and least-privilege SQL — see the dated entry below. v1.50.26 was a **patch**
@@ -471,6 +472,12 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.30 (Password-changed email)
+
+- **Users are emailed when their password changes:** after a password reset, a change from Manage Account or My Profile,
+  and when an administrator sets a new password. The email says what to do if they didn't make the change. A failed
+  email never stops the password change.
 
 ## 📅 2026-11-03 — v1.50.29 (Sign-in and registration don't reveal accounts)
 
