@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.23`** (`AppInfo:Version` in `appsettings.json`). v1.50.23 is a **patch**
+> **Current version: `v1.50.24`** (`AppInfo:Version` in `appsettings.json`). v1.50.24 is a **patch**
+> release: the Invoice Details side panel shows the original invoice's UUID on credit, debit and refund notes — see the dated entry below. v1.50.23 was a **patch**
 > release: every deploy now checks through the public site that no never-public file is served or cached — see the dated entry below. v1.50.22 was a **patch**
 > release: Create e-Invoice and Edit Invoice scripts run again (new lines get their dropdowns) — see the dated entry below. v1.50.21 was a **patch**
 > release: the deploy script refuses stale build folders and removes never-public files from the server — see the dated entry below. v1.50.20 was a **patch**
@@ -465,6 +466,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-03 — v1.50.24 (Original invoice UUID in the Invoice Details side panel)
+
+- **Credit, debit and refund notes show what they adjust:** the Invoice Details side panel now has an "Original invoice
+  UUID" row for credit, debit and refund notes (02–04) and their self-billed versions (12–14), read from the document's
+  stored reference (`RefUUID`, the same value sent to LHDN). A normal or self-billed invoice never shows it, and an
+  adjustment without a real reference (blank, or LHDN's "NA" placeholder) shows no empty row. Rule in
+  `TinHelper.DisplayReferenceUuid`, covered by tests.
+- Docs: `docs/CSP-ENFORCEMENT-PLAN.md`, a staged plan to move the Report-Only CSP to enforced (not started; CSP stays
+  Report-Only).
 
 ## 📅 2026-11-03 — v1.50.23 (Post-deploy public security check)
 

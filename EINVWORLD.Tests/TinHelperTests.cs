@@ -75,5 +75,27 @@ namespace EINVWORLD.Tests
         [Fact]
         public void Resolve_NullInvoice_Throws() =>
             Assert.Throws<ArgumentNullException>(() => TinHelper.ResolveSubmitterTin(null!));
+
+        // Invoice Details sidebar: "Original invoice UUID" shows only for adjustment documents with a real reference.
+        private const string Ref = "XKX4W7NYXMN9QEWQDNDREE6M10";
+
+        [Theory]
+        [InlineData("01", Ref, null)]          // standalone invoice: never, even if a stray RefUUID is stored
+        [InlineData("11", Ref, null)]          // self-billed invoice
+        [InlineData("02", Ref, Ref)]           // credit note
+        [InlineData("03", Ref, Ref)]           // debit note
+        [InlineData("04", Ref, Ref)]           // refund note
+        [InlineData("12", Ref, Ref)]           // self-billed credit / debit / refund notes
+        [InlineData("13", Ref, Ref)]
+        [InlineData("14", Ref, Ref)]
+        [InlineData("02", null, null)]         // missing reference: no empty row
+        [InlineData("03", "", null)]
+        [InlineData("04", "   ", null)]
+        [InlineData("02", "NA", null)]         // LHDN's "no reference" placeholder
+        [InlineData("12", "na", null)]
+        [InlineData("02", " " + Ref + " ", Ref)]
+        [InlineData(null, Ref, null)]
+        public void DisplayReferenceUuid(string? docType, string? refUuid, string? expected) =>
+            Assert.Equal(expected, TinHelper.DisplayReferenceUuid(docType, refUuid));
     }
 }

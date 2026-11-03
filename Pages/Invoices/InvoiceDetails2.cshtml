@@ -814,6 +814,11 @@
                         <dt>Long ID</dt>
                         <dd class="einv-num text-start">@invoice.LongId</dd>
                     }
+                    @if (EINVWORLD.Helpers.TinHelper.DisplayReferenceUuid(invoice.DocTypeCode, invoice.RefUUID) is string originalUuid)
+                    {
+                        <dt>Original invoice UUID</dt>
+                        <dd class="einv-num text-start">@originalUuid</dd>
+                    }
                     @if (invoice.DateTimeValidated.HasValue)
                     {
                         <dt>Validated</dt>
