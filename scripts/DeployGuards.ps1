@@ -9,9 +9,21 @@
     Pure ASCII on purpose: PowerShell 5.1 misreads UTF-8 without a BOM.
 #>
 
-# Relative paths (under App\) that must never be served. Mirrors the <Content Remove> data/debug entries in
-# EINVWORLD.csproj; the trailing * also covers the .br/.gz copies publish generates.
-$ForbiddenPublishPatterns = @('wwwroot\Drafts\*', 'wwwroot\tempcsv\*', 'wwwroot\test-*.html*', 'wwwroot\theme-test.html*')
+# Paths (under App\) that must never be served. Single source of truth: the <NeverPublicPath> items in
+# EINVWORLD.csproj, which publish also excludes. Read as MSBuild globs, used here as -like patterns.
+function Get-NeverPublicGlobs([string]$csprojPath) {
+    $xml = [xml][IO.File]::ReadAllText($csprojPath)
+    $globs = @($xml.SelectNodes('//*[local-name()="NeverPublicPath"]') | ForEach-Object { $_.GetAttribute('Include') } | Where-Object { $_ })
+    if (-not $globs.Count) { throw "No <NeverPublicPath> items in $csprojPath - refusing to run without the never-public list." }
+    $globs
+}
+# MSBuild glob -> -like pattern; the trailing * also covers the .br/.gz copies publish generates.
+function ConvertTo-LikePattern([string]$glob) {
+    $p = $glob.Replace('\**', '\*')
+    if ($p.EndsWith('*')) { $p } else { "$p*" }
+}
+$NeverPublicGlobs = Get-NeverPublicGlobs (Join-Path $PSScriptRoot '..\EINVWORLD.csproj')
+$ForbiddenPublishPatterns = @($NeverPublicGlobs | ForEach-Object { ConvertTo-LikePattern $_ })
 
 # Written into the publish folder right after a clean publish; never copied to the server.
 $PublishStampName = '.deploy-publish-files.txt'
@@ -84,15 +96,79 @@ function Assert-PublishOutput([string]$publishRoot, [string]$repoRoot) {
 }
 
 # Files matching the forbidden patterns on the server, whoever put them there (an old build, or by hand).
-# Only the forbidden folders and wwwroot's top level are read, never the whole upload tree.
+# Only the folders the patterns name are read (recursively for "**"), never the whole upload tree.
 function Find-ForbiddenServerFiles([string]$appPath) {
-    $www = Join-Path $appPath 'wwwroot'
     $found = @()
-    foreach ($folder in 'Drafts', 'tempcsv') {
-        $found += @(Get-RelativeFiles (Join-Path $www $folder) | ForEach-Object { "wwwroot\$folder\$_" })
+    foreach ($glob in $NeverPublicGlobs) {
+        $segments = $glob -split '\\'
+        $static = @($segments | ForEach-Object -Begin { $stop = $false } -Process { if ($_ -match '[*?]') { $stop = $true }; if (-not $stop) { $_ } })
+        $dirRel = ($static | Select-Object -First ([Math]::Min($static.Count, $segments.Count - 1))) -join '\'
+        $dir = Join-Path $appPath $dirRel
+        if (-not (Test-Path -LiteralPath $dir -PathType Container)) { continue }
+        if ($glob.Contains('**')) {
+            $found += @(Get-RelativeFiles $dir | ForEach-Object { "$dirRel\$_" })
+        } else {
+            $found += @([IO.Directory]::GetFiles($dir) | ForEach-Object { "$dirRel\" + [IO.Path]::GetFileName($_) })
+        }
     }
-    if (Test-Path -LiteralPath $www) {
-        $found += @([IO.Directory]::GetFiles($www) | ForEach-Object { 'wwwroot\' + [IO.Path]::GetFileName($_) })
+    Find-ForbiddenFiles @($found | Sort-Object -Unique)
+}
+
+# Known leaked paths (scripts\never-public-known-paths.txt), as App\-relative paths with backslashes.
+function Get-KnownNeverPublicPaths([string]$listPath = (Join-Path $PSScriptRoot 'never-public-known-paths.txt')) {
+    @(Get-Content -LiteralPath $listPath | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { $_.Trim().Replace('/', '\') })
+}
+
+# Default HTTP probe: status code and Cloudflare cache status only. The body goes to NUL and is never read or logged.
+# No cache-busting headers: the point is to see what a stranger gets, including a copy cached at the edge.
+$InvokeStatusProbe = {
+    param([string]$url)
+    $out = & curl.exe -s -m 10 -o NUL -w '%{http_code}|%header{cf-cache-status}' $url 2>$null
+    if (-not $out) { $out = '000|' }
+    $parts = "$out".Split('|')
+    [pscustomobject]@{ Status = [int]$parts[0]; Cache = $parts[1].Trim().ToUpperInvariant() }
+}
+
+# One probe result -> PASS / FAIL / RETRY. FAIL: any 2xx (content), or any Cloudflare cache hit (a stored copy).
+# RETRY: no answer (000) or a server error (5xx), which say nothing about the file.
+function Get-PublicCheckVerdict([int]$status, [string]$cache) {
+    if ($status -ge 200 -and $status -lt 300) { return 'FAIL' }
+    if ($cache -in 'HIT', 'STALE', 'UPDATING', 'REVALIDATED') { return 'FAIL' }
+    if ($status -eq 0 -or $status -ge 500) { return 'RETRY' }
+    'PASS'
+}
+
+# Post-deploy public security verification: requests every never-public path through the real public hostname,
+# spaced out, retrying no-answers. Returns one row per path; any FAIL - or a path still unanswered after the
+# retries (UNVERIFIED) - fails the verification. Logs status, cache status and verdict only, never content.
+function Test-NeverPublicUrls {
+    param(
+        [Parameter(Mandatory)][string]$BaseUrl,
+        [Parameter(Mandatory)][string[]]$RelativePaths,
+        [scriptblock]$Probe = $InvokeStatusProbe,
+        [int]$DelayMs = 1500,
+        [int]$MaxAttempts = 4
+    )
+    $paths = @($RelativePaths | Where-Object { $_ -notmatch '\.(br|gz)$' } | Sort-Object -Unique)
+    foreach ($rel in $paths) {
+        $url = $BaseUrl.TrimEnd('/') + '/' + (($rel -replace '^wwwroot\\', '') -replace '\\', '/')
+        $verdict = 'UNVERIFIED'; $status = 0; $cache = ''
+        for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+            if ($DelayMs -gt 0) { Start-Sleep -Milliseconds ($DelayMs * $attempt) }   # spaced, and backs off on retries
+            $r = & $Probe $url
+            $status = [int]$r.Status; $cache = [string]$r.Cache
+            $v = Get-PublicCheckVerdict $status $cache
+            if ($v -ne 'RETRY') { $verdict = $v; break }
+        }
+        [pscustomobject]@{ Path = $rel; Url = $url; Status = $status; Cache = $cache; Attempts = [Math]::Min($attempt, $MaxAttempts); Verdict = $verdict }
     }
-    Find-ForbiddenFiles $found
+}
+
+# Public hostname for a deploy target; $null for a target with no known public site (e.g. a local test folder).
+function Get-DefaultPublicBaseUrl([string]$destAppPath) {
+    switch -Regex ($destAppPath) {
+        '\\EINVWORLD_STAGING\\App\\?$' { return 'https://staging.einvworld.com' }
+        '\\EINVWORLD\\App\\?$' { return 'https://www.einvworld.com' }
+        default { return $null }
+    }
 }
