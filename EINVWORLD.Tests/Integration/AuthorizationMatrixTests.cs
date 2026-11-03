@@ -83,7 +83,7 @@ namespace EINVWORLD.Tests.Integration
             ctx.InvoiceTemplates.Add(template);
             await ctx.SaveChangesAsync();
 
-            var principal = PrincipalFor(userId, user.UserName!);
+            var principal = actor == "Admin" ? PrincipalFor(userId, user.UserName!, "Admin") : PrincipalFor(userId, user.UserName!);
             var parties = (await UserExtensions.GetDocumentPartiesAsync(ctx, uuid))!.Value;
 
             // Cancel goes out under the issuer's TIN and reject under the recipient's, whoever clicks.

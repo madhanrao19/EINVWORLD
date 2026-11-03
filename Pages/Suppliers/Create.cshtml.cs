@@ -60,11 +60,9 @@ namespace eInvWorld.Pages.Suppliers
 
         public IActionResult OnGet(string? from)
         {
-            // ✅ SECURITY CHECK: If User is Supplier, they MUST have from="lead"
-            if (User.IsInRole("Supplier") && from != "lead")
-            {
-                return Redirect("/Identity/Account/AccessDenied"); // Or return Forbid();
-            }
+            // Creating a company (or lead) reserves its TIN platform-wide, so it is Admin-only. The page stays open to
+            // Suppliers only for OnGetValidateTINAsync, which Suppliers/Edit calls.
+            if (!IsAdmin) return Forbid();
 
             From = from;
 
@@ -95,11 +93,7 @@ namespace eInvWorld.Pages.Suppliers
 
         public async Task<IActionResult> OnPostAsync(string? from)
         {
-            // ✅ SECURITY CHECK: Prevent Suppliers from posting to standard create
-            if (User.IsInRole("Supplier") && from != "lead")
-            {
-                return Redirect("/AccessDenied");
-            }
+            if (!IsAdmin) return Forbid();
 
             // Repopulate dropdowns on POST
             PopulateDropdowns();

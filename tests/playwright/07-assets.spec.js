@@ -84,7 +84,7 @@ test('assets: authenticated pages make no external asset-CDN requests', async ({
     } catch { /* ignore */ }
   });
   await login(page, 'supplier');
-  for (const p of ['/Dashboard/Dashboard', '/PublicCustomer/Create', '/Suppliers/Create?from=lead',
+  for (const p of ['/Dashboard/Dashboard', '/PublicCustomer/Create',
                    '/Identity/Account/Manage/EnableAuthenticator']) {
     await page.goto(p, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);

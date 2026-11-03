@@ -109,7 +109,9 @@ namespace eInvWorld.Pages.Suppliers
 
             if (companyRoleId.HasValue)
             {
-                bool roleExists = await _context.CompanyRoles.AnyAsync(r => r.CompanyRoleId == companyRoleId.Value);
+                // System roles, or this company's own custom roles; never another company's custom role.
+                bool roleExists = await _context.CompanyRoles.AnyAsync(r => r.CompanyRoleId == companyRoleId.Value
+                    && (r.PartyInfoId == null || r.PartyInfoId == partyInfoId));
                 if (!roleExists)
                 {
                     TempData["ErrorMessage"] = "Selected role does not exist.";

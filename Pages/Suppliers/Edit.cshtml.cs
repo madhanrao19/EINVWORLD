@@ -115,13 +115,21 @@ namespace eInvWorld.Pages.Suppliers
             MaskedBankAccountNo = MaskingHelper.MaskLast4(PartyInfo.BankAccountNo);
             PartyInfo.BankAccountNo = null;
 
-            TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == id);
+            TinLocked = await IsTinLockedAsync(_context, partyInfo.PartyInfoId, User.IsInRole("Admin"));
 
             // Populate dropdowns using the helper
             LoadDropdownOptions();
 
             return Page();
         }
+
+        /// <summary>
+        /// Invoice access is granted by TIN, so a member who could re-point their company's TIN at another
+        /// business would see every invoice issued to it. Only an Admin may change it, and not once the company
+        /// appears on any invoice (as supplier or customer).
+        /// </summary>
+        internal static async Task<bool> IsTinLockedAsync(ApplicationDbContext db, int partyInfoId, bool isAdmin) =>
+            !isAdmin || await db.InvoiceHeaders.AnyAsync(h => h.SupplierId == partyInfoId || h.CustomerId == partyInfoId);
 
         public async Task<IActionResult> OnPostAsync()
         {
@@ -131,7 +139,7 @@ namespace eInvWorld.Pages.Suppliers
             if (!ModelState.IsValid)
             {
                 _logger.LogWarning("ModelState is invalid during Edit operation.");
-                TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == PartyInfo.PartyInfoId);
+                TinLocked = await IsTinLockedAsync(_context, PartyInfo.PartyInfoId, User.IsInRole("Admin"));
                 LoadDropdownOptions();
                 return Page();
             }
@@ -146,12 +154,12 @@ namespace eInvWorld.Pages.Suppliers
             var accessDenied = await CheckAccessAsync(existingParty.PartyInfoId);
             if (accessDenied != null) return accessDenied;
 
-            // ✅ TIN is immutable once the company has submitted at least one invoice to LHDN — re-check
-            // server-side (defense in depth) even though the field is also rendered readonly in the view.
-            TinLocked = await _context.InvoiceHeaders.AnyAsync(h => h.SupplierId == existingParty.PartyInfoId);
+            // The TIN is the tenancy key (invoice access matches on it), so it is re-checked server-side even
+            // though the field is rendered readonly in the view.
+            TinLocked = await IsTinLockedAsync(_context, existingParty.PartyInfoId, User.IsInRole("Admin"));
             if (TinLocked && !string.Equals(existingParty.TIN, PartyInfo.TIN, StringComparison.Ordinal))
             {
-                ModelState.AddModelError("PartyInfo.TIN", "TIN cannot be changed once the company has submitted invoices to LHDN.");
+                ModelState.AddModelError("PartyInfo.TIN", "The TIN can only be changed by an administrator.");
                 MaskedBankAccountNo = MaskingHelper.MaskLast4(existingParty.BankAccountNo);
                 LoadDropdownOptions();
                 return Page();
