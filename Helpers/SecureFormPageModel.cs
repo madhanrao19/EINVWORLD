@@ -32,7 +32,7 @@ namespace eInvWorld.Helpers
         {
             var token = Request.Form["cf-turnstile-response"];
             return await VerifyTurnstileAsync(_httpClientFactory.CreateClient(), _config["Turnstile:VerifyUrl"],
-                _config["Turnstile:SecretKey"], token, _logger, HttpContext.RequestAborted);
+                _config["Turnstile:SecretKey"], token, _logger, HttpContext.RequestAborted, HttpContext.Connection.RemoteIpAddress?.ToString());
         }
 
         /// <summary>Cloudflare's siteverify endpoint, used when Turnstile:VerifyUrl isn't configured.</summary>
@@ -43,18 +43,22 @@ namespace eInvWorld.Helpers
         /// or answering garbage all return false, so the form is refused with the normal message instead of a 500.
         /// </summary>
         internal static async Task<bool> VerifyTurnstileAsync(HttpClient client, string? verifyUrl, string? secret, string? token,
-            ILogger logger, System.Threading.CancellationToken ct = default)
+            ILogger logger, System.Threading.CancellationToken ct = default, string? remoteIp = null)
         {
             if (string.IsNullOrWhiteSpace(token))
                 return false;
+            var form = new List<KeyValuePair<string, string>>
+            {
+                new("secret", secret ?? string.Empty),
+                new("response", token),
+            };
+            // The visitor's IP (real client IP via ForwardedHeaders) lets Cloudflare catch a token solved elsewhere.
+            if (!string.IsNullOrEmpty(remoteIp))
+                form.Add(new("remoteip", remoteIp));
             try
             {
                 using var response = await client.PostAsync(string.IsNullOrWhiteSpace(verifyUrl) ? DefaultTurnstileVerifyUrl : verifyUrl,
-                    new FormUrlEncodedContent(new[]
-                    {
-                        new KeyValuePair<string, string>("secret", secret ?? string.Empty),
-                        new KeyValuePair<string, string>("response", token)
-                    }), ct);
+                    new FormUrlEncodedContent(form), ct);
                 if (!response.IsSuccessStatusCode)
                 {
                     logger.LogWarning("Turnstile verification returned HTTP {Status}; form refused.", (int)response.StatusCode);

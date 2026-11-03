@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using NToastNotify;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -329,16 +328,6 @@ builder.Services.AddScoped<InvoiceSyncHelper>();
 builder.Services.AddScoped<InvoiceFullSyncHelper>();
 
 
-
-// ToastNotify
-builder.Services.AddRazorPages()
-    .AddNToastNotifyToastr(new ToastrOptions()
-    {
-        ProgressBar = true,
-        PositionClass = ToastPositions.TopCenter,
-        PreventDuplicates = true,
-        CloseButton = true
-    });
 
 // Configuration bindings
 builder.Services.Configure<FilePathConfig>(builder.Configuration.GetSection("FilePathConfig"));

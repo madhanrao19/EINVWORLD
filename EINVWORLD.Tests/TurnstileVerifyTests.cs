@@ -62,5 +62,16 @@ namespace EINVWORLD.Tests
             await Verify(stub, url: null);
             Assert.Equal(SecureFormPageModel.DefaultTurnstileVerifyUrl, stub.LastUri!.ToString());
         }
+
+        [Fact]
+        public async Task Sends_The_Visitor_Ip_When_Known()
+        {
+            string? body = null;
+            var stub = new Stub(r => { body = r.Content!.ReadAsStringAsync().Result; return Json("{\"success\":true}"); });
+            await SecureFormPageModel.VerifyTurnstileAsync(new HttpClient(stub), null, "secret", "tok", NullLogger.Instance, default, "203.0.113.7");
+            Assert.Contains("remoteip=203.0.113.7", body);
+            await Verify(stub);
+            Assert.DoesNotContain("remoteip", body);
+        }
     }
 }
