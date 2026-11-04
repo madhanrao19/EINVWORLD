@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.35`** (`AppInfo:Version` in `appsettings.json`). v1.50.35 is a **patch**
+> **Current version: `v1.50.36`** (`AppInfo:Version` in `appsettings.json`). v1.50.36 is a **patch**
+> release: the site warns (Staging) or refuses to start (Production) when it has Cloudflare's test CAPTCHA keys — see the dated entry below. v1.50.35 was a **patch**
 > release: invoices other companies' systems send you now appear under Received — see the dated entry below. v1.50.34 was a **patch**
 > release: TIN and ID numbers are no longer sent in web addresses — see the dated entry below. v1.50.33 was a **patch**
 > release: deploys check disk space first, check site health, and clean up the local build afterwards — see the dated entry below. v1.50.32 was a **patch**
@@ -477,6 +478,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.36 (Startup check for Cloudflare test CAPTCHA keys)
+
+- **Security:** Cloudflare's Turnstile **test** keys (`1x…`, `2x…`, `3x…` followed by zeros) always pass, so a site
+  that runs with them has no bot protection on sign-in, registration, contact or the customer-info form. The
+  2026-11-04 Staging security review found Staging doing exactly this (it inherits the test site key from
+  `appsettings.json`).
+  - The startup configuration check now looks at `Turnstile:SiteKey` and `Turnstile:SecretKey`:
+    **Production refuses to start** with a test key; **Staging starts but logs a warning**; Development is not checked
+    (local runs use the test keys on purpose).
+  - The Playwright QA procedure that temporarily sets test keys on Staging still works; it just logs the warning.
+- **Before deploying to Production:** make sure Production's `Turnstile__SecretKey` is a real key, or the site
+  won't start. To clear the Staging warning, create a Turnstile widget for `staging.einvworld.com` and set
+  `Turnstile__SiteKey` and `Turnstile__SecretKey` on the Staging server.
+- No database change.
 
 ## 📅 2026-11-04 — v1.50.35 (Received tab shows invoices from other companies' systems)
 
