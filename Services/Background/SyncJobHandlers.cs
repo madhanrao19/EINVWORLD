@@ -2,7 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using eInvWorld.Models.Background;
+using eInvWorld.Models.Settings;
 using EINVWORLD.Helpers;
+using Microsoft.Extensions.Options;
 
 namespace EINVWORLD.Services.Background
 {
@@ -33,7 +35,12 @@ namespace EINVWORLD.Services.Background
     public sealed class FullImportJobHandler : ISyncJobHandler
     {
         private readonly InvoiceSyncHelper _sync;
-        public FullImportJobHandler(InvoiceSyncHelper sync) => _sync = sync;
+        private readonly int _maxFetches;
+        public FullImportJobHandler(InvoiceSyncHelper sync, IOptions<InvoiceStatusUpdaterSettings> settings)
+        {
+            _sync = sync;
+            _maxFetches = settings.Value.ImportMaxDocumentFetchesPerRun;
+        }
 
         public string JobType => SyncJobType.FullImport;
 
@@ -41,7 +48,7 @@ namespace EINVWORLD.Services.Background
         {
             var user = string.IsNullOrWhiteSpace(job.TriggeredBy) ? "System" : job.TriggeredBy;
             var lookback = SyncJobPayload.LookbackOrDefault(job.PayloadJson, 60);
-            return _sync.RunFullImportFromLhdnAsync(job.Tin, user, lookback);
+            return _sync.RunFullImportFromLhdnAsync(job.Tin, user, lookback, _maxFetches, SyncJobType.FullImport);
         }
     }
 
@@ -52,7 +59,12 @@ namespace EINVWORLD.Services.Background
     public sealed class SupplierRefreshJobHandler : ISyncJobHandler
     {
         private readonly InvoiceSyncHelper _sync;
-        public SupplierRefreshJobHandler(InvoiceSyncHelper sync) => _sync = sync;
+        private readonly int _maxFetches;
+        public SupplierRefreshJobHandler(InvoiceSyncHelper sync, IOptions<InvoiceStatusUpdaterSettings> settings)
+        {
+            _sync = sync;
+            _maxFetches = settings.Value.ImportMaxDocumentFetchesPerRun;
+        }
 
         public string JobType => SyncJobType.SupplierRefresh;
 
@@ -60,7 +72,7 @@ namespace EINVWORLD.Services.Background
         {
             var user = string.IsNullOrWhiteSpace(job.TriggeredBy) ? "System" : job.TriggeredBy;
             var lookback = SyncJobPayload.LookbackOrDefault(job.PayloadJson, 30);
-            return _sync.RunFullImportFromLhdnAsync(job.Tin, user, lookback);
+            return _sync.RunFullImportFromLhdnAsync(job.Tin, user, lookback, _maxFetches, SyncJobType.SupplierRefresh);
         }
     }
 

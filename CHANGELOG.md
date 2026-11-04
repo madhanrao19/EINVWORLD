@@ -490,7 +490,11 @@
   - Documents issued today are found on the same day. Before, the search stopped at midnight.
   - Earlier synced invoices with no supplier or buyer link (left by past failed syncs) are fetched again and
     repaired the next time they come back in a sync.
-  - New received invoices now trigger the "new e-invoice received" email (it never fired before).
+  - New received invoices now trigger the "new e-invoice received" email (it never fired before), but only for
+    documents received in the last day (`MaxAgeDaysForNotification` 7 → 1), so a 30-day backfill doesn't send a burst.
+  - **Gentle on LHDN:** each import run fetches at most 40 documents, newest first
+    (`InvoiceStatusUpdaterSettings:ImportMaxDocumentFetchesPerRun`). That keeps LHDN's shared document queue free
+    for your own status checks. Any remaining documents are fetched by an automatic follow-up job 2 minutes later.
 - No database change. After deploying, click **Refresh from API** on the Received tab to bring in the last 30 days.
 
 ## 📅 2026-11-04 — v1.50.34 (TIN and ID numbers no longer in web addresses)

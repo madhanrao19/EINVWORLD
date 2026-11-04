@@ -229,7 +229,7 @@ namespace eInvWorld.Services
                 return await MarkDoneWithoutSendingAsync("Skipped (feature disabled)");
             }
 
-            int maxAgeDays = _configuration.GetValue<int?>("EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification") ?? 7;
+            int maxAgeDays = _configuration.GetValue<int?>("EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification") ?? 1;
             var referenceDate = invoice.DateTimeReceived ?? invoice.IssueDate ?? invoice.CreatedDate;
             if (referenceDate < DateTime.Now.AddDays(-maxAgeDays))
             {

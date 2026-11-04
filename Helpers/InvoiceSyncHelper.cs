@@ -409,8 +409,20 @@ namespace EINVWORLD.Helpers
             && string.Equals(summary.status, localStatus, StringComparison.OrdinalIgnoreCase)
             && (!string.Equals(summary.status, "Valid", StringComparison.OrdinalIgnoreCase) || localHasLongId);
 
-        public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3)
+        /// <summary>Default cap on raw-document fetches per import run (see <c>InvoiceStatusUpdaterSettings.ImportMaxDocumentFetchesPerRun</c>).</summary>
+        public const int DefaultMaxDocumentFetchesPerRun = 40;
+
+        /// <summary>
+        /// Imports LHDN documents (sent and received) for one company TIN over the lookback window.
+        /// At most <paramref name="maxDocumentFetches"/> raw documents are fetched per run, newest first, so a
+        /// large backlog never holds LHDN's shared get-document queue for long (interactive status checks
+        /// share it). When documents are left over and this run made progress, a follow-up job of
+        /// <paramref name="continuationJobType"/> is queued a couple of minutes later to fetch the rest.
+        /// </summary>
+        public async Task<string> RunFullImportFromLhdnAsync(string tin, string? triggeredBy = "System", int lookbackDays = 3,
+            int maxDocumentFetches = DefaultMaxDocumentFetchesPerRun, string continuationJobType = eInvWorld.Models.Background.SyncJobType.SupplierRefresh)
         {
+            if (maxDocumentFetches < 1) maxDocumentFetches = DefaultMaxDocumentFetchesPerRun;
             var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
             var allSummaries = await GetAllUuidsForSubmitterAsync(tin, accessToken, lookbackDays);
 
@@ -435,35 +447,30 @@ namespace EINVWORLD.Helpers
                 .GroupBy(i => i.UUID!)
                 .ToDictionary(g => g.Key, g => g.First());
 
+            // A local row missing its supplier or buyer link (e.g. a past failed sync) is never skipped,
+            // so the re-fetch can repair it — otherwise it stays invisible in every invoice tab. Otherwise an
+            // invoice already synced that can no longer change status (per LHDN's own status/longId/
+            // dateTimeValidated from this same search response) skips the raw-document fetch — the
+            // endpoint that hits LHDN's strict rate limit.
+            var (toFetch, skipped, deferred) = PlanDocumentFetches(allSummaries, maxDocumentFetches, summary =>
+                existing.TryGetValue(summary.uuid, out var local)
+                && !local.NeedsRelink
+                && (IsStable(summary) || IsUnchangedLocally(summary, local.LHDNStatusId, !string.IsNullOrWhiteSpace(local.LongId))));
+
             int imported = 0;
-            int skipped = 0;
             int errors = 0;
 
             // REMOVED Parallel.ForEachAsync to prevent 429 DDoS penalties from LHDN
-            foreach (var summary in allSummaries)
+            foreach (var summary in toFetch)
             {
-                // A local row missing its supplier or buyer link (e.g. a past failed sync) is never skipped,
-                // so the re-fetch can repair it — otherwise it stays invisible in every invoice tab.
-                if (existing.TryGetValue(summary.uuid, out var local)
-                    && !local.NeedsRelink
-                    && (IsStable(summary) || IsUnchangedLocally(summary, local.LHDNStatusId, !string.IsNullOrWhiteSpace(local.LongId))))
-                {
-                    // Already synced locally and can no longer change status (per LHDN's own status/
-                    // longId/dateTimeValidated from this same search response) — skip the raw-document
-                    // fetch (GetDocumentDetailsAsync), the endpoint that hits LHDN's strict rate limit.
-                    skipped++;
-                    continue;
-                }
-
                 try
                 {
                     // Pacing is handled centrally by LhdnRateLimitHandler (even-paced per endpoint).
                     var docSummary = await _lhdnService.GetDocumentDetailsAsync(summary.uuid, accessToken);
-                    if (docSummary != null)
-                    {
-                        await _fullSyncHelper.SyncAllFromApiAsync(docSummary, tin);
+                    if (docSummary != null && await _fullSyncHelper.SyncAllFromApiAsync(docSummary, tin))
                         imported++;
-                    }
+                    else
+                        errors++;
                 }
                 catch (Exception ex)
                 {
@@ -472,7 +479,71 @@ namespace EINVWORLD.Helpers
                 }
             }
 
-            return $"Imported {imported} documents, Skipped (already stable): {skipped}, Errors: {errors} (submitted by TIN)";
+            var result = $"Imported {imported} documents, Skipped (already stable): {skipped}, Errors: {errors}";
+            if (deferred > 0)
+            {
+                // Continue only on progress: if every fetch failed, re-queuing would just loop on the same documents.
+                bool queued = imported > 0 && await QueueImportContinuationAsync(tin, lookbackDays, continuationJobType);
+                result += queued
+                    ? $", Deferred: {deferred} (continuing in a follow-up job)"
+                    : $", Deferred: {deferred} (picked up by the next refresh)";
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Splits a search result into the documents to fetch now (newest first, at most <paramref name="max"/>),
+        /// the number skipped (already up to date locally) and the number deferred to a later run.
+        /// </summary>
+        internal static (List<DocumentSummary> ToFetch, int Skipped, int Deferred) PlanDocumentFetches(
+            IEnumerable<DocumentSummary> summaries, int max, Func<DocumentSummary, bool> canSkip)
+        {
+            var needed = summaries
+                .Where(s => !canSkip(s))
+                .OrderByDescending(s => s.dateTimeReceived ?? s.dateTimeIssued)
+                .ToList();
+            int skipped = summaries.Count() - needed.Count;
+            var toFetch = needed.Take(Math.Max(1, max)).ToList();
+            return (toFetch, skipped, needed.Count - toFetch.Count);
+        }
+
+        /// <summary>Delay before a continuation job runs, leaving LHDN's get-document queue free for interactive work.</summary>
+        private static readonly TimeSpan ImportContinuationDelay = TimeSpan.FromMinutes(2);
+
+        /// <summary>
+        /// Queues a follow-up import for <paramref name="tin"/> unless one is already queued. Already-imported
+        /// documents are skipped by the next run without a fetch, so each continuation fetches only what's left.
+        /// </summary>
+        private async Task<bool> QueueImportContinuationAsync(string tin, int lookbackDays, string jobType)
+        {
+            try
+            {
+                bool alreadyQueued = await _context.SyncJobs.AnyAsync(j =>
+                    j.Tin == tin && j.Status == eInvWorld.Models.Background.SyncJobStatus.Queued &&
+                    (j.JobType == eInvWorld.Models.Background.SyncJobType.SupplierRefresh ||
+                     j.JobType == eInvWorld.Models.Background.SyncJobType.FullImport));
+                if (alreadyQueued) return true;
+
+                _context.SyncJobs.Add(new eInvWorld.Models.Background.SyncJob
+                {
+                    Tin = tin,
+                    JobType = jobType,
+                    Status = eInvWorld.Models.Background.SyncJobStatus.Queued,
+                    QueuedAtUtc = DateTime.UtcNow,
+                    NextRunAtUtc = DateTime.UtcNow.Add(ImportContinuationDelay),
+                    MaxAttempts = 3,
+                    TriggeredBy = "System (import continuation)",
+                    PayloadJson = EINVWORLD.Services.Background.SyncJobPayload.Create(lookbackDays),
+                });
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Never fail the import over this; the next scheduled or manual refresh still picks the rest up.
+                _logger.LogWarning(ex, "Could not queue an import continuation for TIN {TIN}.", LogSanitizer.MaskTin(tin));
+                return false;
+            }
         }
         /// <summary>
         /// Gets all documents submitted by the specified TIN (both regular and self-billed)
