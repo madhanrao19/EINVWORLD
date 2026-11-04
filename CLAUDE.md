@@ -189,6 +189,9 @@ capture mechanism (or a future requirement) needs content-level scanning, add it
 it's already covered.
 
 ## Known improvement backlog (deferred — need a scoped, tested effort)
+- **Investigated-but-unapproved items live in `docs/FUTURE-IMPROVEMENTS.md`** — read it before touching LHDN auth/sync.
+  Notably: third-party/portal **received** invoices can't be imported under intermediary auth (LHDN policy); a
+  taxpayer-credential design is drafted there but **not approved** — don't implement it until its status says Approved.
 - **Split the ~1,300-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
 - **OpenTelemetry metrics** — low value on a single on-prem node with no metrics backend; revisit if scaled.
 - **Future-readiness** — multi-company/tenant, API versioning, message queue, containerization: design new
