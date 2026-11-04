@@ -61,6 +61,7 @@ dotnet user-secrets set "Turnstile:SecretKey" "your-turnstile-secret"
 # QA only (Playwright): to bypass the challenge, temporarily use Cloudflare's always-pass TEST keys —
 #   Turnstile:SiteKey=1x00000000000000000000AA   Turnstile:SecretKey=1x0000000000000000000000000000000AA
 # NEVER use test keys in production (they disable bot protection). See docs/TABLER-MIGRATION-AUDIT.md.
+# Since v1.50.36 the startup check refuses to start Production with a test key and logs a warning on Staging.
 
 # SMTP — set BOTH username and password. A blank SmtpUsername fails with a clear
 #        "SMTP not configured" error (v1.9.9) and no email is sent.

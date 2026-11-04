@@ -23,9 +23,10 @@ namespace EINVWORLD.Helpers
         /// Staging gets these checks as warnings instead of hard startup failures.
         /// <paramref name="contentRoot"/> (the deployable App folder) is used only to reject a key-ring
         /// path that resolves INSIDE it; pass null to skip that containment check.
+        /// <paramref name="isDevelopment"/> skips the Turnstile test-key check (local dev uses Cloudflare's test keys on purpose).
         /// Throws <see cref="InvalidOperationException"/> aggregating all blocking problems.
         /// </summary>
-        public static void Validate(IConfiguration config, bool isProduction, string? contentRoot = null)
+        public static void Validate(IConfiguration config, bool isProduction, string? contentRoot = null, bool isDevelopment = false)
         {
             var errors = new List<string>();
             var warnings = new List<string>();
@@ -127,6 +128,19 @@ namespace EINVWORLD.Helpers
                     warnings.Add("Webhooks:Enabled=true with Webhooks:BlockPrivateNetworks=false in Production — the SSRF guard is off. Only disable it for a trusted internal receiver on a private network.");
             }
 
+            // ── Cloudflare Turnstile (CAPTCHA) ────────────────────────────────────────────
+            // Cloudflare's published test keys (1x/2x/3x0000…) always pass or always fail, so on a public site
+            // they switch bot protection off. Error in Production; warning on Staging so it still starts.
+            if (!isDevelopment)
+            {
+                foreach (var key in new[] { "Turnstile:SiteKey", "Turnstile:SecretKey" })
+                {
+                    if (!IsTurnstileTestKey(config[key])) continue;
+                    var msg = $"{key} is a Cloudflare TEST key — CAPTCHA does not protect sign-in or the public forms. Create a real Turnstile widget for this hostname and set Turnstile__SiteKey / Turnstile__SecretKey on the server.";
+                    (isProduction ? errors : warnings).Add(msg);
+                }
+            }
+
             foreach (var w in warnings)
                 Log.Warning("⚠️ Config check: {Warning}", w);
 
@@ -139,5 +153,10 @@ namespace EINVWORLD.Helpers
 
             Log.Information("✅ Production configuration validated ({WarningCount} warning(s)).", warnings.Count);
         }
+
+        /// <summary>True for Cloudflare's documented Turnstile test site/secret keys (prefix 1x, 2x or 3x then ten zeros).</summary>
+        internal static bool IsTurnstileTestKey(string? key) =>
+            key is { Length: > 12 } && key[0] is ('1' or '2' or '3') && key[1] == 'x'
+            && key.AsSpan(2, 10).SequenceEqual("0000000000");
     }
 }
