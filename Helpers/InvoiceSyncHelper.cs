@@ -422,7 +422,15 @@ namespace EINVWORLD.Helpers
             var uuidsInBatch = allSummaries.Select(s => s.uuid).ToList();
             var existing = (await _context.InvoiceHeaders
                 .Where(i => uuidsInBatch.Contains(i.UUID!))
-                .Select(i => new { i.UUID, i.LHDNStatusId, i.LongId })
+                .Select(i => new
+                {
+                    i.UUID, i.LHDNStatusId, i.LongId,
+                    // Needs repair: no supplier, no buyer, or a buyer PublicCustomer owned by no company
+                    // (left by the pre-fix direction bug on received invoices).
+                    NeedsRelink = i.SupplierId == null
+                        || (i.CustomerId == null && i.PublicCustomerId == null)
+                        || (i.CustomerId == null && i.PublicCustomer != null && (i.PublicCustomer.CreatedByCompanyId ?? 0) == 0)
+                })
                 .ToListAsync())
                 .GroupBy(i => i.UUID!)
                 .ToDictionary(g => g.Key, g => g.First());
@@ -434,7 +442,10 @@ namespace EINVWORLD.Helpers
             // REMOVED Parallel.ForEachAsync to prevent 429 DDoS penalties from LHDN
             foreach (var summary in allSummaries)
             {
+                // A local row missing its supplier or buyer link (e.g. a past failed sync) is never skipped,
+                // so the re-fetch can repair it — otherwise it stays invisible in every invoice tab.
                 if (existing.TryGetValue(summary.uuid, out var local)
+                    && !local.NeedsRelink
                     && (IsStable(summary) || IsUnchangedLocally(summary, local.LHDNStatusId, !string.IsNullOrWhiteSpace(local.LongId))))
                 {
                     // Already synced locally and can no longer change status (per LHDN's own status/
@@ -450,7 +461,7 @@ namespace EINVWORLD.Helpers
                     var docSummary = await _lhdnService.GetDocumentDetailsAsync(summary.uuid, accessToken);
                     if (docSummary != null)
                     {
-                        await _fullSyncHelper.SyncAllFromApiAsync(docSummary);
+                        await _fullSyncHelper.SyncAllFromApiAsync(docSummary, tin);
                         imported++;
                     }
                 }

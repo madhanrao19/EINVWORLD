@@ -46,7 +46,7 @@ namespace EINVWORLD.Services.Background
     }
 
     /// <summary>
-    /// Supplier-initiated "Refresh from LHDN": same as a full import but a short default lookback.
+    /// Supplier-initiated "Refresh from LHDN": same as a full import with a 30-day default lookback.
     /// (Was the refresh closure in Pages/Invoices/InvoiceLists.)
     /// </summary>
     public sealed class SupplierRefreshJobHandler : ISyncJobHandler
@@ -59,7 +59,7 @@ namespace EINVWORLD.Services.Background
         public Task<string> ExecuteAsync(SyncJob job, CancellationToken ct)
         {
             var user = string.IsNullOrWhiteSpace(job.TriggeredBy) ? "System" : job.TriggeredBy;
-            var lookback = SyncJobPayload.LookbackOrDefault(job.PayloadJson, 7);
+            var lookback = SyncJobPayload.LookbackOrDefault(job.PayloadJson, 30);
             return _sync.RunFullImportFromLhdnAsync(job.Tin, user, lookback);
         }
     }

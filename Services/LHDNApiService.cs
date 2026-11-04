@@ -594,52 +594,67 @@ public class LHDNApiService : ILHDNApiService
         int pageSize = 100;
         int chunkSize = 10;
 
+        var seenUuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         while (start <= end)
         {
             DateTime chunkEnd = start.AddDays(chunkSize - 1);
             if (chunkEnd > end) chunkEnd = end;
 
-            int page = 1;
-            bool hasMore = true;
+            // Whole days: a bare date as issueDateTo meant midnight, so today's documents were missed until
+            // the next day. Capped at "now" so LHDN never gets a future timestamp.
+            var nowUtc = DateTime.UtcNow;
+            var chunkEndOfDay = chunkEnd.Date.AddDays(1).AddSeconds(-1);
+            string issueFrom = $"{start:yyyy-MM-dd}T00:00:00Z";
+            string issueTo = (chunkEndOfDay > nowUtc ? nowUtc : chunkEndOfDay).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-            while (hasMore)
+            // Ask for each direction explicitly: received documents (issued to us by other suppliers' ERPs)
+            // must be imported too, and an unqualified search can't be relied on to include them.
+            foreach (var direction in new[] { "Sent", "Received" })
             {
-                // Param names per LHDN's documented /documents/search contract are "pageNo"/"pageSize"
-                // (not "page"/"size") — using the wrong names silently made LHDN ignore pagination and
-                // always return page 1, so this loop only ever terminated because docs.Count < pageSize
-                // (true for every TIN seen so far) rather than because pagination actually advanced.
-                string url = $"api/v1.0/documents/search?issueDateFrom={start:yyyy-MM-dd}&issueDateTo={chunkEnd:yyyy-MM-dd}&pageNo={page}&pageSize={pageSize}";
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                int page = 1;
+                bool hasMore = true;
 
-                try
+                while (hasMore)
                 {
-                    // ✅ USE THE HELPER: It handles the 429 retries and headers automatically
-                    var response = await SendWithRetryAsync(request, accessToken, tin);
-                    var content = await response.Content.ReadAsStringAsync();
+                    // Param names per LHDN's documented /documents/search contract are "pageNo"/"pageSize"
+                    // (not "page"/"size") — using the wrong names silently made LHDN ignore pagination and
+                    // always return page 1, so this loop only ever terminated because docs.Count < pageSize
+                    // (true for every TIN seen so far) rather than because pagination actually advanced.
+                    string url = $"api/v1.0/documents/search?issueDateFrom={issueFrom}&issueDateTo={issueTo}&invoiceDirection={direction}&pageNo={page}&pageSize={pageSize}";
+                    var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                    var obj = JsonConvert.DeserializeObject<JObject>(content);
-                    var docs = obj?["result"] as JArray;
-
-                    if (docs == null || docs.Count == 0)
+                    try
                     {
-                        hasMore = false;
-                    }
-                    else
-                    {
-                        // Keep the full summary (status/longId/dateTimeValidated/etc.) — the search
-                        // response already carries everything RunFullImportFromLhdnAsync needs to skip
-                        // re-fetching the raw document for invoices that can no longer change status.
-                        var pageSummaries = docs.ToObject<List<DocumentSummary>>() ?? new List<DocumentSummary>();
-                        summaries.AddRange(pageSummaries.Where(s => !string.IsNullOrWhiteSpace(s.uuid)));
+                        // ✅ USE THE HELPER: It handles the 429 retries and headers automatically
+                        var response = await SendWithRetryAsync(request, accessToken, tin);
+                        var content = await response.Content.ReadAsStringAsync();
 
-                        hasMore = docs.Count == pageSize;
-                        page++;
+                        var obj = JsonConvert.DeserializeObject<JObject>(content);
+                        var docs = obj?["result"] as JArray;
+
+                        if (docs == null || docs.Count == 0)
+                        {
+                            hasMore = false;
+                        }
+                        else
+                        {
+                            // Keep the full summary (status/longId/dateTimeValidated/etc.) — the search
+                            // response already carries everything RunFullImportFromLhdnAsync needs to skip
+                            // re-fetching the raw document for invoices that can no longer change status.
+                            var pageSummaries = docs.ToObject<List<DocumentSummary>>() ?? new List<DocumentSummary>();
+                            // De-dupe across directions (a self-addressed document can come back as both).
+                            summaries.AddRange(pageSummaries.Where(s => !string.IsNullOrWhiteSpace(s.uuid) && seenUuids.Add(s.uuid)));
+
+                            hasMore = docs.Count == pageSize;
+                            page++;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "❗ Exception during UUID sync. TIN: {TIN}, Date: {Start}→{End}, Page: {Page}", LogSanitizer.MaskTin(tin), start, chunkEnd, page);
-                    throw;
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "❗ Exception during UUID sync. TIN: {TIN}, Direction: {Direction}, Date: {Start}→{End}, Page: {Page}", LogSanitizer.MaskTin(tin), direction, start, chunkEnd, page);
+                        throw;
+                    }
                 }
             }
 

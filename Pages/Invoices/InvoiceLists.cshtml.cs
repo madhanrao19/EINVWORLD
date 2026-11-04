@@ -403,8 +403,9 @@ namespace eInvWorld.Pages.Invoices
                     string refreshUserName = User?.Identity?.Name ?? "System";
 
                     // 3. Enqueue one durable background import per TIN; the request returns right away.
-                    //    Supplier-initiated refresh is capped to a short 7-day lookback window.
-                    var refreshPayload = EINVWORLD.Services.Background.SyncJobPayload.Create(7);
+                    //    Supplier-initiated refresh looks back 30 days (sent + received); already-stable
+                    //    invoices are skipped without a document fetch, so the LHDN cost stays small.
+                    var refreshPayload = EINVWORLD.Services.Background.SyncJobPayload.Create(30);
                     foreach (var tin in refreshTins)
                     {
                         await _jobTracker.CreateAsync(tin, SyncJobType.SupplierRefresh, refreshUserName, refreshPayload);

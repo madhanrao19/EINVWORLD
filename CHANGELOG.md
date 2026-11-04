@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.34`** (`AppInfo:Version` in `appsettings.json`). v1.50.34 is a **patch**
+> **Current version: `v1.50.35`** (`AppInfo:Version` in `appsettings.json`). v1.50.35 is a **patch**
+> release: invoices other companies' systems send you now appear under Received — see the dated entry below. v1.50.34 was a **patch**
 > release: TIN and ID numbers are no longer sent in web addresses — see the dated entry below. v1.50.33 was a **patch**
 > release: deploys check disk space first, check site health, and clean up the local build afterwards — see the dated entry below. v1.50.32 was a **patch**
 > release: credit, debit and refund notes created from the Invoices list can be submitted again — see the dated entry below. v1.50.31 was a **patch**
@@ -476,6 +477,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.35 (Received tab shows invoices from other companies' systems)
+
+- **Fix:** e-invoices other companies issue to you straight from their own systems (TNB, banks, telcos and so on) did
+  not appear under **Invoices → Received**, so you had to open MyInvois to see them. The LHDN sync treated every
+  document as one you had sent, so a received invoice was never linked to your company. This was worst when the
+  supplier used LHDN's general buyer TIN `EI00000000010` with your name or IC.
+  - The sync now asks LHDN separately for **sent** and **received** documents. A received document is linked to the
+    company that fetched it, so it shows under Received and opens in Invoice Details with its lines.
+  - **Refresh from API** looks back **30 days** (was 7). The automatic background sync is unchanged (7 days).
+  - Documents issued today are found on the same day. Before, the search stopped at midnight.
+  - Earlier synced invoices with no supplier or buyer link (left by past failed syncs) are fetched again and
+    repaired the next time they come back in a sync.
+  - New received invoices now trigger the "new e-invoice received" email (it never fired before).
+- No database change. After deploying, click **Refresh from API** on the Received tab to bring in the last 30 days.
 
 ## 📅 2026-11-04 — v1.50.34 (TIN and ID numbers no longer in web addresses)
 
