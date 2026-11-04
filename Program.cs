@@ -603,9 +603,10 @@ builder.Services.AddRateLimiter(options =>
     var lhdnValidatePerMinute = builder.Configuration.GetValue("RateLimiting:LhdnValidatePerMinute", 20);
     options.AddPolicy(EINVWORLD.Helpers.TinValidationRateLimit.Policy, httpContext =>
     {
-        if (!rateLimitEnabled || !EINVWORLD.Helpers.TinValidationRateLimit.Applies(httpContext.Request))
+        if (!rateLimitEnabled || !EINVWORLD.Helpers.TinValidationRateLimit.Applies(httpContext))
             return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("not-a-validation");
-        var user = httpContext.User?.Identity?.Name ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        var user = httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
         return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(user,
             _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
             {
@@ -833,7 +834,6 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 // the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
 app.UseSerilogRequestLogging();
 app.UseRouting();
-app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     // no-store on dynamic pages (sensitive financial data). Skip the health endpoint so monitors
@@ -849,6 +849,9 @@ app.Use(async (context, next) =>
 
 app.UseSession(); // Add this line to enable session management
 app.UseAuthentication();
+// After authentication so per-user policies (admin-sync, lhdn-validate) see the signed-in user instead of
+// sharing one bucket per IP; before authorization so the global and public-form limits still run first.
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseMiddleware<eInvWorld.Services.Middleware.UserContextMiddleware>();
 

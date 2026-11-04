@@ -54,12 +54,33 @@ namespace EINVWORLD.Tests
         [InlineData("POST", "", false)]
         [InlineData("POST", "SubmitDocuments", false)]
         [InlineData("POST", "ValidationDetails", false)]
+        [InlineData("POST", "ValidateTIN&handler=x", true)]     // Razor Pages runs the first value, so the limit must too
+        [InlineData("POST", "x&handler=ValidateTIN", false)]
         public void RateLimit_AppliesOnlyToTinValidationPosts(string method, string handler, bool expected)
         {
             var ctx = new DefaultHttpContext();
             ctx.Request.Method = method;
             if (handler.Length > 0) ctx.Request.QueryString = new QueryString("?handler=" + handler);
-            Assert.Equal(expected, TinValidationRateLimit.Applies(ctx.Request));
+            Assert.Equal(expected, TinValidationRateLimit.Applies(ctx));
+        }
+
+        [Fact]
+        public void RateLimit_UsesTheRouteHandlerFirst()
+        {
+            var ctx = new DefaultHttpContext();
+            ctx.Request.Method = "POST";
+            ctx.Request.RouteValues["handler"] = "ValidateTIN";
+            ctx.Request.QueryString = new QueryString("?handler=SubmitDocuments");
+            Assert.True(TinValidationRateLimit.Applies(ctx));
+        }
+
+        [Fact]
+        public void RateLimiter_RunsAfterAuthentication_SoPerUserPoliciesSeeTheUser()
+        {
+            // Before authentication every request is anonymous and per-user policies collapse into one bucket per IP.
+            var program = File.ReadAllText(Path.Combine(RepoRoot(), "Program.cs"));
+            int authn = program.IndexOf("app.UseAuthentication();"), limiter = program.IndexOf("app.UseRateLimiter();"), authz = program.IndexOf("app.UseAuthorization();");
+            Assert.True(authn >= 0 && limiter > authn && authz > limiter, "Expected UseAuthentication, then UseRateLimiter, then UseAuthorization");
         }
 
         [Fact]

@@ -486,7 +486,8 @@
   - The same change for cancel and reject (the TIN and the typed reason were in the address) and for the LHDN
     validation-details window on the Invoices list.
   - "Validate with LHDN" is limited to 20 checks per user per minute (`RateLimiting:LhdnValidatePerMinute`), since each
-    check calls LHDN.
+    check calls LHDN. The rate limiter now runs after sign-in is read, so per-user limits (this one and the admin
+    sync limit) count each user separately instead of everyone behind one office IP together.
   - The call to LHDN itself is unchanged: LHDN's API takes the ID number in its own address, server to server; the app
     never logs that address.
 - Nothing changes for users. IIS logs written before this release can still contain ID numbers in old addresses.
