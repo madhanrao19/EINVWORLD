@@ -27,10 +27,12 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
   optional XAdES signing (off until a cert is bought), 72h cancel/reject window, HTTP rate limits (429).
 
 ## The build reality — build/test locally, CI is the merge gate
-- **A local .NET 10 SDK is available in this environment.** Run `dotnet build`/`dotnet test`/`dotnet run`
-  locally before pushing — don't rely solely on CI to discover a compile error. `dotnet run` against
-  the local dev instance hits the **Staging** SQL Server database (see `RUNBOOKS.md`/session notes) —
-  treat it accordingly (real seeded data, not a throwaway sandbox).
+- **A local .NET 10 SDK is available in this environment.** Prefer `dotnet build` and isolated
+  `dotnet test` before pushing. **Do not assume `dotnet run` is safe:** the local dev instance may connect
+  to the real **Staging** SQL Server database (see `RUNBOOKS.md`/session notes). Inspect the effective
+  environment, connection target, startup migrations and background-job behavior before launching.
+  Do not start the application, run mutating integration tests or execute jobs against live Staging/Production
+  data without explicit authorization. Use isolated test data and a disposable test database by default.
 - A stale locked `bin\...\EINVWORLD.exe` from a still-running `dotnet run`/debug session is the most common
   local build failure (`MSB3021`/`MSB3027` "file is locked by process"). Stop the running `EINVWORLD`
   process (or the IDE's debug session) before rebuilding.
@@ -53,7 +55,8 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
   Migrations must be **additive** (no data-destroying `Up()`); back up before deploying.
 
 ## Workflow (non-negotiable)
-1. Develop on the designated feature branch; **commit and push only when the work is complete**.
+1. Develop on the designated feature branch; **commit and push only when the work is complete and the
+   user has authorized repository actions**. Do not mix unrelated security, UI and architecture changes.
 2. **One PR per logical change.** Keep PRs small and reviewable. Never bundle unrelated changes.
 3. Let CI run; **merge only when green**. Fix failures by reading the job logs, not by guessing.
 4. **Never commit secrets.** Connection strings, LHDN client secrets, SMTP/cert passwords, Turnstile keys
@@ -61,6 +64,39 @@ e-invoicing platform** (SME → Enterprise → Government), improving it continu
 5. Commit messages end with the required `Co-Authored-By` / `Claude-Session` trailers.
 
 ---
+
+## Change risk tiers and approval gates
+- **Routine (low blast radius):** scoped UI/accessibility improvements, localized non-financial fixes,
+  documentation and isolated tests. Investigate, implement and test within the approved request; do not
+  expand scope without explaining why.
+- **Significant (plan/review first):** changes affecting invoice rules/totals/tax, LHDN authorization or sync,
+  company/tenant boundaries, background jobs, public APIs, critical dependencies or nontrivial schema.
+  Produce a concise design, Council/Roast/Engineering review where useful, migration/backward-compatibility
+  implications, rollback and test matrix before implementation. Obtain approval for any new architectural
+  direction or material risk beyond the user's request.
+- **Critical (explicit action approval):** any Production/Staging data mutation or migration, credential
+  rotation/entry, key changes, external submissions/cancellations, deployment, access-control weakening,
+  historical-data rewriting and destructive operations. Require explicit authorization for the specific
+  target/action; a general request to "fix" or "improve" is not approval for these operations.
+- **Deferred backlog:** `docs/FUTURE-IMPROVEMENTS.md` records proposals, not permission to implement. An
+  item must be explicitly approved and its prerequisites validated before coding. Documentation edits
+  alone never activate features.
+- **Stop conditions:** if secrets, private records, unexpected live infrastructure, authorization ambiguity
+  or a failing safety invariant are encountered, stop the risky operation, report facts and propose a safe path.
+  Do not silently switch environments, credentials or tenants.
+
+## Data, scope and test safety
+- **Staging holds a copy of Production data** (real taxpayers, TINs, invoices). Treat it as Production for privacy:
+  read-only queries only for diagnosis, return counts/masked values (`LogSanitizer.MaskTin`), never copy rows out,
+  never write without Critical-tier approval. Never touch the Production database.
+- **LHDN calls in tests/probes:** preprod only, read-only (token + GET) unless a write is explicitly approved; never
+  call the Production API from a dev machine. Respect 429/`Retry-After`. Never print tokens, secrets, claim values or
+  document bodies.
+- **Credentials:** read from user-secrets/env at runtime only; never paste into chat, commits, docs, scripts or logs.
+  Throwaway probe scripts live in the session scratchpad, never in the repo.
+- **Scope control:** stage files by explicit path (never `git add -A`/`.`); check `git status` before committing and
+  leave unrelated untracked files alone. One concern per PR; report out-of-scope findings instead of fixing them.
+- **Docs are evidence:** label claims as verified (with source), unverified, or proposed; mask identifiers.
 
 ## The engineering loop (run for EVERY task)
 1. **Understand** — read surrounding code, business rules, conventions, dependencies, blast radius.
@@ -189,14 +225,19 @@ capture mechanism (or a future requirement) needs content-level scanning, add it
 it's already covered.
 
 ## Known improvement backlog (deferred — need a scoped, tested effort)
+- **Investigated-but-unapproved items live in `docs/FUTURE-IMPROVEMENTS.md`** — read it before touching LHDN auth/sync.
+  Notably: third-party/portal **received** invoices can't be imported under intermediary auth (LHDN policy); a
+  taxpayer-credential design is drafted there but **not approved**. Phase 1 taxpayer-token checks and older-window
+  historical discovery validation are pending; don't implement it until explicitly approved.
 - **Split the ~1,300-line `InvoiceMapper`** — critical money/UBL path; refactor only with strong test cover.
 - **OpenTelemetry metrics** — low value on a single on-prem node with no metrics backend; revisit if scaled.
 - **Future-readiness** — multi-company/tenant, API versioning, message queue, containerization: design new
   work so these stay possible; don't paint the architecture into a corner.
 
-## Autonomous improvement
-After finishing requested work, review affected + neighbouring files/services/controllers/models/tests/
-config/docs. If you find **safe** improvements, implement them (as separate, reviewable PRs). For
-**architectural or high-blast-radius** changes (schema-wide concurrency, large refactors, new heavy/native
-dependencies), **surface a scoped plan and get agreement first** — "refactor safely" and "never risk data
-corruption" override "just do it." Stop when the touched subsystem meets enterprise production standards.
+## Autonomous improvement (bounded by task scope)
+After finishing requested work, review affected and directly neighbouring code and tests. Fix a small,
+low-risk issue only when it is necessary for correctness or security of the requested change, covered by
+appropriate tests, and does not expand the agreed scope. Otherwise **report it** in recommendations or a
+separate scoped proposal; do not silently build unrelated features or open PRs. For architectural,
+financial, LHDN authentication, schema, deployment or security-boundary changes, apply the approval gates
+above. "Refactor safely" and "never risk data corruption" override "just do it."
