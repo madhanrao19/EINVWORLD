@@ -27,7 +27,14 @@ namespace EINVWORLD.Helpers
             _logger = logger;
         }
 
-        public async Task<bool> SyncAllFromApiAsync(DocumentSummary summary)
+        /// <summary>
+        /// Imports or refreshes one LHDN document locally.
+        /// </summary>
+        /// <param name="summary">Document details from LHDN (with the raw document when available).</param>
+        /// <param name="fetchingTin">The company TIN whose token fetched this document. When given it decides
+        /// the direction (Sent vs Received) and, for a received document, the buyer link — needed because
+        /// LHDN's issuerTin is always the supplier and a received document's buyer TIN can be a general TIN.</param>
+        public async Task<bool> SyncAllFromApiAsync(DocumentSummary summary, string? fetchingTin = null)
         {
             if (summary == null || string.IsNullOrWhiteSpace(summary.uuid)) return false;
 
@@ -138,8 +145,11 @@ namespace EINVWORLD.Helpers
                 var submittingCompany = await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == submittingTIN);
                 int submittingCompanyId = submittingCompany?.PartyInfoId ?? 0;
 
-                // Determine Direction: If the supplier TIN matches the TIN we are fetching with, it's a "Sent" invoice.
-                bool isSentInvoice = (supplierTinFromJson == submittingTIN);
+                // Determine Direction: Sent when the supplier is the company we fetched with. submittingTIN
+                // (= issuerTin) is always the supplier, so without fetchingTin every document looked "Sent".
+                bool isSentInvoice = string.IsNullOrWhiteSpace(fetchingTin)
+                    ? supplierTinFromJson == submittingTIN
+                    : string.Equals(supplierTinFromJson?.Trim(), fetchingTin.Trim(), StringComparison.OrdinalIgnoreCase);
 
                 if (isSentInvoice)
                 {
@@ -187,7 +197,12 @@ namespace EINVWORLD.Helpers
                 else
                 {
                     // --- WE ARE THE BUYER (RECEIVED INVOICE) ---
-                    customer = await ParsePartyInfoFromJson.GetOrCreatePartyInfoAsync(_dbContext, customerJson); // Just returns us
+                    // LHDN listed this in OUR Received documents, so the buyer is us — even when the document
+                    // carries a general buyer TIN (EI00000000010 + our name/IC), which a TIN match can't resolve.
+                    customer = !string.IsNullOrWhiteSpace(fetchingTin)
+                        ? await _dbContext.PartyInfos.FirstOrDefaultAsync(p => p.TIN == fetchingTin)
+                        : null;
+                    customer ??= await ParsePartyInfoFromJson.GetOrCreatePartyInfoAsync(_dbContext, customerJson);
 
                     // Resolve Supplier: We always put suppliers in the global PartyInfo table
                     supplier = await ParsePartyInfoFromJson.GetOrCreatePartyInfoAsync(_dbContext, supplierJson);
@@ -366,7 +381,15 @@ namespace EINVWORLD.Helpers
                     // shared general TINs (see the resolution guard above), and this update runs on
                     // every re-sync of a not-yet-"stable" invoice, repeatedly, until 72h after
                     // validation.
-                    if (invoice.CustomerId == null && invoice.PublicCustomerId == null)
+                    // Exception: a received invoice the old direction bug linked to a PublicCustomer owned by
+                    // no company (CreatedByCompanyId 0 — the external supplier isn't a tenant) is unlinked in
+                    // practice; re-point it at us so it appears in our Received tab.
+                    bool strayPublicBuyer = !isSentInvoice && customer != null && invoice.CustomerId == null
+                        && invoice.PublicCustomerId != null
+                        && await _dbContext.PublicCustomers.AnyAsync(p => p.PublicCustomerId == invoice.PublicCustomerId
+                                                                       && (p.CreatedByCompanyId == null || p.CreatedByCompanyId == 0));
+
+                    if ((invoice.CustomerId == null && invoice.PublicCustomerId == null) || strayPublicBuyer)
                     {
                         if (customer != null)
                         {

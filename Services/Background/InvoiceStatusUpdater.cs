@@ -357,7 +357,8 @@ public class InvoiceStatusUpdater : BackgroundService
             {
                 try
                 {
-                    var result = await invoiceSyncHelper.RunFullImportFromLhdnAsync(tin, "BackgroundService", _settings.BackgroundImportLookbackDays);
+                    var result = await invoiceSyncHelper.RunFullImportFromLhdnAsync(tin, "BackgroundService", _settings.BackgroundImportLookbackDays,
+                        _settings.ImportMaxDocumentFetchesPerRun, eInvWorld.Models.Background.SyncJobType.SupplierRefresh);
                     _logger.LogInformation("✅ [LHDN Import] Result for TIN {TIN}: {Result}", EINVWORLD.Helpers.LogSanitizer.MaskTin(tin), result);
                 }
                 catch (Exception ex)

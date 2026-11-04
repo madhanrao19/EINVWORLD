@@ -246,5 +246,103 @@ namespace EINVWORLD.Tests.Integration
             Assert.Equal(realBuyerId, created.PublicCustomerId);
             Assert.Null(created.CustomerId);
         }
+
+        // Received documents: an outside ERP (TNB, a bank, a telco...) issues an e-invoice to our company,
+        // often with LHDN's general buyer TIN EI00000000010 plus our name/IC. LHDN lists it in OUR Received
+        // documents, so the sync must link the buyer to the fetching company — the old code treated every
+        // document as "Sent" (issuerTin is always the supplier) and the invoice never reached Received.
+        private const string GeneralPublicTin = "EI00000000010";
+
+        private async Task<(ServiceProvider Provider, InvoiceFullSyncHelper Helper, int OurId, string OurTin, int ExternalId, string ExternalTin)> SeedReceivedScenarioAsync()
+        {
+            var services = new ServiceCollection();
+            services.AddScoped(_ => _fx.CreateContext());
+            var provider = services.BuildServiceProvider();
+
+            await using var seed = _fx.CreateContext();
+            await SeedLookupsAsync(seed);
+            var ours = NewPartyInfo("Received Test Buyer", $"IG{Guid.NewGuid():N}"[..13]);
+            var external = NewPartyInfo("External ERP Supplier Berhad", $"C{Guid.NewGuid():N}"[..12]);
+            seed.PartyInfos.AddRange(ours, external);
+            await seed.SaveChangesAsync();
+
+            var helper = new InvoiceFullSyncHelper(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<InvoiceFullSyncHelper>.Instance);
+            return (provider, helper, ours.PartyInfoId, ours.TIN, external.PartyInfoId, external.TIN);
+        }
+
+        [Fact]
+        public async Task SyncAllFromApiAsync_ReceivedDocument_WithGeneralBuyerTin_LinksBuyerToFetchingCompany()
+        {
+            if (!_fx.Available) return;
+
+            var (provider, helper, ourId, ourTin, externalId, externalTin) = await SeedReceivedScenarioAsync();
+            await using var _ = provider;
+            string uuid = $"UUID-{Guid.NewGuid():N}";
+
+            var ok = await helper.SyncAllFromApiAsync(new DocumentSummary
+            {
+                uuid = uuid,
+                internalId = $"ERP-{Guid.NewGuid():N}"[..16],
+                typeName = "Invoice",
+                issuerTin = externalTin,
+                receiverTin = GeneralPublicTin,
+                status = "Valid",
+                document = DocumentJson(externalTin, "External ERP Supplier Berhad", GeneralPublicTin, "Received Test Buyer"),
+            }, fetchingTin: ourTin);
+            Assert.True(ok);
+
+            await using var verify = _fx.CreateContext();
+            var created = await verify.InvoiceHeaders.FirstAsync(i => i.UUID == uuid);
+            Assert.Equal(ourId, created.CustomerId);          // what InvoiceLists' Received filter matches on
+            Assert.Null(created.PublicCustomerId);
+            Assert.Equal(externalId, created.SupplierId);
+            Assert.False(created.IsNewInvoiceReceivedEmailSent); // eligible for the "new invoice received" email
+        }
+
+        [Fact]
+        public async Task SyncAllFromApiAsync_ReceivedDocument_RelinksAnOrphanedLocalRow()
+        {
+            if (!_fx.Available) return;
+
+            var (provider, helper, ourId, ourTin, externalId, externalTin) = await SeedReceivedScenarioAsync();
+            await using var _ = provider;
+            string uuid = $"UUID-{Guid.NewGuid():N}";
+            string invoiceNo = $"ERP-ORPHAN-{Guid.NewGuid():N}"[..20];
+
+            // A row left behind by a past failed sync: no supplier, no buyer — invisible in every tab.
+            await using (var seed = _fx.CreateContext())
+            {
+                seed.InvoiceHeaders.Add(new InvoiceHeader
+                {
+                    InvoiceNo = invoiceNo,
+                    PrefixedID = invoiceNo,
+                    DocTypeCode = "01",
+                    Currency = "MYR",
+                    CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "test",
+                    InternalStatusId = "Valid",
+                    LHDNStatusId = "Valid",
+                    UUID = uuid,
+                });
+                await seed.SaveChangesAsync();
+            }
+
+            var ok = await helper.SyncAllFromApiAsync(new DocumentSummary
+            {
+                uuid = uuid,
+                internalId = invoiceNo,
+                typeName = "Invoice",
+                issuerTin = externalTin,
+                receiverTin = GeneralPublicTin,
+                status = "Valid",
+                document = DocumentJson(externalTin, "External ERP Supplier Berhad", GeneralPublicTin, "Received Test Buyer"),
+            }, fetchingTin: ourTin);
+            Assert.True(ok);
+
+            await using var verify = _fx.CreateContext();
+            var healed = await verify.InvoiceHeaders.FirstAsync(i => i.UUID == uuid);
+            Assert.Equal(ourId, healed.CustomerId);
+            Assert.Equal(externalId, healed.SupplierId);
+        }
     }
 }
