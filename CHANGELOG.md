@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.36`** (`AppInfo:Version` in `appsettings.json`). v1.50.36 is a **patch**
+> **Current version: `v1.50.37`** (`AppInfo:Version` in `appsettings.json`). v1.50.37 is a **patch**
+> release: Staging keeps its real CAPTCHA site key after a deploy — see the dated entry below. v1.50.36 was a **patch**
 > release: the site warns (Staging) or refuses to start (Production) when it has Cloudflare's test CAPTCHA keys — see the dated entry below. v1.50.35 was a **patch**
 > release: invoices other companies' systems send you now appear under Received — see the dated entry below. v1.50.34 was a **patch**
 > release: TIN and ID numbers are no longer sent in web addresses — see the dated entry below. v1.50.33 was a **patch**
@@ -478,6 +479,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.37 (Staging keeps its real CAPTCHA site key)
+
+- **Security (Staging):** the real Turnstile site key was set by hand in Staging's `appsettings.json` on the server, but
+  every deploy replaces the server's `appsettings*.json` with the repo's copies, so the next deploy would have put
+  Cloudflare's always-pass test key back. The key now lives in `appsettings.Staging.json`, as Production's does in
+  `appsettings.Production.json`. Staging uses the same widget as Production (`staging.einvworld.com` is an allowed
+  hostname). The secret key stays in Staging's `web.config`.
+- No code or database change.
 
 ## 📅 2026-11-04 — v1.50.36 (Startup check for Cloudflare test CAPTCHA keys)
 
