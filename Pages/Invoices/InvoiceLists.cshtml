@@ -1580,7 +1580,12 @@
             return;
         }
 
-        fetch(`?handler=ValidationDetails&uuid=${encodeURIComponent(uuid || '')}&submissionId=${encodeURIComponent(submissionId || '')}&tin=${encodeURIComponent(tin || '')}&invoiceNo=${encodeURIComponent(invoiceNo || '')}`)
+        // POST body (not the URL) keeps the TIN and invoice identifiers out of server/CDN logs.
+        fetch('?handler=ValidationDetails', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+            body: new URLSearchParams({ uuid: uuid || '', submissionId: submissionId || '', tin: tin || '', invoiceNo: invoiceNo || '' })
+        })
             .then(response => response.json())
             .then(data => {
                 let html = '';

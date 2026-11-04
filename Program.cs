@@ -598,6 +598,24 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
+    // "Validate with LHDN" (TIN + ID number) POSTs: each one calls LHDN, so cap them per user. Only those handlers
+    // are limited on the pages carrying this policy. Configurable via RateLimiting:LhdnValidatePerMinute (default 20).
+    var lhdnValidatePerMinute = builder.Configuration.GetValue("RateLimiting:LhdnValidatePerMinute", 20);
+    options.AddPolicy(EINVWORLD.Helpers.TinValidationRateLimit.Policy, httpContext =>
+    {
+        if (!rateLimitEnabled || !EINVWORLD.Helpers.TinValidationRateLimit.Applies(httpContext.Request))
+            return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("not-a-validation");
+        var user = httpContext.User?.Identity?.Name ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(user,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = lhdnValidatePerMinute <= 0 ? 20 : lhdnValidatePerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
+
     // Anonymous form POSTs (login, register, forgot/resend, contact, customer info, CSP reports): per IP and per
     // path, so one form's traffic never uses up another's (CSP reports can't block a login). GETs are not limited.
     // Configurable via RateLimiting:PublicFormsPerMinute (default 20, leaving room for an office behind one NAT IP).

@@ -5614,7 +5614,12 @@
                     btn.classList.add('btn-info');
 
                     try {
-                        const response = await fetch(`?handler=ValidateShippingRecipientTin&tin=${encodeURIComponent(tin)}&idType=${encodeURIComponent(idType)}&idNo=${encodeURIComponent(idNo)}`);
+                        // POST body, never the URL: the ID number is an NRIC for individuals (URLs end up in server/CDN logs).
+                        const response = await fetch('?handler=ValidateShippingRecipientTin', {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+                            body: new URLSearchParams({ tin: tin, idType: idType, idNo: idNo })
+                        });
                         const data = await response.json();
                         if (data.success) {
                             btn.classList.remove('btn-info', 'btn-danger');

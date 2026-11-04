@@ -122,7 +122,8 @@ namespace eInvWorld.Pages.Invoices
             _invoiceFinalizer = invoiceFinalizer;
             _filePathConfig = filePathConfig.Value;
         }
-        public async Task<IActionResult> OnGetValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
+        // POST (form body + antiforgery): keeps the TIN and invoice identifiers out of URLs and logs.
+        public async Task<IActionResult> OnPostValidationDetailsAsync(string uuid, string submissionId, string tin, string invoiceNo)
         {
             try
             {

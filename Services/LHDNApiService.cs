@@ -130,8 +130,8 @@ public class LHDNApiService : ILHDNApiService
 
             var requestUri = $"api/v1.0/taxpayer/validate/{Uri.EscapeDataString(tin)}?idType={Uri.EscapeDataString(idType)}&idValue={Uri.EscapeDataString(idValue)}";
             var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-            // Log only the method + URI, never the HttpRequestMessage itself (avoids leaking headers/token).
-            _logger.LogDebug("Outgoing LHDN request: {Method} {Uri}", request.Method, request.RequestUri);
+            // LHDN requires the ID number in the query string; never log it (it is an NRIC for individuals) or the token.
+            _logger.LogDebug("Outgoing LHDN request: {Method} api/v1.0/taxpayer/validate/{Tin}", request.Method, LogSanitizer.MaskTin(tin));
 
             // Reuse the shared retry helper: it clones the request per attempt, honours the LHDN
             // Retry-After on 429, and ensures success (throws on failure). The previous inline path

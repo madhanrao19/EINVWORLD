@@ -155,12 +155,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Send the effective reason (the free-text detail when "Others" was chosen) and URL-encode
                 // every value so reasons/UUIDs containing spaces or special characters are transmitted safely.
                 const effectiveReason = (reason === "Others" && details) ? details : reason;
-                let response = await fetch(`/Invoices/InvoiceLists?handler=RejectDocument&documentId=${encodeURIComponent(invoice.uuid)}&rejectionReason=${encodeURIComponent(effectiveReason)}&tin=${encodeURIComponent(invoice.tin || "")}`, {
+                // Values go in the form body (not the URL), so the TIN and the free-text reason stay out of server/CDN logs.
+                let response = await fetch(`/Invoices/InvoiceLists?handler=RejectDocument`, {
                     method: "PUT",
                     headers: {
-                        "Content-Type": "application/json",
                         "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
                     },
+                    body: new URLSearchParams({ documentId: invoice.uuid || "", rejectionReason: effectiveReason || "", tin: invoice.tin || "" }),
                     signal: controller.signal
                 });
 
