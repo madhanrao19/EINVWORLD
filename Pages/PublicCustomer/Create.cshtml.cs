@@ -24,6 +24,7 @@ using System.Threading.Tasks;
 namespace eInvWorld.Pages.PublicCustomer
 {
     [Authorize(Roles = "Admin,Supplier")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(EINVWORLD.Helpers.TinValidationRateLimit.Policy)]
     public class CreateModel : SupplierBasePage
     {
         private new readonly ApplicationDbContext _context;
@@ -276,7 +277,8 @@ namespace eInvWorld.Pages.PublicCustomer
             return RedirectToPage("./List");
         }
 
-        public async Task<JsonResult> OnGetValidateTINAsync(string tin, string idType, string idNo)
+        // POST (form body + antiforgery), never GET: the ID number is an NRIC for individuals and must not reach URLs/logs.
+        public async Task<JsonResult> OnPostValidateTINAsync(string tin, string idType, string idNo)
         {
             if (GeneralTINHelper.IsGeneralTIN(tin))
             {

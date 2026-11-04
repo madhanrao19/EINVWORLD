@@ -34,8 +34,12 @@
 
         setButtons('btn-info', '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Validating...', true);
         try {
-            const sep = cfg.url.includes('?') ? '&' : '?';
-            const response = await fetch(`${cfg.url}${sep}tin=${encodeURIComponent(tin)}&idType=${encodeURIComponent(regType)}&idNo=${encodeURIComponent(regNo)}`);
+            // POST body, never the URL: the ID number is an NRIC for individuals (URLs end up in server/CDN logs).
+            const response = await fetch(cfg.url, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
+                body: new URLSearchParams({ tin: tin, idType: regType, idNo: regNo })
+            });
             const data = await response.json();
             validated = !!data.success;
             if (validated) markValidated(); else { markFailed("Failed - Retry"); console.warn(data.message); }

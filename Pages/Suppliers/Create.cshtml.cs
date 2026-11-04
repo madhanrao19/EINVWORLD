@@ -24,6 +24,7 @@ using eInvWorld.Models.Audit;
 namespace eInvWorld.Pages.Suppliers
 {
     [Authorize(Roles = "Admin,Supplier")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(EINVWORLD.Helpers.TinValidationRateLimit.Policy)]
     public class CreateModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -61,7 +62,7 @@ namespace eInvWorld.Pages.Suppliers
         public IActionResult OnGet(string? from)
         {
             // Creating a company (or lead) reserves its TIN platform-wide, so it is Admin-only. The page stays open to
-            // Suppliers only for OnGetValidateTINAsync, which Suppliers/Edit calls.
+            // Suppliers only for OnPostValidateTINAsync, which Suppliers/Edit calls.
             if (!IsAdmin) return Forbid();
 
             From = from;
@@ -236,7 +237,8 @@ namespace eInvWorld.Pages.Suppliers
 
         // --- NEW: API Validation Endpoints & Logic Additions ---
 
-        public async Task<JsonResult> OnGetValidateTINAsync(string tin, string idType, string idNo)
+        // POST (form body + antiforgery), never GET: the ID number is an NRIC for individuals and must not reach URLs/logs.
+        public async Task<JsonResult> OnPostValidateTINAsync(string tin, string idType, string idNo)
         {
             var generalTins = new[] { "EI00000000010", "EI00000000020", "EI00000000030", "EI00000000040" };
             if (generalTins.Contains(tin))

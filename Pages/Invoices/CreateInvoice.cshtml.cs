@@ -35,6 +35,7 @@ using StatusCodes = eInvWorld.Models.StatusCodes;
 namespace EINVWORLD.Pages.Invoices
 {
     [Authorize(Roles = "Admin,Supplier")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(EINVWORLD.Helpers.TinValidationRateLimit.Policy)]
     public class CreateInvoiceModel : SupplierBasePage
     {
         private const string InvoicePrefix = "EINV"; // Prefix for invoice numbers
@@ -2087,7 +2088,8 @@ namespace EINVWORLD.Pages.Invoices
         // Shipping Recipient "Validate with LHDN" - same underlying ILHDNApiService.ValidateTaxpayerAsync
         // used by Suppliers/PublicCustomer's own Validate button, so a fake TIN/ID-type combo (LHDN
         // Error05 "Invalid Taxpayer Profile Validator") is caught here instead of only at submission time.
-        public async Task<JsonResult> OnGetValidateShippingRecipientTinAsync(string tin, string idType, string idNo)
+        // POST (form body + antiforgery), never GET: the ID number is an NRIC for individuals and must not reach URLs/logs.
+        public async Task<JsonResult> OnPostValidateShippingRecipientTinAsync(string tin, string idType, string idNo)
         {
             if (GeneralTINHelper.IsGeneralTIN(tin))
             {

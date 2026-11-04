@@ -598,6 +598,25 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
+    // "Validate with LHDN" (TIN + ID number) POSTs: each one calls LHDN, so cap them per user. Only those handlers
+    // are limited on the pages carrying this policy. Configurable via RateLimiting:LhdnValidatePerMinute (default 20).
+    var lhdnValidatePerMinute = builder.Configuration.GetValue("RateLimiting:LhdnValidatePerMinute", 20);
+    options.AddPolicy(EINVWORLD.Helpers.TinValidationRateLimit.Policy, httpContext =>
+    {
+        if (!rateLimitEnabled || !EINVWORLD.Helpers.TinValidationRateLimit.Applies(httpContext))
+            return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("not-a-validation");
+        var user = httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(user,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = lhdnValidatePerMinute <= 0 ? 20 : lhdnValidatePerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
+
     // Anonymous form POSTs (login, register, forgot/resend, contact, customer info, CSP reports): per IP and per
     // path, so one form's traffic never uses up another's (CSP reports can't block a login). GETs are not limited.
     // Configurable via RateLimiting:PublicFormsPerMinute (default 20, leaving room for an office behind one NAT IP).
@@ -815,7 +834,6 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 // the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
 app.UseSerilogRequestLogging();
 app.UseRouting();
-app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     // no-store on dynamic pages (sensitive financial data). Skip the health endpoint so monitors
@@ -831,6 +849,9 @@ app.Use(async (context, next) =>
 
 app.UseSession(); // Add this line to enable session management
 app.UseAuthentication();
+// After authentication so per-user policies (admin-sync, lhdn-validate) see the signed-in user instead of
+// sharing one bucket per IP; before authorization so the global and public-form limits still run first.
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseMiddleware<eInvWorld.Services.Middleware.UserContextMiddleware>();
 

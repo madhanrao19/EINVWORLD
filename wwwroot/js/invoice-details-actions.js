@@ -177,12 +177,13 @@
                 }
             });
 
-            let response = await fetch(`?handler=RejectDocument&documentId=${invoice.uuid}&rejectionReason=${reason}&tin=${invoice.tin}`, {
+            // Values go in the form body (not the URL), so the TIN and the free-text reason stay out of server/CDN logs.
+            let response = await fetch(`?handler=RejectDocument`, {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
                     "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
-                }
+                },
+                body: new URLSearchParams({ documentId: invoice.uuid || "", rejectionReason: reason || "", tin: invoice.tin || "" })
             });
 
             console.log(`📩 Response received - Status: ${response.status}`);
@@ -238,12 +239,13 @@
                 }
             });
 
-            let response = await fetch(`?handler=CancelDocument&documentId=${invoice.uuid}&cancellationReason=${reason}&tin=${invoice.tin}`, {
+            // Values go in the form body (not the URL), so the TIN and the free-text reason stay out of server/CDN logs.
+            let response = await fetch(`?handler=CancelDocument`, {
                 method: "PUT",
                 headers: {
-                    "Content-Type": "application/json",
                     "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
-                }
+                },
+                body: new URLSearchParams({ documentId: invoice.uuid || "", cancellationReason: reason || "", tin: invoice.tin || "" })
             });
 
             console.log(`📩 Response received - Status: ${response.status}`);

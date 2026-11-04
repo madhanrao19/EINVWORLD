@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.33`** (`AppInfo:Version` in `appsettings.json`). v1.50.33 is a **patch**
+> **Current version: `v1.50.34`** (`AppInfo:Version` in `appsettings.json`). v1.50.34 is a **patch**
+> release: TIN and ID numbers are no longer sent in web addresses — see the dated entry below. v1.50.33 was a **patch**
 > release: deploys check disk space first, check site health, and clean up the local build afterwards — see the dated entry below. v1.50.32 was a **patch**
 > release: credit, debit and refund notes created from the Invoices list can be submitted again — see the dated entry below. v1.50.31 was a **patch**
 > release: "Sign out of all devices", shorter password-reset links and encrypted keys — see the dated entry below. v1.50.30 was a **patch**
@@ -475,6 +476,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-04 — v1.50.34 (TIN and ID numbers no longer in web addresses)
+
+- **Security:** "Validate with LHDN" sent the TIN, ID type and ID number (an NRIC for individuals) in the web address, so
+  they were written to the IIS access logs and could reach Cloudflare's logs and browser history. The value is now sent
+  in the request body with the anti-forgery token (POST), on every form that has the button: Add/Edit Company, Add/Edit
+  Buyer, and the Shipping Recipient on Create e-Invoice and Edit Invoice.
+  - The same change for cancel and reject (the TIN and the typed reason were in the address) and for the LHDN
+    validation-details window on the Invoices list.
+  - "Validate with LHDN" is limited to 20 checks per user per minute (`RateLimiting:LhdnValidatePerMinute`), since each
+    check calls LHDN. The rate limiter now runs after sign-in is read, so per-user limits (this one and the admin
+    sync limit) count each user separately instead of everyone behind one office IP together.
+  - The call to LHDN itself is unchanged: LHDN's API takes the ID number in its own address, server to server; the app
+    never logs that address.
+- Nothing changes for users. IIS logs written before this release can still contain ID numbers in old addresses.
 
 ## 📅 2026-11-04 — v1.50.33 (Deploy: disk space, health check, local clean-up)
 
