@@ -99,6 +99,10 @@ dotnet run
 
 Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 
+> In `Development` the background workers (LHDN polling/import, finalizer, emails, recurring invoices, sync jobs)
+> are **off**, because a local run often points at the shared Staging database. Set `Development:RunBackgroundJobs=true`
+> only against a disposable database.
+
 > Migrations auto-apply on startup only when `DatabaseSettings:AutoMigrateOnStartup = true`. It's `false` in
 > the checked-in config: on Staging/Production, `scripts\Deploy-Staging.ps1` applies them at deploy time
 > (after a DB backup). See `DEPLOY-NOTES.md` §1.

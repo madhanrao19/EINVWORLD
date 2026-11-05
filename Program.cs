@@ -649,7 +649,23 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
 });
 
+// A local Development run usually points at the shared Staging database (real taxpayer data). Its workers would then
+// poll LHDN, import, finalize, email and run recurring invoices against Staging next to the server's own workers
+// (seen 2-3 Nov 2026), so in Development EINVWORLD's own background workers are off unless
+// Development:RunBackgroundJobs=true. Staging/Production never run as Development.
+bool devBackgroundJobsOff = builder.Environment.IsDevelopment()
+    && !builder.Configuration.GetValue("Development:RunBackgroundJobs", false);
+if (devBackgroundJobsOff)
+{
+    foreach (var worker in builder.Services
+                 .Where(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Assembly == typeof(Program).Assembly)
+                 .ToList())
+        builder.Services.Remove(worker);
+}
+
 var app = builder.Build();
+if (devBackgroundJobsOff)
+    Log.Warning("Development: background workers are OFF (set Development:RunBackgroundJobs=true to run them, only against a disposable database).");
 
 // Fail fast on broken/missing critical config (blank connection string, missing DataProtection key
 // ring, signing enabled without a cert, localhost URLs in Production, etc.) so a misconfigured
