@@ -482,13 +482,21 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
-## 📅 2026-11-05 — v1.50.39 (local runs don't start background jobs)
+## 📅 2026-11-05 — v1.50.39 (local runs can't touch the shared databases by accident)
 
-- **Safety:** a local development run (`Development` environment) usually connects to the shared Staging database,
-  which holds a copy of Production data. It also started every background worker, so it polled LHDN, imported,
+- **Safety:** a local development run (`Development` environment) usually connected to the shared Staging database,
+  which holds a copy of Production data, and started every background worker — so it polled LHDN, imported,
   finalized invoices, sent emails and ran recurring invoices against Staging next to the Staging server (seen on
-  2-3 Nov 2026). In `Development` these workers now stay off unless `Development:RunBackgroundJobs=true`.
-  Staging and Production are unaffected (they never run as `Development`). Startup migrations were already off by default.
+  2-3 Nov 2026).
+  - In `Development` the app now **refuses to start** when `DefaultConnection` or `WebsiteDb` points at another machine.
+    Connecting on purpose needs `Development:AllowSharedDatabase=true`, and then background workers, migrations and
+    seeders are always off.
+  - Against a local database, background workers, startup migrations and seeders are off by default and switched on with
+    `Development:RunBackgroundJobs`, `Development:RunMigrations`, `Development:RunSeeders`.
+  - Staging and Production are unaffected (they run as `Staging`/`Production`; the switches are ignored there). CI tests
+    don't start the app.
+  - **Developers:** if your user-secrets point at Staging, the local app will stop with a message: point
+    `ConnectionStrings:DefaultConnection`/`WebsiteDb` at LocalDB, or set `Development:AllowSharedDatabase=true`.
 - No database change.
 
 ## 📅 2026-11-05 — v1.50.38 (LHDN import follow-up jobs always stop)

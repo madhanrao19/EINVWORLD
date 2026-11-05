@@ -35,6 +35,11 @@ if (builder.Environment.IsDevelopment())
 }
 builder.Configuration.AddEnvironmentVariables();
 
+// Development must not touch the shared Staging/Production databases by accident (real taxpayer data): stop here,
+// before the logger or anything else connects, unless the connection strings are local or the developer opted in.
+// Workers, migrations and seeders are off in Development unless explicitly enabled against a local database.
+var startupDbPlan = EINVWORLD.Helpers.DevelopmentSafety.Evaluate(builder.Environment.IsDevelopment(), builder.Configuration);
+
 // 🧩 Load the native wkhtmltox library ONLY when the DinkToPdf engine is selected (the default).
 // With the Puppeteer engine the native DLL is not needed and may be absent, so loading it
 // unconditionally would crash startup. Done after configuration is available so the engine is known.
@@ -649,23 +654,13 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
 });
 
-// A local Development run usually points at the shared Staging database (real taxpayer data). Its workers would then
-// poll LHDN, import, finalize, email and run recurring invoices against Staging next to the server's own workers
-// (seen 2-3 Nov 2026), so in Development EINVWORLD's own background workers are off unless
-// Development:RunBackgroundJobs=true. Staging/Production never run as Development.
-bool devBackgroundJobsOff = builder.Environment.IsDevelopment()
-    && !builder.Configuration.GetValue("Development:RunBackgroundJobs", false);
-if (devBackgroundJobsOff)
-{
-    foreach (var worker in builder.Services
-                 .Where(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Assembly == typeof(Program).Assembly)
-                 .ToList())
-        builder.Services.Remove(worker);
-}
+// A local run's workers would poll LHDN, import, finalize and email next to the server's own (seen 2-3 Nov 2026).
+if (!startupDbPlan.RunBackgroundJobs)
+    EINVWORLD.Helpers.DevelopmentSafety.RemoveOwnHostedServices(builder.Services, typeof(Program).Assembly);
 
 var app = builder.Build();
-if (devBackgroundJobsOff)
-    Log.Warning("Development: background workers are OFF (set Development:RunBackgroundJobs=true to run them, only against a disposable database).");
+if (startupDbPlan.Notice != null)
+    Log.Warning("{StartupDatabaseNotice}", startupDbPlan.Notice);
 
 // Fail fast on broken/missing critical config (blank connection string, missing DataProtection key
 // ring, signing enabled without a cert, localhost URLs in Production, etc.) so a misconfigured
@@ -683,7 +678,7 @@ Log.Information(
     app.Configuration.GetValue("DocumentCapture:Enabled", false),
     app.Configuration.GetValue("DocumentCapture:OcrEnabled", false),
     app.Configuration.GetValue("SmartCapture:Enabled", false),
-    app.Configuration.GetValue("DatabaseSettings:AutoMigrateOnStartup", false));
+    startupDbPlan.RunMigrations);
 
 // Apply migrations and seed data
 using (var scope = app.Services.CreateScope())
@@ -694,7 +689,7 @@ using (var scope = app.Services.CreateScope())
     // controlled step (set DatabaseSettings:AutoMigrateOnStartup=false and run `dotnet ef database update`).
     // Defaults to true to preserve existing behaviour.
     var context = services.GetRequiredService<ApplicationDbContext>();
-    if (app.Configuration.GetValue<bool>("DatabaseSettings:AutoMigrateOnStartup", true))
+    if (startupDbPlan.RunMigrations)
     {
         context.Database.Migrate();
         // WebsiteDbContext owns the Resources tables (ResourceTypes/ResourceItems). It has its own
@@ -706,15 +701,18 @@ using (var scope = app.Services.CreateScope())
     }
     else
     {
-        Log.Information("⏭️ Skipping startup migrations (DatabaseSettings:AutoMigrateOnStartup=false). Run migrations as a deploy step.");
+        Log.Information("⏭️ Skipping startup migrations (DatabaseSettings:AutoMigrateOnStartup=false, or Development without Development:RunMigrations). Run migrations as a deploy step.");
     }
 
-    // Seed data codes
-    var seeder = services.GetRequiredService<DataSeeder>(); // Resolve DataSeeder from the service provider
-    await seeder.SeedDataAsync(); // Seed the data codes
+    if (startupDbPlan.RunSeeders)
+    {
+        // Seed data codes
+        var seeder = services.GetRequiredService<DataSeeder>(); // Resolve DataSeeder from the service provider
+        await seeder.SeedDataAsync(); // Seed the data codes
 
-    var roleSeeder = services.GetRequiredService<RoleSeeder>();
-    await roleSeeder.SeedRolesAndAdminAsync(); // Seed roles
+        var roleSeeder = services.GetRequiredService<RoleSeeder>();
+        await roleSeeder.SeedRolesAndAdminAsync(); // Seed roles
+    }
 
     // ✅ Auto-create folders from FilePathConfig
     var filePathConfig = builder.Configuration.GetSection("FilePathConfig").Get<FilePathConfig>()

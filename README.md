@@ -99,9 +99,12 @@ dotnet run
 
 Then browse to the HTTPS URL shown (default `https://localhost:7073`).
 
-> In `Development` the background workers (LHDN polling/import, finalizer, emails, recurring invoices, sync jobs)
-> are **off**, because a local run often points at the shared Staging database. Set `Development:RunBackgroundJobs=true`
-> only against a disposable database.
+> **Local runs are kept away from shared databases (v1.50.39).** In `Development` the app refuses to start when
+> `DefaultConnection` or `WebsiteDb` points at another machine (Staging/Production hold real taxpayer data) — use a
+> local SQL Server / LocalDB. To connect to a shared database on purpose set `Development:AllowSharedDatabase=true`;
+> background workers, migrations and seeders then stay off. Against a local database they are off by default too:
+> enable them with `Development:RunBackgroundJobs`, `Development:RunMigrations`, `Development:RunSeeders` (`true`;
+> a fresh local database needs `RunMigrations` + `RunSeeders` once). These switches have no effect on Staging/Production.
 
 > Migrations auto-apply on startup only when `DatabaseSettings:AutoMigrateOnStartup = true`. It's `false` in
 > the checked-in config: on Staging/Production, `scripts\Deploy-Staging.ps1` applies them at deploy time

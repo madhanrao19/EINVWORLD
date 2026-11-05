@@ -49,8 +49,12 @@ From the project folder (the one with `EINVWORLD.csproj`):
 # One-time (the project already has a UserSecretsId, so this just confirms it)
 dotnet user-secrets init
 
-# Database
+# Database — must be LOCAL in Development (a non-local server stops startup; see README "Local runs")
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Database=eInvWorld;Trusted_Connection=True;TrustServerCertificate=True"
+dotnet user-secrets set "ConnectionStrings:WebsiteDb" "Server=localhost;Database=eInvWorldWebsite;Trusted_Connection=True;TrustServerCertificate=True"
+# Fresh local database: create schema + seed data once (Development only, refused against a shared server)
+dotnet user-secrets set "Development:RunMigrations" "true"
+dotnet user-secrets set "Development:RunSeeders" "true"
 
 # LHDN MyInvois (PREPROD credentials for dev)
 dotnet user-secrets set "LHDNApiConfig:ClientSecret"  "your-preprod-client-secret"
