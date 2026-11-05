@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.42`** (`AppInfo:Version` in `appsettings.json`). v1.50.42 is a **patch**
+> **Current version: `v1.50.43`** (`AppInfo:Version` in `appsettings.json`). v1.50.43 is a **patch**
+> release: a failed scheduled LHDN import logs the TIN masked — see the dated entry below. v1.50.42 was a **patch**
 > release: the lead-approval activity entry masks the TIN — see the dated entry below. v1.50.41 was a **patch**
 > release: demo users no longer get built-in passwords when seeding is switched on — see the dated entry below. v1.50.40 was a **patch**
 > release: tax numbers (TINs) are masked in LHDN import results, logs and token errors — see the dated entry below. v1.50.39 was a **patch**
@@ -484,6 +485,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-05 — v1.50.43 (failed scheduled import logs the TIN masked)
+
+- **Security:** when the scheduled LHDN import failed for a company, the error log line carried the full TIN. It is now
+  masked (`LogSanitizer.MaskTin`). Found by re-checking every logging path after v1.50.42. The lead-approval masking now
+  has an SQL integration test.
+- No database change.
 
 ## 📅 2026-11-05 — v1.50.42 (lead approval activity entry masks the TIN)
 
