@@ -230,3 +230,102 @@ Redeploying the previous build ignores the additive table.
 - Both secrets expire together: a missed rotation stops taxpayer reads for that company on the expiry date.
 - Each company must register its own **Production** ERP. Holding a taxpayer's ERP credentials makes EINVWORLD that company's
   read system of record, so explicit, revocable company consent is required.
+
+## 2. Duplicate-UUID protection for imported invoices
+
+| | |
+|---|---|
+| Status | 📝 **Proposed** — investigated 2026-11-05 |
+| Database change | Phase 2 only — needs explicit approval |
+| Implementation | ⛔ **Not approved** |
+
+### Problem ✅
+`InvoiceHeaders.UUID` has a non-unique index only (`IX_InvoiceHeaders_UUID`). An LHDN document can therefore be stored
+twice if two writers both see "no row for this UUID" and insert. Since v1.50.35 the supplier's and the buyer's company
+can both import the same document (Sent for one, Received for the other).
+
+### What already protects it ✅ (code read 2026-11-05)
+- `InvoiceFullSyncHelper.SyncAllFromApiAsync` takes a per-UUID `SemaphoreSlim` (static, so shared by
+  `InvoiceStatusUpdater` and `DurableSyncJobWorker`) and looks the UUID up globally (not per company) inside a
+  transaction. **Within one process**, imports of the same document therefore run one after another and update one row.
+- `DurableSyncJobWorker` claims jobs with `UPDLOCK, READPAST`, so two processes never run the same job.
+- Staging: **0** duplicate UUID groups (read-only count, 2026-11-05). Production: not checked (no access from dev).
+
+### Where duplicates can still happen 🔬
+They can only happen when **two processes** write to the same database at once:
+1. **IIS overlapped recycle:** by default IIS starts the new worker process before the old one stops. Both pools use the
+   defaults (see §3), so for up to 90 s, about every 29 h, two `InvoiceStatusUpdater` instances run.
+2. **A local Development run against Staging:** seen 4 times on 2–3 Nov 2026. Blocked from v1.50.39 (PR #465).
+3. **Submit vs import:** `InvoiceSubmissionHelper` writes the UUID onto the draft's row after LHDN accepts it, while an
+   import that sees the document in `documents/search` inserts a new row unless it already finds that UUID. The per-UUID
+   semaphore does not cover the submit path. It is unlikely, because search lags submission, but possible.
+
+### Uniqueness scope: global per database ✅
+A UUID identifies one LHDN document. EINVWORLD stores it as **one** row shared by both companies through
+`SupplierId`/`CustomerId`/`PublicCustomerId`; tenant views filter on those links. A `(UUID, CompanyId)` key would be wrong:
+it would allow exactly the duplicate that double-counts the document. Staging and Production are separate databases, so
+a database-level rule applies per environment automatically. Drafts have no UUID (`NULL`), so the index must be filtered.
+
+### Proposed plan 📝
+**Phase 0, read-only (owner):** run the duplicate count on each database, Production included, before anything else:
+`SELECT UUID, COUNT(*) FROM InvoiceHeaders WHERE UUID IS NOT NULL AND UUID <> '' GROUP BY UUID HAVING COUNT(*) > 1`.
+Any hits need a reviewed merge (keep the row with lines/PDF; repoint history) before Phase 2.
+
+**Phase 1, code only, no schema change (Significant tier):**
+- Inside the existing transaction in `SyncAllFromApiAsync`, before the UUID lookup, take a SQL application lock:
+  `EXEC sp_getapplock @Resource = N'einv:uuid:<uuid>', @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 30000`.
+  This serialises the same UUID across processes. The lock is released at commit/rollback, scoped to the database (so to
+  the environment), with no new table. Keep the in-process semaphore so the same process doesn't wait on SQL.
+- In `InvoiceSubmissionHelper`, take the same lock in a short transaction around saving the accepted UUID. If an imported
+  row with that UUID already exists, log and merge into the submitted row instead of keeping two rows.
+- On lock timeout (result < 0): skip the document this run (it is re-fetched next run). Never insert without the lock.
+- Tests: SQL Server integration tests (CI LocalDB) with two contexts importing the same UUID concurrently → one row.
+
+**Phase 2, schema (Critical tier, needs approval):** replace the index with a filtered unique one:
+`CREATE UNIQUE INDEX UX_InvoiceHeaders_UUID ON InvoiceHeaders(UUID) WHERE UUID IS NOT NULL AND UUID <> ''`
+(hand-authored migration, 4 artifacts, idempotent `Apply_*.sql` that **aborts if duplicates exist**). Then the import
+catches SQL errors 2601/2627 on insert, reloads the existing row and updates it. Rollback: drop the unique index and
+recreate the non-unique one (no data change).
+
+**Order:** the §3 IIS change first (removes the most likely cause, no code), then Phase 0, Phase 1, Phase 2.
+
+## 3. IIS app-pool recycling (Staging and Production)
+
+| | |
+|---|---|
+| Status | 📝 **Proposed** — investigated 2026-11-05 (read-only: server `applicationHost.config`) |
+| Server change | Owner/operator only; not made |
+
+### Current settings ✅
+| Pool | startMode | idleTimeout | Recycling | Overlapping rotation |
+|---|---|---|---|---|
+| `staging.einvworld.com` | AlwaysRunning | 0 (never) | default: every 1,740 min (29 h) | default: **allowed** |
+| `einvworld.com` (Production) | default **OnDemand** | default **20 min** | default: every 1,740 min (29 h) | default: **allowed** |
+
+Neither site sets `preloadEnabled`. Staging's `DurableSyncJobWorker started` log lines confirm restarts about every 29 h.
+
+### Risks
+- **Overlap:** for the shutdown window (default 90 s) the old and the new process both run every background worker
+  (status polling, LHDN import, finalizer, emails). That means double LHDN calls (429 risk) and the duplicate-UUID race in §2.
+- **Production idle shutdown:** after 20 min without requests the process stops, and **background polling/import stops**
+  until the next request. Staging does not have this problem.
+
+### Recommendation 📝 (apply in a maintenance window, Staging first, then Production)
+1. Both pools: `recycling.disallowOverlappingRotation = true`. A recycle then means a few seconds of downtime instead of
+   two processes. Cloudflare shows its error page meanwhile, and the durable job queue resumes. This is the safest choice
+   for a single-instance app with background workers.
+2. Both pools: replace the 29 h rolling recycle (`periodicRestart.time = 00:00:00`) with one scheduled recycle at a quiet
+   time, e.g. 03:30 MYT, so restarts are predictable and outside office hours.
+3. Production only: `startMode = AlwaysRunning`, `processModel.idleTimeout = 00:00:00` and the site's
+   `applicationDefaults.preloadEnabled = true` (needs the IIS *Application Initialization* feature), matching Staging.
+
+Commands for the operator (elevated, on the server; back up first with `appcmd add backup pre-recycle-change`):
+
+```
+%windir%\system32\inetsrv\appcmd set apppool "staging.einvworld.com" /recycling.disallowOverlappingRotation:true /recycling.periodicRestart.time:00:00:00 /+recycling.periodicRestart.schedule.[value='03:30:00']
+%windir%\system32\inetsrv\appcmd set apppool "einvworld.com" /recycling.disallowOverlappingRotation:true /recycling.periodicRestart.time:00:00:00 /+recycling.periodicRestart.schedule.[value='03:30:00'] /startMode:AlwaysRunning /processModel.idleTimeout:00:00:00
+%windir%\system32\inetsrv\appcmd set site "einvworld.com" /applicationDefaults.preloadEnabled:true
+```
+
+Rollback: `appcmd restore backup pre-recycle-change`. Check: health endpoints 200, and one `DurableSyncJobWorker started`
+per recycle.
