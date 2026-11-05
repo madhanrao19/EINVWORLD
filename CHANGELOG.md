@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.38`** (`AppInfo:Version` in `appsettings.json`). v1.50.38 is a **patch**
+> **Current version: `v1.50.39`** (`AppInfo:Version` in `appsettings.json`). v1.50.39 is a **patch**
+> release: a local development run no longer starts background jobs against the shared Staging database — see the dated entry below. v1.50.38 was a **patch**
 > release: an LHDN import can no longer queue follow-up jobs forever on invoices it cannot repair — see the dated entry below. v1.50.37 was a **patch**
 > release: Staging keeps its real CAPTCHA site key after a deploy — see the dated entry below. v1.50.36 was a **patch**
 > release: the site warns (Staging) or refuses to start (Production) when it has Cloudflare's test CAPTCHA keys — see the dated entry below. v1.50.35 was a **patch**
@@ -480,6 +481,23 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-05 — v1.50.39 (local runs can't touch the shared databases by accident)
+
+- **Safety:** a local development run (`Development` environment) usually connected to the shared Staging database,
+  which holds a copy of Production data, and started every background worker — so it polled LHDN, imported,
+  finalized invoices, sent emails and ran recurring invoices against Staging next to the Staging server (seen on
+  2-3 Nov 2026).
+  - In `Development` the app now **refuses to start** when `DefaultConnection` or `WebsiteDb` points at another machine.
+    Connecting on purpose needs `Development:AllowSharedDatabase=true`, and then background workers, migrations and
+    seeders are always off.
+  - Against a local database, background workers, startup migrations and seeders are off by default and switched on with
+    `Development:RunBackgroundJobs`, `Development:RunMigrations`, `Development:RunSeeders`.
+  - Staging and Production are unaffected (they run as `Staging`/`Production`; the switches are ignored there). CI tests
+    don't start the app.
+  - **Developers:** if your user-secrets point at Staging, the local app will stop with a message: point
+    `ConnectionStrings:DefaultConnection`/`WebsiteDb` at LocalDB, or set `Development:AllowSharedDatabase=true`.
+- No database change.
 
 ## 📅 2026-11-05 — v1.50.38 (LHDN import follow-up jobs always stop)
 

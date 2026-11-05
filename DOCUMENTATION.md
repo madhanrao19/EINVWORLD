@@ -611,7 +611,10 @@ blank in files and supplied via env vars / user-secrets.
 ## 15. Build, test & CI
 
 - **Build:** `dotnet build EINVWORLD.sln -c Release`. **Run:** `dotnet run` (dev; default
-  `https://localhost:7073`).
+  `https://localhost:7073`). In `Development` (`Helpers/DevelopmentSafety.cs`, v1.50.39) startup is refused
+  when a connection string points at a non-local SQL Server unless `Development:AllowSharedDatabase=true` (then workers,
+  migrations and seeders are forced off); against a local database EINVWORLD's background workers, migrations and seeders
+  run only with `Development:RunBackgroundJobs` / `RunMigrations` / `RunSeeders` = `true`. Other environments unchanged.
 - **Tests:** `EINVWORLD.Tests/` (xUnit) — `dotnet test`. Covers helpers, validators, the background
   queue, AI (`Services/AI`, provider mapping, config validation), and UBL mapping.
 - **Integration tests:** `EINVWORLD.Tests/Integration/` runs against a **real SQL Server** — migrations
