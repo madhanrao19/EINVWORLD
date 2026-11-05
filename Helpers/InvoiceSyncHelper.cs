@@ -427,7 +427,7 @@ namespace EINVWORLD.Helpers
             var allSummaries = await GetAllUuidsForSubmitterAsync(tin, accessToken, lookbackDays);
 
             if (allSummaries == null || !allSummaries.Any())
-                return $"No documents found for TIN: {tin}";
+                return $"No documents found for TIN: {LogSanitizer.MaskTin(tin)}";
 
             // Only invoices we already have locally can be safely skipped — an unseen UUID always needs
             // the raw-document fetch, since /documents/search never carries line-item content.

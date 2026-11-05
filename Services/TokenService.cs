@@ -224,7 +224,7 @@ namespace eInvWorld.Services
                 {
                     // This will reveal the true error! Usually "invalid_grant" or "Intermediary not appointed"
                     _logger.LogError("❌ LHDN 400 BadRequest. They rejected the Intermediary Login. LHDN Message: {Body}", body);
-                    throw new InvalidOperationException($"LHDN rejected intermediary token for {tin}. Reason: {body}");
+                    throw new InvalidOperationException($"LHDN rejected intermediary token for {LogSanitizer.MaskTin(tin)}. Reason: {body}");
                 }
                 else if (response.StatusCode == HttpStatusCode.TooManyRequests)
                 {
@@ -259,7 +259,7 @@ namespace eInvWorld.Services
                 .FirstOrDefaultAsync();
 
             if (string.IsNullOrWhiteSpace(tin) || tin.StartsWith("EI00"))
-                throw new Exception($"❌ Invalid or General TIN ({tin}) assigned to this user.");
+                throw new Exception($"❌ Invalid or General TIN ({LogSanitizer.MaskTin(tin)}) assigned to this user.");
 
             return tin;
         }
@@ -268,7 +268,7 @@ namespace eInvWorld.Services
         public async Task<string> GetAccessTokenForTIN(string tin)
         {
             if (GeneralTINHelper.IsGeneralTIN(tin))
-                throw new Exception($"❌ Token request blocked: General TIN ({tin}) is not allowed.");
+                throw new Exception($"❌ Token request blocked: General TIN ({LogSanitizer.MaskTin(tin)}) is not allowed.");
 
             return await GetOrFetchTokenAsync(tin);
         }
