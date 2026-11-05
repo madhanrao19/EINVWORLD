@@ -490,7 +490,7 @@ namespace EINVWORLD.Helpers
                 // Continue only when this run stored a document we didn't have: each follow-up then adds at least one
                 // row, so the chain always ends. Re-fetching local rows (status refresh, or a supplier/buyer repair
                 // that may never succeed) is not progress — it would re-queue forever on the same rows.
-                bool queued = newImported > 0 && await QueueImportContinuationAsync(tin, lookbackDays, continuationJobType);
+                bool queued = ShouldQueueContinuation(deferred, newImported) && await QueueImportContinuationAsync(tin, lookbackDays, continuationJobType);
                 result += queued
                     ? $", Deferred: {deferred} (continuing in a follow-up job)"
                     : $", Deferred: {deferred} (picked up by the next refresh)";
@@ -517,6 +517,12 @@ namespace EINVWORLD.Helpers
             var toFetch = needed.Take(Math.Max(1, max)).ToList();
             return (toFetch, skipped, needed.Count - toFetch.Count);
         }
+
+        /// <summary>
+        /// A follow-up job is queued only when documents are left over and this run stored at least one document we
+        /// didn't have, so every follow-up makes progress and the chain always ends.
+        /// </summary>
+        internal static bool ShouldQueueContinuation(int deferred, int newImported) => deferred > 0 && newImported > 0;
 
         /// <summary>Delay before a continuation job runs, leaving LHDN's get-document queue free for interactive work.</summary>
         private static readonly TimeSpan ImportContinuationDelay = TimeSpan.FromMinutes(2);
