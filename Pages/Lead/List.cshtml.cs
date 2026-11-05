@@ -162,7 +162,7 @@ namespace eInvWorld.Pages.Lead
                 UserName = User.Identity?.Name ?? "System",
                 Action = "Approved Company Lead",
                 Module = "PublicCustomer",
-                Data = $"Approved: {party.CompanyName} ({party.TIN})",
+                Data = $"Approved: {party.CompanyName} ({EINVWORLD.Helpers.LogSanitizer.MaskTin(party.TIN)})",
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
                 Timestamp = DateTime.Now
             });
