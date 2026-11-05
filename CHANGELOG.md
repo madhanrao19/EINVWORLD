@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.39`** (`AppInfo:Version` in `appsettings.json`). v1.50.39 is a **patch**
+> **Current version: `v1.50.40`** (`AppInfo:Version` in `appsettings.json`). v1.50.40 is a **patch**
+> release: tax numbers (TINs) are masked in LHDN import results, logs and token errors — see the dated entry below. v1.50.39 was a **patch**
 > release: a local development run no longer starts background jobs against the shared Staging database — see the dated entry below. v1.50.38 was a **patch**
 > release: an LHDN import can no longer queue follow-up jobs forever on invoices it cannot repair — see the dated entry below. v1.50.37 was a **patch**
 > release: Staging keeps its real CAPTCHA site key after a deploy — see the dated entry below. v1.50.36 was a **patch**
@@ -481,6 +482,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-05 — v1.50.40 (TINs masked in LHDN import logs)
+
+- **Security:** when an LHDN import found no documents, its result "No documents found for TIN: …" carried the full
+  TIN. That result is written to the system log and stored on the Sync Jobs entry (seen on Staging, 4 Nov 2026). An IG
+  TIN identifies a person. It is now masked like every other TIN in the logs (`LogSanitizer.MaskTin`; general TINs stay
+  readable).
+- Also masked: the TIN in the "reject document" LHDN error log, in the Sync Jobs tracking-failure warning, and in three
+  token error messages that are logged when a token can't be obtained.
+- No database change.
 
 ## 📅 2026-11-05 — v1.50.39 (local runs can't touch the shared databases by accident)
 
