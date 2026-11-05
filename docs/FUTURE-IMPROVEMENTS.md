@@ -329,3 +329,57 @@ Commands for the operator (elevated, on the server; back up first with `appcmd a
 
 Rollback: `appcmd restore backup pre-recycle-change`. Check: health endpoints 200, and one `DurableSyncJobWorker started`
 per recycle.
+
+### Graceful shutdown and memory (added 2026-11-05)
+- Both sites run ASP.NET Core **in-process** (`hostingModel="inprocess"`). The app does not set `HostOptions.ShutdownTimeout`,
+  so background workers get .NET's default **30 s** to stop. Keep the pool's `shutdownTimeLimit` at its default 90 s, so
+  IIS never kills the process before the app has stopped.
+- An interrupted sync job is not lost: `DurableSyncJobWorker` jobs carry `LockedUntilUtc`, and orphaned jobs are picked up
+  again after a restart. An interrupted import is re-run by the next scheduled cycle (imports are idempotent per UUID).
+- Memory: not measured (remote WMI is denied from the dev PC). Check the pool's private bytes in Task Manager / `perfmon`
+  on the server before adding a `privateMemory` recycle limit. A memory-based recycle is not recommended without data.
+
+## 4. Historical logs that still contain full TINs
+
+| | |
+|---|---|
+| Status | 📝 **Proposed**: read-only inventory done on Staging 2026-11-05 |
+| Data change | ⛔ **Needs explicit approval** (Critical tier). Staging first, then Production (run by the owner; never from a dev PC) |
+
+### Inventory ✅ (Staging, read-only counts, 5 Nov 2026)
+Raw TIN = `C` + 10 digits or `IG` + 9+ digits. Counts only; no values were read out.
+
+| Table.column | Rows with a raw TIN | Kind | Action |
+|---|---|---|---|
+| `SystemLogs.Message` / `LogEvent` / `Exception` | 60,280 / 68,052 / 7,772 (of 372,021 rows, 1.06 GB; oldest 2026-07-05) | free-text log | **mask** |
+| `SyncJobs.Message` | 17 (of 119) | free-text job result | **mask** |
+| `UserActivityLogs.Data` | 472 (of 702): 398 old login entries "TIN: …" (2025-06 → 2026-11-03, before v1.50.34), 2 lead approvals | free-text activity | **mask** |
+| `AuditLogs.Tin` | 77 | tamper-evident hash chain (business identifier) | **keep — never UPDATE/DELETE `AuditLogs`** |
+| `LHDNTokenLogs.TIN`, `SyncJobs.Tin` | 7,876 / 48 | dedicated key column (which company) | keep |
+
+By month (`SystemLogs.Message`): Jul 48,493 · Aug 9,022 · Sep 1,141 · Oct 1,450 · Nov 174 (the last at 15:02 on 5 Nov, before
+v1.50.40). Since v1.50.40 nothing new has been written; every log source found is masked in the code. One writer remains:
+`Pages/Lead/List.cshtml.cs` writes "Approved: {CompanyName} ({TIN})" to `UserActivityLogs`. It is a small code fix,
+to do in its own PR.
+
+`LogCleanupSettings:RetentionDays` is **365**, so without action these rows stay until mid-2027.
+
+### Proposed remediation 📝
+1. **Fix the last writer first** (lead approval → `LogSanitizer.MaskTin`), so no new raw TINs appear.
+2. **Backup:** `BACKUP DATABASE … WITH COPY_ONLY` to the server's restricted backup folder (same ACL as other DB backups),
+   kept 14 days, then deleted. Do not export rows to files or to the incident folder.
+3. **Dry run (read-only):** a one-off script (session scratchpad or `scripts/`, reviewed in a PR) applies the same masking
+   rule as `LogSanitizer.MaskTin` (general TINs `EI000…` stay readable) to each matching row in memory and reports, per
+   table and column: rows matched, rows that would change, and a few *shapes* with digits replaced by `#`. It writes nothing.
+4. **Apply:** the same script with `-Apply` updates rows **by primary key in batches of 1,000**, one transaction per batch,
+   and only the three free-text tables above. It does an `UPDATE` (not a `DELETE`), so the operational history stays, and
+   touches only rows that still match the pattern (so re-running it is safe). It logs counts, never values. It runs in a
+   quiet hour, because `SystemLogs` is the app's live log sink.
+   - Alternative for `SystemLogs` only: lower `RetentionDays` to 120 and let `LogCleanupService` delete the July–August
+     rows (about 85 % of the matches). This is simpler but deletes those logs, and it is a config change plus deploy.
+5. **Verify:** re-run the inventory → 0 rows in the three free-text tables; `AuditLogs` untouched (**Admin → Audit Trail →
+   Verify chain integrity** still passes); health endpoints 200; the app keeps logging.
+6. **Rollback:** restore the copy-only backup as `<db>_REMEDIATION_RESTORE`, copy the original text back by primary key
+   for the affected rows, then drop the restore database.
+7. **Production:** the owner runs steps 2–5 on Production after Staging has passed. The Production counts will differ
+   (Staging is a copy).
