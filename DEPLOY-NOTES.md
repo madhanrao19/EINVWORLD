@@ -22,8 +22,8 @@ changes are additive and AI/features stay off unless already enabled.
    vars) is server-owned. Put any per-server override there as an environment variable, never in a
    server's appsettings file: the next deploy replaces it (the script warns and the backup keeps it).
 4. **Deploy the new build** into `App\` (keep `web.config` env and the
-   key-ring folder intact — never overwrite server secrets). Get the build from the green **CI run on
-   `main`** → **Artifacts → `einvworld-app`** (a ready `dotnet publish` output; carries no secrets).
+   key-ring folder intact — never overwrite server secrets). Deploy the commit whose **CI run on `main`**
+   is green (CI no longer uploads a build artifact since 2026-11-05 — it filled the Actions storage quota).
    For Staging specifically, `scripts\Deploy-Staging.ps1` automates publish + backup + copy and
    **always excludes `web.config`** from the copy — safer than a manual
    `dotnet publish`/`robocopy`, which will happily overwrite `web.config` (where Staging's real
@@ -75,7 +75,7 @@ changes are additive and AI/features stay off unless already enabled.
    - **A failed run keeps the build output** for diagnosis.
    If the deploying machine lacks the SDK pinned in `global.json` (10.0.300), the script installs it
    per-user into `%LOCALAPPDATA%\Microsoft\dotnet` on a real run (`-WhatIf` only reports it).
-   **If you're deploying from a CI artifact** (or any pre-built output), run it with
+   **If you're deploying a pre-built output**, run it with
    **`-SkipPublish`** after copying the publish folder to `bin\Release\net10.0\win-x64\publish`.
 5. **Config/env changes for this version:**
    - **AI (if you use it):** the `AIAssistant__*` environment variables are **retired** — rename them to
