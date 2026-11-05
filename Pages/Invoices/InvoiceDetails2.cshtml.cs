@@ -363,7 +363,7 @@ namespace EINVWORLD.Pages.Invoices
                 }
                 catch (Exception apiEx)
                 {
-                    _logger.LogError(apiEx, "❌ LHDN API call failed for document {documentId} with TIN {userTin}", documentId, userTin);
+                    _logger.LogError(apiEx, "❌ LHDN API call failed for document {documentId} with TIN {userTin}", documentId, EINVWORLD.Helpers.LogSanitizer.MaskTin(userTin));
                     return StatusCode(500, $"Failed to reject document in LHDN API: {apiEx.Message}");
                 }
 

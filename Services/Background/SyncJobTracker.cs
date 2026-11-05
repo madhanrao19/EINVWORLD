@@ -56,7 +56,7 @@ namespace EINVWORLD.Services.Background
             }
             catch (Exception ex)
             {
-                HandleTrackingException(ex, $"create SyncJob row for TIN {tin}");
+                HandleTrackingException(ex, $"create SyncJob row for TIN {EINVWORLD.Helpers.LogSanitizer.MaskTin(tin)}");
                 return 0;
             }
         }
