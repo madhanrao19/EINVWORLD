@@ -55,6 +55,9 @@ dotnet user-secrets set "ConnectionStrings:WebsiteDb" "Server=localhost;Database
 # Fresh local database: create schema + seed data once (Development only, refused against a shared server)
 dotnet user-secrets set "Development:RunMigrations" "true"
 dotnet user-secrets set "Development:RunSeeders" "true"
+# Optional demo users on a local database: no built-in passwords, set your own strong ones
+#   dotnet user-secrets set "Seeding:SeedDefaultUsers" "true"
+#   dotnet user-secrets set "Seeding:DefaultAdminPassword" "<strong password>"   (also DefaultSupplierPassword / DefaultBuyerPassword)
 
 # LHDN MyInvois (PREPROD credentials for dev)
 dotnet user-secrets set "LHDNApiConfig:ClientSecret"  "your-preprod-client-secret"

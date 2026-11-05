@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.40`** (`AppInfo:Version` in `appsettings.json`). v1.50.40 is a **patch**
+> **Current version: `v1.50.41`** (`AppInfo:Version` in `appsettings.json`). v1.50.41 is a **patch**
+> release: demo users no longer get built-in passwords when seeding is switched on — see the dated entry below. v1.50.40 was a **patch**
 > release: tax numbers (TINs) are masked in LHDN import results, logs and token errors — see the dated entry below. v1.50.39 was a **patch**
 > release: a local development run no longer starts background jobs against the shared Staging database — see the dated entry below. v1.50.38 was a **patch**
 > release: an LHDN import can no longer queue follow-up jobs forever on invoices it cannot repair — see the dated entry below. v1.50.37 was a **patch**
@@ -482,6 +483,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-05 — v1.50.41 (no built-in demo passwords)
+
+- **Security:** with `Seeding:SeedDefaultUsers=true`, the startup seeder created `admin@`, `supplier@` and
+  `buyer@einvworld.com` with built-in, publicly known passwords whenever no password was configured. It now has no
+  fallback: a demo user is created only when `Seeding:DefaultAdminPassword` / `DefaultSupplierPassword` /
+  `DefaultBuyerPassword` is set in user-secrets or environment variables and is not one of the old defaults.
+  Otherwise the user is skipped with a warning. A user that can't be created is logged with error codes only.
+- Existing users, roles and passwords are never changed. Staging and Production have seeding off, so nothing changes there.
+- The Playwright helpers read the demo passwords from `E2E_ADMIN_PASSWORD`, `E2E_SUPPLIER_PASSWORD` and
+  `E2E_BUYER_PASSWORD` instead of the repository.
+- No database change.
 
 ## 📅 2026-11-05 — v1.50.40 (TINs masked in LHDN import logs)
 
