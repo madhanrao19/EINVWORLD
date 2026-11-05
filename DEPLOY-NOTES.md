@@ -490,9 +490,11 @@ Point Uptime Kuma / PRTG / Zabbix at `/health/ready`.
   with the accountant whether each needs cancelling and re-issuing against the right original invoice.
 - **Audit trail** is hash-chained and append-only — never `UPDATE`/`DELETE` `AuditLogs`. Verify
   integrity any time from **Admin → Audit Trail → Verify chain integrity**.
-- **Demo users:** `Seeding:SeedDefaultUsers` is **off** by default (v1.50.3). When turned on it seeds `admin@`/`supplier@`/
-  `buyer@einvworld.com` with well-known passwords, so only enable it for a throwaway database. Accounts that already exist
-  are never changed by the setting: on a public site (Staging included) delete the demo accounts or change their passwords.
+- **Demo users:** `Seeding:SeedDefaultUsers` is **off** by default (v1.50.3). Since v1.50.41 there are **no built-in
+  passwords**: when it is on, `admin@`/`supplier@`/`buyer@einvworld.com` are created only if
+  `Seeding:DefaultAdminPassword` / `DefaultSupplierPassword` / `DefaultBuyerPassword` are set (user-secrets or env vars)
+  and are not the old public defaults; otherwise a warning is logged and the user is skipped. Accounts that already
+  exist are never changed: on a public site (Staging included) delete the demo accounts or change their passwords.
 - **General-TIN memberships (v1.47.11, once per database):** run `scripts/Remove-GeneralTinMemberships.sql`
   (step 1 preview, then step 2 after a backup). No user should belong to a General Public / Foreign Buyer /
   Foreign Supplier / Government placeholder company.

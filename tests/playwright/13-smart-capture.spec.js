@@ -2,6 +2,8 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 
 const FIXTURES = path.join(__dirname, 'fixtures');
+// From the environment, never from Git.
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
 
 // NOTE on accounts used here: this verification environment has no real LHDN sandbox credentials
 // configured (LHDNApiConfig:ClientSecret is blank — a secret, never checked in). Any non-Admin,
@@ -32,7 +34,7 @@ test.describe('Smart Capture', () => {
     // Global test timeout (playwright.config.js) is 60s; this test's terminal-state wait alone can take
     // up to AI:TimeoutSeconds (180s) when Ollama isn't reachable — extend so that wait isn't cut short.
     test.setTimeout(240_000);
-    await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
+    await loginVerifyUser(page, 'admin@einvworld.com', ADMIN_PASSWORD);
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('h1.einv-page-title')).toContainText('Create from document'); // nav label (Smart Capture is the feature name)
 
@@ -59,7 +61,7 @@ test.describe('Smart Capture', () => {
   });
 
   test('rejects a renamed non-PDF (magic-byte check)', async ({ page }) => {
-    await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
+    await loginVerifyUser(page, 'admin@einvworld.com', ADMIN_PASSWORD);
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
     await page.locator('#scUpload').setInputFiles(path.join(FIXTURES, 'fake.pdf'));
     await page.click('#scUploadSubmit');
@@ -68,7 +70,7 @@ test.describe('Smart Capture', () => {
   });
 
   test('rejects an oversized upload', async ({ page }) => {
-    await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
+    await loginVerifyUser(page, 'admin@einvworld.com', ADMIN_PASSWORD);
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
     // Generated in-memory rather than committed as a fixture file, to avoid a 15MB dummy binary in git
     // history — only its size matters for this check, not its content.
@@ -88,7 +90,7 @@ test.describe('Smart Capture', () => {
   // (run against real SQL Server). This browser-level test covers what IS verifiable here: the download
   // endpoint requires authentication at all, and the owning tenant can retrieve its own document.
   test('download endpoint requires authentication; owning tenant can retrieve its own document', async ({ page, request }) => {
-    await loginVerifyUser(page, 'admin@einvworld.com', 'Admin@123');
+    await loginVerifyUser(page, 'admin@einvworld.com', ADMIN_PASSWORD);
     await page.goto('/Invoices/SmartCapture', { waitUntil: 'domcontentloaded' });
     await page.locator('#scUpload').setInputFiles(path.join(FIXTURES, 'valid-invoice.pdf'));
     await page.click('#scUploadSubmit');

@@ -1,10 +1,11 @@
 const { expect } = require('@playwright/test');
 const crypto = require('crypto');
 
+// Passwords come from the environment (E2E_ADMIN_PASSWORD / E2E_SUPPLIER_PASSWORD / E2E_BUYER_PASSWORD), never from Git.
 const USERS = {
-  admin: { email: 'admin@einvworld.com', password: 'Admin@123' },
-  supplier: { email: 'supplier@einvworld.com', password: 'Supplier@123' },
-  buyer: { email: 'buyer@einvworld.com', password: 'Buyer@123' },
+  admin: { email: 'admin@einvworld.com', password: process.env.E2E_ADMIN_PASSWORD, env: 'E2E_ADMIN_PASSWORD' },
+  supplier: { email: 'supplier@einvworld.com', password: process.env.E2E_SUPPLIER_PASSWORD, env: 'E2E_SUPPLIER_PASSWORD' },
+  buyer: { email: 'buyer@einvworld.com', password: process.env.E2E_BUYER_PASSWORD, env: 'E2E_BUYER_PASSWORD' },
 };
 
 /**
@@ -15,6 +16,7 @@ const USERS = {
 async function submitCredentials(page, role) {
   const user = USERS[role];
   if (!user) throw new Error(`Unknown role: ${role}`);
+  if (!user.password) throw new Error(`Set ${user.env} to run tests as ${role}.`);
   await page.goto('/login', { waitUntil: 'commit', timeout: 60000 });
   await page.fill('#username', user.email);
   await page.fill('#password-input', user.password);
@@ -32,6 +34,7 @@ async function submitCredentials(page, role) {
 async function login(page, role) {
   const user = USERS[role];
   if (!user) throw new Error(`Unknown role: ${role}`);
+  if (!user.password) throw new Error(`Set ${user.env} to run tests as ${role}.`);
   await page.goto('/login', { waitUntil: 'commit', timeout: 60000 });
   await page.fill('#username', user.email);
   await page.fill('#password-input', user.password);

@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace eInvWorld.Services
@@ -50,11 +52,12 @@ namespace eInvWorld.Services
                 return;
             }
 
-            // Passwords are overridable via config/env (Seeding:DefaultAdminPassword, etc.) so a non-prod
-            // environment that DOES seed can still avoid the well-known defaults.
-            string adminPwd    = _config["Seeding:DefaultAdminPassword"]    ?? "Admin@123";
-            string supplierPwd = _config["Seeding:DefaultSupplierPassword"] ?? "Supplier@123";
-            string buyerPwd    = _config["Seeding:DefaultBuyerPassword"]    ?? "Buyer@123";
+            // Bootstrap passwords must come from user-secrets/env (Seeding:DefaultAdminPassword etc.). There is no
+            // built-in fallback: a user whose password isn't configured (or is one of the old public defaults) is
+            // simply not created. Existing users are never touched, so their passwords stay as they are.
+            string? adminPwd    = _config["Seeding:DefaultAdminPassword"];
+            string? supplierPwd = _config["Seeding:DefaultSupplierPassword"];
+            string? buyerPwd    = _config["Seeding:DefaultBuyerPassword"];
 
             // ✅ Seed Default Users with Assigned Companies. Admins are still forced to enrol 2FA on first
             // login by AdminMfaEnforcementMiddleware, so a seeded admin can't be used without MFA.
@@ -71,11 +74,25 @@ namespace eInvWorld.Services
             await SeedUserAsync("buyer@einvworld.com", buyerPwd, "Buyer", new List<int> { 12 });
         }
 
-        private async Task SeedUserAsync(string email, string password, string role, List<int>? companyIds)
+        /// <summary>The passwords older versions fell back to; they are public, so they are refused as bootstrap passwords.</summary>
+        private static readonly HashSet<string> RetiredDefaultPasswords = new(StringComparer.OrdinalIgnoreCase)
+            { "Admin@123", "Supplier@123", "Buyer@123" };
+
+        /// <summary>True when <paramref name="password"/> is set and is not one of the retired public defaults.</summary>
+        internal static bool IsUsableBootstrapPassword(string? password) =>
+            !string.IsNullOrWhiteSpace(password) && !RetiredDefaultPasswords.Contains(password.Trim());
+
+        private async Task SeedUserAsync(string email, string? password, string role, List<int>? companyIds)
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
             {
+                if (!IsUsableBootstrapPassword(password))
+                {
+                    _logger.LogWarning("Seeding {Email}: not created. Set a strong Seeding:Default{Role}Password in user-secrets or environment variables (built-in defaults are no longer used).", email, role);
+                    return;
+                }
+
                 user = new ApplicationUser
                 {
                     UserName = email,
@@ -87,8 +104,13 @@ namespace eInvWorld.Services
                     UserType = role
                 };
 
-                var result = await _userManager.CreateAsync(user, password);
-                if (!result.Succeeded) return;
+                var result = await _userManager.CreateAsync(user, password!);
+                if (!result.Succeeded)
+                {
+                    // Error codes only (e.g. PasswordTooShort); never the password.
+                    _logger.LogWarning("Seeding {Email}: not created ({Errors}).", email, string.Join(", ", result.Errors.Select(e => e.Code)));
+                    return;
+                }
 
                 await _userManager.AddToRoleAsync(user, role);
             }
