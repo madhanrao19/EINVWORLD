@@ -4,7 +4,7 @@
 > release: an LHDN import can no longer queue follow-up jobs forever on invoices it cannot repair — see the dated entry below. v1.50.37 was a **patch**
 > release: Staging keeps its real CAPTCHA site key after a deploy — see the dated entry below. v1.50.36 was a **patch**
 > release: the site warns (Staging) or refuses to start (Production) when it has Cloudflare's test CAPTCHA keys — see the dated entry below. v1.50.35 was a **patch**
-> release: invoices other companies' systems send you now appear under Received — see the dated entry below. v1.50.34 was a **patch**
+> release: received invoices LHDN returns are now linked to your company and appear under Received (under intermediary auth, only ones submitted through EINVWORLD) — see the dated entry below. v1.50.34 was a **patch**
 > release: TIN and ID numbers are no longer sent in web addresses — see the dated entry below. v1.50.33 was a **patch**
 > release: deploys check disk space first, check site health, and clean up the local build afterwards — see the dated entry below. v1.50.32 was a **patch**
 > release: credit, debit and refund notes created from the Invoices list can be submitted again — see the dated entry below. v1.50.31 was a **patch**
@@ -522,6 +522,11 @@
 - No database change.
 
 ## 📅 2026-11-04 — v1.50.35 (Received tab shows invoices from other companies' systems)
+
+> **Correction (2026-11-05):** this release links received documents correctly *when LHDN returns them*. EINVWORLD
+> signs in as an intermediary, and LHDN only returns documents the intermediary submitted, so invoices issued from the
+> MyInvois portal or another supplier's own system (TNB, banks, telcos) are **still not imported**. See
+> `docs/FUTURE-IMPROVEMENTS.md` (taxpayer credentials, not approved).
 
 - **Fix:** e-invoices other companies issue to you straight from their own systems (TNB, banks, telcos and so on) did
   not appear under **Invoices → Received**, so you had to open MyInvois to see them. The LHDN sync treated every
