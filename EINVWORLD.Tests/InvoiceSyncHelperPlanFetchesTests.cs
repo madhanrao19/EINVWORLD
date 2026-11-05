@@ -59,6 +59,82 @@ namespace EINVWORLD.Tests
             Assert.Equal(2, deferred);
         }
 
+        /// <summary>
+        /// Simulates the import job chain the way RunFullImportFromLhdnAsync drives it: plan, fetch (new documents are
+        /// stored unless they fail), then queue a follow-up only if ShouldQueueContinuation says so.
+        /// Returns the number of runs and the UUIDs stored; throws if the chain does not stop.
+        /// </summary>
+        private static (int Runs, HashSet<string> Stored) RunChain(
+            IReadOnlyList<DocumentSummary> lhdn, ISet<string> local, ISet<string> alwaysFails, int max = 40)
+        {
+            var stored = new HashSet<string>(local);
+            for (int run = 1; run <= 1000; run++)
+            {
+                // Local rows are never skippable here: worst case, every one needs a repair that never succeeds.
+                var (toFetch, _, deferred) = InvoiceSyncHelper.PlanDocumentFetches(lhdn, max, canSkip: _ => false,
+                    isNew: d => !stored.Contains(d.uuid));
+                int newImported = 0;
+                foreach (var d in toFetch)
+                    if (!alwaysFails.Contains(d.uuid) && stored.Add(d.uuid)) newImported++;
+                if (!InvoiceSyncHelper.ShouldQueueContinuation(deferred, newImported)) return (run, stored);
+            }
+            throw new Xunit.Sdk.XunitException("Import continuation chain did not stop after 1000 runs.");
+        }
+
+        [Fact]
+        public void All_unrepairable_local_rows_queue_no_follow_up()
+        {
+            var docs = Enumerable.Range(1, 100).Select(i => Doc($"L{i}", i)).ToList();
+
+            var (runs, _) = RunChain(docs, local: docs.Select(d => d.uuid).ToHashSet(), alwaysFails: new HashSet<string>());
+
+            Assert.Equal(1, runs);
+        }
+
+        [Fact]
+        public void Mixed_batch_imports_every_new_document_then_stops()
+        {
+            // 60 newer local rows that never repair + 100 older new documents, cap 40.
+            var local = Enumerable.Range(1, 60).Select(i => Doc($"L{i}", i)).ToList();
+            var fresh = Enumerable.Range(1, 100).Select(i => Doc($"N{i}", 100 + i)).ToList();
+
+            var (runs, stored) = RunChain(local.Concat(fresh).ToList(), local.Select(d => d.uuid).ToHashSet(), new HashSet<string>());
+
+            Assert.All(fresh, d => Assert.Contains(d.uuid, stored));
+            Assert.Equal(4, runs); // 40 + 40 + 20 new, then one run that finds nothing new
+        }
+
+        [Fact]
+        public void Failing_new_documents_do_not_stop_the_others_and_the_chain_ends()
+        {
+            var fresh = Enumerable.Range(1, 50).Select(i => Doc($"N{i}", i)).ToList();
+            var failing = fresh.Take(5).Select(d => d.uuid).ToHashSet(); // the 5 newest always fail
+
+            var (runs, stored) = RunChain(fresh, new HashSet<string>(), failing);
+
+            Assert.Equal(45, stored.Count);
+            Assert.Equal(3, runs); // 35 new, 10 new, then a run with only failures and re-fetches
+        }
+
+        [Fact]
+        public void A_run_where_every_fetch_fails_queues_no_follow_up()
+        {
+            // e.g. LHDN down: no follow-up; the next scheduled import or Refresh from API retries.
+            var fresh = Enumerable.Range(1, 50).Select(i => Doc($"N{i}", i)).ToList();
+
+            var (runs, stored) = RunChain(fresh, new HashSet<string>(), fresh.Select(d => d.uuid).ToHashSet());
+
+            Assert.Equal(1, runs);
+            Assert.Empty(stored);
+        }
+
+        [Theory]
+        [InlineData(0, 5, false)]  // nothing left over
+        [InlineData(7, 0, false)]  // left over, but this run stored nothing new (repairs/refreshes/failures only)
+        [InlineData(7, 1, true)]
+        public void Follow_up_needs_leftovers_and_a_new_document(int deferred, int newImported, bool expected) =>
+            Assert.Equal(expected, InvoiceSyncHelper.ShouldQueueContinuation(deferred, newImported));
+
         [Fact]
         public void Non_positive_cap_still_makes_progress()
         {
