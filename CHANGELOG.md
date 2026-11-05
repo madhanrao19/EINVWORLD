@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.37`** (`AppInfo:Version` in `appsettings.json`). v1.50.37 is a **patch**
+> **Current version: `v1.50.38`** (`AppInfo:Version` in `appsettings.json`). v1.50.38 is a **patch**
+> release: an LHDN import can no longer queue follow-up jobs forever on invoices it cannot repair — see the dated entry below. v1.50.37 was a **patch**
 > release: Staging keeps its real CAPTCHA site key after a deploy — see the dated entry below. v1.50.36 was a **patch**
 > release: the site warns (Staging) or refuses to start (Production) when it has Cloudflare's test CAPTCHA keys — see the dated entry below. v1.50.35 was a **patch**
 > release: invoices other companies' systems send you now appear under Received — see the dated entry below. v1.50.34 was a **patch**
@@ -479,6 +480,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-05 — v1.50.38 (LHDN import follow-up jobs always stop)
+
+- **Fix (LHDN sync, v1.50.35 regression):** an import run fetches at most 40 documents and queued a follow-up job
+  whenever documents were left over and it had "imported" anything. Local invoices missing a supplier or buyer link
+  are re-fetched on every run to repair them, and one that can never be repaired (for example a sent invoice whose
+  buyer record belongs to no company, or a document whose supplier can't be read) still counted as imported. With
+  more than 40 of those, each run re-fetched the same newest rows and queued another job 2 minutes later, without
+  end, using LHDN's rate-limited document endpoint and never reaching the older new documents.
+  - Documents not yet stored locally are now fetched first; refreshes and repairs of local rows use what is left
+    of the 40.
+  - A follow-up job is queued only when the run stored at least one **new** document, so every follow-up adds a row
+    and the chain always ends. Rows left over after that are picked up by the next scheduled import or Refresh.
+- Verified on Staging before the fix (read-only): no follow-up jobs had been queued; 4 rows lack a supplier and 4 a
+  buyer, below the 40 that trigger the loop.
+- No database change. No configuration change.
 
 ## 📅 2026-11-04 — v1.50.37 (Staging keeps its real CAPTCHA site key)
 

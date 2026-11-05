@@ -42,6 +42,24 @@ namespace EINVWORLD.Tests
         }
 
         [Fact]
+        public void New_documents_come_before_newer_local_rows_that_need_a_refetch()
+        {
+            // 3 newer local rows that keep needing a re-fetch (e.g. an unrepairable buyer link) must not use the
+            // whole budget: the older documents we don't have yet are fetched first, so each run makes progress.
+            var docs = new List<DocumentSummary>
+            {
+                Doc("local-1", 1), Doc("local-2", 2), Doc("local-3", 3), Doc("new-old", 10), Doc("new-older", 11)
+            };
+
+            var (toFetch, skipped, deferred) = InvoiceSyncHelper.PlanDocumentFetches(docs, max: 3, canSkip: _ => false,
+                isNew: d => d.uuid.StartsWith("new"));
+
+            Assert.Equal(new[] { "new-old", "new-older", "local-1" }, toFetch.Select(d => d.uuid));
+            Assert.Equal(0, skipped);
+            Assert.Equal(2, deferred);
+        }
+
+        [Fact]
         public void Non_positive_cap_still_makes_progress()
         {
             var (toFetch, _, deferred) = InvoiceSyncHelper.PlanDocumentFetches(new[] { Doc("a", 1), Doc("b", 2) }, max: 0, canSkip: _ => false);
