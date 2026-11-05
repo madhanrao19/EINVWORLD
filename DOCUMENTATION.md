@@ -301,13 +301,16 @@ RequestReject, and drafts older than 3 days. `Unresolved()` then drops invoices 
 - **re-issued**: a **Resend** copy (`ResentFromInvoiceNo` = the original's `InvoiceNo`) is LHDN Valid.
   This is checked when the query runs, so no status-sync path needs a hook. The link is tenant-checked on save.
 
-**External-ERP invoices (buyer-side sync).** `InvoiceFullSyncHelper` pulls documents from LHDN's
-`documents/search` API, which is TIN-scoped, not submitter-scoped — it returns every document where the
-company is a party, including ones submitted directly to LHDN by a different system entirely (an
-external ERP), not through EINVWORLD. When such a document is first discovered and the local company is
-the buyer, `InvoiceFullSyncHelper` creates the missing `PartyInfo` for the supplier (if EINVWORLD has
-never seen them) and the invoice appears in the Buyer's Received tab automatically. See §8 for the
-"new e-invoice received" notification this triggers.
+**Received invoices (buyer-side sync) — limited by intermediary auth.** `InvoiceFullSyncHelper` imports
+whatever LHDN's `documents/search` returns for a company TIN. EINVWORLD signs in to LHDN as an **intermediary**
+(`onbehalfof`), and LHDN only lets an intermediary see documents **it submitted itself** (MyInvois SDK FAQ;
+reproduced on preprod 2026-11-04 — see `docs/FUTURE-IMPROVEMENTS.md`). So the Received tab shows invoices
+another company sent **through EINVWORLD**; invoices issued from the MyInvois portal or another supplier's own
+ERP (TNB, banks, telcos…) are **not** returned and do not appear. Importing those needs the company's own
+taxpayer credentials — drafted in `docs/FUTURE-IMPROVEMENTS.md`, **not approved**. When a received document is
+returned and the local company is the buyer, `InvoiceFullSyncHelper` creates the missing `PartyInfo` for the
+supplier (if needed) and links the buyer to the fetching company. See §8 for the "new e-invoice received"
+notification this triggers.
 
 ---
 
@@ -318,7 +321,7 @@ All run as `IHostedService` in the same process (so the IIS app pool should be *
 | Service | Purpose |
 |---|---|
 | **`DurableSyncJobWorker`** | Durable, SQL-backed job queue. Polls `SyncJobs`, atomically claims a job (`UPDLOCK`/`READPAST`), dispatches by `JobType` to an `ISyncJobHandler`, retries with backoff, and recovers orphaned jobs after a restart. Handles StatusSync / FullImport / SupplierRefresh / **SubmitDocument** (background retry of an interactive LHDN submission that threw, and — since Smart Capture Stage 4 — the same job type an eligible auto-submit schedules with a delay via `NextRunAtUtc`; reuses `InvoiceSubmissionHelper`, no-ops if the invoice is no longer Draft so it can never double-submit; exhausted retries land in the Sync Jobs dead-letter view) / **SmartCaptureExtraction** (OCR/LLM extraction for one uploaded document) / **SmartCaptureRetention** (tiered document/file cleanup, §10) / **WebhookDelivery** (outbound customer-ERP webhook, see §10). |
-| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`), the PDF/validation-email finalizer safety net, the new-e-invoice-received-email safety net (below), and — every 10th cycle — the full LHDN `documents/search` import for every registered company TIN (`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`, default 7 days; this is what catches invoices an external ERP submitted directly to LHDN — see §7). Since v1.50.35 each import searches `invoiceDirection=Sent` and `invoiceDirection=Received` separately and links a received document's buyer to the fetching company (even with a general buyer TIN), so other companies' invoices appear under Received; the user's **Refresh from API** (`SupplierRefresh` job) looks back 30 days. Every import run fetches at most `InvoiceStatusUpdaterSettings:ImportMaxDocumentFetchesPerRun` (default 40) raw documents, newest first, so it never holds LHDN's shared get-document queue for long; documents not yet stored locally are fetched first, and when documents are left over and the run stored at least one new document, a follow-up job of the same type is queued 2 minutes later (once per TIN; since v1.50.38 re-fetching local rows never re-queues, so the chain always ends). |
+| **`InvoiceStatusUpdater`** | Periodically polls LHDN for pending invoices' validation status. Also runs the webhook dispatcher (enqueues `WebhookDelivery` jobs for invoices that reached a terminal status; no-op unless `Webhooks:Enabled`), the PDF/validation-email finalizer safety net, the new-e-invoice-received-email safety net (below), and — every 10th cycle — the full LHDN `documents/search` import for every registered company TIN (`InvoiceStatusUpdaterSettings:BackgroundImportLookbackDays`, default 7 days; under intermediary auth LHDN returns only documents EINVWORLD submitted, so invoices from other suppliers' own systems are not found — see §7). Since v1.50.35 each import searches `invoiceDirection=Sent` and `invoiceDirection=Received` separately and links a received document's buyer to the fetching company (even with a general buyer TIN), so invoices other EINVWORLD companies send it appear under Received; the user's **Refresh from API** (`SupplierRefresh` job) looks back 30 days. Every import run fetches at most `InvoiceStatusUpdaterSettings:ImportMaxDocumentFetchesPerRun` (default 40) raw documents, newest first, so it never holds LHDN's shared get-document queue for long; documents not yet stored locally are fetched first, and when documents are left over and the run stored at least one new document, a follow-up job of the same type is queued 2 minutes later (once per TIN; since v1.50.38 re-fetching local rows never re-queues, so the chain always ends). |
 | **`InvoiceFinalizerService`** | Finalizes invoices once validated (PDF/email/QR follow-ups). |
 
 **Email retry pattern (Valid-status, new-invoice-received, rejection, cancellation).**
@@ -425,8 +428,8 @@ See [`SECRETS-SETUP.md`](SECRETS-SETUP.md).
 - **Manual sync / import / refresh** run as durable background jobs (visible on **Sync Jobs**).
 - **Templates** and **recurring invoices**.
 - PDF generation (DinkToPdf/Puppeteer) and validated-invoice email notifications.
-- **New-e-invoice-received email** — when an external ERP submits an invoice directly to LHDN and the
-  local company is the buyer, EINVWORLD's LHDN sync discovers it (§7) and emails the buyer once it's
+- **New-e-invoice-received email** — when LHDN returns a new invoice where the local company is the buyer
+  (under intermediary auth: one submitted through EINVWORLD, see §7), the LHDN sync imports it and emails the buyer once it's
   synced in, with the same indefinite-retry robustness as the validated-invoice email (§8).
 
 **AI (optional, on-prem, OFF by default)**

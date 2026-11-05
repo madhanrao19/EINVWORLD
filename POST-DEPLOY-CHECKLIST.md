@@ -204,7 +204,8 @@ bottom; stop and investigate on the first ❌.
 - [ ] Trigger a notification email (e.g. account confirm, validated invoice). ✅ delivered; links use the configured public base URL (not localhost).
 - [ ] Confirm SMTP creds are supplied via **env vars** (not committed). ✅ (`appsettings.json` ships blank).
 - [ ] **(v1.14.0) New-e-invoice-received email:** trigger an LHDN sync for a company that has a genuinely
-      new buyer-side invoice from an external ERP (or use "Refresh from API" on the Received tab shortly
+      new buyer-side invoice submitted through EINVWORLD by another company (invoices from another supplier's own ERP
+      or the MyInvois portal are not returned under intermediary auth — see `docs/FUTURE-IMPROVEMENTS.md`) (or use "Refresh from API" on the Received tab shortly
       after one lands). ✅ the buyer gets a "New e-Invoice Received" email (not the "Validated" one).
       Temporarily stop the SMTP relay and repeat — ✅ the send fails, is logged, and
       `InvoiceHeader.IsNewInvoiceReceivedEmailSent` stays `false` so the next background cycle (every
