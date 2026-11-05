@@ -363,7 +363,7 @@ public class InvoiceStatusUpdater : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ [LHDN Import] Failed to import for TIN {TIN}: {Error}", tin, ex.Message);
+                    _logger.LogError(ex, "❌ [LHDN Import] Failed to import for TIN {TIN}: {Error}", EINVWORLD.Helpers.LogSanitizer.MaskTin(tin), ex.Message);
                 }
             }
 
