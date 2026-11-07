@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -277,8 +277,8 @@ $ErrorActionPreference = 'Stop'
         {
             if (!OperatingSystem.IsWindows()) return;
             var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
-            Assert.Contains("DEPLOY:OK", output);
-            Assert.Contains("STATE deployed=True publish=False obj=False webconfig=True", output);
+            Has(output, "DEPLOY:OK");
+            Has(output, "STATE deployed=True publish=False obj=False webconfig=True");
         }
 
         [Fact]
@@ -286,13 +286,16 @@ $ErrorActionPreference = 'Stop'
         {
             if (!OperatingSystem.IsWindows()) return;
             var output = DeployEndToEnd((path, _) => path == "/Drafts/EINV00149.json" || path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
-            Assert.Contains("DEPLOY:FAILED", output);
-            Assert.Contains("SECURITY VERIFICATION FAILED", output);
-            Assert.Contains("STATE deployed=True publish=True obj=True webconfig=True", output);
+            Has(output, "DEPLOY:FAILED");
+            Has(output, "SECURITY VERIFICATION FAILED");
+            Has(output, "STATE deployed=True publish=True obj=True webconfig=True");
             Assert.DoesNotContain(Secret, output);
         }
 
         // ---- Copy safety: unlock wait, copy failure, integrity, rollback (the 2026-11-08 locked-EINVWORLD.dll incident) ----
+
+        // On failure, show the whole deploy output: the reason is usually far from the start.
+        private static void Has(string output, string expected) => Assert.True(output.Contains(expected), $"Expected \"{expected}\" in:\n{output}");
 
         private static bool Healthy(string path) => path.StartsWith("/health/");
         private static (int, string?) Up(string path, int _) => Healthy(path) ? (200, null) : (302, "DYNAMIC");
@@ -305,6 +308,9 @@ $ErrorActionPreference = 'Stop'
             File.WriteAllText(Path.Combine(App, "EINVWORLD.exe"), "old");
             File.WriteAllText(Path.Combine(App, "EINVWORLD.dll"), "old");
             File.WriteAllText(Path.Combine(App, @"logs\stdout.log"), "old-log");
+            // An older build than the publish (as on a server): robocopy skips same-size, same-time files.
+            foreach (var f in new[] { "EINVWORLD.exe", "EINVWORLD.dll" })
+                File.SetLastWriteTimeUtc(Path.Combine(App, f), DateTime.UtcNow.AddHours(-1));
             File.WriteAllText(Path.Combine(Publish, "EINVWORLD.dll"), "new");
             File.WriteAllText(Path.Combine(Publish, "added.dll"), "new");
         }
@@ -327,9 +333,9 @@ $ErrorActionPreference = 'Stop'
             });
             var output = DeployEndToEnd(Up, "-ShutdownTimeoutSeconds 60");
             await release;
-            Assert.Contains("DEPLOY:OK", output);
-            Assert.Contains("App stopped after", output);
-            Assert.Contains("offline=False exe=x added=True", output);
+            Has(output, "DEPLOY:OK");
+            Has(output, "App stopped after");
+            Has(output, "offline=False exe=x added=True");
             Assert.Equal("new", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
         }
 
@@ -340,10 +346,10 @@ $ErrorActionPreference = 'Stop'
             SeedOldBuild();
             using var dll = HoldOpen(Path.Combine(App, "EINVWORLD.dll"));
             var output = DeployEndToEnd(Up, "-ShutdownTimeoutSeconds 2");
-            Assert.Contains("DEPLOY:FAILED exit=1", output);
-            Assert.Contains("STOPPED BEFORE COPY", output);
-            Assert.Contains("EINVWORLD.dll", output);
-            Assert.Contains("webconfig=True offline=False exe=old added=False", output);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "STOPPED BEFORE COPY");
+            Has(output, "EINVWORLD.dll");
+            Has(output, "webconfig=True offline=False exe=old added=False");
         }
 
         // A publish file nobody can read: robocopy has already copied the root files (a mixed build) when it fails on it.
@@ -361,9 +367,9 @@ $ErrorActionPreference = 'Stop'
             SeedOldBuild();
             using var locked = UnreadablePublishFile();
             var output = DeployEndToEnd(Up);
-            Assert.Contains("DEPLOY:FAILED exit=1", output);
-            Assert.Contains("ROLLED BACK", output);
-            Assert.Contains("webconfig=True offline=False exe=old added=False log=old-log deploylogs=1", output);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "ROLLED BACK");
+            Has(output, "webconfig=True offline=False exe=old added=False log=old-log deploylogs=1");
             Assert.Equal("old", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
         }
 
@@ -374,9 +380,9 @@ $ErrorActionPreference = 'Stop'
             SeedOldBuild();
             using var locked = UnreadablePublishFile();
             var output = DeployEndToEnd(Up, "-SkipBackup");
-            Assert.Contains("DEPLOY:FAILED exit=1", output);
-            Assert.Contains("LEFT OFFLINE", output);
-            Assert.Contains("offline=True", output);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "LEFT OFFLINE");
+            Has(output, "offline=True");
         }
 
         [Fact]
@@ -392,10 +398,24 @@ $ErrorActionPreference = 'Stop'
                 lock (_root) { if (!File.ReadAllText(log).Contains("crash")) File.AppendAllText(log, "\r\ncrash"); }
                 return (500, null);
             });
-            Assert.Contains("DEPLOY:FAILED exit=1", output);
-            Assert.Contains("HEALTH CHECK FAILED: the new build was ROLLED BACK", output);
-            Assert.Contains("webconfig=True offline=False exe=old added=False log=old-log|crash", output);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "HEALTH CHECK FAILED: the new build was ROLLED BACK");
+            Has(output, "webconfig=True offline=False exe=old added=False log=old-log|crash");
             Assert.Equal("old", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
+        }
+
+        [Fact]
+        public void Deploy_CopyThatSkippedAChangedDll_IsCaughtByTheIntegrityCheck_AndRolledBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            // Same size and timestamp, different content: robocopy reports success without copying it.
+            File.SetLastWriteTimeUtc(Path.Combine(App, "EINVWORLD.dll"), File.GetLastWriteTimeUtc(Path.Combine(Publish, "EINVWORLD.dll")));
+            var output = DeployEndToEnd(Up);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "don't match the build, e.g. EINVWORLD.dll");
+            Has(output, "ROLLED BACK");
+            Has(output, "offline=False exe=old added=False");
         }
 
         [Fact]
@@ -404,9 +424,9 @@ $ErrorActionPreference = 'Stop'
             if (!OperatingSystem.IsWindows()) return;
             SeedOldBuild();
             var output = DeployEndToEnd((path, _) => path == "/health/ready" ? (503, null) : Up(path, 0));
-            Assert.Contains("DEPLOY:FAILED exit=1", output);
-            Assert.Contains("Not rolled back", output);
-            Assert.Contains("offline=False exe=x added=True", output);
+            Has(output, "DEPLOY:FAILED exit=1");
+            Has(output, "Not rolled back");
+            Has(output, "offline=False exe=x added=True");
         }
 
         [Fact] public void Rollback_UndoesAPartialDeploy_AndLeavesEverythingElseAlone() => Passes(@"

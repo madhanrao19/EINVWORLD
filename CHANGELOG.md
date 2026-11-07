@@ -506,8 +506,8 @@
     rolled back; `/health/ready` failing alone (database, folders) fails the run without a rollback, since the previous
     build depends on the same. A rollback never reverts database migrations (they are additive).
   - The site stays offline unless `App\` is known consistent, including when the run is interrupted (Ctrl+C) mid-copy.
-  - New: `-CopyRetryWaitSeconds`, `-HealthRetryDelayMs`. Tests: 9 new isolated deploy tests (delayed shutdown,
-    timeout, copy failure, partial deploy, failed start, readiness-only failure, rollback, failed rollback).
+  - New: `-CopyRetryWaitSeconds`, `-HealthRetryDelayMs`. Tests: 10 new isolated deploy tests (delayed shutdown,
+    timeout, copy failure, a copy that skipped a changed DLL, partial deploy, failed start, readiness-only failure, rollback, failed rollback).
 - No database change. No app code change.
 
 ## 📅 2026-11-05 — v1.50.43 (failed scheduled import logs the TIN masked)

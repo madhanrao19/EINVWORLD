@@ -171,6 +171,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Any failure: print the reason on one unwrapped line (a non-interactive host wraps error records), then fail (exit 1).
+trap { Write-Host "DEPLOY STOPPED: $($_.Exception.Message)" -ForegroundColor Red; break }
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 . (Join-Path $PSScriptRoot 'DeployGuards.ps1')   # stale-file guards: Initialize-PublishFolder, Assert-PublishOutput, ...
 
