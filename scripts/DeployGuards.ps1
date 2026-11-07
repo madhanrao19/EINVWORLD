@@ -232,6 +232,80 @@ function Remove-DeployArtifacts([string[]]$paths, [string]$repoRoot) {
     }
 }
 
+# ---- Copy safety: wait for the app to stop, verify the copy, roll back (2026-11-08) -------------------------------
+# On 2026-11-08 a fixed 5 s pause after app_offline.htm was too short: the app still held EINVWORLD.dll, robocopy
+# failed on it, and the site came back online with the old DLL and every other file new (a mixed build).
+
+# True when another process holds the file open (or it can't be opened for writing). A missing file is not locked.
+function Test-FileLocked([string]$path) {
+    try { $fs = [IO.File]::Open($path, 'Open', 'ReadWrite', 'None'); $fs.Close(); $false }
+    catch [IO.FileNotFoundException] { $false }
+    catch [IO.DirectoryNotFoundException] { $false }
+    catch { $true }
+}
+
+# app_offline.htm makes the ASP.NET Core Module stop the app; its worker process keeps every loaded .dll/.exe under
+# App\ open until it has exited. Polls until none is held, or the timeout. These are this App folder's own files,
+# so another site's process can't hold them: unlocked means THIS app has stopped. EINVWORLD.dll is polled alone
+# first (cheap over a share), then every binary once. Returns Unlocked, Seconds and up to 10 still-open files.
+function Wait-AppFilesUnlocked {
+    param(
+        [Parameter(Mandatory)][string]$AppPath,
+        [int]$TimeoutSeconds = 120,
+        [int]$PollMs = 2000
+    )
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $bins = @(Get-RelativeFiles $AppPath | Where-Object { $_ -match '\.(dll|exe)$' })
+    $locked = @()
+    while ($true) {
+        $locked = @('EINVWORLD.dll' | Where-Object { Test-FileLocked (Join-Path $AppPath $_) })
+        if (-not $locked.Count) { $locked = @($bins | Where-Object { Test-FileLocked (Join-Path $AppPath $_) } | Select-Object -First 10) }
+        if (-not $locked.Count -or $sw.Elapsed.TotalSeconds -ge $TimeoutSeconds) { break }
+        Start-Sleep -Milliseconds $PollMs
+    }
+    [pscustomobject]@{ Unlocked = (-not $locked.Count); Seconds = [int]$sw.Elapsed.TotalSeconds; Locked = $locked }
+}
+
+# Files under $dest that don't match $source: missing, different size or timestamp (robocopy keeps timestamps), and
+# for the start-up files, different content. Returns the relative paths that differ.
+function Compare-DeployedFiles([string]$source, [string]$dest, [string[]]$relativePaths) {
+    $critical = 'EINVWORLD.dll', 'EINVWORLD.exe', 'EINVWORLD.deps.json', 'EINVWORLD.runtimeconfig.json'
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+        foreach ($rel in $relativePaths) {
+            $s = New-Object IO.FileInfo (Join-Path $source $rel)
+            $d = New-Object IO.FileInfo (Join-Path $dest $rel)
+            if (-not $d.Exists -or $d.Length -ne $s.Length -or $d.LastWriteTimeUtc -ne $s.LastWriteTimeUtc) { $rel; continue }
+            if ($critical -contains $rel) {
+                $a = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($s.FullName)))
+                $b = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($d.FullName)))
+                if ($a -ne $b) { $rel }
+            }
+        }
+    }
+    finally { $sha.Dispose() }
+}
+
+# Rollback: puts App\ back as the pre-deploy backup has it. Overwrites from the backup (never web.config or
+# app_offline.htm), deletes files this deploy shipped that the backup lacks (new in the failed release), then
+# checks every backup file matches. Files the deploy never shipped (uploads, server-only files) are left alone.
+# The caller must have stopped the app (app_offline.htm + Wait-AppFilesUnlocked). Throws if anything differs.
+function Restore-AppFromBackup([string]$backupPath, [string]$appPath, [string[]]$shippedRelative, [int]$retryWaitSeconds = 5, [string]$logPath) {
+    $keep = 'web.config', 'app_offline.htm'
+    $rc = @($backupPath, $appPath, '/E', '/R:3', "/W:$retryWaitSeconds", '/NFL', '/NDL', '/NJH', '/NP', '/XF') + $keep
+    if ($logPath) { $rc += "/LOG+:$logPath" }
+    robocopy @rc | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "Rollback robocopy failed (exit code $LASTEXITCODE)$(if ($logPath) { " - see $logPath" })." }
+    $inBackup = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    Get-RelativeFiles $backupPath | ForEach-Object { [void]$inBackup.Add($_) }
+    foreach ($rel in $shippedRelative) {
+        $f = Join-Path $appPath $rel
+        if (-not $inBackup.Contains($rel) -and (Test-Path -LiteralPath $f -PathType Leaf)) { Remove-Item -LiteralPath $f -Force }
+    }
+    $bad = @(Compare-DeployedFiles $backupPath $appPath @($inBackup | Where-Object { $keep -notcontains (Split-Path $_ -Leaf) }))
+    if ($bad.Count) { throw "Rollback incomplete: $($bad.Count) file(s) still differ from the backup, e.g. $(($bad | Select-Object -First 5) -join ', ')." }
+}
+
 # Public hostname for a deploy target; $null for a target with no known public site (e.g. a local test folder).
 function Get-DefaultPublicBaseUrl([string]$destAppPath) {
     switch -Regex ($destAppPath) {

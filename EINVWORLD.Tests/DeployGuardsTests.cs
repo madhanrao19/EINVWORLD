@@ -240,36 +240,183 @@ $down = { param($url) [pscustomobject]@{ Status = 503; Cache = '' } }
 $r = @(Test-HealthUrls -BaseUrl 'https://x' -Probe $down -DelayMs 0 -MaxAttempts 3)
 if ($r[0].Healthy -or $r[0].Attempts -ne 3) { throw ""down: $($r[0].Healthy) after $($r[0].Attempts)"" }");
 
+        // ---- Copy safety: wait for the app to stop, roll back a failed copy (2026-11-08 mixed-build incident) ----
+
+        private static readonly DateTime OldBuildTime = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>Holds a file the way a running app holds its loaded DLLs: others may read it, nobody may write it.</summary>
+        private static FileStream HoldOpen(string path) => new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        /// <summary>Releases <paramref name="held"/> <paramref name="afterMs"/> ms after <paramref name="trigger"/> appears.</summary>
+        private static Task ReleaseAfter(FileStream held, string trigger, int afterMs) => Task.Run(async () =>
+        {
+            var until = DateTime.UtcNow.AddMinutes(2);
+            while (!File.Exists(trigger) && DateTime.UtcNow < until) await Task.Delay(50);
+            await Task.Delay(afterMs);
+            held.Dispose();
+        });
+
+        private static void OldFile(string path, string content)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, content);
+            File.SetLastWriteTimeUtc(path, OldBuildTime);
+        }
+
+        [Fact]
+        public void Wait_ReturnsOnceTheAppReleasesItsDll()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var dll = Path.Combine(_root, "App", "EINVWORLD.dll");
+            OldFile(dll, "old");
+            var release = ReleaseAfter(HoldOpen(dll), Path.Combine(_root, "go"), 3000);
+            var result = Run(@"Set-Content ""$repo\..\go"" 'x'
+$w = Wait-AppFilesUnlocked -AppPath ""$repo\..\App"" -TimeoutSeconds 30 -PollMs 200
+if (-not $w.Unlocked -or $w.Seconds -lt 2) { throw ""unlocked $($w.Unlocked) after $($w.Seconds) s"" }");
+            release.Wait();
+            Assert.Equal("OK", result);
+        }
+
+        [Fact]
+        public void Wait_TimesOut_AndNamesTheNativeDllStillHeld()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(_root, "App", "EINVWORLD.dll"), "free");
+            var native = Path.Combine(_root, "App", "runtimes", "win-x64", "native", "Magick.Native.dll");
+            OldFile(native, "held");
+            using var held = HoldOpen(native);
+            Passes(@"$w = Wait-AppFilesUnlocked -AppPath ""$repo\..\App"" -TimeoutSeconds 2 -PollMs 200
+if ($w.Unlocked -or $w.Seconds -lt 2 -or ($w.Locked -join '|') -ne 'runtimes\win-x64\native\Magick.Native.dll') { throw ""unlocked $($w.Unlocked), held: $($w.Locked -join '|')"" }");
+        }
+
+        [Fact] public void Restore_PutsTheBackupBack_RemovesNewFiles_KeepsServerFiles() => Passes(@"
+$app = ""$repo\..\App""; $bak = ""$repo\..\Bak""
+function F($p, $c, $t) { New-Item -ItemType Directory -Force (Split-Path $p) | Out-Null; Set-Content $p $c; (Get-Item $p).LastWriteTimeUtc = [datetime]$t }
+F ""$bak\EINVWORLD.dll"" 'old' '2026-01-01'; F ""$bak\lib.dll"" 'old' '2026-01-01'; F ""$bak\web.config"" 'backup-cfg' '2026-01-01'
+F ""$app\EINVWORLD.dll"" 'NEW' '2026-11-08'; F ""$app\lib.dll"" 'old' '2026-01-01'; F ""$app\only-new.dll"" 'NEW' '2026-11-08'
+F ""$app\web.config"" 'server-cfg' '2026-11-08'; F ""$app\wwwroot\uploads\logo.png"" 'upload' '2026-11-08'; F ""$app\app_offline.htm"" 'off' '2026-11-08'
+Restore-AppFromBackup $bak $app @('EINVWORLD.dll', 'lib.dll', 'only-new.dll') 1
+if ((Get-Content ""$app\EINVWORLD.dll"") -ne 'old') { throw 'EINVWORLD.dll not restored' }
+if (Test-Path ""$app\only-new.dll"") { throw 'file new in the failed release was kept' }
+if ((Get-Content ""$app\web.config"") -ne 'server-cfg') { throw 'web.config overwritten' }
+if (-not (Test-Path ""$app\wwwroot\uploads\logo.png"") -or -not (Test-Path ""$app\app_offline.htm"")) { throw 'server file removed' }");
+
+        [Fact]
+        public void Restore_FailsLoudly_WhenAFileCannotBeRestored()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(_root, "Bak", "EINVWORLD.dll"), "old");
+            var dll = Path.Combine(_root, "App", "EINVWORLD.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(dll)!);
+            File.WriteAllText(dll, "NEW");
+            using var held = HoldOpen(dll);
+            Throws(@"Restore-AppFromBackup ""$repo\..\Bak"" ""$repo\..\App"" @('EINVWORLD.dll') 1", "Rollback robocopy failed");
+        }
+
         // The real Deploy-Staging.ps1 in an isolated fake repo (its own scripts\, bin\, obj\) deploying to a local
-        // App folder, with a local site standing in for the public one.
-        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond)
+        // App folder, with a local site standing in for the public one. The App folder starts with an old build
+        // (EINVWORLD.dll 'old-build', wwwroot\js\site.js) plus web.config; the release ships 'new-build'.
+        private string E2eApp => Path.Combine(_root, "e2e", "App");
+
+        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond, string extraArgs = "")
         {
             using var server = new FakeSite(respond);
             var scripts = Path.GetDirectoryName(Guards())!;
+            foreach (var (rel, content) in new[] { ("EINVWORLD.dll", "old-build"), (@"wwwroot\js\site.js", "old-js") })
+                if (!File.Exists(Path.Combine(E2eApp, rel))) OldFile(Path.Combine(E2eApp, rel), content);   // a test may already hold it open
             var body = @"
 $e = ""$repo\..\e2e""; $r2 = ""$e\repo""; $p2 = ""$r2\bin\Release\net10.0\win-x64\publish""; $o2 = ""$r2\obj\Release\net10.0\win-x64""
-New-Item -ItemType Directory -Force ""$r2\scripts"", $p2, $o2, ""$e\App"" | Out-Null
+New-Item -ItemType Directory -Force ""$r2\scripts"", $p2, $o2, ""$e\App"", ""$p2\wwwroot\js"" | Out-Null
 Copy-Item 'SCRIPTS\Deploy-Staging.ps1', 'SCRIPTS\DeployGuards.ps1', 'SCRIPTS\app_offline.htm' ""$r2\scripts""
 Copy-Item 'SCRIPTS\..\EINVWORLD.csproj' $r2
 Set-Content ""$r2\scripts\never-public-known-paths.txt"" 'wwwroot/Drafts/EINV00149.json'
 Copy-Item ""$repo\appsettings.json"" $r2; Copy-Item ""$repo\appsettings.json"" $p2
-Set-Content ""$p2\EINVWORLD.exe"" 'x'; Write-PublishStamp $p2; Set-Content ""$o2\a.obj"" 'x'
+Set-Content ""$p2\EINVWORLD.exe"" 'x'; Set-Content ""$p2\EINVWORLD.dll"" 'new-build'; Set-Content ""$p2\wwwroot\js\site.js"" 'new-js-longer'
+Write-PublishStamp $p2; Set-Content ""$o2\a.obj"" 'x'
 Set-Content ""$e\App\web.config"" '<configuration />'
-try { & ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish -SkipMigrations -SkipRuntimeCheck -PublicBaseUrl 'http://127.0.0.1:PORT' -Confirm:$false 6>&1 | Out-Null; 'DEPLOY:OK' }
+try { & ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish -SkipMigrations -SkipRuntimeCheck -PublicBaseUrl 'http://127.0.0.1:PORT' -HealthRetryDelayMs 0 EXTRA -Confirm:$false 6>&1 | ForEach-Object { 'LOG ' + $_ }; 'DEPLOY:OK' }
 catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
-'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />')"
-                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString());
+'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />')
+'FILES dll=' + (Get-Content ""$e\App\EINVWORLD.dll"") + ' offline=' + (Test-Path ""$e\App\app_offline.htm"") + ' drafts=' + (Test-Path ""$e\App\wwwroot\Drafts\EINV00149.json"")"
+                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString()).Replace("EXTRA", extraArgs);
             Run(body);
             return _lastOutput;
+        }
+
+        private static (int Status, string? Cache) Healthy(string path, int _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC");
+
+        [Fact]
+        public void Deploy_AppSlowToStop_WaitsForItThenDeploys()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(E2eApp, "EINVWORLD.dll"), "old-build");
+            var release = ReleaseAfter(HoldOpen(Path.Combine(E2eApp, "EINVWORLD.dll")), Path.Combine(E2eApp, "app_offline.htm"), 3000);
+            var output = DeployEndToEnd(Healthy);
+            release.Wait();
+            Assert.Contains("DEPLOY:OK", output);
+            Assert.Contains("FILES dll=new-build offline=False", output);
+            var waited = System.Text.RegularExpressions.Regex.Match(output, @"App stopped after (\d+) s");
+            Assert.True(waited.Success && int.Parse(waited.Groups[1].Value) >= 2, output);
+            Assert.Contains("Integrity check: all", output);
+        }
+
+        [Fact]
+        public void Deploy_AppNeverStops_CopiesNothing_AndBringsTheOldBuildBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(E2eApp, "EINVWORLD.dll"), "old-build");
+            using var held = HoldOpen(Path.Combine(E2eApp, "EINVWORLD.dll"));
+            var output = DeployEndToEnd(Healthy, "-ShutdownTimeoutSeconds 3");
+            Assert.Contains("DEPLOY:FAILED STOPPED BEFORE COPY", output);
+            Assert.Contains("EINVWORLD.dll", output);
+            Assert.Contains("STATE deployed=False publish=True obj=True webconfig=True", output);
+            Assert.Contains("FILES dll=old-build offline=False", output);
+        }
+
+        [Fact]
+        public void Deploy_CopyFailsHalfway_RollsBackToTheOldBuild_WithoutNeverPublicFiles()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(E2eApp, "wwwroot", "js", "site.js"), "old-js");
+            OldFile(Path.Combine(E2eApp, "wwwroot", "Drafts", "EINV00149.json"), "draft");
+            using var held = HoldOpen(Path.Combine(E2eApp, "wwwroot", "js", "site.js"));   // not a binary: the wait passes, the copy fails
+            var output = DeployEndToEnd(Healthy, "-CopyRetryWaitSeconds 1");
+            Assert.Contains("DEPLOY:FAILED DEPLOY FAILED and was ROLLED BACK", output);
+            Assert.Contains("STATE deployed=False publish=True obj=True webconfig=True", output);   // EINVWORLD.exe was new: removed again
+            Assert.True(output.Contains("FILES dll=old-build offline=False drafts=False"), output);
+            var log = Directory.GetFiles(Path.Combine(_root, "e2e", "DeployLogs"), "*_robocopy.log").Single();
+            Assert.Contains("site.js", File.ReadAllText(log));
+        }
+
+        [Fact]
+        public void Deploy_UnhealthyAfterTheCopy_RollsBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (503, null) : (302, "DYNAMIC"));
+            Assert.Contains("DEPLOY:FAILED HEALTH CHECK FAILED: the new build was ROLLED BACK", output);
+            Assert.Contains("STILL UNHEALTHY", output);
+            Assert.Contains("FILES dll=old-build offline=False", output);
+        }
+
+        [Fact]
+        public void Deploy_CopyFailsWithoutABackup_LeavesTheSiteOffline()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            OldFile(Path.Combine(E2eApp, "wwwroot", "js", "site.js"), "old-js");
+            using var held = HoldOpen(Path.Combine(E2eApp, "wwwroot", "js", "site.js"));
+            var output = DeployEndToEnd(Healthy, "-SkipBackup -CopyRetryWaitSeconds 1");
+            Assert.Contains("DEPLOY:FAILED DEPLOY FAILED and there is no backup", output);
+            Assert.Contains("offline=True", output);
         }
 
         [Fact]
         public void Deploy_Succeeds_ThenDeletesOnlyTheLocalBuildOutput()
         {
             if (!OperatingSystem.IsWindows()) return;
-            var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
+            var output = DeployEndToEnd(Healthy);
             Assert.Contains("DEPLOY:OK", output);
             Assert.Contains("STATE deployed=True publish=False obj=False webconfig=True", output);
+            Assert.Contains("FILES dll=new-build offline=False", output);
         }
 
         [Fact]
