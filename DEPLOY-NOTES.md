@@ -33,8 +33,14 @@ changes are additive and AI/features stay off unless already enabled.
    for what a real run needs: write access to the backup and `App\` folders, PowerShell remoting to the
    server (when the Hosting Bundle needs installing), and the SQL login's backup/DDL rights (when
    migrations are pending). Any problem shows as a warning. It also covers step 2 itself: it drops
-   `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
-   you don't need to stop the site by hand.
+   `app_offline.htm` into `App\` for the copy, so on Staging you don't need to stop the site by hand.
+   **Copy safety (v1.50.44):** nothing is copied until the app has released every `.dll`/`.exe` in `App\`
+   (`-ShutdownTimeoutSeconds`, default 120; on timeout nothing is copied and the old version comes back). After
+   the copy every shipped file is checked against the build. If the copy, that check or the health check fails,
+   the files the deploy changed are restored from the pre-deploy backup and verified, and the run fails (nonzero
+   exit). Logs, uploads and `web.config` are never touched by a rollback. With `-SkipBackup`, or if the restore
+   fails, the site **stays offline** (`app_offline.htm`) rather than serve a mixed build: restore `App\` by hand
+   from the backup (never `web.config`), then delete `app_offline.htm`. Robocopy logs: `<target>\DeployLogs\`.
    The page users see meanwhile is `scripts/app_offline.htm` (Ledger maintenance page: start time,
    expected finish, reloads itself when the site is back); edit that file, not the script, to change it.
    It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
@@ -65,8 +71,10 @@ changes are additive and AI/features stay off unless already enabled.
    **Disk space, health check, clean-up (v1.50.33):**
    - **Before anything changes:** the server disk must hold a full `App\` backup plus 1 GB, and this PC 3 GB for the
      publish. Otherwise the deploy stops with "Not enough disk space", and `-WhatIf` reports it. Below 20 GB free it warns.
-   - **After the public check:** `/health/live` and `/health/ready` must return 200 through the public site, or the run
-     fails with "HEALTH CHECK FAILED". The files are deployed by then, so check the logs or roll back from the backup.
+   - **Before the public check (v1.50.44):** `/health/live` and `/health/ready` must return 200 through the public site, or
+     the run fails with "HEALTH CHECK FAILED". If `/health/live` fails (the build doesn't start) the new build is rolled
+     back automatically (see Copy safety); if only `/health/ready` fails (database, folders) it is not, since the previous
+     build needs the same. A rollback never reverts database migrations (additive by rule).
    - **Only if everything passed:** the local `bin\Release\net10.0\win-x64\publish` and `obj\Release\*\win-x64` are
      deleted. Nothing outside the repo's `bin\` and `obj\` is ever deleted, and neither are the NuGet cache or the server
      backups.

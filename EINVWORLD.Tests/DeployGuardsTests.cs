@@ -241,8 +241,13 @@ $r = @(Test-HealthUrls -BaseUrl 'https://x' -Probe $down -DelayMs 0 -MaxAttempts
 if ($r[0].Healthy -or $r[0].Attempts -ne 3) { throw ""down: $($r[0].Healthy) after $($r[0].Attempts)"" }");
 
         // The real Deploy-Staging.ps1 in an isolated fake repo (its own scripts\, bin\, obj\) deploying to a local
-        // App folder, with a local site standing in for the public one.
-        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond)
+        // App folder, with a local site standing in for the public one. It runs in its own powershell.exe so the
+        // exit code is the real one: DEPLOY:OK only for exit 0.
+        private string E2e => Path.Combine(_root, "e2e");
+        private string App => Path.Combine(E2e, "App");
+        private string Publish => Path.Combine(E2e, @"repo\bin\Release\net10.0\win-x64\publish");
+
+        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond, string extraArgs = "")
         {
             using var server = new FakeSite(respond);
             var scripts = Path.GetDirectoryName(Guards())!;
@@ -255,10 +260,14 @@ Set-Content ""$r2\scripts\never-public-known-paths.txt"" 'wwwroot/Drafts/EINV001
 Copy-Item ""$repo\appsettings.json"" $r2; Copy-Item ""$repo\appsettings.json"" $p2
 Set-Content ""$p2\EINVWORLD.exe"" 'x'; Write-PublishStamp $p2; Set-Content ""$o2\a.obj"" 'x'
 Set-Content ""$e\App\web.config"" '<configuration />'
-try { & ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish -SkipMigrations -SkipRuntimeCheck -PublicBaseUrl 'http://127.0.0.1:PORT' -Confirm:$false 6>&1 | Out-Null; 'DEPLOY:OK' }
-catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
-'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />')"
-                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString());
+$ErrorActionPreference = 'Continue'
+& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish -SkipMigrations -SkipRuntimeCheck -PublicBaseUrl 'http://127.0.0.1:PORT' -HealthRetryDelayMs 0 -CopyRetryWaitSeconds 1 EXTRA 2>&1 | ForEach-Object { 'LOG ' + $_ }
+if ($LASTEXITCODE -eq 0) { 'DEPLOY:OK' } else { 'DEPLOY:FAILED exit=' + $LASTEXITCODE }
+$ErrorActionPreference = 'Stop'
+'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />') +
+  ' offline=' + (Test-Path ""$e\App\app_offline.htm"") + ' exe=' + (Get-Content ""$e\App\EINVWORLD.exe"") + ' added=' + (Test-Path ""$e\App\added.dll"") +
+  ' log=' + ((Get-Content ""$e\App\logs\stdout.log"" -ErrorAction SilentlyContinue) -join '|') + ' deploylogs=' + @(Get-ChildItem ""$e\DeployLogs"" -Filter *.log -ErrorAction SilentlyContinue).Count"
+                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString()).Replace("EXTRA", extraArgs);
             Run(body);
             return _lastOutput;
         }
@@ -277,10 +286,167 @@ catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
         {
             if (!OperatingSystem.IsWindows()) return;
             var output = DeployEndToEnd((path, _) => path == "/Drafts/EINV00149.json" || path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC"));
-            Assert.Contains("DEPLOY:FAILED SECURITY VERIFICATION FAILED", output);
+            Assert.Contains("DEPLOY:FAILED", output);
+            Assert.Contains("SECURITY VERIFICATION FAILED", output);
             Assert.Contains("STATE deployed=True publish=True obj=True webconfig=True", output);
             Assert.DoesNotContain(Secret, output);
         }
+
+        // ---- Copy safety: unlock wait, copy failure, integrity, rollback (the 2026-11-08 locked-EINVWORLD.dll incident) ----
+
+        private static bool Healthy(string path) => path.StartsWith("/health/");
+        private static (int, string?) Up(string path, int _) => Healthy(path) ? (200, null) : (302, "DYNAMIC");
+
+        // App\ holds the previous release (old EINVWORLD.dll/.exe, an IIS stdout log); the release adds added.dll.
+        private void SeedOldBuild()
+        {
+            Directory.CreateDirectory(Path.Combine(App, "logs"));
+            Directory.CreateDirectory(Publish);
+            File.WriteAllText(Path.Combine(App, "EINVWORLD.exe"), "old");
+            File.WriteAllText(Path.Combine(App, "EINVWORLD.dll"), "old");
+            File.WriteAllText(Path.Combine(App, @"logs\stdout.log"), "old-log");
+            File.WriteAllText(Path.Combine(Publish, "EINVWORLD.dll"), "new");
+            File.WriteAllText(Path.Combine(Publish, "added.dll"), "new");
+        }
+
+        // Holds a file the way a running app holds its loaded DLL: others may read it, nobody may replace it.
+        private static FileStream HoldOpen(string path, FileShare share = FileShare.Read) => new(path, FileMode.Open, FileAccess.Read, share);
+
+        [Fact]
+        public async Task Deploy_WaitsForTheAppToReleaseItsDll_ThenDeploys()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            var dll = HoldOpen(Path.Combine(App, "EINVWORLD.dll"));
+            // The app releases its DLL 8 s after app_offline.htm appears: the deploy must wait, not copy over it.
+            var release = Task.Run(async () =>
+            {
+                while (!File.Exists(Path.Combine(App, "app_offline.htm"))) await Task.Delay(50);
+                await Task.Delay(8000);   // longer than the old fixed 5 s pause
+                dll.Dispose();
+            });
+            var output = DeployEndToEnd(Up, "-ShutdownTimeoutSeconds 60");
+            await release;
+            Assert.Contains("DEPLOY:OK", output);
+            Assert.Contains("App stopped after", output);
+            Assert.Contains("offline=False exe=x added=True", output);
+            Assert.Equal("new", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
+        }
+
+        [Fact]
+        public void Deploy_AppNeverStops_CopiesNothing_AndExitsNonzero()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            using var dll = HoldOpen(Path.Combine(App, "EINVWORLD.dll"));
+            var output = DeployEndToEnd(Up, "-ShutdownTimeoutSeconds 2");
+            Assert.Contains("DEPLOY:FAILED exit=1", output);
+            Assert.Contains("STOPPED BEFORE COPY", output);
+            Assert.Contains("EINVWORLD.dll", output);
+            Assert.Contains("webconfig=True offline=False exe=old added=False", output);
+        }
+
+        // A publish file nobody can read: robocopy has already copied the root files (a mixed build) when it fails on it.
+        private FileStream UnreadablePublishFile()
+        {
+            Directory.CreateDirectory(Path.Combine(Publish, @"wwwroot\js"));
+            File.WriteAllText(Path.Combine(Publish, @"wwwroot\js\locked.js"), "new");
+            return HoldOpen(Path.Combine(Publish, @"wwwroot\js\locked.js"), FileShare.None);
+        }
+
+        [Fact]
+        public void Deploy_CopyFailsHalfway_RollsBackToTheOldBuild_AndKeepsTheRobocopyLog()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            using var locked = UnreadablePublishFile();
+            var output = DeployEndToEnd(Up);
+            Assert.Contains("DEPLOY:FAILED exit=1", output);
+            Assert.Contains("ROLLED BACK", output);
+            Assert.Contains("webconfig=True offline=False exe=old added=False log=old-log deploylogs=1", output);
+            Assert.Equal("old", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
+        }
+
+        [Fact]
+        public void Deploy_CopyFailsWithoutABackup_LeavesTheSiteOffline()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            using var locked = UnreadablePublishFile();
+            var output = DeployEndToEnd(Up, "-SkipBackup");
+            Assert.Contains("DEPLOY:FAILED exit=1", output);
+            Assert.Contains("LEFT OFFLINE", output);
+            Assert.Contains("offline=True", output);
+        }
+
+        [Fact]
+        public void Deploy_NewBuildFailsToStart_RollsBack_AndKeepsTheStartupLog()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            var log = Path.Combine(App, @"logs\stdout.log");
+            // The new build crashes on start: health answers 500 and IIS writes the reason to the stdout log.
+            var output = DeployEndToEnd((path, _) =>
+            {
+                if (!Healthy(path)) return (302, "DYNAMIC");
+                lock (_root) { if (!File.ReadAllText(log).Contains("crash")) File.AppendAllText(log, "\r\ncrash"); }
+                return (500, null);
+            });
+            Assert.Contains("DEPLOY:FAILED exit=1", output);
+            Assert.Contains("HEALTH CHECK FAILED: the new build was ROLLED BACK", output);
+            Assert.Contains("webconfig=True offline=False exe=old added=False log=old-log|crash", output);
+            Assert.Equal("old", File.ReadAllText(Path.Combine(App, "EINVWORLD.dll")));
+        }
+
+        [Fact]
+        public void Deploy_OnlyReadinessFails_IsNotRolledBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            SeedOldBuild();
+            var output = DeployEndToEnd((path, _) => path == "/health/ready" ? (503, null) : Up(path, 0));
+            Assert.Contains("DEPLOY:FAILED exit=1", output);
+            Assert.Contains("Not rolled back", output);
+            Assert.Contains("offline=False exe=x added=True", output);
+        }
+
+        [Fact] public void Rollback_UndoesAPartialDeploy_AndLeavesEverythingElseAlone() => Passes(@"
+$b = ""$repo\..\backup""; $a = ""$repo\..\App""
+New-Item -ItemType Directory -Force ""$b\wwwroot"", ""$a\wwwroot\uploads"", ""$a\logs"" | Out-Null
+Set-Content ""$b\EINVWORLD.dll"" 'old'; Set-Content ""$b\wwwroot\site.js"" 'old'; Set-Content ""$b\stale.dll"" 'old'
+Set-Content ""$b\.deploy-manifest.txt"" @('EINVWORLD.dll', 'wwwroot\site.js', 'stale.dll'); Set-Content ""$b\web.config"" 'backup-cfg'
+Set-Content ""$b\appsettings.Production.json"" 'backup-settings'
+Set-Content ""$repo\..\outside.txt"" 'keep'; Set-Content ""$b\..\outside.txt"" 'keep'
+Copy-Item ""$b\*"" $a -Recurse -Force
+# The failed deploy: EINVWORLD.dll replaced, site.js not yet, added.dll new, stale.dll removed, a new manifest.
+Set-Content ""$a\EINVWORLD.dll"" 'new'; Set-Content ""$a\added.dll"" 'new'; Remove-Item ""$a\stale.dll""
+Set-Content ""$a\.deploy-manifest.txt"" @('EINVWORLD.dll', 'wwwroot\site.js', 'added.dll')
+# Written since the backup by others: must survive.
+Set-Content ""$a\web.config"" 'server-cfg'; Set-Content ""$a\logs\stdout.log"" 'crash'; Set-Content ""$a\wwwroot\uploads\u.png"" 'u'
+# A tampered manifest (traversal, rooted) and a file this run excludes from the copy must not be restored.
+Add-Content ""$b\.deploy-manifest.txt"" @('..\outside.txt', ""$repo\..\outside.txt"", 'appsettings.Production.json')
+Set-Content ""$a\appsettings.Production.json"" 'server-settings'
+Restore-AppFromBackup $b $a @('EINVWORLD.dll', 'wwwroot\site.js', 'added.dll') 0 '' @('web.config', 'app_offline.htm', 'appsettings.Production.json')
+if ((Get-Content ""$a\appsettings.Production.json"") -ne 'server-settings') { throw 'restored a file the copy excludes' }
+foreach ($f in 'EINVWORLD.dll', 'wwwroot\site.js', 'stale.dll') { if ((Get-Content ""$a\$f"") -ne 'old') { throw ""$f not restored"" } }
+if ((Get-Content ""$a\.deploy-manifest.txt"")[0..2] -join ',' -ne 'EINVWORLD.dll,wwwroot\site.js,stale.dll') { throw 'manifest not restored' }
+if (Test-Path ""$a\added.dll"") { throw 'the failed release''s new file is still there' }
+if ((Get-Content ""$a\web.config"") -ne 'server-cfg' -or (Get-Content ""$a\logs\stdout.log"") -ne 'crash' -or -not (Test-Path ""$a\wwwroot\uploads\u.png"")) { throw 'touched a file the deploy never wrote' }");
+
+        [Fact] public void Rollback_ThatCannotRestoreAFile_Throws() => Throws(@"
+$b = ""$repo\..\backup""; $a = ""$repo\..\App""
+New-Item -ItemType Directory -Force $b, $a | Out-Null
+Set-Content ""$b\EINVWORLD.dll"" 'old'; Set-Content ""$a\EINVWORLD.dll"" 'new'
+$h = [IO.File]::Open(""$a\EINVWORLD.dll"", 'Open', 'Read', 'Read')
+try { Restore-AppFromBackup $b $a @('EINVWORLD.dll') 0 } finally { $h.Close() }", "Rollback could not restore EINVWORLD.dll");
+
+        [Fact] public void UnlockWait_ReportsTheHeldFile_AndPassesOnceReleased() => Passes(@"
+$a = ""$repo\..\App""; New-Item -ItemType Directory -Force ""$a\runtimes"" | Out-Null
+Set-Content ""$a\EINVWORLD.dll"" 'x'; Set-Content ""$a\runtimes\native.dll"" 'x'; Set-Content ""$a\notes.txt"" 'x'
+$h = [IO.File]::Open(""$a\runtimes\native.dll"", 'Open', 'Read', 'Read')
+try { $w = Wait-AppFilesUnlocked -AppPath $a -TimeoutSeconds 1 -PollMs 100 } finally { $h.Close() }
+if ($w.Unlocked -or ($w.Locked -join ',') -ne 'runtimes\native.dll') { throw ""held: $($w.Unlocked) $($w.Locked)"" }
+$w = Wait-AppFilesUnlocked -AppPath $a -TimeoutSeconds 1 -PollMs 100
+if (-not $w.Unlocked) { throw 'still locked after release' }");
 
         /// <summary>Minimal HTTP/1.1 server on a free loopback port. Status 0 = close without answering (curl sees 000).</summary>
         private sealed class FakeSite : IDisposable

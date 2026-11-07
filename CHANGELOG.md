@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.43`** (`AppInfo:Version` in `appsettings.json`). v1.50.43 is a **patch**
+> **Current version: `v1.50.44`** (`AppInfo:Version` in `appsettings.json`). v1.50.44 is a **patch**
+> release: a deploy waits for the app to stop before copying and rolls back a failed deploy — see the dated entry below. v1.50.43 was a **patch**
 > release: a failed scheduled LHDN import logs the TIN masked — see the dated entry below. v1.50.42 was a **patch**
 > release: the lead-approval activity entry masks the TIN — see the dated entry below. v1.50.41 was a **patch**
 > release: demo users no longer get built-in passwords when seeding is switched on — see the dated entry below. v1.50.40 was a **patch**
@@ -485,6 +486,29 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-08 — v1.50.44 (deploys wait for the app to stop and roll back a failed copy)
+
+- **Deploy reliability (`scripts/Deploy-Staging.ps1`, Staging and Production):** the v1.50.43 Staging deploy failed with
+  robocopy exit 11 because the app still held `EINVWORLD.dll` 5 s after `app_offline.htm` (a fixed pause), and the
+  script then put the site back online with the old DLL next to new files (a mixed build; recovered by hand). Now:
+  - Nothing is copied until the app has released every `.dll`/`.exe` in `App\`, polled for up to
+    `-ShutdownTimeoutSeconds` (default 120). On timeout the deploy stops, nothing was copied, the old version comes
+    back online and the locked files are named.
+  - After the copy every shipped file is checked against the build (size and timestamp; `EINVWORLD.dll/.exe`,
+    `.deps.json`, `.runtimeconfig.json` by SHA-256).
+  - If the copy, that check or the post-deploy health check fails, the files the deploy changed are restored from the
+    pre-deploy backup and verified, and the script exits nonzero. Logs, uploads and `web.config` written since the
+    backup are left alone. Robocopy logs are kept in `<target>\DeployLogs\`.
+  - A mixed build is never put online: with `-SkipBackup`, or if the restore fails, the site stays offline
+    (`app_offline.htm`) with instructions.
+  - The health check now runs before the public security check. A build that won't start (`/health/live` fails) is
+    rolled back; `/health/ready` failing alone (database, folders) fails the run without a rollback, since the previous
+    build depends on the same. A rollback never reverts database migrations (they are additive).
+  - The site stays offline unless `App\` is known consistent, including when the run is interrupted (Ctrl+C) mid-copy.
+  - New: `-CopyRetryWaitSeconds`, `-HealthRetryDelayMs`. Tests: 9 new isolated deploy tests (delayed shutdown,
+    timeout, copy failure, partial deploy, failed start, readiness-only failure, rollback, failed rollback).
+- No database change. No app code change.
 
 ## 📅 2026-11-05 — v1.50.43 (failed scheduled import logs the TIN masked)
 
