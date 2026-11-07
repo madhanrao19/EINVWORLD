@@ -281,7 +281,7 @@
     <!-- EPPlus removed: v5+ requires a commercial/Polyform license (was being used under NonCommercial,
          a violation for a commercial product). Replaced with ClosedXML (MIT) — see GenerateExcel. -->
     <PackageReference Include="Humanizer" Version="3.0.10" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="15.0.0" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="15.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.14" />
