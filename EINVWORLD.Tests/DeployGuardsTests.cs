@@ -399,6 +399,15 @@ catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
         }
 
         [Fact]
+        public void Deploy_NoHealthAnswerAtAll_KeepsTheVerifiedBuild_AndFails()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (0, null) : (302, "DYNAMIC"));
+            Assert.Contains("DEPLOY:FAILED HEALTH UNVERIFIED", output);
+            Assert.Contains("FILES dll=new-build offline=False", output);
+        }
+
+        [Fact]
         public void Deploy_CopyFailsWithoutABackup_LeavesTheSiteOffline()
         {
             if (!OperatingSystem.IsWindows()) return;

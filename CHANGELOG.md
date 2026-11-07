@@ -504,7 +504,8 @@
   - **Logs:** robocopy logs go to `DeployLogs\` next to the server's backups. Robocopy retries 3 times,
     `-CopyRetryWaitSeconds` apart (default 5).
   - The health check now runs before the public security check, so an app that won't start rolls back instead of
-    failing the security check with 5xx answers.
+    failing the security check with 5xx answers. Only a real error answer rolls back: if the site doesn't answer at all
+    (network, tunnel, a very slow first start) the verified new build is kept and the run fails as "HEALTH UNVERIFIED".
   - Tests (`DeployGuardsTests`, real PowerShell, local folders): app slow to stop, app never stops, copy fails halfway,
     unhealthy after the copy, copy fails without a backup, and the restore itself.
 

@@ -559,10 +559,15 @@ Get-RelativeFiles $SourcePublishPath | ForEach-Object {
 }
 
 # Stops the app (app_offline.htm must already be in App\), restores the pre-deploy backup, verifies it and removes
-# never-public files the backup may hold. Throws if any of that fails; the caller then keeps the site offline.
+# never-public files the backup may hold. Throws if any of that fails. $script:restoreStarted tells the caller whether
+# App\ was touched: if the app never stopped, nothing was restored and App\ is as it was before the rollback.
+# Known limit: files the OLD app changed under App\ between the backup and app_offline.htm revert to the backup's copy
+# (documents, logs and keys live outside App\, so in practice only never-public leftovers and ANCM stdout logs).
+$script:restoreStarted = $false
 function Invoke-AppRollback {
     $w = Wait-AppFilesUnlocked -AppPath $DestAppPath -TimeoutSeconds $ShutdownTimeoutSeconds
     if (-not $w.Unlocked) { throw "the app still holds $($w.Locked -join ', ') after $($w.Seconds) s" }
+    $script:restoreStarted = $true
     Write-Host "Rolling back: restoring $backupPath into App\ ..." -ForegroundColor Yellow
     Restore-AppFromBackup $backupPath $DestAppPath @($shipped) $CopyRetryWaitSeconds $copyLog
     foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) { Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force }
@@ -693,7 +698,13 @@ if (-not $PublicBaseUrl) { $PublicBaseUrl = Get-DefaultPublicBaseUrl $DestAppPat
 if ($PublicBaseUrl) {
     $health = @(Test-HealthUrls -BaseUrl $PublicBaseUrl -DelayMs $HealthRetryDelayMs)
     $health | ForEach-Object { Write-Host ("  {0,3} after {1} attempt(s)  {2}" -f $_.Status, $_.Attempts, $_.Url) }
-    if (@($health | Where-Object { -not $_.Healthy }).Count) {
+    $unhealthy = @($health | Where-Object { -not $_.Healthy })
+    if ($unhealthy.Count -and $deployed -and -not @($unhealthy | Where-Object { $_.Status -ne 0 }).Count) {
+        # No answer at all (000): this PC's network, the tunnel, or a first start longer than curl's timeout. That
+        # proves nothing about the build, so the verified new build is kept rather than rolled back.
+        throw "HEALTH UNVERIFIED: no answer from $PublicBaseUrl after the deploy, so the integrity-verified new build was KEPT (not rolled back). Check this PC's connection and the site, then re-run the health and security checks (DEPLOY-NOTES.md); roll back from $(if ($backupPath) { $backupPath } else { 'your backup' }) if the site is really down."
+    }
+    if ($unhealthy.Count) {
         if (-not ($deployed -and $backupPath)) {
             throw "HEALTH CHECK FAILED: the site is not healthy$(if ($deployed) { ' and there is no backup to roll back to (-SkipBackup)' }). Check SystemLogs / the stdout log. Local build output kept for diagnosis."
         }
@@ -701,6 +712,11 @@ if ($PublicBaseUrl) {
         Set-Content -Path $offlineFile -Value $offlineHtml -Encoding utf8
         try { Invoke-AppRollback }
         catch {
+            if (-not $script:restoreStarted) {
+                # The app never stopped, so nothing was restored: App\ still holds the verified new build.
+                Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
+                throw "HEALTH CHECK FAILED and the rollback could not start ($($_.Exception.Message)): nothing was restored, the verified new build is back online. Check the server, then roll back from $backupPath by hand if needed."
+            }
             throw "HEALTH CHECK FAILED and the ROLLBACK FAILED ($($_.Exception.Message)): the site is LEFT OFFLINE (app_offline.htm). Restore $backupPath into App\ by hand (never web.config), then delete $offlineFile."
         }
         Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
