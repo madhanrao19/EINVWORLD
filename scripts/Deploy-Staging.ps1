@@ -38,7 +38,12 @@
     the new schema. Any failure stops the deploy before a single app file is copied.
 
     The site is taken offline only for the copy step, via `app_offline.htm` (no IIS admin rights
-    needed), and comes back on the next request.
+    needed), and comes back on the next request. Nothing is copied until the app has released every
+    .dll/.exe in App\ (-ShutdownTimeoutSeconds). After the copy every shipped file is checked against
+    the build. If the copy, that check or the health check fails, App\ is restored from the pre-deploy
+    backup and verified, and the script fails (nonzero exit). A mixed build is never put online: with
+    -SkipBackup, or if the restore itself fails, the site stays offline (app_offline.htm) for a human.
+    Robocopy logs go to <target>\DeployLogs\ next to the backups.
 
     Disk space and clean-up: before anything changes, the server disk must hold a full backup of
     App\ plus 1 GB and this PC's disk 3 GB (else the deploy stops; below 20 GB free it warns). After
@@ -96,6 +101,17 @@
     Keep the local publish output after a successful deploy (normally deleted, see "Disk space and clean-up"),
     e.g. to deploy the same build to Production next with -SkipPublish.
 
+.PARAMETER ShutdownTimeoutSeconds
+    How long to wait, after app_offline.htm, for the app to stop and release every .dll/.exe in App\ (default
+    120: the app's own 30 s graceful shutdown plus IIS's 90 s limit). Nothing is copied before that; on timeout
+    the deploy stops, nothing was copied, and the previous version comes back online.
+
+.PARAMETER CopyRetryWaitSeconds
+    Seconds robocopy waits between its 3 retries of a file (default 5).
+
+.PARAMETER HealthRetryDelayMs
+    Base gap between post-deploy health-check attempts (default 3000, growing per attempt).
+
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
     Pending migrations are still listed (read-only query). Also runs read-only preflight checks and
@@ -145,7 +161,13 @@ param(
 
     [string]$PublicBaseUrl,
 
-    [switch]$KeepPublishOutput
+    [switch]$KeepPublishOutput,
+
+    [ValidateRange(1, 900)][int]$ShutdownTimeoutSeconds = 120,
+
+    [ValidateRange(1, 60)][int]$CopyRetryWaitSeconds = 5,
+
+    [ValidateRange(0, 60000)][int]$HealthRetryDelayMs = 3000
 )
 
 $ErrorActionPreference = 'Stop'
@@ -380,22 +402,24 @@ if ($forbiddenOnServer.Count) {
 }
 
 # -- 2. Backup -----------------------------------------------------------------------------------
+$backupPath = $null   # set only once a backup really exists - the rollback depends on it
+$deployedVersion = 'unknown'
 if (-not $SkipBackup) {
-    $deployedVersion = 'unknown'
     $verFile = Join-Path $DestAppPath 'appsettings.json'
     if (Test-Path $verFile) {
         $match = (Get-Content $verFile -Raw) | Select-String '"Version":\s*"(v[\d.]+)"'
         if ($match) { $deployedVersion = $match.Matches[0].Groups[1].Value }
     }
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $backupPath = Join-Path (Split-Path $DestAppPath -Parent) "App_Backup_${deployedVersion}_$stamp"
+    $plannedBackup = Join-Path (Split-Path $DestAppPath -Parent) "App_Backup_${deployedVersion}_$stamp"
 
-    if ($PSCmdlet.ShouldProcess($backupPath, "Back up current App\ ($deployedVersion)")) {
-        Write-Host "Backing up current App\ ($deployedVersion) to $backupPath ..." -ForegroundColor Cyan
-        $rcArgs = @($DestAppPath, $backupPath, '/E', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH')
+    if ($PSCmdlet.ShouldProcess($plannedBackup, "Back up current App\ ($deployedVersion)")) {
+        Write-Host "Backing up current App\ ($deployedVersion) to $plannedBackup ..." -ForegroundColor Cyan
+        $rcArgs = @($DestAppPath, $plannedBackup, '/E', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH')
         robocopy @rcArgs | Select-Object -Last 6
         # Robocopy exit codes 0-7 are all non-fatal ("files copied" etc); only 8+ means real trouble.
         if ($LASTEXITCODE -ge 8) { throw "Backup robocopy failed (exit code $LASTEXITCODE) - aborting before touching App\." }
+        $backupPath = $plannedBackup
         Write-Host "Backup complete: $backupPath" -ForegroundColor Green
     }
 }
@@ -523,7 +547,32 @@ else {
 Write-Host ""
 Write-Host "Copying publish output into App\ (excluding: $($excludeFiles -join ', ')) ..." -ForegroundColor Cyan
 
-$rcArgs = @($SourcePublishPath, $DestAppPath, '/E', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH', '/XF') + $excludeFiles
+$deployLogDir = Join-Path (Split-Path $DestAppPath -Parent) 'DeployLogs'
+$copyLog = Join-Path $deployLogDir "deploy_$(Get-Date -Format 'yyyyMMdd_HHmmss')_robocopy.log"
+$rcArgs = @($SourcePublishPath, $DestAppPath, '/E', '/R:3', "/W:$CopyRetryWaitSeconds", '/NFL', '/NDL', '/NJH', '/NP', '/TEE', "/LOG+:$copyLog", '/XF') + $excludeFiles
+
+# Every file this release ships (the publish output minus server-owned files): what the copy is checked against,
+# what the next deploy may remove, and what a rollback deletes when the backup lacks it.
+$shipped = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+Get-RelativeFiles $SourcePublishPath | ForEach-Object {
+    if ($excludeFiles -notcontains (Split-Path $_ -Leaf)) { [void]$shipped.Add($_) }
+}
+
+# Stops the app (app_offline.htm must already be in App\), restores the pre-deploy backup, verifies it and removes
+# never-public files the backup may hold. Throws if any of that fails. $script:restoreStarted tells the caller whether
+# App\ was touched: if the app never stopped, nothing was restored and App\ is as it was before the rollback.
+# Known limit: files the OLD app changed under App\ between the backup and app_offline.htm revert to the backup's copy
+# (documents, logs and keys live outside App\, so in practice only never-public leftovers and ANCM stdout logs).
+$script:restoreStarted = $false
+function Invoke-AppRollback {
+    $w = Wait-AppFilesUnlocked -AppPath $DestAppPath -TimeoutSeconds $ShutdownTimeoutSeconds
+    if (-not $w.Unlocked) { throw "the app still holds $($w.Locked -join ', ') after $($w.Seconds) s" }
+    $script:restoreStarted = $true
+    Write-Host "Rolling back: restoring $backupPath into App\ ..." -ForegroundColor Yellow
+    Restore-AppFromBackup $backupPath $DestAppPath @($shipped) $CopyRetryWaitSeconds $copyLog
+    foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) { Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force }
+    Write-Host "Rollback verified: App\ matches $backupPath ($deployedVersion)." -ForegroundColor Yellow
+}
 
 # Settings files the server has that differ from this build are replaced (the backup keeps the old copy).
 foreach ($name in 'appsettings.json', 'appsettings.Production.json', 'appsettings.Staging.json') {
@@ -537,10 +586,13 @@ foreach ($name in 'appsettings.json', 'appsettings.Production.json', 'appsetting
 if ($WhatIfPreference) { $rcArgs += '/L' }
 
 # app_offline.htm makes the ASP.NET Core Module stop the app and release its DLL locks, so no manual
-# site stop is needed. Dropped AFTER the backup (so a restored backup never ships it) and always removed,
-# even if the copy fails - removing it brings the site back up on the next request.
+# site stop is needed. Dropped AFTER the backup (so a restored backup never ships it). Removed once App\ is
+# consistent again - the new build verified, nothing copied, or the backup restored - and only then: if a
+# rollback is impossible or fails, it stays, so a mixed build is never served.
 $offlineFile = Join-Path $DestAppPath 'app_offline.htm'
+$deployed = $false
 if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server-only files)')) {
+    New-Item -ItemType Directory -Force $deployLogDir | Out-Null
     # Maintenance page (scripts\app_offline.htm, self-contained): it shows when the update started and the
     # expected finish, and reloads itself once the site answers again.
     $offlineTemplate = Join-Path $PSScriptRoot 'app_offline.htm'
@@ -553,66 +605,128 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
             Replace('{{REF}}', 'DEPLOY-' + $offlineStart.ToString('yyyyMMdd-HHmm'))
     }
     Set-Content -Path $offlineFile -Value $offlineHtml -Encoding utf8
+    $keepOffline = $false
     try {
-        Start-Sleep -Seconds 5   # give ANCM time to shut the app down
-        robocopy @rcArgs | Select-Object -Last 8
-        if ($LASTEXITCODE -ge 8) { throw "Deploy robocopy failed (exit code $LASTEXITCODE) - check output above. Your pre-deploy backup is intact." }
-        Write-Host "Copy complete." -ForegroundColor Green
-
-        # Remove files the PREVIOUS deploy shipped that this release no longer has. Driven only by the
-        # manifest this script wrote last time, so anything it never shipped (uploads under wwwroot,
-        # server-only files, the backup) is never touched. The pre-deploy backup still has every file.
-        $manifestPath = Join-Path $DestAppPath '.deploy-manifest.txt'
-        $shipped = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
-        Get-RelativeFiles $SourcePublishPath | ForEach-Object {
-            if ($excludeFiles -notcontains (Split-Path $_ -Leaf)) { [void]$shipped.Add($_) }
+        # Never copy while the app runs: wait (bounded) until it has released every binary in App\.
+        Write-Host "Waiting for the app to stop (up to $ShutdownTimeoutSeconds s) ..." -ForegroundColor Cyan
+        $wait = Wait-AppFilesUnlocked -AppPath $DestAppPath -TimeoutSeconds $ShutdownTimeoutSeconds
+        if (-not $wait.Unlocked) {
+            throw "STOPPED BEFORE COPY: after $($wait.Seconds) s these files are still held open (or can't be written): $($wait.Locked -join ', '). Nothing was copied; the previous version comes back online. Check the app pool on the server (a hung request or worker), then re-run, or raise -ShutdownTimeoutSeconds."
         }
-        if (Test-Path $manifestPath) {
-            $stale = @(Get-Content $manifestPath | Where-Object {
-                $_ -and -not $shipped.Contains($_) -and $_ -notmatch '\.\.' -and -not [IO.Path]::IsPathRooted($_) -and
-                $excludeFiles -notcontains (Split-Path $_ -Leaf)
-            })
-            $removed = 0
-            foreach ($rel in $stale) {
-                $full = Join-Path $DestAppPath $rel
-                if (Test-Path -LiteralPath $full -PathType Leaf) {
-                    Remove-Item -LiteralPath $full -Force
-                    Write-Host "  removed (no longer in this release): $rel"
-                    $removed++
+        Write-Host "App stopped after $($wait.Seconds) s: no .dll/.exe in App\ is held open." -ForegroundColor Green
+
+        try {
+            robocopy @rcArgs | Select-Object -Last 8
+            if ($LASTEXITCODE -ge 8) { throw "Deploy robocopy failed (exit code $LASTEXITCODE) - errors are in $copyLog" }
+            Write-Host "Copy complete." -ForegroundColor Green
+
+            # Remove files the PREVIOUS deploy shipped that this release no longer has. Driven only by the
+            # manifest this script wrote last time, so anything it never shipped (uploads under wwwroot,
+            # server-only files, the backup) is never touched. The pre-deploy backup still has every file.
+            $manifestPath = Join-Path $DestAppPath '.deploy-manifest.txt'
+            if (Test-Path $manifestPath) {
+                $stale = @(Get-Content $manifestPath | Where-Object {
+                    $_ -and -not $shipped.Contains($_) -and $_ -notmatch '\.\.' -and -not [IO.Path]::IsPathRooted($_) -and
+                    $excludeFiles -notcontains (Split-Path $_ -Leaf)
+                })
+                $removed = 0
+                foreach ($rel in $stale) {
+                    $full = Join-Path $DestAppPath $rel
+                    if (Test-Path -LiteralPath $full -PathType Leaf) {
+                        Remove-Item -LiteralPath $full -Force
+                        Write-Host "  removed (no longer in this release): $rel"
+                        $removed++
+                    }
+                }
+                Write-Host "Stale-file clean-up: removed $removed file(s) dropped since the last deploy." -ForegroundColor Green
+            }
+            else {
+                # First run with this script version: no manifest yet, so delete nothing; list what a human should review.
+                $unshipped = @(Get-RelativeFiles (Join-Path $DestAppPath 'wwwroot') | ForEach-Object { "wwwroot\$_" } |
+                    Where-Object { -not $shipped.Contains($_) })
+                Write-Host "No deploy manifest yet - nothing removed this time (the next deploy cleans up automatically)." -ForegroundColor Yellow
+                if ($unshipped.Count) {
+                    Write-Host "  $($unshipped.Count) file(s) under wwwroot are not in this release - review, and delete by hand only if they are old build files (NOT uploads):" -ForegroundColor Yellow
+                    $unshipped | Select-Object -First 40 | ForEach-Object { Write-Host "    $_" }
                 }
             }
-            Write-Host "Stale-file clean-up: removed $removed file(s) dropped since the last deploy." -ForegroundColor Green
-        }
-        else {
-            # First run with this script version: no manifest yet, so delete nothing; list what a human should review.
-            $unshipped = @(Get-RelativeFiles (Join-Path $DestAppPath 'wwwroot') | ForEach-Object { "wwwroot\$_" } |
-                Where-Object { -not $shipped.Contains($_) })
-            Write-Host "No deploy manifest yet - nothing removed this time (the next deploy cleans up automatically)." -ForegroundColor Yellow
-            if ($unshipped.Count) {
-                Write-Host "  $($unshipped.Count) file(s) under wwwroot are not in this release - review, and delete by hand only if they are old build files (NOT uploads):" -ForegroundColor Yellow
-                $unshipped | Select-Object -First 40 | ForEach-Object { Write-Host "    $_" }
-            }
-        }
-        Set-Content -Path $manifestPath -Value ($shipped | Sort-Object) -Encoding utf8
+            Set-Content -Path $manifestPath -Value ($shipped | Sort-Object) -Encoding utf8
 
-        # Never-public files this script did not ship (an old build or a hand copy left them, so the manifest
-        # can't remove them - Production's Drafts\ and tempcsv\). The pre-deploy backup keeps a copy.
-        foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) {
-            Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force
-            Write-Host "  removed (must not be public): $rel"
+            # Never-public files this script did not ship (an old build or a hand copy left them, so the manifest
+            # can't remove them - Production's Drafts\ and tempcsv\). The pre-deploy backup keeps a copy.
+            foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) {
+                Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force
+                Write-Host "  removed (must not be public): $rel"
+            }
+            $left = Find-ForbiddenServerFiles $DestAppPath
+            if ($left.Count) { throw "These files must not be public and are still on the server: $($left -join ', ')" }
+
+            # Integrity: every shipped file must now be exactly the build's (start-up files by content).
+            $bad = @(Compare-DeployedFiles $SourcePublishPath $DestAppPath @($shipped))
+            if ($bad.Count) { throw "$($bad.Count) deployed file(s) don't match the build, e.g. $(($bad | Select-Object -First 5) -join ', ')" }
+            Write-Host "Integrity check: all $($shipped.Count) shipped file(s) match the build." -ForegroundColor Green
+            $deployed = $true
         }
-        $left = Find-ForbiddenServerFiles $DestAppPath
-        if ($left.Count) { throw "These files must not be public and are still on the server: $($left -join ', ')" }
+        catch {
+            $failure = $_.Exception.Message
+            Write-Host "DEPLOY FAILED during the copy: $failure" -ForegroundColor Red
+            if (-not $backupPath) {
+                $keepOffline = $true
+                throw "DEPLOY FAILED and there is no backup to roll back to (-SkipBackup): App\ may hold a mixed build, so the site is LEFT OFFLINE (app_offline.htm). Restore App\ by hand, then delete $offlineFile. Cause: $failure"
+            }
+            try { Invoke-AppRollback }
+            catch {
+                $keepOffline = $true
+                throw "DEPLOY FAILED and the ROLLBACK FAILED ($($_.Exception.Message)): the site is LEFT OFFLINE (app_offline.htm). Restore $backupPath into App\ by hand (never web.config), then delete $offlineFile. Cause: $failure"
+            }
+            throw "DEPLOY FAILED and was ROLLED BACK to $deployedVersion ($backupPath, verified). Cause: $failure. Robocopy log: $copyLog"
+        }
     }
     finally {
-        Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
-        Write-Host "Site back online (app_offline.htm removed)." -ForegroundColor Green
+        if ($keepOffline) { Write-Host "Site LEFT OFFLINE: $offlineFile stays until App\ is restored." -ForegroundColor Red }
+        else {
+            Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
+            Write-Host "Site back online (app_offline.htm removed)." -ForegroundColor Green
+        }
     }
 }
 
-# -- 4. Public security verification (through the real hostname, so a Cloudflare-cached copy counts) ---------
+# -- 4. Health check through the public hostname (the first request starts the new build) ----------------
+# Runs before the security check: an app that won't start answers 5xx everywhere, which must roll back, not
+# read as an unverifiable security check.
 if (-not $PublicBaseUrl) { $PublicBaseUrl = Get-DefaultPublicBaseUrl $DestAppPath }
 if ($PublicBaseUrl) {
+    $health = @(Test-HealthUrls -BaseUrl $PublicBaseUrl -DelayMs $HealthRetryDelayMs)
+    $health | ForEach-Object { Write-Host ("  {0,3} after {1} attempt(s)  {2}" -f $_.Status, $_.Attempts, $_.Url) }
+    $unhealthy = @($health | Where-Object { -not $_.Healthy })
+    if ($unhealthy.Count -and $deployed -and -not @($unhealthy | Where-Object { $_.Status -ne 0 }).Count) {
+        # No answer at all (000): this PC's network, the tunnel, or a first start longer than curl's timeout. That
+        # proves nothing about the build, so the verified new build is kept rather than rolled back.
+        throw "HEALTH UNVERIFIED: no answer from $PublicBaseUrl after the deploy, so the integrity-verified new build was KEPT (not rolled back). Check this PC's connection and the site, then re-run the health and security checks (DEPLOY-NOTES.md); roll back from $(if ($backupPath) { $backupPath } else { 'your backup' }) if the site is really down."
+    }
+    if ($unhealthy.Count) {
+        if (-not ($deployed -and $backupPath)) {
+            throw "HEALTH CHECK FAILED: the site is not healthy$(if ($deployed) { ' and there is no backup to roll back to (-SkipBackup)' }). Check SystemLogs / the stdout log. Local build output kept for diagnosis."
+        }
+        Write-Host "HEALTH CHECK FAILED after the deploy - rolling back to $deployedVersion." -ForegroundColor Red
+        Set-Content -Path $offlineFile -Value $offlineHtml -Encoding utf8
+        try { Invoke-AppRollback }
+        catch {
+            if (-not $script:restoreStarted) {
+                # The app never stopped, so nothing was restored: App\ still holds the verified new build.
+                Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
+                throw "HEALTH CHECK FAILED and the rollback could not start ($($_.Exception.Message)): nothing was restored, the verified new build is back online. Check the server, then roll back from $backupPath by hand if needed."
+            }
+            throw "HEALTH CHECK FAILED and the ROLLBACK FAILED ($($_.Exception.Message)): the site is LEFT OFFLINE (app_offline.htm). Restore $backupPath into App\ by hand (never web.config), then delete $offlineFile."
+        }
+        Remove-Item -Path $offlineFile -Force -ErrorAction SilentlyContinue
+        $after = @(Test-HealthUrls -BaseUrl $PublicBaseUrl -DelayMs $HealthRetryDelayMs)
+        $state = if (@($after | Where-Object { -not $_.Healthy }).Count) { 'is STILL UNHEALTHY - check the server' } else { 'is healthy again' }
+        throw "HEALTH CHECK FAILED: the new build was ROLLED BACK to $deployedVersion ($backupPath, verified) and the site $state. Local build output kept for diagnosis."
+    }
+    Write-Host "Health check: PASS." -ForegroundColor Green
+
+    # -- 5. Public security verification (through the real hostname, so a Cloudflare-cached copy counts) -----
     $checkPaths = @(Get-KnownNeverPublicPaths) + @($forbiddenOnServer)
     Write-Host ""
     Write-Host "Public security check: never-public paths through $PublicBaseUrl (status and cache only, never content) ..." -ForegroundColor Cyan
@@ -623,14 +737,6 @@ if ($PublicBaseUrl) {
         throw "SECURITY VERIFICATION FAILED: $($bad.Count) of $($results.Count) never-public path(s) are served, cached at Cloudflare, or could not be verified. The app files ARE deployed. Remove the files from the server, purge the Cloudflare cache, then re-run the check: . .\scripts\DeployGuards.ps1; Test-NeverPublicUrls -BaseUrl $PublicBaseUrl -RelativePaths (Get-KnownNeverPublicPaths)"
     }
     Write-Host "Public security check: PASS ($($results.Count) path(s), none served or cached)." -ForegroundColor Green
-
-    # -- 5. Health check through the same public hostname ---------------------------------------------
-    $health = @(Test-HealthUrls -BaseUrl $PublicBaseUrl)
-    $health | ForEach-Object { Write-Host ("  {0,3} after {1} attempt(s)  {2}" -f $_.Status, $_.Attempts, $_.Url) }
-    if (@($health | Where-Object { -not $_.Healthy }).Count) {
-        throw "HEALTH CHECK FAILED: the app files ARE deployed but the site is not healthy. Check SystemLogs / the stdout log, or roll back from the backup. Local build output kept for diagnosis."
-    }
-    Write-Host "Health check: PASS." -ForegroundColor Green
 }
 else {
     Write-Warning "No public hostname for $DestAppPath - post-deploy public security and health checks skipped (pass -PublicBaseUrl to run them)."

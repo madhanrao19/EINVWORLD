@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.43`** (`AppInfo:Version` in `appsettings.json`). v1.50.43 is a **patch**
+> **Current version: `v1.50.44`** (`AppInfo:Version` in `appsettings.json`). v1.50.44 is a **patch**
+> release: the deploy script waits for the app to stop and rolls back a failed deploy — see the dated entry below. v1.50.43 was a **patch**
 > release: a failed scheduled LHDN import logs the TIN masked — see the dated entry below. v1.50.42 was a **patch**
 > release: the lead-approval activity entry masks the TIN — see the dated entry below. v1.50.41 was a **patch**
 > release: demo users no longer get built-in passwords when seeding is switched on — see the dated entry below. v1.50.40 was a **patch**
@@ -485,6 +486,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-08 — v1.50.44 (Deploy: wait for the app to stop, roll back a failed copy)
+
+- **Deploy script (`scripts\Deploy-Staging.ps1`), operators only; the app is unchanged.** Staging's 8 Nov deploy failed
+  with robocopy exit 11: the script paused a fixed 5 s after `app_offline.htm`, the app (up to 30 s to stop its
+  background jobs) still held `EINVWORLD.dll`, and the site came back online with the old DLL and every other file new.
+  - **Waits for the app to stop:** nothing is copied until no `.dll`/`.exe` in that site's `App\` is held open, polled
+    for up to `-ShutdownTimeoutSeconds` (default 120). On timeout the deploy stops, nothing was copied, the previous
+    version comes back online, and the message names the files still held.
+  - **Checks the copy:** every shipped file must match the build (size and timestamp; `EINVWORLD.dll`/`.exe`,
+    `.deps.json`, `.runtimeconfig.json` by SHA-256).
+  - **Rolls back:** if the copy, that check or the health check fails, `App\` is restored from the pre-deploy backup
+    (never `web.config`; uploads and other server-only files untouched; files new in the failed release removed;
+    never-public files removed again), the restore is verified, and the script fails. A mixed build is never put online:
+    with `-SkipBackup`, or if the restore fails, the site stays offline (`app_offline.htm`) for a human.
+  - **Logs:** robocopy logs go to `DeployLogs\` next to the server's backups. Robocopy retries 3 times,
+    `-CopyRetryWaitSeconds` apart (default 5).
+  - The health check now runs before the public security check, so an app that won't start rolls back instead of
+    failing the security check with 5xx answers. Only a real error answer rolls back: if the site doesn't answer at all
+    (network, tunnel, a very slow first start) the verified new build is kept and the run fails as "HEALTH UNVERIFIED".
+  - Tests (`DeployGuardsTests`, real PowerShell, local folders): app slow to stop, app never stops, copy fails halfway,
+    unhealthy after the copy, copy fails without a backup, and the restore itself.
 
 ## 📅 2026-11-05 — v1.50.43 (failed scheduled import logs the TIN masked)
 

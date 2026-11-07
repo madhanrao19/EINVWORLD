@@ -33,8 +33,15 @@ changes are additive and AI/features stay off unless already enabled.
    for what a real run needs: write access to the backup and `App\` folders, PowerShell remoting to the
    server (when the Hosting Bundle needs installing), and the SQL login's backup/DDL rights (when
    migrations are pending). Any problem shows as a warning. It also covers step 2 itself: it drops
-   `app_offline.htm` into `App\` for the copy only and always removes it afterwards, so on Staging
-   you don't need to stop the site by hand.
+   `app_offline.htm` into `App\` for the copy only, so on Staging you don't need to stop the site by hand.
+   **It copies nothing until the app has stopped:** it waits (up to `-ShutdownTimeoutSeconds`, default 120)
+   until no `.dll`/`.exe` in that `App\` is held open; on timeout it stops, nothing was copied, and the old
+   version comes back online. After the copy every shipped file is checked against the build. **If the copy,
+   that check or the health check fails, it restores `App\` from the pre-deploy backup** (never `web.config`;
+   uploads untouched), verifies the restore and exits with an error (`DEPLOY FAILED and was ROLLED BACK`).
+   If there is no backup (`-SkipBackup`) or the restore fails, the site is **left offline** with
+   `app_offline.htm` rather than serving a mixed build: restore `App_Backup_*` into `App\` by hand (not
+   `web.config`), then delete `app_offline.htm`. Robocopy logs are in `DeployLogs\` next to the backups.
    The page users see meanwhile is `scripts/app_offline.htm` (Ledger maintenance page: start time,
    expected finish, reloads itself when the site is back); edit that file, not the script, to change it.
    It also removes **old build files a release no longer ships** (e.g. a deleted `.js`): each run writes
@@ -544,6 +551,12 @@ holds a table lock or hits the command timeout on a large table.
   `RetentionDays`. Both live under `LogCleanupSettings` in `appsettings.Production.json`.
 
 ## 9. Rollback
+
+`scripts\Deploy-Staging.ps1` rolls back on its own when the copy, the file check or the health check fails (see step 4
+above). To roll back by hand (e.g. a problem found after a successful deploy): drop `app_offline.htm` into `App\`, wait
+until `EINVWORLD.dll` can be renamed (the app has stopped), copy the `App_Backup_<version>_<time>` folder back over `App\`
+without `web.config`, delete files the bad release added, then delete `app_offline.htm`. Its `Restore-AppFromBackup`
+function (in `scripts\DeployGuards.ps1`) does exactly that and verifies the result.
 
 Deploy to `App_New`, smoke-test, then swap to `App` (keep `App_Old`). Never delete `Documents\`,
 `Logs\`, `Cert\`, or `Keys\` during a deploy. DB changes are additive/idempotent; keep a pre-deploy
