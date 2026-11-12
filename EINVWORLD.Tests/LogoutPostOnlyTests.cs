@@ -69,6 +69,15 @@ namespace EINVWORLD.Tests
         }
 
         [Theory]
+        [InlineData(null, "/Dashboard/Dashboard")]
+        [InlineData("", "/Dashboard/Dashboard")]
+        [InlineData("/Identity/Account/Logout?logoutReason=timeout", "/Dashboard/Dashboard")]  // expired-session idle timeout
+        [InlineData("/identity/account/LOGOUT", "/Dashboard/Dashboard")]
+        [InlineData("/Invoices/InvoiceLists", "/Invoices/InvoiceLists")]
+        public void Sign_In_Never_Returns_To_The_Logout_Page(string? returnUrl, string expected) =>
+            Assert.Equal(expected, eInvWorld.Areas.Identity.Pages.Account.LoginModel.WithoutLogoutReturn(returnUrl!) ?? "/Dashboard/Dashboard");
+
+        [Theory]
         [InlineData("Pages/Shared/_LayoutTabler.cshtml")]
         [InlineData("Pages/Shared/_LoginLayoutTabler.cshtml")]
         [InlineData("Pages/Shared/_Layout.cshtml")]

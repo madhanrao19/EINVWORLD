@@ -150,9 +150,19 @@ namespace eInvWorld.Areas.Identity.Pages.Account
             return Page();
         }
 
+        /// <summary>
+        /// Where to go after signing in. An idle-timeout logout POST that arrives after the session already expired is
+        /// redirected here with ReturnUrl=/Identity/Account/Logout...; returning there would only show the "Log out"
+        /// confirm page, so that ReturnUrl is dropped (null: the caller uses its default).
+        /// </summary>
+        internal static string WithoutLogoutReturn(string returnUrl) =>
+            string.IsNullOrEmpty(returnUrl) || returnUrl.StartsWith("/Identity/Account/Logout", StringComparison.OrdinalIgnoreCase)
+                ? null
+                : returnUrl;
+
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
-            returnUrl ??= Url.Content("~/Dashboard/Dashboard");
+            returnUrl = WithoutLogoutReturn(returnUrl) ?? Url.Content("~/Dashboard/Dashboard");
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 

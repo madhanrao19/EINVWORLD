@@ -499,7 +499,8 @@
   - **Idle timeout** (`_LayoutTabler`, `_LoginLayoutTabler`, and the rollback `_Layout`/`_LoginLayout`): the auto sign-out now
     submits a POST form with the page's antiforgery token instead of navigating to the logout URL. The login page still shows
     the "signed out due to inactivity" message (`logoutReason=timeout`). If the session already expired, the POST is sent to
-    the login page as before.
+    the login page as before; after signing in again the user goes to the dashboard, not back to the logout page
+    (`LoginModel.WithoutLogoutReturn`).
   - The sidebar and user-menu Logout buttons were already POST forms; three old partials (`_Navbar`, `_LoginPartial`,
     `_CustomLoginPartial`) had forms without `method="post"` (so they sent a GET) and are now POST.
   - Tests: `LogoutPostOnlyTests` — GET doesn't sign out, the page keeps antiforgery, no view or script logs out with a GET
