@@ -54,8 +54,9 @@ namespace eInvWorld.Pages.PublicCustomer
             var entity = await _context.PublicCustomers
                 .FirstOrDefaultAsync(p => p.PublicCustomerId == id);
 
+            // Same answer as another company's buyer (AccessDenied below), so a non-Admin can't tell which ids exist.
             if (entity == null)
-                return NotFound();
+                return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
             (entity.CountryCode, entity.StateCode) = DropdownHelper.DefaultAddress(entity.CountryCode, entity.StateCode);
 
             // Admin can edit anything
@@ -98,7 +99,7 @@ namespace eInvWorld.Pages.PublicCustomer
                 .FirstOrDefaultAsync(p => p.PublicCustomerId == PublicCustomer.PublicCustomerId);
 
             if (existing == null)
-                return NotFound();
+                return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
 
             // ===== Ownership check =====
             if (!User.IsInRole("Admin"))
