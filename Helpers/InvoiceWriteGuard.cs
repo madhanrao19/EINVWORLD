@@ -20,6 +20,9 @@ namespace EINVWORLD.Helpers
         private static readonly string[] SelfBilledSupplierTins = { "EI00000000010", "EI00000000030" };
         private static readonly string[] EditableStatuses = { "Draft", "TransmissionError" };
 
+        /// <summary>True when Save Draft may overwrite an invoice in this internal status (the rule <see cref="CheckAsync"/> enforces).</summary>
+        public static bool IsEditableStatus(string? internalStatusId) => EditableStatuses.Contains(internalStatusId);
+
         public static async Task<string?> CheckAsync(ClaimsPrincipal user, ApplicationDbContext db, IBuyerService buyers,
             string? invoiceNo, string? docTypeCode, int? supplierId, int? customerId, int? publicCustomerId, bool checkInvoiceNo = true)
         {
@@ -35,7 +38,7 @@ namespace EINVWORLD.Helpers
                 if (existing != null)
                 {
                     if (!await user.CanManageInvoiceAsync(db, invoiceNo)) return "You are not authorized to edit this invoice.";
-                    if (!EditableStatuses.Contains(existing.InternalStatusId)) return "This invoice can no longer be edited.";
+                    if (!IsEditableStatus(existing.InternalStatusId)) return "This invoice can no longer be edited.";
                 }
             }
 
