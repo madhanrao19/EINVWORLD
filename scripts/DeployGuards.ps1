@@ -256,11 +256,13 @@ function Wait-AppFilesUnlocked {
     )
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $bins = @(Get-RelativeFiles $AppPath | Where-Object { $_ -match '\.(dll|exe)$' })
-    $locked = @()
+    $locked = @(); $clear = 0
     while ($true) {
         $locked = @('EINVWORLD.dll' | Where-Object { Test-FileLocked (Join-Path $AppPath $_) })
         if (-not $locked.Count) { $locked = @($bins | Where-Object { Test-FileLocked (Join-Path $AppPath $_) } | Select-Object -First 10) }
-        if (-not $locked.Count -or $sw.Elapsed.TotalSeconds -ge $TimeoutSeconds) { break }
+        # Two clear polls in a row: one could fall in the moment before a starting worker loads its DLLs.
+        $clear = if ($locked.Count) { 0 } else { $clear + 1 }
+        if ($clear -ge 2 -or $sw.Elapsed.TotalSeconds -ge $TimeoutSeconds) { break }
         Start-Sleep -Milliseconds $PollMs
     }
     [pscustomobject]@{ Unlocked = (-not $locked.Count); Seconds = [int]$sw.Elapsed.TotalSeconds; Locked = $locked }
@@ -286,23 +288,44 @@ function Compare-DeployedFiles([string]$source, [string]$dest, [string[]]$relati
     finally { $sha.Dispose() }
 }
 
-# Rollback: puts App\ back as the pre-deploy backup has it. Overwrites from the backup (never web.config or
-# app_offline.htm), deletes files this deploy shipped that the backup lacks (new in the failed release), then
-# checks every backup file matches. Files the deploy never shipped (uploads, server-only files) are left alone.
-# The caller must have stopped the app (app_offline.htm + Wait-AppFilesUnlocked). Throws if anything differs.
-function Restore-AppFromBackup([string]$backupPath, [string]$appPath, [string[]]$shippedRelative, [int]$retryWaitSeconds = 5, [string]$logPath) {
-    $keep = 'web.config', 'app_offline.htm'
-    $rc = @($backupPath, $appPath, '/E', '/R:3', "/W:$retryWaitSeconds", '/NFL', '/NDL', '/NJH', '/NP', '/XF') + $keep
-    if ($logPath) { $rc += "/LOG+:$logPath" }
-    robocopy @rc | Out-Null
-    if ($LASTEXITCODE -ge 8) { throw "Rollback robocopy failed (exit code $LASTEXITCODE)$(if ($logPath) { " - see $logPath" })." }
+# Rollback: undoes what a deploy changed in App\, from the pre-deploy backup. A deploy writes only this release's
+# files and the manifest, and deletes only files the previous manifest listed - so exactly those are put back as the
+# backup has them, and the release's files the backup lacks are deleted. Everything else (IIS stdout logs written
+# since the backup, uploads, server-only files, web.config) is left alone, so a rollback never loses newer data.
+# The caller must have stopped the app (app_offline.htm + Wait-AppFilesUnlocked). Throws unless App\ then matches.
+function Restore-AppFromBackup([string]$backupPath, [string]$appPath, [string[]]$shippedRelative, [int]$retryWaitSeconds = 5, [string]$logPath,
+                               [string[]]$skip = @('web.config', 'app_offline.htm')) {   # the deploy's copy exclusions
+    $manifest = '.deploy-manifest.txt'
     $inBackup = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
     Get-RelativeFiles $backupPath | ForEach-Object { [void]$inBackup.Add($_) }
-    foreach ($rel in $shippedRelative) {
-        $f = Join-Path $appPath $rel
-        if (-not $inBackup.Contains($rel) -and (Test-Path -LiteralPath $f -PathType Leaf)) { Remove-Item -LiteralPath $f -Force }
+    $written = @(@($shippedRelative) + $manifest)
+    $previous = @(if ($inBackup.Contains($manifest)) { Get-Content -LiteralPath (Join-Path $backupPath $manifest) })
+    $touched = @(($written + $previous) | Where-Object {
+        $_ -and $_ -notmatch '\.\.' -and -not [IO.Path]::IsPathRooted($_) -and $skip -notcontains (Split-Path $_ -Leaf)
+    } | Sort-Object -Unique)
+    $restore = @($touched | Where-Object { $inBackup.Contains($_) })
+    foreach ($rel in $restore) {
+        $dst = Join-Path $appPath $rel
+        # Unchanged since the backup (the copy never got to it): leave it, as robocopy would. The check below hashes the start-up files.
+        $s = New-Object IO.FileInfo (Join-Path $backupPath $rel); $d = New-Object IO.FileInfo $dst
+        if ($d.Exists -and $d.Length -eq $s.Length -and $d.LastWriteTimeUtc -eq $s.LastWriteTimeUtc) { continue }
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                New-Item -ItemType Directory -Force (Split-Path $dst -Parent) | Out-Null
+                Copy-Item -LiteralPath (Join-Path $backupPath $rel) -Destination $dst -Force   # keeps the timestamp
+                break
+            }
+            catch {
+                if ($attempt -ge 4) { throw "Rollback could not restore ${rel}: $($_.Exception.Message)" }
+                Start-Sleep -Seconds $retryWaitSeconds
+            }
+        }
     }
-    $bad = @(Compare-DeployedFiles $backupPath $appPath @($inBackup | Where-Object { $keep -notcontains (Split-Path $_ -Leaf) }))
+    $removed = @($written | Where-Object { -not $inBackup.Contains($_) -and (Test-Path -LiteralPath (Join-Path $appPath $_) -PathType Leaf) })
+    foreach ($rel in $removed) { Remove-Item -LiteralPath (Join-Path $appPath $rel) -Force }
+    if ($logPath) { Add-Content -LiteralPath $logPath -Value "$(Get-Date -Format o) ROLLBACK from ${backupPath}: restored $($restore.Count) file(s), removed $($removed.Count) file(s) the backup lacks." }
+    $bad = @(Compare-DeployedFiles $backupPath $appPath $restore) +
+           @($written | Where-Object { -not $inBackup.Contains($_) -and (Test-Path -LiteralPath (Join-Path $appPath $_) -PathType Leaf) })
     if ($bad.Count) { throw "Rollback incomplete: $($bad.Count) file(s) still differ from the backup, e.g. $(($bad | Select-Object -First 5) -join ', ')." }
 }
 
