@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.48`** (`AppInfo:Version` in `appsettings.json`). v1.50.48 is a **patch**
+> **Current version: `v1.50.49`** (`AppInfo:Version` in `appsettings.json`). v1.50.49 is a **patch**
+> release: the website database (Resources) can be created on an empty SQL Server — see the dated entry below. v1.50.48 was a **patch**
 > release: another site can no longer sign a user out with a link — see the dated entry below. v1.50.47 was a **patch**
 > release: company and buyer pages no longer reveal which ids exist — see the dated entry below. v1.50.46 was a **patch**
 > release: opening Edit for an invoice that can no longer be edited shows its details instead — see the dated entry below. v1.50.45 was a **patch**
@@ -490,6 +491,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-12 — v1.50.49 (website database installs on an empty SQL Server)
+
+- **WebsiteDb migration `20250613051105_CreateResourceTypes`:** it added the `Resources → ResourceTypes` foreign key, but no
+  migration created `ResourceTypes` (the original databases had it made by hand), so migrating an empty website database
+  failed with "Could not create constraint or index". The migration now creates `ResourceTypes` (`Code nvarchar(50)` PK,
+  `Name nvarchar(100)`, as in the model) only when it doesn't exist.
+  - Existing databases (Staging, Production) already applied this migration, so it never runs there again; nothing changes
+    for them. Applied migration history is not rewritten. `Down()` still leaves the table in place, as before.
+  - A fresh install starts with no resource types; an Admin adds them under Admin → Resources → Types.
+  - Tests: `WebsiteDbMigrationTests` (SQL Server) — empty database migrates and the FK is enforced; a database whose
+    `ResourceTypes` was made by hand keeps its table and rows; rolling back past the migration and re-applying works.
+- No change to existing databases. No new migration.
 
 ## 📅 2026-11-12 — v1.50.48 (sign-out only by POST: no logout by link)
 

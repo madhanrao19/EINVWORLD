@@ -19,8 +19,15 @@ namespace EINVWORLD.Migrations
                 nullable: false,
                 defaultValue: "article"); // Default to a valid existing code
 
-            // ❌ DO NOT create ResourceTypes table if it already exists
-            // migrationBuilder.CreateTable(...)
+            // ResourceTypes was first created by hand on the original databases, so this migration only added the
+            // FK and a fresh database failed here. Create it only when missing: databases that already have it (and
+            // already applied this migration) are untouched. Same shape as the model: Code nvarchar(50) PK, Name nvarchar(100).
+            migrationBuilder.Sql(@"IF OBJECT_ID(N'[dbo].[ResourceTypes]', N'U') IS NULL
+CREATE TABLE [dbo].[ResourceTypes] (
+    [Code] nvarchar(50) NOT NULL,
+    [Name] nvarchar(100) NOT NULL,
+    CONSTRAINT [PK_ResourceTypes] PRIMARY KEY ([Code])
+);");
 
             // ✅ Create index
             migrationBuilder.CreateIndex(
