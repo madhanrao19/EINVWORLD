@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.47`** (`AppInfo:Version` in `appsettings.json`). v1.50.47 is a **patch**
+> **Current version: `v1.50.48`** (`AppInfo:Version` in `appsettings.json`). v1.50.48 is a **patch**
+> release: another site can no longer sign a user out with a link — see the dated entry below. v1.50.47 was a **patch**
 > release: company and buyer pages no longer reveal which ids exist — see the dated entry below. v1.50.46 was a **patch**
 > release: opening Edit for an invoice that can no longer be edited shows its details instead — see the dated entry below. v1.50.45 was a **patch**
 > release: deploy rollback hardening (offline on Ctrl+C, rollback restores only what the deploy changed) — see the dated entry below. v1.50.44 was a **patch**
@@ -489,6 +490,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-12 — v1.50.48 (sign-out only by POST: no logout by link)
+
+- **Logout (`Areas/Identity/Pages/Account/Logout.cshtml.cs`):** a GET to `/Identity/Account/Logout` signed the user out, so
+  any other site could sign a user out with a link or redirect (logout CSRF, found by the 12 Nov 2026 Staging QA). Signing
+  out now happens only on POST, which carries the antiforgery token; a GET shows the "Log out" confirm page.
+  - **Idle timeout** (`_LayoutTabler`, `_LoginLayoutTabler`, and the rollback `_Layout`/`_LoginLayout`): the auto sign-out now
+    submits a POST form with the page's antiforgery token instead of navigating to the logout URL. The login page still shows
+    the "signed out due to inactivity" message (`logoutReason=timeout`). If the session already expired, the POST is sent to
+    the login page as before; after signing in again the user goes to the dashboard, not back to the logout page
+    (`LoginModel.WithoutLogoutReturn`).
+  - The sidebar and user-menu Logout buttons were already POST forms; three old partials (`_Navbar`, `_LoginPartial`,
+    `_CustomLoginPartial`) had forms without `method="post"` (so they sent a GET) and are now POST.
+  - Tests: `LogoutPostOnlyTests` — GET doesn't sign out, the page keeps antiforgery, no view or script logs out with a GET
+    (link, `location.href`, or a form without `method="post"`), and each layout's idle timeout posts the token.
+- No database change.
 
 ## 📅 2026-11-12 — v1.50.47 (company and buyer pages don't reveal which ids exist)
 

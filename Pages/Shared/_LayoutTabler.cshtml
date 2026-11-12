@@ -175,7 +175,17 @@
                     }).then(() => { startTimers(); });
                 }, warnAfter);
                 logoutTimeout = setTimeout(() => {
-                    window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
+                    // POST with the antiforgery token: a GET to Logout only shows the confirm page (v1.50.48).
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.action = '/Identity/Account/Logout?logoutReason=timeout';
+                    const token = document.createElement('input');
+                    token.type = 'hidden';
+                    token.name = '__RequestVerificationToken';
+                    token.value = '@Xsrf.GetAndStoreTokens(Context).RequestToken';
+                    form.appendChild(token);
+                    document.body.appendChild(form);
+                    form.submit();
                 }, logoutAfter);
             }
             ['mousemove', 'keydown', 'mousedown', 'scroll'].forEach(evt => {
