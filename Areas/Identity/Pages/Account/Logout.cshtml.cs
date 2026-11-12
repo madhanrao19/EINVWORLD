@@ -50,16 +50,11 @@ namespace eInvWorld.Areas.Identity.Pages.Account
         //    }
         //}
 
-        public async Task<IActionResult> OnGet(string logoutReason = null)
-        {
-            await _signInManager.SignOutAsync();
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            HttpContext.Session.Clear();
-
-            _logger.LogInformation("User logged out and session cleared.");
-
-            return Redirect($"/login?logoutReason={Uri.EscapeDataString(logoutReason ?? "")}"); // a value can't add its own query parameters
-        }
+        /// <summary>
+        /// Shows the "Log out" confirm page only. Signing out is a state change, so it happens on POST with the
+        /// antiforgery token; a GET that signed out let any other site log a user out with a link (12 Nov 2026 QA).
+        /// </summary>
+        public IActionResult OnGet() => Page();
 
         public async Task<IActionResult> OnPost(string logoutReason = null)
         {

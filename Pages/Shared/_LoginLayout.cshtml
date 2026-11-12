@@ -1,4 +1,5 @@
-﻿@using eInvWorld.Models
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@using eInvWorld.Models
 @inject Microsoft.AspNetCore.Identity.SignInManager<ApplicationUser> SignInManager
 @inject Microsoft.Extensions.Options.IOptions<eInvWorld.Models.Settings.SessionSettings> SessionOptions
 @{
@@ -46,7 +47,17 @@
                 }, warnAfter);
 
                 logoutTimeout = setTimeout(() => {
-                    window.location.href = '/Identity/Account/Logout?logoutReason=timeout';
+                    // POST with the antiforgery token: a GET to Logout only shows the confirm page (v1.50.48).
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.action = '/Identity/Account/Logout?logoutReason=timeout';
+                    const token = document.createElement('input');
+                    token.type = 'hidden';
+                    token.name = '__RequestVerificationToken';
+                    token.value = '@Xsrf.GetAndStoreTokens(Context).RequestToken';
+                    form.appendChild(token);
+                    document.body.appendChild(form);
+                    form.submit();
                 }, logoutAfter);
             }
 
