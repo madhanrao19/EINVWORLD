@@ -16,7 +16,10 @@ const stillSignedIn = async page => {
 // Signs in, unless the run already starts signed in (a saved storageState, e.g. a 2FA-enrolled account).
 async function signedIn(page) {
   if (await stillSignedIn(page)) return;
-  try { await login(page, ROLE); } catch { test.skip(true, `${ROLE} login unavailable (needs its E2E_*_PASSWORD and the Turnstile test key)`); }
+  try { await login(page, ROLE); } catch (e) {
+    if (process.env.QA_LOGIN_ROLE) throw e; // asked for this role explicitly: a broken sign-in must fail, not skip
+    test.skip(true, `${ROLE} login unavailable (needs its E2E_*_PASSWORD and the Turnstile test key)`);
+  }
 }
 
 test('idle timeout warns, then signs out with a POST and shows the inactivity message', async ({ page }) => {
