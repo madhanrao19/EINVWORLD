@@ -123,7 +123,7 @@ namespace EINVWORLD.Pages.Invoices
             {
                 _logger.LogWarning("Invoice not found for UUID/InvoiceNo: {Uuid}", uuid);
                 // Same answer as another company's invoice (Forbid below), so invoice numbers can't be probed.
-                return User.IsInRole("Admin") ? NotFound() : Forbid();
+                return EINVWORLD.Helpers.UserExtensions.IsAdmin(User, _context) ? NotFound() : Forbid(); // same Admin test as CanAccessInvoiceAsync
             }
 
             // IDOR guard: only a party to the invoice (Supplier/Customer/PublicCustomer) or an Admin may view it.

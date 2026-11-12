@@ -74,6 +74,8 @@ namespace EINVWORLD.Tests.Integration
             ctx.UserCompanies.Add(new UserCompany { UserId = supplierId, PartyInfoId = mine.PartyInfoId, HasCompanyAccess = true, IsPrimaryCompany = true });
             await ctx.SaveChangesAsync();
             var adminId = await CreateUserAsync(ctx, "enum-admin");
+            (await ctx.Users.FindAsync(adminId))!.UserType = "Admin"; // a real Admin: role and UserType (UserExtensions.IsAdmin)
+            await ctx.SaveChangesAsync();
 
             return (other, buyer.PublicCustomerId,
                 PrincipalFor(supplierId, (await ctx.Users.FindAsync(supplierId))!.UserName!, "Supplier"),
@@ -198,6 +200,12 @@ namespace EINVWORLD.Tests.Integration
             Assert.IsType<ForbidResult>(await Details(supplier).OnGetAsync(missingNo));
             Assert.IsType<ForbidResult>(await InvoiceEditLockedRedirectTests.Page(ctx, supplier, "GET").OnGetAsync(invoiceNo));
             Assert.IsType<ForbidResult>(await InvoiceEditLockedRedirectTests.Page(ctx, supplier, "GET").OnGetAsync(missingNo));
+
+            // Admin role without UserType "Admin" is not an Admin to CanAccessInvoiceAsync, so it must not get 404 either.
+            var roleOnlyId = await CreateUserAsync(ctx, "enum-role-only-admin");
+            var roleOnly = PrincipalFor(roleOnlyId, (await ctx.Users.FindAsync(roleOnlyId))!.UserName!, "Admin");
+            Assert.IsType<ForbidResult>(await Details(roleOnly).OnGetAsync(missingNo));
+            Assert.IsType<ForbidResult>(await InvoiceEditLockedRedirectTests.Page(ctx, roleOnly, "GET").OnGetAsync(missingNo));
 
             Assert.IsType<NotFoundResult>(await Details(admin).OnGetAsync(missingNo));
             Assert.IsType<NotFoundObjectResult>(await InvoiceEditLockedRedirectTests.Page(ctx, admin, "GET").OnGetAsync(missingNo));
