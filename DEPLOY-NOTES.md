@@ -37,8 +37,11 @@ changes are additive and AI/features stay off unless already enabled.
    **It copies nothing until the app has stopped:** it waits (up to `-ShutdownTimeoutSeconds`, default 120)
    until no `.dll`/`.exe` in that `App\` is held open; on timeout it stops, nothing was copied, and the old
    version comes back online. After the copy every shipped file is checked against the build. **If the copy,
-   that check or the health check fails, it restores `App\` from the pre-deploy backup** (never `web.config`;
-   uploads untouched), verifies the restore and exits with an error (`DEPLOY FAILED and was ROLLED BACK`).
+   that check or `/health/live` fails, it restores what the deploy changed from the pre-deploy backup** (never
+   `web.config`; uploads, logs and copy-excluded files untouched), verifies the restore and exits with an error
+   (`DEPLOY FAILED and was ROLLED BACK`). `/health/ready` failing alone is not rolled back (the previous build needs the
+   same database and folders), and a rollback never reverts database migrations (additive by rule). The site also
+   stays offline if the run is interrupted (Ctrl+C) mid-copy.
    If there is no backup (`-SkipBackup`) or the restore fails, the site is **left offline** with
    `app_offline.htm` rather than serving a mixed build: restore `App_Backup_*` into `App\` by hand (not
    `web.config`), then delete `app_offline.htm`. Robocopy logs are in `DeployLogs\` next to the backups.
@@ -72,8 +75,8 @@ changes are additive and AI/features stay off unless already enabled.
    **Disk space, health check, clean-up (v1.50.33):**
    - **Before anything changes:** the server disk must hold a full `App\` backup plus 1 GB, and this PC 3 GB for the
      publish. Otherwise the deploy stops with "Not enough disk space", and `-WhatIf` reports it. Below 20 GB free it warns.
-   - **After the public check:** `/health/live` and `/health/ready` must return 200 through the public site, or the run
-     fails with "HEALTH CHECK FAILED". The files are deployed by then, so check the logs or roll back from the backup.
+   - **Before the public check (v1.50.44):** `/health/live` and `/health/ready` must return 200 through the public site,
+     or the run fails with "HEALTH CHECK FAILED" (rolled back automatically only if `/health/live` fails; see above).
    - **Only if everything passed:** the local `bin\Release\net10.0\win-x64\publish` and `obj\Release\*\win-x64` are
      deleted. Nothing outside the repo's `bin\` and `obj\` is ever deleted, and neither are the NuGet cache or the server
      backups.

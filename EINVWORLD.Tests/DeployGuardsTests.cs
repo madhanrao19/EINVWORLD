@@ -264,7 +264,7 @@ if ($r[0].Healthy -or $r[0].Attempts -ne 3) { throw ""down: $($r[0].Healthy) aft
         }
 
         [Fact]
-        public void Wait_ReturnsOnceTheAppReleasesItsDll()
+        public async Task Wait_ReturnsOnceTheAppReleasesItsDll()
         {
             if (!OperatingSystem.IsWindows()) return;
             var dll = Path.Combine(_root, "App", "EINVWORLD.dll");
@@ -273,7 +273,7 @@ if ($r[0].Healthy -or $r[0].Attempts -ne 3) { throw ""down: $($r[0].Healthy) aft
             var result = Run(@"Set-Content ""$repo\..\go"" 'x'
 $w = Wait-AppFilesUnlocked -AppPath ""$repo\..\App"" -TimeoutSeconds 30 -PollMs 200
 if (-not $w.Unlocked -or $w.Seconds -lt 2) { throw ""unlocked $($w.Unlocked) after $($w.Seconds) s"" }");
-            release.Wait();
+            await release;
             Assert.Equal("OK", result);
         }
 
@@ -310,7 +310,7 @@ if (-not (Test-Path ""$app\wwwroot\uploads\logo.png"") -or -not (Test-Path ""$ap
             Directory.CreateDirectory(Path.GetDirectoryName(dll)!);
             File.WriteAllText(dll, "NEW");
             using var held = HoldOpen(dll);
-            Throws(@"Restore-AppFromBackup ""$repo\..\Bak"" ""$repo\..\App"" @('EINVWORLD.dll') 1", "Rollback robocopy failed");
+            Throws(@"Restore-AppFromBackup ""$repo\..\Bak"" ""$repo\..\App"" @('EINVWORLD.dll') 1", "Rollback could not restore EINVWORLD.dll");
         }
 
         // The real Deploy-Staging.ps1 in an isolated fake repo (its own scripts\, bin\, obj\) deploying to a local
@@ -346,13 +346,13 @@ catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
         private static (int Status, string? Cache) Healthy(string path, int _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC");
 
         [Fact]
-        public void Deploy_AppSlowToStop_WaitsForItThenDeploys()
+        public async Task Deploy_AppSlowToStop_WaitsForItThenDeploys()
         {
             if (!OperatingSystem.IsWindows()) return;
             OldFile(Path.Combine(E2eApp, "EINVWORLD.dll"), "old-build");
             var release = ReleaseAfter(HoldOpen(Path.Combine(E2eApp, "EINVWORLD.dll")), Path.Combine(E2eApp, "app_offline.htm"), 3000);
             var output = DeployEndToEnd(Healthy);
-            release.Wait();
+            await release;
             Assert.Contains("DEPLOY:OK", output);
             Assert.Contains("FILES dll=new-build offline=False", output);
             var waited = System.Text.RegularExpressions.Regex.Match(output, @"App stopped after (\d+) s");
@@ -405,6 +405,61 @@ catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
             var output = DeployEndToEnd((path, _) => path.StartsWith("/health/") ? (0, null) : (302, "DYNAMIC"));
             Assert.Contains("DEPLOY:FAILED HEALTH UNVERIFIED", output);
             Assert.Contains("FILES dll=new-build offline=False", output);
+        }
+
+        [Fact] public void Rollback_UndoesAPartialDeploy_AndLeavesEverythingElseAlone() => Passes(@"
+$b = ""$repo\..\backup""; $a = ""$repo\..\App""
+New-Item -ItemType Directory -Force ""$b\wwwroot"", ""$a\wwwroot\uploads"", ""$a\logs"" | Out-Null
+Set-Content ""$b\EINVWORLD.dll"" 'old'; Set-Content ""$b\wwwroot\site.js"" 'old'; Set-Content ""$b\stale.dll"" 'old'
+Set-Content ""$b\.deploy-manifest.txt"" @('EINVWORLD.dll', 'wwwroot\site.js', 'stale.dll'); Set-Content ""$b\web.config"" 'backup-cfg'
+Set-Content ""$b\appsettings.Production.json"" 'backup-settings'
+Set-Content ""$repo\..\outside.txt"" 'keep'; Set-Content ""$b\..\outside.txt"" 'keep'
+Copy-Item ""$b\*"" $a -Recurse -Force
+# The failed deploy: EINVWORLD.dll replaced, site.js not yet, added.dll new, stale.dll removed, a new manifest.
+Set-Content ""$a\EINVWORLD.dll"" 'new'; Set-Content ""$a\added.dll"" 'new'; Remove-Item ""$a\stale.dll""
+Set-Content ""$a\.deploy-manifest.txt"" @('EINVWORLD.dll', 'wwwroot\site.js', 'added.dll')
+# Written since the backup by others: must survive.
+Set-Content ""$a\web.config"" 'server-cfg'; Set-Content ""$a\logs\stdout.log"" 'crash'; Set-Content ""$a\wwwroot\uploads\u.png"" 'u'
+# A tampered manifest (traversal, rooted) and a file this run excludes from the copy must not be restored.
+Add-Content ""$b\.deploy-manifest.txt"" @('..\outside.txt', ""$repo\..\outside.txt"", 'appsettings.Production.json')
+Set-Content ""$a\appsettings.Production.json"" 'server-settings'
+Restore-AppFromBackup $b $a @('EINVWORLD.dll', 'wwwroot\site.js', 'added.dll') 0 '' @('web.config', 'app_offline.htm', 'appsettings.Production.json')
+if ((Get-Content ""$a\appsettings.Production.json"") -ne 'server-settings') { throw 'restored a file the copy excludes' }
+foreach ($f in 'EINVWORLD.dll', 'wwwroot\site.js', 'stale.dll') { if ((Get-Content ""$a\$f"") -ne 'old') { throw ""$f not restored"" } }
+if ((Get-Content ""$a\.deploy-manifest.txt"")[0..2] -join ',' -ne 'EINVWORLD.dll,wwwroot\site.js,stale.dll') { throw 'manifest not restored' }
+if (Test-Path ""$a\added.dll"") { throw 'the failed release''s new file is still there' }
+if ((Get-Content ""$a\web.config"") -ne 'server-cfg' -or (Get-Content ""$a\logs\stdout.log"") -ne 'crash' -or -not (Test-Path ""$a\wwwroot\uploads\u.png"")) { throw 'touched a file the deploy never wrote' }");
+
+        [Fact]
+        public void Deploy_OnlyReadinessFails_IsNotRolledBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd((path, _) => path == "/health/ready" ? (503, null) : Healthy(path, 0));
+            Assert.True(output.Contains("DEPLOY:FAILED HEALTH CHECK FAILED: the app started"), output);
+            Assert.True(output.Contains("FILES dll=new-build offline=False"), output);
+        }
+
+        [Fact]
+        public async Task Deploy_CopyThatSkippedAChangedDll_IsCaughtByTheIntegrityCheck_AndRolledBack()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            // Same size and timestamp as the build's EINVWORLD.dll ('new-build'), different content: robocopy reports
+            // success without copying it, and only the integrity check's hash notices.
+            var dll = Path.Combine(E2eApp, "EINVWORLD.dll");
+            OldFile(dll, "old-buil!\r\n");   // the length of the build's 'new-build' line
+            var trigger = Path.Combine(E2eApp, "app_offline.htm");
+            var align = Task.Run(async () =>
+            {
+                var until = DateTime.UtcNow.AddMinutes(2);
+                while (!File.Exists(trigger) && DateTime.UtcNow < until) await Task.Delay(20);
+                var pub = Path.Combine(_root, "e2e", "repo", "bin", "Release", "net10.0", "win-x64", "publish", "EINVWORLD.dll");
+                File.SetLastWriteTimeUtc(dll, File.GetLastWriteTimeUtc(pub));
+            });
+            var output = DeployEndToEnd(Healthy, "-ShutdownTimeoutSeconds 30");
+            await align;
+            Assert.True(output.Contains("don't match the build, e.g. EINVWORLD.dll"), output);
+            Assert.True(output.Contains("DEPLOY:FAILED DEPLOY FAILED and was ROLLED BACK"), output);
+            Assert.True(output.Contains("FILES dll=old-buil! offline=False"), output);
         }
 
         [Fact]

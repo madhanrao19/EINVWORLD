@@ -171,6 +171,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Any failure: print the reason on one unwrapped line (a non-interactive host wraps error records), then fail (exit 1).
+trap { Write-Host "DEPLOY STOPPED: $($_.Exception.Message)" -ForegroundColor Red; break }
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 . (Join-Path $PSScriptRoot 'DeployGuards.ps1')   # stale-file guards: Initialize-PublishFolder, Assert-PublishOutput, ...
 
@@ -561,15 +563,14 @@ Get-RelativeFiles $SourcePublishPath | ForEach-Object {
 # Stops the app (app_offline.htm must already be in App\), restores the pre-deploy backup, verifies it and removes
 # never-public files the backup may hold. Throws if any of that fails. $script:restoreStarted tells the caller whether
 # App\ was touched: if the app never stopped, nothing was restored and App\ is as it was before the rollback.
-# Known limit: files the OLD app changed under App\ between the backup and app_offline.htm revert to the backup's copy
-# (documents, logs and keys live outside App\, so in practice only never-public leftovers and ANCM stdout logs).
+# Only what the deploy changed is restored (Restore-AppFromBackup), so logs and uploads written since the backup stay.
 $script:restoreStarted = $false
 function Invoke-AppRollback {
     $w = Wait-AppFilesUnlocked -AppPath $DestAppPath -TimeoutSeconds $ShutdownTimeoutSeconds
     if (-not $w.Unlocked) { throw "the app still holds $($w.Locked -join ', ') after $($w.Seconds) s" }
     $script:restoreStarted = $true
     Write-Host "Rolling back: restoring $backupPath into App\ ..." -ForegroundColor Yellow
-    Restore-AppFromBackup $backupPath $DestAppPath @($shipped) $CopyRetryWaitSeconds $copyLog
+    Restore-AppFromBackup $backupPath $DestAppPath @($shipped) $CopyRetryWaitSeconds $copyLog (@($excludeFiles) + 'app_offline.htm')
     foreach ($rel in Find-ForbiddenServerFiles $DestAppPath) { Remove-Item -LiteralPath (Join-Path $DestAppPath $rel) -Force }
     Write-Host "Rollback verified: App\ matches $backupPath ($deployedVersion)." -ForegroundColor Yellow
 }
@@ -605,12 +606,14 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
             Replace('{{REF}}', 'DEPLOY-' + $offlineStart.ToString('yyyyMMdd-HHmm'))
     }
     Set-Content -Path $offlineFile -Value $offlineHtml -Encoding utf8
-    $keepOffline = $false
+    # Offline unless App\ is known consistent: a Ctrl+C mid-copy skips every catch but runs the finally below.
+    $keepOffline = $true
     try {
         # Never copy while the app runs: wait (bounded) until it has released every binary in App\.
         Write-Host "Waiting for the app to stop (up to $ShutdownTimeoutSeconds s) ..." -ForegroundColor Cyan
         $wait = Wait-AppFilesUnlocked -AppPath $DestAppPath -TimeoutSeconds $ShutdownTimeoutSeconds
         if (-not $wait.Unlocked) {
+            $keepOffline = $false   # nothing was copied
             throw "STOPPED BEFORE COPY: after $($wait.Seconds) s these files are still held open (or can't be written): $($wait.Locked -join ', '). Nothing was copied; the previous version comes back online. Check the app pool on the server (a hung request or worker), then re-run, or raise -ShutdownTimeoutSeconds."
         }
         Write-Host "App stopped after $($wait.Seconds) s: no .dll/.exe in App\ is held open." -ForegroundColor Green
@@ -666,17 +669,16 @@ if ($PSCmdlet.ShouldProcess($DestAppPath, 'Copy publish output (excluding server
             if ($bad.Count) { throw "$($bad.Count) deployed file(s) don't match the build, e.g. $(($bad | Select-Object -First 5) -join ', ')" }
             Write-Host "Integrity check: all $($shipped.Count) shipped file(s) match the build." -ForegroundColor Green
             $deployed = $true
+            $keepOffline = $false
         }
         catch {
             $failure = $_.Exception.Message
             Write-Host "DEPLOY FAILED during the copy: $failure" -ForegroundColor Red
             if (-not $backupPath) {
-                $keepOffline = $true
                 throw "DEPLOY FAILED and there is no backup to roll back to (-SkipBackup): App\ may hold a mixed build, so the site is LEFT OFFLINE (app_offline.htm). Restore App\ by hand, then delete $offlineFile. Cause: $failure"
             }
-            try { Invoke-AppRollback }
+            try { Invoke-AppRollback; $keepOffline = $false }
             catch {
-                $keepOffline = $true
                 throw "DEPLOY FAILED and the ROLLBACK FAILED ($($_.Exception.Message)): the site is LEFT OFFLINE (app_offline.htm). Restore $backupPath into App\ by hand (never web.config), then delete $offlineFile. Cause: $failure"
             }
             throw "DEPLOY FAILED and was ROLLED BACK to $deployedVersion ($backupPath, verified). Cause: $failure. Robocopy log: $copyLog"
@@ -705,6 +707,11 @@ if ($PublicBaseUrl) {
         throw "HEALTH UNVERIFIED: no answer from $PublicBaseUrl after the deploy, so the integrity-verified new build was KEPT (not rolled back). Check this PC's connection and the site, then re-run the health and security checks (DEPLOY-NOTES.md); roll back from $(if ($backupPath) { $backupPath } else { 'your backup' }) if the site is really down."
     }
     if ($unhealthy.Count) {
+        # Only a build that doesn't start (/health/live) is rolled back. /health/ready alone (database, folders) failing
+        # is the environment: the previous build shares it, so a rollback would not help and could undo a good build.
+        if (@($health | Where-Object { $_.Url -like '*/health/live' -and $_.Healthy }).Count) {
+            throw "HEALTH CHECK FAILED: the app started (/health/live 200) but /health/ready is not 200 - the database or a folder it needs is unavailable. Not rolled back: the previous build depends on the same. Check SystemLogs / the stdout log, then re-check /health/ready."
+        }
         if (-not ($deployed -and $backupPath)) {
             throw "HEALTH CHECK FAILED: the site is not healthy$(if ($deployed) { ' and there is no backup to roll back to (-SkipBackup)' }). Check SystemLogs / the stdout log. Local build output kept for diagnosis."
         }

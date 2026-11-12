@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.44`** (`AppInfo:Version` in `appsettings.json`). v1.50.44 is a **patch**
+> **Current version: `v1.50.45`** (`AppInfo:Version` in `appsettings.json`). v1.50.45 is a **patch**
+> release: deploy rollback hardening (offline on Ctrl+C, rollback restores only what the deploy changed) — see the dated entry below. v1.50.44 was a **patch**
 > release: the deploy script waits for the app to stop and rolls back a failed deploy — see the dated entry below. v1.50.43 was a **patch**
 > release: a failed scheduled LHDN import logs the TIN masked — see the dated entry below. v1.50.42 was a **patch**
 > release: the lead-approval activity entry masks the TIN — see the dated entry below. v1.50.41 was a **patch**
@@ -486,6 +487,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-12 — v1.50.45 (Deploy: rollback hardening)
+
+- **Deploy script (`scripts/Deploy-Staging.ps1`, Staging and Production), on top of v1.50.44:**
+  - The site stays offline unless `App\` is known consistent: a Ctrl+C (or a stopped console) during the copy skipped
+    the rollback but still removed `app_offline.htm`, putting a mixed build online.
+  - A rollback restores only what the deploy changed (this release's files, the files the previous manifest listed, the
+    manifest) and skips files still matching the backup, instead of copying the whole backup. IIS stdout logs written
+    since the backup (the reason a build failed to start), uploads and copy-excluded files are no longer reverted.
+  - Only a build that doesn't start (`/health/live`) is rolled back; `/health/ready` failing alone (database, folders)
+    fails the run without a rollback, since the previous build depends on the same.
+  - The app must be seen stopped on two polls in a row before the copy. Any failure prints `DEPLOY STOPPED: <reason>`
+    on one line.
+  - Tests: readiness-only failure, a copy that skipped a changed DLL (caught by the integrity hash), and a partial
+    rollback with a tampered manifest.
+- No database change. No app code change.
 
 ## 📅 2026-11-08 — v1.50.44 (Deploy: wait for the app to stop, roll back a failed copy)
 
