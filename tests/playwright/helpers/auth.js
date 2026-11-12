@@ -60,42 +60,61 @@ async function logout(page) {
   if (await btn.count()) await btn.click({ timeout: 10000 }).catch(() => {});
 }
 
-const isLocal = host => host.startsWith('localhost') || host.startsWith('127.0.0.1');
+// The app's own host: the configured base URL (EINVWORLD_BASE_URL, as in playwright.config.js), plus
+// localhost/127.0.0.1. Errors from these hosts fail a test; anything else is third-party.
+const appHosts = (() => {
+  const hosts = new Set(['localhost', '127.0.0.1']);
+  try { hosts.add(new URL(process.env.EINVWORLD_BASE_URL || 'http://localhost:5210').hostname); } catch { /* ignore */ }
+  return hosts;
+})();
+const isApp = host => appHosts.has(String(host).split(':')[0]);
+
+// Known harmless messages, kept out of consoleErrors on purpose. Each is narrow; add new ones here with a reason.
+//  - "Failed to load resource": carries no origin; the app's own failed requests are caught by the response /
+//    requestfailed handlers below, so counting it here would double-count blocked third-party hosts.
+//  - /cdn-cgi/ on the app's host: Cloudflare's edge scripts (Turnstile, beacon, email decode), not app code.
+// CSP report-only notices are browser log entries, not console calls, so they never reach the console handler.
+const isCloudflareEdge = url => /^\/cdn-cgi\//.test(url.pathname);
 
 /**
- * Attaches collectors that flag ONLY same-origin (localhost) problems. External
- * CDN / analytics failures (e.g. blocked googletagmanager.com in a sandbox) are
- * ignored here — they are tracked separately as a design finding, not per-page.
+ * Collects problems on the page. consoleErrors and failedRequests hold the app's own errors (its host, see
+ * appHosts) and should be empty; externalErrors is informational.
+ * - console.error and uncaught exceptions (pageerror) from the app's scripts → consoleErrors
+ * - HTTP >= 400 and network failures for the app's host → failedRequests
  */
 function watchPage(page) {
-  const consoleErrors = [];   // same-origin JS/resource errors only
-  const externalErrors = [];  // third-party failures, informational
-  const failedRequests = [];  // same-origin HTTP >= 400 / network failures
+  const consoleErrors = [];   // the app's own JS errors (console.error + uncaught exceptions)
+  const externalErrors = [];  // third-party and Cloudflare-edge failures, informational
+  const failedRequests = [];  // the app's own HTTP >= 400 / network failures
+  const sourceOf = text => {
+    try { return new URL(text); } catch { return null; }
+  };
   page.on('console', msg => {
     if (msg.type() !== 'error') return;
     const text = msg.text();
-    // Generic "Failed to load resource" messages carry no reliable origin; same-origin
-    // resource failures are already captured by the response/requestfailed handlers below,
-    // so treat these as external noise here to avoid double-counting blocked CDNs.
     if (/Failed to load resource/i.test(text)) { externalErrors.push(text); return; }
     const loc = msg.location && msg.location();
-    let host = '';
-    try { host = loc && loc.url ? new URL(loc.url).host : ''; } catch { /* ignore */ }
-    if (host && !isLocal(host)) externalErrors.push(text);
+    const src = loc && loc.url ? sourceOf(loc.url) : null;
+    if (src && (!isApp(src.host) || isCloudflareEdge(src))) externalErrors.push(text);
+    else consoleErrors.push(text);
+  });
+  page.on('pageerror', err => {
+    // The top stack frame names the script that threw; no frame (inline script or eval) counts as the app's.
+    const frame = /(https?:\/\/[^\s)]+)/.exec(err.stack || '');
+    const src = frame ? sourceOf(frame[1]) : null;
+    const text = `pageerror: ${err.message}`;
+    if (src && (!isApp(src.host) || isCloudflareEdge(src))) externalErrors.push(text);
     else consoleErrors.push(text);
   });
   page.on('response', resp => {
-    try {
-      const u = new URL(resp.url());
-      if (isLocal(u.host) && resp.status() >= 400) failedRequests.push(`${resp.status()} ${u.pathname}`);
-    } catch { /* ignore */ }
+    const u = sourceOf(resp.url());
+    if (u && isApp(u.host) && !isCloudflareEdge(u) && resp.status() >= 400) failedRequests.push(`${resp.status()} ${u.pathname}`);
   });
   page.on('requestfailed', req => {
-    try {
-      const u = new URL(req.url());
-      if (isLocal(u.host)) failedRequests.push(`FAILED ${u.pathname} (${req.failure()?.errorText})`);
-      else externalErrors.push(`external failed: ${u.host}${u.pathname}`);
-    } catch { /* ignore */ }
+    const u = sourceOf(req.url());
+    if (!u) return;
+    if (isApp(u.host) && !isCloudflareEdge(u)) failedRequests.push(`FAILED ${u.pathname} (${req.failure()?.errorText})`);
+    else externalErrors.push(`external failed: ${u.host}${u.pathname}`);
   });
   return { consoleErrors, externalErrors, failedRequests };
 }

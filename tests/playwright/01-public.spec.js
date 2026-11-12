@@ -25,9 +25,10 @@ for (const pg of PUBLIC_PAGES) {
     const text = await page.locator('body').innerText();
     expect(text.trim().length, 'page body has content').toBeGreaterThan(20);
     await page.waitForTimeout(1500); // let async widgets settle
-    // Resource-image 404s come from staging DB rows whose files live on the prod E:\ share
-    // (absent on this QA box), not from a code defect — don't fail the run on those.
-    const realFailures = failedRequests.filter(f => !/\/api\/resources\/images\//.test(f));
+    // Locally, resource-image 404s come from database rows whose image files live on the server's share (absent
+    // on a dev box), not from a code defect. On a deployed host (Staging/Production) they are real missing files.
+    const local = /^(localhost|127\.0\.0\.1)$/.test(new URL(page.url()).hostname);
+    const realFailures = failedRequests.filter(f => !(local && /\/api\/resources\/images\//.test(f)));
     expect.soft(realFailures, `failed same-origin requests on ${pg.path}`).toEqual([]);
     expect(consoleErrors, `same-origin console errors on ${pg.path}`).toEqual([]);
   });
