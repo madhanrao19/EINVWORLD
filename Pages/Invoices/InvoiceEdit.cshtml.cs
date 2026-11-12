@@ -224,6 +224,16 @@ namespace eInvWorld.Pages.Invoices
                     return Forbid();
                 }
 
+                // Opening the editor for an invoice Save Draft would refuse (Valid, Submitted, Cancelled, ...) only
+                // shows a form that can never be saved, so a GET goes to Invoice Details instead. GET only: OnPostAsync
+                // calls this method to re-render after a refused save, and must still get the populated page.
+                if (HttpMethods.IsGet(Request.Method) && !EINVWORLD.Helpers.InvoiceWriteGuard.IsEditableStatus(existingInvoice.InternalStatusId))
+                {
+                    _logger.LogInformation("InvoiceEdit: {InvoiceNo} is {Status}, not editable; showing details.", id, existingInvoice.InternalStatusId);
+                    return RedirectToPage("/Invoices/InvoiceDetails2",
+                        new { uuid = string.IsNullOrWhiteSpace(existingInvoice.UUID) ? existingInvoice.InvoiceNo : existingInvoice.UUID });
+                }
+
                 // Map existing invoice to view model
                 Invoice = MapToInvoiceHeaderView(existingInvoice);
 
