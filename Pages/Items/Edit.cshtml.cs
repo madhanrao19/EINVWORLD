@@ -36,7 +36,8 @@ namespace eInvWorld.Pages.Items
             if (id == null) return NotFound();
 
             var itemdescription = await _context.ItemDescriptions.FirstOrDefaultAsync(m => m.Id == id);
-            if (itemdescription == null) return NotFound();
+            // A missing id answers like another company's id, so ids can't be probed (Admin still gets 404).
+            if (itemdescription == null) return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
 
             if (!User.IsInRole("Admin"))
             {
@@ -78,7 +79,7 @@ namespace eInvWorld.Pages.Items
             }
 
             var existingItem = await _context.ItemDescriptions.AsNoTracking().FirstOrDefaultAsync(i => i.Id == ItemDescription.Id);
-            if (existingItem == null) return NotFound();
+            if (existingItem == null) return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
 
             // GET checks ownership; the POST must too, or any supplier could overwrite another company's item by id.
             var (allowed, companyId) = await DeleteModel.ManageScopeAsync(_context, User);

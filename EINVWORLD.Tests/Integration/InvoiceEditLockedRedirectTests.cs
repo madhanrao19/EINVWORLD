@@ -34,7 +34,7 @@ namespace EINVWORLD.Tests.Integration
             public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
         }
 
-        private static eInvWorld.Pages.Invoices.InvoiceEditModel Page(eInvWorld.Data.ApplicationDbContext ctx, ClaimsPrincipal user, string method)
+        internal static eInvWorld.Pages.Invoices.InvoiceEditModel Page(eInvWorld.Data.ApplicationDbContext ctx, ClaimsPrincipal user, string method)
         {
             // Only what OnGetAsync touches before the status check is real; the rest is never reached on a redirect.
             var page = new eInvWorld.Pages.Invoices.InvoiceEditModel(null!, ctx, null!, ImportLogMaskingTests.NullProxy.Create<ILHDNApiService>(),

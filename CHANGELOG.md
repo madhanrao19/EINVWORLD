@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.49`** (`AppInfo:Version` in `appsettings.json`). v1.50.49 is a **patch**
+> **Current version: `v1.50.50`** (`AppInfo:Version` in `appsettings.json`). v1.50.50 is a **patch**
+> release: item and invoice pages no longer reveal which ids exist — see the dated entry below. v1.50.49 was a **patch**
 > release: the website database (Resources) can be created on an empty SQL Server — see the dated entry below. v1.50.48 was a **patch**
 > release: another site can no longer sign a user out with a link — see the dated entry below. v1.50.47 was a **patch**
 > release: company and buyer pages no longer reveal which ids exist — see the dated entry below. v1.50.46 was a **patch**
@@ -492,6 +493,18 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-12 — v1.50.50 (item and invoice pages don't reveal which ids exist)
+
+- Follow-up to v1.50.47. For a non-Admin, these pages answered "not found" for an id that doesn't exist but "access denied"
+  for another company's, so ids could be mapped. Both now get the same answer; an Admin still gets "not found".
+  - **Items** Edit (GET and POST) and Delete (GET and POST): Access Denied. Deleting a missing id used to return to the list.
+  - **Invoice Details** (`InvoiceDetails2`) and **Invoice Edit** (GET): Forbid, the same as another company's invoice.
+  - Handlers that already checked access before loading (PDF download, history export, cancel/reject, list actions) were
+    already consistent and are unchanged. Not changed by design: Invoice Edit's save also creates a brand-new invoice whose
+    number isn't in the database yet, so saving to a missing number and to another company's number still differ.
+  - Tests: `IdEnumerationTests` (SQL Server) — missing and foreign ids give the same result on each page, the other
+    company's item is untouched, Admin still gets 404 and can open items.
+- No database change.
 ## 📅 2026-11-12 — v1.50.49 (website database installs on an empty SQL Server)
 
 - **WebsiteDb migration `20250613051105_CreateResourceTypes`:** it added the `Resources → ResourceTypes` foreign key, but no

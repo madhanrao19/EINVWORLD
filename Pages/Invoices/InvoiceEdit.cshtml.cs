@@ -209,7 +209,8 @@ namespace eInvWorld.Pages.Invoices
 
                 if (existingInvoice == null)
                 {
-                    return NotFound($"Invoice {id} not found.");
+                    // Same answer as another company's invoice (Forbid below), so invoice numbers can't be probed.
+                    return User.IsInRole("Admin") ? NotFound($"Invoice {id} not found.") : Forbid();
                 }
 
                 // IDOR guard: SupplierBasePage's own check never actually engages for this page (it

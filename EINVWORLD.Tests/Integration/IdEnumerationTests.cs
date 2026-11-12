@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -131,5 +132,76 @@ namespace EINVWORLD.Tests.Integration
             Assert.IsType<NotFoundResult>(await Details(admin).OnGetAsync(MissingId));
             Assert.IsType<NotFoundResult>(await Edit(admin).OnGetAsync(MissingId));
         }
+        // ── v1.50.50: Items and invoice pages ───────────────────────────────────────────────────────────
+        private static async Task<(int itemId, string invoiceNo, ClaimsPrincipal supplier, ClaimsPrincipal admin)> SeedForeignItemAndInvoiceAsync(eInvWorld.Data.ApplicationDbContext ctx)
+        {
+            var (other, _, supplier, admin) = await SeedAsync(ctx);
+            var item = new ItemDescription { ClassificationCode = "022", ItemCode = "ENUM-1", Description = "other's item", CreatedByCompanyId = other.PartyInfoId };
+            ctx.ItemDescriptions.Add(item);
+            if (!await ctx.Set<Status>().AnyAsync(s => s.StatusCode == "Draft"))
+                ctx.Set<Status>().Add(new Status { StatusCode = "Draft", StatusType = "Internal", Name = "Draft" });
+            var invoiceNo = $"ENM{Guid.NewGuid():N}"[..20];
+            ctx.InvoiceHeaders.Add(new InvoiceHeader
+            {
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = "01", Currency = "MYR", CreatedDate = DateTime.UtcNow,
+                CreatedBy = "integration-test", InternalStatusId = "Draft", SupplierId = other.PartyInfoId,
+            });
+            await ctx.SaveChangesAsync();
+            return (item.Id, invoiceNo, supplier, admin);
+        }
+
+        [Fact]
+        public async Task Item_Edit_And_Delete_Give_A_Supplier_The_Same_Answer_For_Missing_And_Foreign_Ids()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (itemId, _, supplier, admin) = await SeedForeignItemAndInvoiceAsync(ctx);
+            var dropdowns = new eInvWorld.Helpers.DropdownHelper(ctx);
+            eInvWorld.Pages.Items.EditModel Edit(ClaimsPrincipal u) => As(new eInvWorld.Pages.Items.EditModel(ctx, dropdowns), u);
+            eInvWorld.Pages.Items.DeleteModel Delete(ClaimsPrincipal u) => As(new eInvWorld.Pages.Items.DeleteModel(ctx), u);
+            const string denied = "redirect /Identity/Account/AccessDenied";
+
+            Assert.Equal(denied, Shape(await Edit(supplier).OnGetAsync(itemId)));
+            Assert.Equal(denied, Shape(await Edit(supplier).OnGetAsync(MissingId)));
+            Assert.Equal(denied, Shape(await Delete(supplier).OnGetAsync(itemId)));
+            Assert.Equal(denied, Shape(await Delete(supplier).OnGetAsync(MissingId)));
+
+            var postForeign = Edit(supplier);
+            postForeign.ItemDescription = new ItemDescription { Id = itemId, ClassificationCode = "022", ItemCode = "X", Description = "overwrite" };
+            Assert.Equal(denied, Shape(await postForeign.OnPostAsync()));
+            var postMissing = Edit(supplier);
+            postMissing.ItemDescription = new ItemDescription { Id = MissingId, ClassificationCode = "022", ItemCode = "X", Description = "x" };
+            Assert.Equal(denied, Shape(await postMissing.OnPostAsync()));
+
+            Assert.Equal(denied, Shape(await Delete(supplier).OnPostAsync(itemId)));
+            Assert.Equal(denied, Shape(await Delete(supplier).OnPostAsync(MissingId)));
+            Assert.Equal("other's item", (await ctx.ItemDescriptions.AsNoTracking().SingleAsync(i => i.Id == itemId)).Description); // untouched
+
+            // Admin: missing is still 404 on the pages, and deleting a missing id still just returns to the list.
+            Assert.IsType<NotFoundResult>(await Edit(admin).OnGetAsync(MissingId));
+            Assert.IsType<NotFoundResult>(await Delete(admin).OnGetAsync(MissingId));
+            Assert.IsType<RedirectToPageResult>(await Delete(admin).OnPostAsync(MissingId));
+            Assert.IsType<PageResult>(await Edit(admin).OnGetAsync(itemId));
+        }
+
+        [Fact]
+        public async Task Invoice_Edit_And_Details_Give_A_Supplier_The_Same_Answer_For_Missing_And_Foreign_Invoices()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (_, invoiceNo, supplier, admin) = await SeedForeignItemAndInvoiceAsync(ctx);
+            var missingNo = $"NOPE{Guid.NewGuid():N}"[..20];
+            EINVWORLD.Pages.Invoices.InvoiceDetails2Model Details(ClaimsPrincipal u) => As(new EINVWORLD.Pages.Invoices.InvoiceDetails2Model(
+                ctx, NullLogger<eInvWorld.Pages.Invoices.InvoiceDetailsModel>.Instance, null!, null!, null!, null!, null!, null!, null!, null!, null!), u);
+
+            Assert.IsType<ForbidResult>(await Details(supplier).OnGetAsync(invoiceNo));
+            Assert.IsType<ForbidResult>(await Details(supplier).OnGetAsync(missingNo));
+            Assert.IsType<ForbidResult>(await InvoiceEditLockedRedirectTests.Page(ctx, supplier, "GET").OnGetAsync(invoiceNo));
+            Assert.IsType<ForbidResult>(await InvoiceEditLockedRedirectTests.Page(ctx, supplier, "GET").OnGetAsync(missingNo));
+
+            Assert.IsType<NotFoundResult>(await Details(admin).OnGetAsync(missingNo));
+            Assert.IsType<NotFoundObjectResult>(await InvoiceEditLockedRedirectTests.Page(ctx, admin, "GET").OnGetAsync(missingNo));
+        }
     }
 }
+

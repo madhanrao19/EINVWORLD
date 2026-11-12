@@ -28,7 +28,8 @@ namespace eInvWorld.Pages.Items
             if (id == null) return NotFound();
 
             var itemdescription = await _context.ItemDescriptions.FirstOrDefaultAsync(m => m.Id == id);
-            if (itemdescription == null) return NotFound();
+            // A missing id answers like another company's id, so ids can't be probed (Admin still gets 404).
+            if (itemdescription == null) return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
 
             var (allowed, companyId) = await ManageScopeAsync(_context, User);
             if (!allowed || (companyId.HasValue && itemdescription.CreatedByCompanyId != companyId))
@@ -49,7 +50,7 @@ namespace eInvWorld.Pages.Items
             // The confirmation page checks ownership on GET; the POST must too, or any supplier could
             // delete another company's item by posting its id.
             var (allowed, companyId) = await ManageScopeAsync(_context, User);
-            if (!allowed || (itemdescription != null && companyId.HasValue && itemdescription.CreatedByCompanyId != companyId))
+            if (!allowed || (companyId.HasValue && itemdescription?.CreatedByCompanyId != companyId)) // missing id: same answer as foreign
             {
                 return Redirect("/Identity/Account/AccessDenied");
             }
