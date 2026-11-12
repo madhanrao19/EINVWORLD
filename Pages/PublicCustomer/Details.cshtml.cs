@@ -38,8 +38,9 @@ namespace eInvWorld.Pages.PublicCustomer
                 .FirstOrDefaultAsync(p => p.PublicCustomerId == id);
 
 
+            // Same answer as another company's buyer (AccessDenied below), so a non-Admin can't tell which ids exist.
             if (entity == null)
-                return NotFound();
+                return User.IsInRole("Admin") ? NotFound() : Redirect("/Identity/Account/AccessDenied");
 
             StateName = _dropdownHelper.GetStateName(entity.StateCode);
 

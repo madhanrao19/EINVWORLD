@@ -96,7 +96,8 @@ namespace eInvWorld.Pages.Suppliers
             if (partyInfo == null)
             {
                 _logger.LogWarning($"PartyInfo with ID {id} not found.");
-                return NotFound();
+                // Same answer as another company's id (Forbid below), so a non-Admin can't tell which ids exist.
+                return User.IsInRole("Admin") ? NotFound() : Forbid();
             }
 
             // Any member of the company may view the profile; only EditProfile permission (checked
@@ -148,7 +149,7 @@ namespace eInvWorld.Pages.Suppliers
             if (existingParty == null)
             {
                 _logger.LogWarning($"PartyInfo with ID {PartyInfo.PartyInfoId} not found during update.");
-                return NotFound();
+                return User.IsInRole("Admin") ? NotFound() : Forbid();
             }
 
             var accessDenied = await CheckAccessAsync(existingParty.PartyInfoId);

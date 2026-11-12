@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.46`** (`AppInfo:Version` in `appsettings.json`). v1.50.46 is a **patch**
+> **Current version: `v1.50.47`** (`AppInfo:Version` in `appsettings.json`). v1.50.47 is a **patch**
+> release: company and buyer pages no longer reveal which ids exist — see the dated entry below. v1.50.46 was a **patch**
 > release: opening Edit for an invoice that can no longer be edited shows its details instead — see the dated entry below. v1.50.45 was a **patch**
 > release: deploy rollback hardening (offline on Ctrl+C, rollback restores only what the deploy changed) — see the dated entry below. v1.50.44 was a **patch**
 > release: the deploy script waits for the app to stop and rolls back a failed deploy — see the dated entry below. v1.50.43 was a **patch**
@@ -488,6 +489,33 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-12 — v1.50.47 (company and buyer pages don't reveal which ids exist)
+
+- **Company profile edit (`Pages/Suppliers/Edit.cshtml.cs`) and buyer details/edit (`Pages/PublicCustomer/Details.cshtml.cs`,
+  `Edit.cshtml.cs`):** a non-Admin got *Not found* for an id that doesn't exist but *Access denied* for one that belongs to
+  another company, so they could work out which company and buyer ids exist. Both now get *Access denied*; an Admin still
+  gets *Not found* for a missing id. GET and POST. Found by the 12 Nov 2026 Staging QA (`/Suppliers/Edit?id=`).
+  - The other company pages (`Suppliers/Details`, `Users`, `Audit`, `InvoiceBranding`, `Security`, `RolesPermissions`)
+    already answered the same for both through the `SupplierBasePage` gate; `Suppliers/AssignBuyers`, `Index` and `Create`
+    are Admin-only.
+  - Tests: `IdEnumerationTests` (SQL Server).
+- No database change.
+
+## 📅 2026-11-12 — v1.50.46 (Edit opens Invoice Details for invoices that can't be edited)
+
+- **Invoice Edit (`Pages/Invoices/InvoiceEdit.cshtml.cs`):** opening `/Invoices/InvoiceEdit/{invoiceNo}` for an invoice in a
+  status Save Draft refuses (anything but Draft or TransmissionError: Valid, Submitted, Invalid, Cancelled, ...) now goes to
+  Invoice Details (by UUID, or invoice number when there is none) instead of showing an editable form that could never be
+  saved. Found by the 12 Nov 2026 Staging QA (a Valid credit note opened in the editor by URL).
+  - The status list is the one `InvoiceWriteGuard` already enforces on save (`InvoiceWriteGuard.IsEditableStatus`), so the
+    two can't drift. The save and submit guards are unchanged.
+  - The company check still runs first, so another company's invoice is refused without revealing its status.
+  - GET only: the re-render after a refused save still shows the page with its message.
+  - Tests: `InvoiceEditLockedRedirectTests` (SQL Server) — Valid/Invalid/Cancelled/Submitted invoices and Valid/Cancelled
+    credit, debit and refund notes redirect; Draft and TransmissionError stay; no-UUID redirect; another company is
+    forbidden; POST re-render is not redirected.
+- No database change.
 
 ## 📅 2026-11-12 — v1.50.45 (Deploy: rollback hardening)
 
@@ -7032,18 +7060,3 @@ earlier `SyncModelAfterNet10Upgrade`, `AddSyncJobTable`, `DecoupleSystemLogsFrom
 - Implemented PDF and JSON generation post-submission.
 - Added UUID validation and retry-safe document polling logic.
 - Added self-billed invoice support with supplier/customer TIN switching.
-
-## 📅 2026-11-12 — v1.50.46 (Edit opens Invoice Details for invoices that can't be edited)
-
-- **Invoice Edit (`Pages/Invoices/InvoiceEdit.cshtml.cs`):** opening `/Invoices/InvoiceEdit/{invoiceNo}` for an invoice in a
-  status Save Draft refuses (anything but Draft or TransmissionError: Valid, Submitted, Invalid, Cancelled, ...) now goes to
-  Invoice Details (by UUID, or invoice number when there is none) instead of showing an editable form that could never be
-  saved. Found by the 12 Nov 2026 Staging QA (a Valid credit note opened in the editor by URL).
-  - The status list is the one `InvoiceWriteGuard` already enforces on save (`InvoiceWriteGuard.IsEditableStatus`), so the
-    two can't drift. The save and submit guards are unchanged.
-  - The company check still runs first, so another company's invoice is refused without revealing its status.
-  - GET only: the re-render after a refused save still shows the page with its message.
-  - Tests: `InvoiceEditLockedRedirectTests` (SQL Server) — Valid/Invalid/Cancelled/Submitted invoices and Valid/Cancelled
-    credit, debit and refund notes redirect; Draft and TransmissionError stay; no-UUID redirect; another company is
-    forbidden; POST re-render is not redirected.
-- No database change.
