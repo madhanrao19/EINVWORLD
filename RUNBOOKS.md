@@ -126,6 +126,13 @@ no rush and no downtime.
 4. Verify: open a supplier/buyer or invoice with a bank account number in the UI — it displays normally
    (decrypted transparently). The run is recorded in **Admin → Audit Trail** as `PiiEncryptionBackfill`.
 
+**Retiring an old key (v1.50.53):** the same button re-encrypts values held under an older key with the
+current key. To remove a key from the ring (for example a Production key that was copied to Staging): back up
+the database and the key folder, run the action until it reports **0 re-keyed and 0 unreadable**, stop the
+site, move the old `key-*.xml` files out of the key folder, start the site and check a bank account number
+still displays. A red result with "could not be decrypted" means a needed key is missing: put it back first.
+Removing a key also signs out anyone whose sign-in cookie was issued under it.
+
 **Note:** TIN is intentionally left in plaintext (it's filtered on throughout the app and is a semi-public
 tax identifier); so are `Addr1`/city/state/postal (used for reporting and PDF rendering). This is by
 design — see CHANGELOG v1.7.2.

@@ -90,7 +90,8 @@
             Bank account numbers and secondary/tertiary address lines are encrypted at rest with the
             DataProtection key-ring. New and edited records are encrypted automatically. Use this one-time
             action to encrypt <strong>existing</strong> rows that predate this feature. It is safe to run
-            more than once — already-encrypted rows are skipped.
+            more than once — already-encrypted rows are skipped. Values encrypted with an older key are
+            re-encrypted with the current key, so an old key can be retired afterwards.
         </p>
         <div class="alert alert-warning py-2 small mb-2">
             <strong>Before running:</strong> take a full database backup and confirm the DataProtection

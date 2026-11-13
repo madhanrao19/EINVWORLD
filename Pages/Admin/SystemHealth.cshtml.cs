@@ -91,12 +91,12 @@ namespace eInvWorld.Pages.Admin
             {
                 var result = await _piiBackfill.RunAsync(ct);
                 PiiBackfillMessage = result.Summary();
-                PiiBackfillFailed = false;
+                PiiBackfillFailed = result.TotalUnreadable > 0; // shown in red: a key is missing from the ring
                 _logger.LogInformation("PII encryption backfill run by {User}: {Summary}",
                     User.Identity?.Name, PiiBackfillMessage);
                 await _audit.WriteAsync("PiiEncryptionBackfill", new AuditEntry
                 {
-                    NewValueJson = $"{{\"scanned\":{result.TotalScanned},\"encrypted\":{result.TotalEncrypted}}}"
+                    NewValueJson = $"{{\"scanned\":{result.TotalScanned},\"encrypted\":{result.TotalEncrypted},\"rekeyed\":{result.TotalRekeyed},\"unreadable\":{result.TotalUnreadable}}}"
                 }, ct);
             }
             catch (Exception ex)
