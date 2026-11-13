@@ -312,6 +312,24 @@ if (-not $w.Unlocked -or $w.Seconds -lt 2) { throw ""unlocked $($w.Unlocked) aft
 if ($w.Unlocked -or $w.Seconds -lt 2 -or ($w.Locked -join '|') -ne 'runtimes\win-x64\native\Magick.Native.dll') { throw ""unlocked $($w.Unlocked), held: $($w.Locked -join '|')"" }");
         }
 
+        // A backup's web.config and in-app key folder inherited "local users can read" from the backup's parent folder.
+        [Fact] public void Backup_SecretsAreReadableOnlyByAdministratorsAndSystem() => Passes(@"
+Protect-BackupSecrets ""$repo\..\NoSuchBackup""
+# Only an elevated run (the deployer, CI) can read back what it has just closed to everyone but administrators.
+if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+$bak = ""$repo\..\Bak""
+New-Item -ItemType Directory -Force ""$bak\DataProtectionKeys"" | Out-Null
+Set-Content ""$bak\web.config"" 'secrets'; Set-Content ""$bak\DataProtectionKeys\key-1.xml"" 'key'; Set-Content ""$bak\EINVWORLD.dll"" 'x'
+Protect-BackupSecrets $bak
+function Sids($p) { (Get-Acl -LiteralPath $p).GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) }
+foreach ($p in ""$bak\web.config"", ""$bak\DataProtectionKeys"", ""$bak\DataProtectionKeys\key-1.xml"") {
+    $extra = @(Sids $p | Where-Object { $_.IdentityReference.Value -notin 'S-1-5-32-544', 'S-1-5-18' })
+    if ($extra.Count) { throw ""$p is still open to $($extra.IdentityReference.Value -join ', ')"" }
+    if (@(Sids $p).Count -lt 2) { throw ""$p lost Administrators or SYSTEM"" }
+}
+if (-not @(Sids ""$bak\EINVWORLD.dll"" | Where-Object IsInherited).Count) { throw 'ordinary backup files must keep their inherited permissions' }
+}");
+
         [Fact] public void Restore_PutsTheBackupBack_RemovesNewFiles_KeepsServerFiles() => Passes(@"
 $app = ""$repo\..\App""; $bak = ""$repo\..\Bak""
 function F($p, $c, $t) { New-Item -ItemType Directory -Force (Split-Path $p) | Out-Null; Set-Content $p $c; (Get-Item $p).LastWriteTimeUtc = [datetime]$t }
