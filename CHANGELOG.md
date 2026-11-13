@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.50`** (`AppInfo:Version` in `appsettings.json`). v1.50.50 is a **patch**
+> **Current version: `v1.50.53`** (`AppInfo:Version` in `appsettings.json`). v1.50.53 is a **patch**
+> release: "Encrypt existing PII" also re-keys values held under an older key — see the dated entry below. v1.50.50 was a **patch**
 > release: item and invoice pages no longer reveal which ids exist — see the dated entry below. v1.50.49 was a **patch**
 > release: the website database (Resources) can be created on an empty SQL Server — see the dated entry below. v1.50.48 was a **patch**
 > release: another site can no longer sign a user out with a link — see the dated entry below. v1.50.47 was a **patch**
@@ -492,6 +493,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-13 — v1.50.53 ("Encrypt existing PII" re-keys values held under an older key)
+
+- **Admin → System Health → "Encrypt existing PII" now also re-keys.** A bank account number, address line or
+  webhook secret that is encrypted under a key which is no longer the key-ring's current key is re-encrypted under
+  the current one. After a run reports nothing left to re-key, an old key can be removed from the ring: this is how
+  Staging stops depending on keys copied from Production (and how a key is retired after a suspected leak).
+  - **Safety fix:** a value that is already ciphertext but that no key in the ring can open used to be taken for
+    plaintext and encrypted a second time. It is now left unchanged and counted as **unreadable**; the result is
+    shown in red, because it means a key is missing from the ring.
+  - Webhook signing secrets are included. LHDN access tokens are not: they last an hour and are fetched again.
+  - The audit entry (`PiiEncryptionBackfill`) records scanned, encrypted, re-keyed and unreadable counts.
+  - Tests: `PiiBackfillClassifyTests`.
+- No database schema change. Back up the database and the key-ring folder before running (RUNBOOKS, Runbook 4).
 
 ## 📅 2026-11-12 — v1.50.50 (item and invoice pages don't reveal which ids exist)
 
