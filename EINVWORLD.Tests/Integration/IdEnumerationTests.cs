@@ -209,6 +209,12 @@ namespace EINVWORLD.Tests.Integration
 
             Assert.IsType<NotFoundResult>(await Details(admin).OnGetAsync(missingNo));
             Assert.IsType<NotFoundObjectResult>(await InvoiceEditLockedRedirectTests.Page(ctx, admin, "GET").OnGetAsync(missingNo));
+
+            // PDF download: same answers. An Admin asking for a missing invoice got a 500 (the generator threw) and four
+            // error log lines (13 Nov 2026 Production QA); the generator is never reached here (it is null).
+            Assert.IsType<ForbidResult>(await Details(supplier).OnGetDownloadPdfAsync(invoiceNo));
+            Assert.IsType<ForbidResult>(await Details(supplier).OnGetDownloadPdfAsync(missingNo));
+            Assert.IsType<NotFoundResult>(await Details(admin).OnGetDownloadPdfAsync(missingNo));
         }
     }
 }
