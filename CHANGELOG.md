@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.58`** (`AppInfo:Version` in `appsettings.json`). v1.50.58 is a **patch**
+> **Current version: `v1.50.59`** (`AppInfo:Version` in `appsettings.json`). v1.50.59 is a **patch**
+> release: requests the browser cancelled are no longer logged as server errors — see the dated entry below. v1.50.58 was a **patch**
 > release: the deploy script only deploys a clean checkout of origin/main — see the dated entry below. v1.50.57 was a **patch**
 > release: the Recurring Invoices pages are for Admin and Supplier only — see the dated entry below. v1.50.56 was a **patch**
 > release: a PDF request for an invoice that doesn't exist answers 404 instead of a server error — see the dated entry below. v1.50.53 was a **patch**
@@ -497,6 +498,18 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-14 — v1.50.59 (cancelled requests are not logged as HTTP 500)
+
+- **Cancelled requests are no longer logged as server errors.** When a browser navigates away before a page has
+  finished loading (seen on Staging right after sign-in, on the Dashboard and `/api/table-preferences`), the database
+  call it was waiting for is cancelled. The request log recorded that as `responded 500` at Error level, although
+  nothing was wrong and the next request succeeded. Such a request now ends as **499** (client closed request),
+  logged at Information level, and no error page is rendered for it (`ClientAbortMiddleware`).
+  - Only a cancellation of the request itself counts. A server-side timeout (for example an outgoing LHDN call) and
+    every other exception are still logged as errors, as before.
+  - Users see no difference: the cancelled response was never shown to anyone.
+  - Tests: `ClientAbortMiddlewareTests`.
+- No database change.
 ## 📅 2026-11-14 — v1.50.58 (Deploy: only a clean checkout of origin/main)
 
 - **`scripts\Deploy-Staging.ps1` deploys only a clean checkout of `origin/main`.** The script publishes the working

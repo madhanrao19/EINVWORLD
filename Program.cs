@@ -847,6 +847,8 @@ app.UseStaticFiles(new Microsoft.AspNetCore.Builder.StaticFileOptions
 // Structured per-request log (method, path, status, elapsed ms) — one tidy line per request instead of
 // the framework's noisy multi-line default. Placed after static files so asset hits don't flood the log.
 app.UseSerilogRequestLogging();
+// Inside the request log, so a request the browser cancelled is logged as 499 (Information), not "500" (Error).
+app.UseMiddleware<eInvWorld.Services.Middleware.ClientAbortMiddleware>();
 app.UseRouting();
 app.Use(async (context, next) =>
 {
