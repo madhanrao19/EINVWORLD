@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.57`** (`AppInfo:Version` in `appsettings.json`). v1.50.57 is a **patch**
+> **Current version: `v1.50.58`** (`AppInfo:Version` in `appsettings.json`). v1.50.58 is a **patch**
+> release: the deploy script only deploys a clean checkout of origin/main — see the dated entry below. v1.50.57 was a **patch**
 > release: the Recurring Invoices pages are for Admin and Supplier only — see the dated entry below. v1.50.56 was a **patch**
 > release: a PDF request for an invoice that doesn't exist answers 404 instead of a server error — see the dated entry below. v1.50.53 was a **patch**
 > release: "Encrypt existing PII" also re-keys values held under an older key — see the dated entry below. v1.50.50 was a **patch**
@@ -496,6 +497,22 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-14 — v1.50.58 (Deploy: only a clean checkout of origin/main)
+
+- **`scripts\Deploy-Staging.ps1` deploys only a clean checkout of `origin/main`.** The script publishes the working
+  folder, so uncommitted, untracked or unmerged code could ship under a released version number. It now stops before
+  any change (no runtime install, backup, migration or copy) when:
+  - the working folder has uncommitted or untracked files (untracked `*.md` outside `wwwroot` don't count: publish
+    never ships them);
+  - `HEAD` is not `origin/main` (fetched first; a failed fetch also stops it);
+  - the publish output was built from another commit (the SDK stamps the commit into `EINVWORLD.dll`), which also
+    covers `-SkipPublish`.
+- **Exception, Staging only:** `-AllowUnverifiedSource` deploys anyway with a warning (testing unmerged code, or an
+  older commit for a rollback drill). It is **never accepted for Production**. `-WhatIf` reports the problem as a
+  preflight warning.
+- Tests: `DeployGuardsTests` (clean, modified, untracked code, untracked docs, `wwwroot` content, wrong commit,
+  unreadable commit, Production vs Staging target).
+- No application code or database change.
 ## 📅 2026-11-14 — v1.50.57 (Recurring Invoices pages are for Admin and Supplier only)
 
 - **A Buyer can no longer open Recurring Invoices by typing the address.** `/RecurringInvoices/Index`, `/Create` and

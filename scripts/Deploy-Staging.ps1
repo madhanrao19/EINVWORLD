@@ -112,6 +112,12 @@
 .PARAMETER HealthRetryDelayMs
     Base gap between post-deploy health-check attempts (default 3000, growing per attempt).
 
+.PARAMETER AllowUnverifiedSource
+    Staging only: deploy even though the source is not a clean checkout of origin/main (to test unmerged code, or
+    an older commit for a rollback drill). Never accepted for Production. Without it the deploy stops before any
+    change when the working folder has uncommitted or untracked files (untracked *.md outside wwwroot don't count),
+    HEAD is not origin/main (fetched first), or the publish output was built from another commit.
+
 .PARAMETER WhatIf
     Preview what would be copied/backed up/migrated without changing anything on the server.
     Pending migrations are still listed (read-only query). Also runs read-only preflight checks and
@@ -167,7 +173,9 @@ param(
 
     [ValidateRange(1, 60)][int]$CopyRetryWaitSeconds = 5,
 
-    [ValidateRange(0, 60000)][int]$HealthRetryDelayMs = 3000
+    [ValidateRange(0, 60000)][int]$HealthRetryDelayMs = 3000,
+
+    [switch]$AllowUnverifiedSource
 )
 
 $ErrorActionPreference = 'Stop'
@@ -231,6 +239,32 @@ foreach ($disk in @(@{ Name = 'Server'; Path = $DestAppPath; Need = $appBytes + 
         default { Write-Host "$msg - OK." -ForegroundColor Green }
     }
 }
+
+# -- Source guard: only a clean checkout of origin/main is deployed (DeployGuards.ps1) -----------------------
+# Checked before anything changes, and again once the build exists (its DLL carries the commit it was built from).
+function Assert-DeploySource([string[]]$problems) {
+    if (-not $problems.Count) { return }
+    $msg = "Source check: $($problems -join '; ')"
+    $prod = Test-ProductionTarget $DestAppPath
+    if ($AllowUnverifiedSource -and -not $prod) { Write-Warning "$msg. Deploying anyway (-AllowUnverifiedSource)." }
+    elseif ($WhatIfPreference) { Write-Warning "Preflight: $msg - the real run will stop here." }
+    else {
+        $hint = if ($prod) { '-AllowUnverifiedSource is not accepted for Production.' } else { 'To test unmerged code on Staging, re-run with -AllowUnverifiedSource.' }
+        throw "$msg. Only a clean checkout of origin/main is deployed: commit, merge, then pull main. Nothing was changed. $hint"
+    }
+}
+$sourceProblems = @()
+$eap = $ErrorActionPreference; $ErrorActionPreference = 'Continue'   # git writes progress to stderr
+$env:GIT_TERMINAL_PROMPT = '0'                                       # never wait for a credential prompt
+try {
+    & git -C $repoRoot fetch --quiet origin main 2>$null
+    if ($LASTEXITCODE -ne 0) { $sourceProblems += "origin/main could not be fetched (git fetch exit $LASTEXITCODE)" }
+    $sourceHead = "$(& git -C $repoRoot rev-parse HEAD 2>$null)".Trim()
+    $sourceProblems += @(Get-SourceProblems @(& git -C $repoRoot status --porcelain 2>$null) $sourceHead "$(& git -C $repoRoot rev-parse origin/main 2>$null)".Trim())
+}
+finally { $ErrorActionPreference = $eap }
+Assert-DeploySource $sourceProblems
+if (-not $sourceProblems.Count) { Write-Host "Source check: clean checkout of origin/main ($sourceHead)." -ForegroundColor Green }
 
 # -- 0. Server .NET runtime (Hosting Bundle) -------------------------------------------------------
 # The app is framework-dependent: runtime security fixes (e.g. System.Security.Cryptography.Pkcs,
@@ -396,6 +430,8 @@ if ($WhatIfPreference -and -not $SkipPublish) {
 else {
     Assert-PublishOutput $SourcePublishPath $repoRoot
     Write-Host "Publish output check: matches the clean publish, version $(Get-AppVersion (Join-Path $SourcePublishPath 'appsettings.json'))." -ForegroundColor Green
+    $builtCommit = Get-BuiltCommit (Join-Path $SourcePublishPath 'EINVWORLD.dll')
+    if ($builtCommit -ne $sourceHead) { Assert-DeploySource @("the publish output was built from commit '$builtCommit', not HEAD $sourceHead") }
 }
 $forbiddenOnServer = Find-ForbiddenServerFiles $DestAppPath
 if ($forbiddenOnServer.Count) {

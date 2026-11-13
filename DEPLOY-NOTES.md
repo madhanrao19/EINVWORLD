@@ -60,6 +60,11 @@ changes are additive and AI/features stay off unless already enabled.
    Files that must never be public (`wwwroot\Drafts`, `wwwroot\tempcsv`, `wwwroot\test-*.html`,
    `wwwroot\theme-test.html`) stop the deploy if they are in the build, and are deleted from the server
    after the copy whoever put them there (the pre-deploy backup keeps them).
+   **Source guard (v1.50.51):** the script deploys only a clean checkout of `origin/main`. It stops before any
+   change when the working folder has uncommitted or untracked files (untracked `*.md` outside `wwwroot` don't
+   count), `HEAD` is not `origin/main` (it fetches first), or the publish output was built from another commit.
+   So: merge the PR, `git checkout main; git pull`, then deploy. `-AllowUnverifiedSource` skips this for
+   **Staging only** (testing unmerged code, a rollback drill); it is never accepted for Production.
    **The never-public list lives in one place:** the `<NeverPublicPath>` items in `EINVWORLD.csproj`
    (publish excludes them; the deploy guards, `.gitignore` check and tests all read them). Add a new
    pattern there, plus its `.gitignore` line; `WwwrootExposureTests` fails until both agree.
