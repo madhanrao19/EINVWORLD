@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.53`** (`AppInfo:Version` in `appsettings.json`). v1.50.53 is a **patch**
+> **Current version: `v1.50.56`** (`AppInfo:Version` in `appsettings.json`). v1.50.56 is a **patch**
+> release: a PDF request for an invoice that doesn't exist answers 404 instead of a server error — see the dated entry below. v1.50.53 was a **patch**
 > release: "Encrypt existing PII" also re-keys values held under an older key — see the dated entry below. v1.50.50 was a **patch**
 > release: item and invoice pages no longer reveal which ids exist — see the dated entry below. v1.50.49 was a **patch**
 > release: the website database (Resources) can be created on an empty SQL Server — see the dated entry below. v1.50.48 was a **patch**
@@ -493,6 +494,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-13 — v1.50.56 (PDF download for a missing invoice answers 404)
+
+- **A PDF request for an invoice that doesn't exist now answers 404 instead of a server error.** For an Admin
+  (who passes the access check for any invoice number) the PDF generator was called anyway, threw, and the request
+  ended as **500** with four error lines in the log. Both PDF download handlers (`InvoiceDetails2` and
+  `InvoiceLists`) now check that the invoice exists first. Found in the 13 Nov 2026 Production QA.
+  - Non-Admins are unchanged: a missing invoice is refused exactly like another company's (v1.50.50), so ids still
+    can't be probed.
+  - Tests: `IdEnumerationTests.Invoice_Edit_And_Details_Give_A_Supplier_The_Same_Answer_For_Missing_And_Foreign_Invoices`
+    (SQL integration).
+- No database change.
 
 ## 📅 2026-11-13 — v1.50.53 ("Encrypt existing PII" re-keys values held under an older key)
 

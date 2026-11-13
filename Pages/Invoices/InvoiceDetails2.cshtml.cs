@@ -276,6 +276,10 @@ namespace EINVWORLD.Pages.Invoices
                 return Forbid();
             }
 
+            // Only an Admin gets here for a missing invoice (anyone else was refused above, as for a foreign one).
+            if (!await _context.InvoiceHeaders.AnyAsync(i => i.InvoiceNo == invoiceNo))
+                return NotFound();
+
             try
             {
                 // Generate PDF and get file path
