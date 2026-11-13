@@ -292,8 +292,11 @@ function Compare-DeployedFiles([string]$source, [string]$dest, [string[]]$relati
 # DataProtection keys. A copy inherits its new parent's permissions, which let any local user read it, so both are
 # cut down to Administrators and SYSTEM (by SID: the names are localised). The rollback never reads either.
 function Protect-BackupSecrets([string]$backupPath) {
-    foreach ($rel in 'web.config', 'DataProtectionKeys') {
-        $p = Join-Path $backupPath $rel
+    if (-not (Test-Path -LiteralPath $backupPath)) { return }
+    # Every web.config, not only the top one: servers have held full copies with secrets in App\temp\.
+    $targets = @(Get-ChildItem -LiteralPath $backupPath -Recurse -File -Filter 'web.config*' -Force | ForEach-Object FullName) +
+               @(Join-Path $backupPath 'DataProtectionKeys')
+    foreach ($p in $targets) {
         if (-not (Test-Path -LiteralPath $p)) { continue }
         # Children before their folder: once the folder is closed, a non-elevated owner can no longer list it.
         $items = @(Get-ChildItem -LiteralPath $p -Recurse -Force | Sort-Object { $_.FullName.Length } -Descending) + (Get-Item -LiteralPath $p -Force)

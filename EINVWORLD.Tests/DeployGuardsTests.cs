@@ -318,11 +318,12 @@ Protect-BackupSecrets ""$repo\..\NoSuchBackup""
 # Only an elevated run (the deployer, CI) can read back what it has just closed to everyone but administrators.
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
 $bak = ""$repo\..\Bak""
-New-Item -ItemType Directory -Force ""$bak\DataProtectionKeys"" | Out-Null
+New-Item -ItemType Directory -Force ""$bak\DataProtectionKeys"", ""$bak\temp"" | Out-Null
 Set-Content ""$bak\web.config"" 'secrets'; Set-Content ""$bak\DataProtectionKeys\key-1.xml"" 'key'; Set-Content ""$bak\EINVWORLD.dll"" 'x'
+Set-Content ""$bak\temp\web.config"" 'stray copy with secrets'
 Protect-BackupSecrets $bak
 function Sids($p) { (Get-Acl -LiteralPath $p).GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) }
-foreach ($p in ""$bak\web.config"", ""$bak\DataProtectionKeys"", ""$bak\DataProtectionKeys\key-1.xml"") {
+foreach ($p in ""$bak\web.config"", ""$bak\temp\web.config"", ""$bak\DataProtectionKeys"", ""$bak\DataProtectionKeys\key-1.xml"") {
     $extra = @(Sids $p | Where-Object { $_.IdentityReference.Value -notin 'S-1-5-32-544', 'S-1-5-18' })
     if ($extra.Count) { throw ""$p is still open to $($extra.IdentityReference.Value -join ', ')"" }
     if (@(Sids $p).Count -lt 2) { throw ""$p lost Administrators or SYSTEM"" }

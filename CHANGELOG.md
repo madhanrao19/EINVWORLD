@@ -504,8 +504,9 @@
 - **`scripts\Deploy-Staging.ps1`: the pre-deploy app backup no longer exposes server secrets.** The backup copies
   `App\` including `web.config` (connection strings, LHDN client secret, SMTP password). A copied file takes its new
   parent folder's permissions, so every `App_Backup_*\web.config` was readable by any local user, even after the
-  live `web.config` was locked down. Right after the backup copy, `web.config` and (if the key ring was left inside
-  `App\`) `DataProtectionKeys` are now restricted to Administrators and SYSTEM (`Protect-BackupSecrets`). If that
+  live `web.config` was locked down. Right after the backup copy, every `web.config` in it (including stray copies
+  such as `App	emp\web.config`, found on both servers holding the full server settings) and, if the key ring was left
+  inside `App\`, `DataProtectionKeys` are restricted to Administrators and SYSTEM (`Protect-BackupSecrets`). If that
   fails, the deploy stops before `App\` is touched.
   - The rollback is unaffected: it never reads the backup's `web.config`.
   - Existing backups are not changed by this; restrict or delete old `App_Backup_*` folders by hand.
