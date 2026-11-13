@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.56`** (`AppInfo:Version` in `appsettings.json`). v1.50.56 is a **patch**
+> **Current version: `v1.50.57`** (`AppInfo:Version` in `appsettings.json`). v1.50.57 is a **patch**
+> release: the Recurring Invoices pages are for Admin and Supplier only — see the dated entry below. v1.50.56 was a **patch**
 > release: a PDF request for an invoice that doesn't exist answers 404 instead of a server error — see the dated entry below. v1.50.53 was a **patch**
 > release: "Encrypt existing PII" also re-keys values held under an older key — see the dated entry below. v1.50.50 was a **patch**
 > release: item and invoice pages no longer reveal which ids exist — see the dated entry below. v1.50.49 was a **patch**
@@ -494,6 +495,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.57 (Recurring Invoices pages are for Admin and Supplier only)
+
+- **A Buyer can no longer open Recurring Invoices by typing the address.** `/RecurringInvoices/Index`, `/Create` and
+  `/Edit` required only a signed-in user, so a Buyer-role account could open the (empty) list although the menu does
+  not offer it. They now require the Admin or Supplier role, the same as Templates; anyone else gets Access Denied.
+  - No data was exposed: the list shows only profiles the signed-in user created, and creating or editing a profile
+    already required write access to the template's company. Those checks are unchanged.
+  - Tests: `RecurringInvoicesRoleGateTests`.
+- No database change.
 
 ## 📅 2026-11-13 — v1.50.56 (PDF download for a missing invoice answers 404)
 
