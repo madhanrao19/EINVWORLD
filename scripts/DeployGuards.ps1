@@ -304,6 +304,13 @@ function Protect-BackupSecrets([string]$backupPath) {
             $flags = if ($item.PSIsContainer) { '(OI)(CI)F' } else { 'F' }
             $out = icacls $item.FullName /inheritance:r /grant:r "*S-1-5-32-544:$flags" "*S-1-5-18:$flags" 2>&1
             if ($LASTEXITCODE -ne 0) { throw "Could not restrict $($item.FullName) to Administrators and SYSTEM: $out" }
+            # /grant:r keeps explicit entries for anyone else (e.g. a file's creator): remove those too.
+            $others = @($item.GetAccessControl('Access').GetAccessRules($true, $false, [Security.Principal.SecurityIdentifier]) |
+                ForEach-Object { $_.IdentityReference.Value } | Where-Object { $_ -notin 'S-1-5-32-544', 'S-1-5-18' } | Select-Object -Unique)
+            foreach ($sid in $others) {
+                $out = icacls $item.FullName /remove:g "*$sid" /remove:d "*$sid" 2>&1
+                if ($LASTEXITCODE -ne 0) { throw "Could not remove $sid from $($item.FullName): $out" }
+            }
         }
     }
 }
