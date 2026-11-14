@@ -165,6 +165,16 @@ namespace EINVWORLD.Tests
             Assert.True(bad.Count == 0, "Inline handlers / javascript: links (use einv-actions.js data- attributes):\n" + string.Join("\n", bad.Take(20)));
         }
 
+        // A <style> element built at runtime has no nonce, so style-src-elem refuses it: rules belong in a stylesheet.
+        [Fact]
+        public void PageScripts_DoNotCreateStyleElements()
+        {
+            var bad = SourceFiles("*.js")
+                .Where(f => System.Text.RegularExpressions.Regex.IsMatch(File.ReadAllText(f), @"createElement\(\s*[""'`]style[""'`]\s*\)"))
+                .Select(Path.GetFileName).ToList();
+            Assert.True(bad.Count == 0, "Scripts creating <style> elements: " + string.Join(", ", bad));
+        }
+
         // A data-on-* action only runs if some page or script allows it (einvActions.allow([...])).
         [Fact]
         public void EveryDeclaredAction_IsAllowedSomewhere()
