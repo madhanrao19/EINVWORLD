@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.62`** (`AppInfo:Version` in `appsettings.json`). v1.50.62 is a **patch**
+> **Current version: `v1.50.63`** (`AppInfo:Version` in `appsettings.json`). v1.50.63 is a **patch**
+> release: the Report-Only CSP no longer causes a console error on every page — see the dated entry below. v1.50.62 was a **patch**
 > release: no inline event handlers or `javascript:` links left, ready for an enforced CSP — see the dated entry below. v1.50.61 was a **patch**
 > release: a strict nonce-based Content-Security-Policy, still Report-Only — see the dated entry below. v1.50.60 was a **patch**
 > release: a deploy's app backup no longer leaves `web.config` readable by local users — see the dated entry below. v1.50.59 was a **patch**
@@ -500,6 +501,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.63 (no console error from the Report-Only CSP)
+
+- **`upgrade-insecure-requests` is only sent with an enforced policy.** Browsers ignore it in
+  `Content-Security-Policy-Report-Only` and log *"The Content Security Policy directive 'upgrade-insecure-requests'
+  is ignored when delivered in a report-only policy"* as a console error on every page; the Playwright public-page
+  spec (`01-public`) failed on all 11 pages because of it on Staging v1.50.62. The directive returns automatically
+  when `Security:CspMode=Enforce`.
+- No database change.
 
 ## 📅 2026-11-14 — v1.50.62 (no inline event handlers or javascript: links)
 
