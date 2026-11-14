@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.60`** (`AppInfo:Version` in `appsettings.json`). v1.50.60 is a **patch**
+> **Current version: `v1.50.61`** (`AppInfo:Version` in `appsettings.json`). v1.50.61 is a **patch**
+> release: a strict nonce-based Content-Security-Policy, still Report-Only — see the dated entry below. v1.50.60 was a **patch**
 > release: a deploy's app backup no longer leaves `web.config` readable by local users — see the dated entry below. v1.50.59 was a **patch**
 > release: requests the browser cancelled are no longer logged as server errors — see the dated entry below. v1.50.58 was a **patch**
 > release: the deploy script only deploys a clean checkout of origin/main — see the dated entry below. v1.50.57 was a **patch**
@@ -498,6 +499,32 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.61 (strict nonce-based Content-Security-Policy, Report-Only)
+
+- **The Content-Security-Policy is now the strict candidate, still in Report-Only.** Every response gets a fresh
+  128-bit nonce; a tag helper (`CspNonceTagHelper`, registered in both `_ViewImports.cshtml`) adds it to every
+  `<script>` and `<style>` a Razor view renders, so no view had to change. The policy (`ContentSecurityPolicy`):
+  - `script-src 'self' 'nonce-…' https://challenges.cloudflare.com` (+ `https://www.googletagmanager.com` only where
+    `GoogleAnalytics:MeasurementId` is set, i.e. Production; Staging gets no analytics hosts at all). **No
+    `'unsafe-inline'`, no `'unsafe-eval'`**, no wildcard hosts; `script-src-attr 'none'` refuses inline handlers.
+  - `style-src`/`style-src-elem` need the nonce; `style-src-attr 'unsafe-inline'` is the one remaining exception
+    (291 `style=` attributes and libraries that set them).
+  - `img-src` lost the bare `https:` wildcard; the unused CDN hosts (jsdelivr, cdnjs, code.jquery, datatables,
+    tiny.cloud) are gone; `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'self'`,
+    `worker-src`/`manifest-src`/`media-src 'self'`, `upgrade-insecure-requests` on HTTPS.
+  - Nothing is blocked yet: the header stays `Content-Security-Policy-Report-Only`. The 129 inline event handlers
+    and 9 `javascript:` links will be reported until they are moved into script files (next PRs).
+- **`Security:CspMode`** (`ReportOnly` default, `Enforce`, `Off`) is read on every request; an unknown value means
+  Report-Only, never off. Rollback from enforcement = set `Security__CspMode=ReportOnly`.
+- **Violation reports are privacy-safe.** `/csp-report` accepts both the classic `report-uri` format and the
+  Reporting API (`Reporting-Endpoints` header, `report-to csp`). URLs are cut to origin + path, so query strings
+  (password-reset tokens, invoice numbers, TINs) are no longer logged; the script sample is never read; the page
+  path, source file and line are logged so each violation can be found. Per-IP rate limit and 10-minute de-duplication
+  unchanged.
+- Tests: `ContentSecurityPolicyTests` (directives, no unsafe script sources, analytics only where configured, nonce
+  uniqueness, mode parsing, tag helper, every view folder registers it, report parsing and URL stripping).
+- No database change.
 
 ## 📅 2026-11-14 — v1.50.60 (deploy backups keep `web.config` readable only by administrators)
 

@@ -796,28 +796,21 @@ app.Use(async (context, next) =>
     // No page uses the camera, microphone, location or payment APIs; deny them to the page and any embedded frame.
     headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()";
 
-    // Content-Security-Policy is shipped in REPORT-ONLY mode first: it never blocks, only reports
-    // violations, so it cannot break the (CDN-heavy, inline-script) UI. It documents the current
-    // allowed sources and gives a baseline to tighten — once the CDN assets are localized and inline
-    // scripts removed, drop the CDN hosts / 'unsafe-*' tokens and promote this to the enforcing
-    // "Content-Security-Policy" header.
-    headers["Content-Security-Policy-Report-Only"] = string.Join("; ", new[]
+    // Content-Security-Policy with a per-response nonce (ContentSecurityPolicy, CspNonceTagHelper). Security:CspMode
+    // (ReportOnly by default, Enforce, Off) is read on every request, so enforcement can be switched back to
+    // report-only by changing one setting. Violation reports go to /csp-report (CspReportController).
+    var cspHeader = eInvWorld.Services.Security.ContentSecurityPolicy.HeaderName(
+        eInvWorld.Services.Security.ContentSecurityPolicy.ParseMode(app.Configuration["Security:CspMode"]));
+    if (cspHeader != null)
     {
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.datatables.net https://cdn.tiny.cloud https://www.googletagmanager.com https://www.google-analytics.com https://challenges.cloudflare.com",
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com",
-        "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com",
-        "img-src 'self' data: https:",
-        // GA4 (Google Signals) also posts to analytics.google.com and the regional Google domain.
-        "connect-src 'self' https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://www.google.com https://www.google.com.my https://cdn.tiny.cloud",
-        "frame-src https://challenges.cloudflare.com https://www.google.com",
-        "object-src 'none'",
-        "base-uri 'self'",
-        "frame-ancestors 'self'",
-        // Browsers POST violation reports here so the policy can be tightened from real data before
-        // it is promoted from Report-Only to enforcing. See CspReportController.
-        "report-uri /csp-report"
-    });
+        var nonce = eInvWorld.Services.Security.ContentSecurityPolicy.GetNonce(context);
+        headers[cspHeader] = eInvWorld.Services.Security.ContentSecurityPolicy.Build(
+            nonce,
+            analytics: !string.IsNullOrWhiteSpace(app.Configuration["GoogleAnalytics:MeasurementId"]),
+            upgradeInsecure: context.Request.IsHttps);
+        if (context.Request.IsHttps) // the Reporting API only posts to secure endpoints
+            headers["Reporting-Endpoints"] = $"{eInvWorld.Services.Security.ContentSecurityPolicy.ReportGroup}=\"https://{context.Request.Host}/csp-report\"";
+    }
 
     await next();
 });
