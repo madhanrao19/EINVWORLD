@@ -64,7 +64,12 @@ try {{
             return output[(i + 7)..].Trim();
         }
 
-        private void Passes(string body) { if (OperatingSystem.IsWindows()) Assert.Equal("OK", Run(body)); }
+        private void Passes(string body)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var result = Run(body);
+            Assert.True(result == "OK", result); // the whole message: Assert.Equal's diff cuts it at the first path
+        }
         private void Throws(string body, string because)
         {
             if (!OperatingSystem.IsWindows()) return;
