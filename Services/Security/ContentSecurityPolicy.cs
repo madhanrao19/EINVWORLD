@@ -73,8 +73,9 @@ namespace eInvWorld.Services.Security
                 "font-src 'self' data: https://fonts.gstatic.com",
                 $"img-src 'self' data: blob:{gaImg}",
                 $"connect-src 'self'{gaConnect}",
-                // Turnstile's challenge frame; Google Maps on the contact page; GTM's <noscript> frame.
-                $"frame-src {turnstile} https://www.google.com{gtm}",
+                // Our own frames: Invoice Lists prints a PDF from a blob: URL in a hidden frame (printInvoicePdf).
+                // Then Turnstile's challenge frame, Google Maps on the contact page and GTM's <noscript> frame.
+                $"frame-src 'self' blob: {turnstile} https://www.google.com{gtm}",
                 "worker-src 'self'",
                 "manifest-src 'self'",
                 "media-src 'self'",
