@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.66`** (`AppInfo:Version` in `appsettings.json`). v1.50.66 is a **patch**
+> **Current version: `v1.50.67`** (`AppInfo:Version` in `appsettings.json`). v1.50.67 is a **patch**
+> release: Invoice Lists checks Submitted invoices more often and refreshes when they turn Valid — see the dated entry below. v1.50.66 was a **patch**
 > release: Production's CSP allows Cloudflare's two tag-gateway loader scripts by hash, so it can be enforced without losing analytics — see the dated entry below. v1.50.65 was a **patch**
 > release: printing a PDF from Invoice Lists works under the enforced CSP — see the dated entry below. v1.50.64 was a **patch**
 > release: Invoice Lists no longer adds styles at runtime that an enforced CSP would refuse — see the dated entry below. v1.50.63 was a **patch**
@@ -504,6 +505,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-15 — v1.50.67 (Invoice Lists: Submitted invoices refresh to Valid sooner)
+
+- **Invoice Lists already re-checked visible invoices with LHDN every 30 s and reloaded when a status changed.** Each
+  page load restarted that timer and a hidden tab skipped it, so a just-submitted invoice could sit on "Submitted"
+  until the user refreshed by hand. Now the page asks every **15 s while any row is Submitted** (30 s otherwise) and
+  checks straight away when the tab becomes visible again.
+- Server side unchanged: `SyncActiveSession` still polls at most 4 invoices per pass, one pass per user, with the
+  per-invoice cooldown (so the first LHDN check is still about a minute after submission). No LHDN rate change.
+- No database change.
 
 ## 📅 2026-11-14 — v1.50.66 (CSP: Cloudflare tag gateway allowed by hash on Production)
 

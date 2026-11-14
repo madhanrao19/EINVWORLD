@@ -735,7 +735,7 @@
                                                         ? (invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN) 
                                                         : invoice.Supplier?.TIN);
 
-                                                <tr id="row-@invoice.InvoiceNo" data-invoiceno="@invoice.InvoiceNo">
+                                                <tr id="row-@invoice.InvoiceNo" data-invoiceno="@invoice.InvoiceNo" data-lhdn-status="@invoice.LHDNStatusId">
                                                     @if (showSelection)
                                                     {
                                                         <td class="col-checkbox">
@@ -1682,51 +1682,49 @@
 </script>
 <script>
     $(document).ready(function () {
-        // Guard so interval ticks never stack: a rate-limited sync can take minutes server-side,
+        // Guard so ticks never stack: a rate-limited sync can take minutes server-side,
         // and firing another request on top multiplies the LHDN polling load.
         let sessionSyncInFlight = false;
+        let lastSyncAt = Date.now();
 
-        // Runs every 30 seconds
-        setInterval(function () {
-            // Stop running if the user switches to another browser tab (Saves API calls!)
-            if (document.hidden) return;
+        // Asks the server to re-check the visible invoices with LHDN and reloads when any status changed. The server
+        // decides what is actually polled (Submitted first, at most 4, per-invoice cooldown, one pass per user).
+        function syncVisibleInvoices() {
+            if (document.hidden || sessionSyncInFlight) return;
 
-            // Skip this tick if the previous sync request hasn't finished yet
-            if (sessionSyncInFlight) return;
-
-            // Gather the Invoice Numbers currently visible on the table. Read from the rows
-            // (not the checkboxes) so tabs without row selection — e.g. All — still auto-sync.
+            // Read from the rows (not the checkboxes) so tabs without row selection — e.g. All — still auto-sync.
             let visibleInvoices = [];
             $('#invoiceTable tbody tr[data-invoiceno]').each(function () {
                 let invoiceNo = $(this).data('invoiceno');
-                if (invoiceNo) {
-                    visibleInvoices.push(invoiceNo);
-                }
+                if (invoiceNo) visibleInvoices.push(invoiceNo);
             });
+            if (visibleInvoices.length === 0) return;
 
-            if (visibleInvoices.length > 0) {
-                sessionSyncInFlight = true;
-                $.ajax({
-                    url: '?handler=SyncActiveSession',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    data: JSON.stringify(visibleInvoices),
-                    success: function (response) {
-                        // If the backend found updates (e.g., a buyer rejected it!), reload the page to show it.
-                        if (response.success && response.updatedCount > 0) {
-                            console.log("Updates found from LHDN! Refreshing data...");
-                            location.reload();
-                        }
-                    },
-                    complete: function () {
-                        sessionSyncInFlight = false;
-                    }
-                });
-            }
-        }, 30000); // 30,000 milliseconds = 30 seconds
+            sessionSyncInFlight = true;
+            lastSyncAt = Date.now();
+            $.ajax({
+                url: '?handler=SyncActiveSession',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+                data: JSON.stringify(visibleInvoices),
+                success: function (response) {
+                    // e.g. a Submitted invoice became Valid, or a buyer rejected one: reload to show it.
+                    if (response.success && response.updatedCount > 0) location.reload();
+                },
+                complete: function () { sessionSyncInFlight = false; }
+            });
+        }
+
+        // Every 30 s; every 15 s while an invoice on the page is still Submitted (waiting for LHDN's verdict), so it
+        // turns Valid without a manual refresh. Paused while the tab is hidden, and checked again when it comes back.
+        setInterval(function () {
+            const waiting = $('#invoiceTable tbody tr[data-lhdn-status="Submitted"]').length > 0;
+            if (Date.now() - lastSyncAt >= (waiting ? 15000 : 30000)) syncVisibleInvoices();
+        }, 5000);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden && Date.now() - lastSyncAt >= 10000) syncVisibleInvoices();
+        });
     });
 </script>
 <script>
