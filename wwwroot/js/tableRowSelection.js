@@ -1,17 +1,7 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
     const selectAllCheckbox = document.getElementById("selectAll");
 
-    // Ensure the <head> element exists before appending styles
-    if (document.head) {
-        const style = document.createElement("style");
-        style.innerHTML = `
-            .selected-row {
-                /* Brand tint from the theme tokens — a fixed light grey hid the row text in dark mode. */
-                background-color: rgba(var(--einv-primary-rgb), .12) !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    // The .selected-row style lives in tabler/css/einvworld-tokens.css: a <style> element created here has no CSP nonce.
 
     function updateCheckboxes() {
         const checkboxes = document.querySelectorAll(".invoice-checkbox");

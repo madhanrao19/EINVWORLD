@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.63`** (`AppInfo:Version` in `appsettings.json`). v1.50.63 is a **patch**
+> **Current version: `v1.50.64`** (`AppInfo:Version` in `appsettings.json`). v1.50.64 is a **patch**
+> release: Invoice Lists no longer adds styles at runtime that an enforced CSP would refuse — see the dated entry below. v1.50.63 was a **patch**
 > release: the Report-Only CSP no longer causes a console error on every page — see the dated entry below. v1.50.62 was a **patch**
 > release: no inline event handlers or `javascript:` links left, ready for an enforced CSP — see the dated entry below. v1.50.61 was a **patch**
 > release: a strict nonce-based Content-Security-Policy, still Report-Only — see the dated entry below. v1.50.60 was a **patch**
@@ -502,6 +503,18 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-14 — v1.50.64 (Invoice Lists: no runtime style elements)
+
+- **Invoice Lists no longer creates `<style>` elements at runtime**, which the enforced CSP (`style-src-elem` needs
+  the nonce) would refuse. Found by checking every signed-in page on Staging v1.50.62 against the policy:
+  - `tableRowSelection.js` built its one `.selected-row` rule in a `<style>` element; the rule now lives in
+    `tabler/css/einvworld-tokens.css` (same tint, dark mode unchanged).
+  - The page loaded a second SweetAlert2 build (`js/sweetalert2.all.min.js`, v11.22.3) on top of the layout's
+    v11.10.3; the `.all` build injects its CSS as a `<style>` element. The extra bundle is removed (the page now
+    uses the layout's SweetAlert2 and its stylesheet; every option it uses exists in v11.10.3).
+- **No page needs `'unsafe-eval'`**: the only `new Function` in the scripts these pages load is SweetAlert2's
+  `<swal-function-param>` template helper, and the app uses no SweetAlert2 templates.
+- Tests: `ContentSecurityPolicyTests.PageScripts_DoNotCreateStyleElements`.
 ## 📅 2026-11-14 — v1.50.63 (no console error from the Report-Only CSP)
 
 - **`upgrade-insecure-requests` is only sent with an enforced policy.** Browsers ignore it in
