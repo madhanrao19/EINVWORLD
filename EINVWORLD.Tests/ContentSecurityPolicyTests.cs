@@ -71,6 +71,39 @@ namespace EINVWORLD.Tests
             Assert.Contains("https://www.googletagmanager.com", ContentSecurityPolicy.Build("n", analytics: true, upgradeInsecure: true));
         }
 
+        // Production allows Cloudflare's tag-gateway loader scripts by hash; the setting must never be able to widen the policy.
+        [Fact]
+        public void ScriptHashes_AreAddedOnlyWhenWellFormed()
+        {
+            var script = Directives(ContentSecurityPolicy.Build("n", analytics: true, upgradeInsecure: true, new[]
+            {
+                "sha256-Bv2VIV3tL5uSsGJrNtJTHhyccfQnNwc6Kx6yYg3tIBM=", "'sha384-abc+/12=='", " sha256-Bv2VIV3tL5uSsGJrNtJTHhyccfQnNwc6Kx6yYg3tIBM= ",
+                "'unsafe-inline'", "https:", "*", "sha256-x' 'unsafe-eval", "", null!,
+            }))["script-src"];
+            Assert.Contains(" 'sha256-Bv2VIV3tL5uSsGJrNtJTHhyccfQnNwc6Kx6yYg3tIBM=' ", script);
+            Assert.Contains(" 'sha384-abc+/12==' ", script);
+            Assert.Single(script.Split(' '), t => t.Contains("Bv2VIV3")); // duplicates collapse
+            Assert.DoesNotContain("unsafe", script);
+            Assert.DoesNotContain("*", script);
+            Assert.DoesNotContain(" https: ", script + " ");
+            Assert.DoesNotContain("sha", ContentSecurityPolicy.Build("n", analytics: true, upgradeInsecure: true));
+        }
+
+        [Fact]
+        public void ProductionSettings_ListOnlyHashes_AndStagingNone()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null && !File.Exists(Path.Combine(dir.FullName, "EINVWORLD.csproj"))) dir = dir.Parent;
+            Assert.NotNull(dir);
+            var root = dir!.FullName;
+            var prod = File.ReadAllText(Path.Combine(root, "appsettings.Production.json"));
+            Assert.Contains("\"CspScriptHashes\"", prod);
+            Assert.DoesNotContain("unsafe-", prod);
+            foreach (var other in new[] { "appsettings.json", "appsettings.Staging.json", "appsettings.Development.json" })
+                if (File.Exists(Path.Combine(root, other)))
+                    Assert.DoesNotContain("CspScriptHashes", File.ReadAllText(Path.Combine(root, other)));
+        }
+
         [Fact]
         public void LocalHttp_DoesNotUpgradeRequests() =>
             Assert.DoesNotContain("upgrade-insecure-requests", ContentSecurityPolicy.Build("n", false, upgradeInsecure: false));

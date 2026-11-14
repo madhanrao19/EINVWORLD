@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.65`** (`AppInfo:Version` in `appsettings.json`). v1.50.65 is a **patch**
+> **Current version: `v1.50.66`** (`AppInfo:Version` in `appsettings.json`). v1.50.66 is a **patch**
+> release: Production's CSP allows Cloudflare's two tag-gateway loader scripts by hash, so it can be enforced without losing analytics — see the dated entry below. v1.50.65 was a **patch**
 > release: printing a PDF from Invoice Lists works under the enforced CSP — see the dated entry below. v1.50.64 was a **patch**
 > release: Invoice Lists no longer adds styles at runtime that an enforced CSP would refuse — see the dated entry below. v1.50.63 was a **patch**
 > release: the Report-Only CSP no longer causes a console error on every page — see the dated entry below. v1.50.62 was a **patch**
@@ -503,6 +504,20 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.66 (CSP: Cloudflare tag gateway allowed by hash on Production)
+
+- **New setting `Security:CspScriptHashes`**: hashes of inline scripts the app does not render itself. Only
+  `appsettings.Production.json` sets it, to the two loader scripts Cloudflare's Google tag gateway injects into every
+  page (Production's only source of Google Analytics hits). Enforcing the CSP on Production on 14 Nov blocked them and
+  analytics stopped; Production was put back on Report-Only after about 10 minutes.
+- Values that are not a well-formed `sha256-/sha384-/sha512-` hash are ignored, so the setting cannot add
+  `'unsafe-inline'`, hosts or wildcards. Staging lists no hashes.
+- Not allowed on purpose: the Google Ads remarketing pixel (`www.google.com.my/ads/ga-audiences`) and GA's `data:`
+  probe; both are refused under enforcement and neither affects GA reporting.
+- Tests: `ContentSecurityPolicyTests.ScriptHashes_AreAddedOnlyWhenWellFormed`, `ProductionSettings_ListOnlyHashes_AndStagingNone`.
+  See `docs/CSP-ENFORCEMENT-PLAN.md` (Cloudflare tag gateway hashes) for what to do if Cloudflare changes the loader.
+- No database change.
 
 ## 📅 2026-11-14 — v1.50.65 (CSP: Invoice Lists PDF print allowed)
 

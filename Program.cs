@@ -800,6 +800,7 @@ app.Use(async (context, next) =>
     // (ReportOnly by default, Enforce, Off) is read on every request, so enforcement can be switched back to
     // report-only by changing one setting. Violation reports go to /csp-report (CspReportController).
     var cspMode = eInvWorld.Services.Security.ContentSecurityPolicy.ParseMode(app.Configuration["Security:CspMode"]);
+    var cspScriptHashes = app.Configuration.GetSection("Security:CspScriptHashes").Get<string[]>();
     var cspHeader = eInvWorld.Services.Security.ContentSecurityPolicy.HeaderName(cspMode);
     if (cspHeader != null)
     {
@@ -808,7 +809,8 @@ app.Use(async (context, next) =>
             nonce,
             analytics: !string.IsNullOrWhiteSpace(app.Configuration["GoogleAnalytics:MeasurementId"]),
             // Browsers ignore upgrade-insecure-requests in a Report-Only policy and log an error about it on every page.
-            upgradeInsecure: context.Request.IsHttps && cspMode == eInvWorld.Services.Security.CspMode.Enforce);
+            upgradeInsecure: context.Request.IsHttps && cspMode == eInvWorld.Services.Security.CspMode.Enforce,
+            scriptHashes: cspScriptHashes);
         if (context.Request.IsHttps) // the Reporting API only posts to secure endpoints
             headers["Reporting-Endpoints"] = $"{eInvWorld.Services.Security.ContentSecurityPolicy.ReportGroup}=\"https://{context.Request.Host}/csp-report\"";
     }

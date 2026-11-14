@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
 namespace eInvWorld.Services.Security
@@ -50,7 +52,12 @@ namespace eInvWorld.Services.Security
         /// <param name="nonce">This response's nonce.</param>
         /// <param name="analytics">True only where Google Tag Manager is configured (Production); Staging gets none.</param>
         /// <param name="upgradeInsecure">True when the public site is HTTPS (not local development over HTTP).</param>
-        public static string Build(string nonce, bool analytics, bool upgradeInsecure)
+        /// <param name="scriptHashes">
+        /// <c>Security:CspScriptHashes</c>: hashes (<c>sha256-…</c>) of inline scripts we do not render ourselves, so
+        /// cannot nonce. Production lists the two loader scripts Cloudflare's Google tag gateway injects into every page.
+        /// Anything that is not a well-formed hash is ignored, so this setting can never widen the policy.
+        /// </param>
+        public static string Build(string nonce, bool analytics, bool upgradeInsecure, IEnumerable<string>? scriptHashes = null)
         {
             const string turnstile = "https://challenges.cloudflare.com";
             var gtm = analytics ? " https://www.googletagmanager.com" : "";
@@ -63,7 +70,7 @@ namespace eInvWorld.Services.Security
             var directives = new List<string>
             {
                 "default-src 'self'",
-                $"script-src 'self' 'nonce-{nonce}' {turnstile}{gtm}",
+                $"script-src 'self' 'nonce-{nonce}'{Hashes(scriptHashes)} {turnstile}{gtm}",
                 // Inline handlers (onclick=…) are covered by script-src; with a nonce and no 'unsafe-inline' they are refused.
                 "script-src-attr 'none'",
                 $"style-src 'self' 'nonce-{nonce}' https://fonts.googleapis.com",
@@ -89,5 +96,11 @@ namespace eInvWorld.Services.Security
             if (upgradeInsecure) directives.Insert(directives.Count - 2, "upgrade-insecure-requests");
             return string.Join("; ", directives);
         }
+
+        private static readonly Regex HashSource = new("^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$", RegexOptions.CultureInvariant);
+
+        private static string Hashes(IEnumerable<string>? hashes) =>
+            hashes == null ? "" : string.Concat(hashes.Select(h => h?.Trim().Trim('\'') ?? "")
+                .Where(h => HashSource.IsMatch(h)).Distinct().Select(h => $" '{h}'"));
     }
 }
