@@ -73,6 +73,29 @@ try {{
             Assert.Contains(because, result);
         }
 
+        // Source guard (v1.50.51): only a clean checkout of origin/main is deployed.
+        [Theory]
+        [InlineData("@()", "a", "a", "")]                                                  // clean, on origin/main
+        [InlineData("@('?? docs/NOTES.md', '?? \"docs/my notes.md\"')", "a", "a", "")]     // untracked docs are never published
+        [InlineData("@(' M Program.cs')", "a", "a", "uncommitted")]
+        [InlineData("@('?? Pages/New.cshtml.cs')", "a", "a", "uncommitted")]               // untracked code would be compiled in
+        [InlineData("@('?? wwwroot/readme.md')", "a", "a", "uncommitted")]                 // wwwroot content is published
+        [InlineData("@()", "a", "b", "is not origin/main")]
+        [InlineData("@()", "a", "", "could not read")]
+        public void SourceGuard_AllowsOnlyACleanOriginMain(string porcelain, string head, string originMain, string problem)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            Run($"$p = @(Get-SourceProblems {porcelain} '{head}' '{originMain}'); 'PROBLEMS:' + ($p -join '|')");
+            var problems = _lastOutput[(_lastOutput.IndexOf("PROBLEMS:", StringComparison.Ordinal) + 9)..].Split('\n')[0].Trim();
+            if (problem == "") Assert.Equal("", problems); else Assert.Contains(problem, problems);
+        }
+
+        [Fact] public void SourceGuard_KnowsProductionFromStaging() =>
+            Passes(@"if (-not (Test-ProductionTarget '\\srv\e$\EINVWORLD\App')) { throw 'prod' }; if (Test-ProductionTarget '\\srv\e$\EINVWORLD_STAGING\App') { throw 'staging' }");
+
+        [Fact] public void BuiltCommit_IsNullForAFileWithoutAStamp() =>
+            Passes("if ($null -ne (Get-BuiltCommit \"$pub\\EINVWORLD.dll\")) { throw 'stamp' }; if ($null -ne (Get-BuiltCommit \"$pub\\missing.dll\")) { throw 'missing' }");
+
         [Fact] public void CleanPublish_Passes() => Passes("Write-PublishStamp $pub; Assert-PublishOutput $pub $repo");
 
         [Fact] public void FileAddedAfterThePublish_Stops() =>
@@ -314,11 +337,12 @@ if (-not (Test-Path ""$app\wwwroot\uploads\logo.png"") -or -not (Test-Path ""$ap
         }
 
         // The real Deploy-Staging.ps1 in an isolated fake repo (its own scripts\, bin\, obj\) deploying to a local
+        // The fake repo is not a git checkout, so each run passes -AllowUnverifiedSource unless it tests the source guard.
         // App folder, with a local site standing in for the public one. The App folder starts with an old build
         // (EINVWORLD.dll 'old-build', wwwroot\js\site.js) plus web.config; the release ships 'new-build'.
         private string E2eApp => Path.Combine(_root, "e2e", "App");
 
-        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond, string extraArgs = "")
+        private string DeployEndToEnd(Func<string, int, (int Status, string? Cache)> respond, string extraArgs = "", bool allowUnverifiedSource = true)
         {
             using var server = new FakeSite(respond);
             var scripts = Path.GetDirectoryName(Guards())!;
@@ -338,12 +362,23 @@ try { & ""$r2\scripts\Deploy-Staging.ps1"" -DestAppPath ""$e\App"" -SkipPublish 
 catch { 'DEPLOY:FAILED ' + $_.Exception.Message }
 'STATE deployed=' + (Test-Path ""$e\App\EINVWORLD.exe"") + ' publish=' + (Test-Path $p2) + ' obj=' + (Test-Path $o2) + ' webconfig=' + ((Get-Content ""$e\App\web.config"") -eq '<configuration />')
 'FILES dll=' + (Get-Content ""$e\App\EINVWORLD.dll"") + ' offline=' + (Test-Path ""$e\App\app_offline.htm"") + ' drafts=' + (Test-Path ""$e\App\wwwroot\Drafts\EINV00149.json"")"
-                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString()).Replace("EXTRA", extraArgs);
+                .Replace("SCRIPTS", scripts).Replace("PORT", server.Port.ToString()).Replace("EXTRA", extraArgs + (allowUnverifiedSource ? " -AllowUnverifiedSource" : ""));
             Run(body);
             return _lastOutput;
         }
 
         private static (int Status, string? Cache) Healthy(string path, int _) => path.StartsWith("/health/") ? (200, null) : (302, "DYNAMIC");
+
+        [Fact]
+        public void Deploy_SourceNotACleanOriginMain_StopsBeforeAnyChange()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var output = DeployEndToEnd(Healthy, allowUnverifiedSource: false);
+            Assert.Contains("DEPLOY:FAILED Source check:", output);
+            Assert.Contains("Nothing was changed", output);
+            Assert.Contains("FILES dll=old-build offline=False", output);                    // App\ untouched, never taken offline
+            Assert.Empty(Directory.GetDirectories(Path.Combine(_root, "e2e"), "App_Backup_*")); // not even a backup
+        }
 
         [Fact]
         public async Task Deploy_AppSlowToStop_WaitsForItThenDeploys()

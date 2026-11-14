@@ -329,6 +329,26 @@ function Restore-AppFromBackup([string]$backupPath, [string]$appPath, [string[]]
     if ($bad.Count) { throw "Rollback incomplete: $($bad.Count) file(s) still differ from the backup, e.g. $(($bad | Select-Object -First 5) -join ', ')." }
 }
 
+# ---- Source guard: only a clean checkout of origin/main is deployed (2026-11-13) -----------------------------------
+# The script publishes the working folder, so uncommitted or unmerged code could ship under a released version number.
+
+# Reasons this source must not be deployed; nothing when it is a clean checkout of origin/main.
+# $porcelain = the lines of `git status --porcelain`. Untracked *.md outside wwwroot are ignored: publish never ships them.
+function Get-SourceProblems([string[]]$porcelain, [string]$head, [string]$originMain) {
+    $dirty = @($porcelain | Where-Object { $_ -and $_ -notmatch '^\?\? "?(?!wwwroot/)[^"]*\.md"?$' })
+    if ($dirty.Count) { "the working folder has $($dirty.Count) uncommitted or untracked change(s), e.g. $(($dirty | Select-Object -First 3 | ForEach-Object { $_.Trim() }) -join ', ')" }
+    if (-not $head -or -not $originMain) { "git could not read the commits (HEAD '$head', origin/main '$originMain')" }
+    elseif ($head -ne $originMain) { "HEAD $head is not origin/main $originMain" }
+}
+
+# Commit a build was made from: the .NET SDK stamps it into the DLL's product version ("1.0.0+<sha>"). $null if absent.
+function Get-BuiltCommit([string]$dllPath) {
+    if (-not (Test-Path -LiteralPath $dllPath)) { return $null }
+    if ([Diagnostics.FileVersionInfo]::GetVersionInfo($dllPath).ProductVersion -match '\+([0-9a-f]{40})') { $Matches[1] } else { $null }
+}
+
+function Test-ProductionTarget([string]$destAppPath) { $destAppPath -match '\\EINVWORLD\\App\\?$' }
+
 # Public hostname for a deploy target; $null for a target with no known public site (e.g. a local test folder).
 function Get-DefaultPublicBaseUrl([string]$destAppPath) {
     switch -Regex ($destAppPath) {
