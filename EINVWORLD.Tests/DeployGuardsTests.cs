@@ -64,7 +64,12 @@ try {{
             return output[(i + 7)..].Trim();
         }
 
-        private void Passes(string body) { if (OperatingSystem.IsWindows()) Assert.Equal("OK", Run(body)); }
+        private void Passes(string body)
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            var result = Run(body);
+            Assert.True(result == "OK", result); // the whole message: Assert.Equal's diff cuts it at the first path
+        }
         private void Throws(string body, string because)
         {
             if (!OperatingSystem.IsWindows()) return;
@@ -322,7 +327,8 @@ New-Item -ItemType Directory -Force ""$bak\DataProtectionKeys"", ""$bak\temp"" |
 Set-Content ""$bak\web.config"" 'secrets'; Set-Content ""$bak\DataProtectionKeys\key-1.xml"" 'key'; Set-Content ""$bak\EINVWORLD.dll"" 'x'
 Set-Content ""$bak\temp\web.config"" 'stray copy with secrets'
 Protect-BackupSecrets $bak
-function Sids($p) { (Get-Acl -LiteralPath $p).GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) }
+# .NET, not Get-Acl: on the CI runner Windows PowerShell can't load Microsoft.PowerShell.Security.
+function Sids($p) { (Get-Item -LiteralPath $p -Force).GetAccessControl().GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]) }
 foreach ($p in ""$bak\web.config"", ""$bak\temp\web.config"", ""$bak\DataProtectionKeys"", ""$bak\DataProtectionKeys\key-1.xml"") {
     $extra = @(Sids $p | Where-Object { $_.IdentityReference.Value -notin 'S-1-5-32-544', 'S-1-5-18' })
     if ($extra.Count) { throw ""$p is still open to $($extra.IdentityReference.Value -join ', ')"" }

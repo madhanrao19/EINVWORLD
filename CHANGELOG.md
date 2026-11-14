@@ -508,6 +508,8 @@
   such as `App\temp\web.config`, found on both servers holding the full server settings) and, if the key ring was left
   inside `App\`, `DataProtectionKeys` are restricted to Administrators and SYSTEM (`Protect-BackupSecrets`). If that
   fails, the deploy stops before `App\` is touched.
+  - Any other explicit permission on those files (for example one for the account that created them) is removed
+    as well, not only the inherited ones.
   - The rollback is unaffected: it never reads the backup's `web.config`.
   - Existing backups are not changed by this; restrict or delete old `App_Backup_*` folders by hand.
   - Tests: `DeployGuardsTests.Backup_SecretsAreReadableOnlyByAdministratorsAndSystem` (asserts the permissions when
