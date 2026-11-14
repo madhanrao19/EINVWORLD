@@ -585,12 +585,28 @@ public class LHDNApiService : ILHDNApiService
         }
     }
 
+    /// <summary>
+    /// LHDN /documents/search bounds (UTC, as LHDN expects) for whole Malaysia days <paramref name="fromMytDate"/> to
+    /// <paramref name="toMytDate"/>, the end capped at <paramref name="nowUtc"/> so LHDN never gets a future timestamp.
+    /// The dates used to be sent as if they were UTC: between 00:00 and 08:00 MYT "today 00:00Z" was later than "now",
+    /// so LHDN answered 400, and invoices issued 00:00-08:00 MYT fell outside every window.
+    /// </summary>
+    internal static (string From, string To) SearchWindowUtc(DateTime fromMytDate, DateTime toMytDate, DateTime nowUtc)
+    {
+        var fromUtc = eInvWorld.Helpers.DateTimeHelper.MalaysiaToUtc(DateTime.SpecifyKind(fromMytDate.Date, DateTimeKind.Unspecified));
+        var toUtc = eInvWorld.Helpers.DateTimeHelper.MalaysiaToUtc(DateTime.SpecifyKind(toMytDate.Date.AddDays(1).AddSeconds(-1), DateTimeKind.Unspecified));
+        if (toUtc > nowUtc) toUtc = nowUtc;
+        const string format = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        return (fromUtc.ToString(format, System.Globalization.CultureInfo.InvariantCulture), toUtc.ToString(format, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     public async Task<List<DocumentSummary>> GetAllUuidsForTinAsync(string tin, string accessToken, int lookbackDays = 3)
     {
         var summaries = new List<DocumentSummary>();
         if (lookbackDays < 1) lookbackDays = 1;
-        DateTime start = DateTime.Today.AddDays(-lookbackDays);
-        DateTime end = DateTime.Today;
+        // Whole Malaysia days (how users and LHDN's portal count them), whatever the server's time zone.
+        DateTime end = eInvWorld.Helpers.DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow).Date;
+        DateTime start = end.AddDays(-lookbackDays);
         int pageSize = 100;
         int chunkSize = 10;
 
@@ -601,12 +617,7 @@ public class LHDNApiService : ILHDNApiService
             DateTime chunkEnd = start.AddDays(chunkSize - 1);
             if (chunkEnd > end) chunkEnd = end;
 
-            // Whole days: a bare date as issueDateTo meant midnight, so today's documents were missed until
-            // the next day. Capped at "now" so LHDN never gets a future timestamp.
-            var nowUtc = DateTime.UtcNow;
-            var chunkEndOfDay = chunkEnd.Date.AddDays(1).AddSeconds(-1);
-            string issueFrom = $"{start:yyyy-MM-dd}T00:00:00Z";
-            string issueTo = (chunkEndOfDay > nowUtc ? nowUtc : chunkEndOfDay).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            var (issueFrom, issueTo) = SearchWindowUtc(start, chunkEnd, DateTime.UtcNow);
 
             // Ask for each direction explicitly: received documents (issued to us by other suppliers' ERPs)
             // must be imported too, and an unqualified search can't be relied on to include them.
