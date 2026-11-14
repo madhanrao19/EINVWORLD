@@ -505,7 +505,7 @@
   `App\` including `web.config` (connection strings, LHDN client secret, SMTP password). A copied file takes its new
   parent folder's permissions, so every `App_Backup_*\web.config` was readable by any local user, even after the
   live `web.config` was locked down. Right after the backup copy, every `web.config` in it (including stray copies
-  such as `App	emp\web.config`, found on both servers holding the full server settings) and, if the key ring was left
+  such as `App\temp\web.config`, found on both servers holding the full server settings) and, if the key ring was left
   inside `App\`, `DataProtectionKeys` are restricted to Administrators and SYSTEM (`Protect-BackupSecrets`). If that
   fails, the deploy stops before `App\` is touched.
   - The rollback is unaffected: it never reads the backup's `web.config`.
@@ -513,6 +513,7 @@
   - Tests: `DeployGuardsTests.Backup_SecretsAreReadableOnlyByAdministratorsAndSystem` (asserts the permissions when
     run elevated, as CI is). Verified on the server in a scratch folder, locally and over the deploy's UNC path.
 - No application code or database change.
+
 ## 📅 2026-11-14 — v1.50.59 (cancelled requests are not logged as HTTP 500)
 
 - **Cancelled requests are no longer logged as server errors.** When a browser navigates away before a page has
