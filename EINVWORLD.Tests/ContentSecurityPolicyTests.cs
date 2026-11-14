@@ -136,6 +136,47 @@ namespace EINVWORLD.Tests
             }
         }
 
+        private static IEnumerable<string> SourceFiles(params string[] patterns)
+        {
+            var root = new DirectoryInfo(AppContext.BaseDirectory);
+            while (root != null && !File.Exists(Path.Combine(root.FullName, "EINVWORLD.csproj"))) root = root.Parent;
+            var sep = Path.DirectorySeparatorChar;
+            foreach (var dir in new[] { "Pages", "Areas", Path.Combine("wwwroot", "js"), Path.Combine("wwwroot", "tabler", "js") })
+                foreach (var pattern in patterns)
+                {
+                    var full = Path.Combine(root!.FullName, dir);
+                    if (!Directory.Exists(full)) continue;
+                    foreach (var f in Directory.EnumerateFiles(full, pattern, SearchOption.AllDirectories))
+                        // einv-actions.js documents the old handlers it replaces, in comments
+                        if (!f.Contains($"{sep}lib{sep}") && !f.EndsWith(".min.js") && !f.EndsWith("einv-actions.js")) yield return f;
+                }
+        }
+
+        // Inline handlers and javascript: URLs are refused once the policy is enforced (no 'unsafe-inline').
+        [Fact]
+        public void NoInlineEventHandlers_OrJavascriptUrls_InViewsOrPageScripts()
+        {
+            var handler = new System.Text.RegularExpressions.Regex(@"\son(click|change|input|submit|paste|keydown|keyup|keypress|focus|blur|load|error|mouse\w+)\s*=\s*\\?[""']", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var bad = SourceFiles("*.cshtml", "*.js")
+                .SelectMany(f => File.ReadLines(f).Select((line, i) => (f, i, line)))
+                .Where(x => handler.IsMatch(x.line) || x.line.Contains("href=\"javascript:", StringComparison.OrdinalIgnoreCase))
+                .Select(x => $"{Path.GetFileName(x.f)}:{x.i + 1}: {x.line.Trim()}")
+                .ToList();
+            Assert.True(bad.Count == 0, "Inline handlers / javascript: links (use einv-actions.js data- attributes):\n" + string.Join("\n", bad.Take(20)));
+        }
+
+        // A data-on-* action only runs if some page or script allows it (einvActions.allow([...])).
+        [Fact]
+        public void EveryDeclaredAction_IsAllowedSomewhere()
+        {
+            var texts = SourceFiles("*.cshtml", "*.js").Select(File.ReadAllText).ToList();
+            var used = texts.SelectMany(t => System.Text.RegularExpressions.Regex.Matches(t, @"data-on-(?:click|change|input|submit)=""([A-Za-z_$][\w$]*)""").Select(m => m.Groups[1].Value)).ToHashSet();
+            var allowed = texts.SelectMany(t => System.Text.RegularExpressions.Regex.Matches(t, @"einvActions\.allow\(\[([^\]]*)\]").SelectMany(m => System.Text.RegularExpressions.Regex.Matches(m.Groups[1].Value, @"""([^""]+)""").Select(n => n.Groups[1].Value))).ToHashSet();
+            Assert.NotEmpty(used);
+            var missing = used.Except(allowed).OrderBy(n => n).ToList();
+            Assert.True(missing.Count == 0, "data-on-* actions never allowed: " + string.Join(", ", missing));
+        }
+
         [Fact]
         public void Reports_ClassicFormat_DropQueryStrings()
         {

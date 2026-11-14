@@ -120,6 +120,8 @@
 
     @await Html.PartialAsync("_GoogleAnalytics")
 
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 <body data-logout-reason="@logoutReason">
     <div class="auth-page-wrapper pt-3 pt-md-5">

@@ -42,7 +42,7 @@ else
                 <input type="hidden" name="id" value="@Model.PartyInfo.PartyInfoId" />
                 <div class="row g-3 align-items-center">
                     <div class="col-md-4">
-                        <select name="ActionFilter" class="form-select" onchange="this.form.submit()">
+                        <select name="ActionFilter" class="form-select" data-autosubmit>
                             <option value="">All actions</option>
                             @foreach (var action in Model.AvailableActions)
                             {

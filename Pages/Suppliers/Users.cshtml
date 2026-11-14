@@ -108,7 +108,7 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
-                                                    <form method="post" asp-page-handler="RevokeInvite" onsubmit="return confirm('Revoke this invitation?');">
+                                                    <form method="post" asp-page-handler="RevokeInvite" data-confirm="Revoke this invitation?">
                                                         <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
                                                         <input type="hidden" name="invitationId" value="@invite.CompanyInvitationId" />
                                                         <button type="submit" class="dropdown-item text-danger"><i class="ri-close-circle-line align-bottom me-2"></i> Revoke</button>
@@ -178,7 +178,7 @@
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li>
                                                         @* Name goes through data-confirm, not a JS string literal: a ' in a user's name must not break out of it. *@
-                                                        <form method="post" asp-page-handler="RemoveMember" data-confirm="Remove @m.User.FullName from this company?" onsubmit="return confirm(this.dataset.confirm);">
+                                                        <form method="post" asp-page-handler="RemoveMember" data-confirm="Remove @m.User.FullName from this company?">
                                                             <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
                                                             <input type="hidden" name="userCompanyId" value="@m.Id" />
                                                             <button type="submit" class="dropdown-item text-danger"><i class="ri-user-unfollow-line align-bottom me-2"></i> Remove</button>

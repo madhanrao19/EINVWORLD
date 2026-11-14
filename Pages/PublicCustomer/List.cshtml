@@ -207,7 +207,7 @@
                                                 <li>
                                                     @if (isAssignedToCurrentUser)
                                                     {
-                                                        <form method="post" asp-page-handler="RemoveFromBuyers" asp-route-publicCustomerId="@item.PublicCustomerId" onsubmit="return confirm('Remove this buyer from your active list?');">
+                                                        <form method="post" asp-page-handler="RemoveFromBuyers" asp-route-publicCustomerId="@item.PublicCustomerId" data-confirm="Remove this buyer from your active list?">
                                                             <button type="submit" class="dropdown-item text-warning" title="Remove from My Buyers">
                                                                 <i class="ri-user-unfollow-line align-bottom me-2"></i> Remove from My Buyers List
                                                             </button>
@@ -233,7 +233,7 @@
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <form method="post" asp-page-handler="Delete" asp-route-buyerId="@item.PublicCustomerId" onsubmit="return confirm('Remove this buyer? If no one else uses this record it will be deleted; otherwise it is just unlinked from your account.');">
+                                                    <form method="post" asp-page-handler="Delete" asp-route-buyerId="@item.PublicCustomerId" data-confirm="Remove this buyer? If no one else uses this record it will be deleted; otherwise it is just unlinked from your account.">
                                                         <button type="submit" class="dropdown-item text-danger">
                                                             <i class="ri-delete-bin-fill align-bottom me-2"></i> Remove
                                                         </button>

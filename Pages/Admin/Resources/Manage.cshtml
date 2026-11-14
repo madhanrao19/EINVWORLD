@@ -188,7 +188,7 @@
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>
                                                         <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="delete-form">
-                                                            <button type="button" class="dropdown-item text-danger" onclick="confirmDelete(this)"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
+                                                            <button type="button" class="dropdown-item text-danger" data-on-click="confirmDelete" data-args='["$this"]'><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
                                                         </form>
                                                     </li>
                                                 </ul>
@@ -347,3 +347,5 @@
 
 
 }
+
+<script>einvActions.allow(["confirmDelete"]);</script>

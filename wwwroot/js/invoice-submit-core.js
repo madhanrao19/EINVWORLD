@@ -1,4 +1,5 @@
-﻿// 📦 File: wwwroot/js/invoice-submit-core.js
+﻿if (window.einvActions) einvActions.allow(["copyUUID"]); // used by the markup this file builds (einv-actions.js)
+// 📦 File: wwwroot/js/invoice-submit-core.js
 // 📦 File: wwwroot/js/invoice-submit-core.js
 
 let isSubmitting = false;
@@ -94,7 +95,7 @@ export async function handleSubmit(submitButton) {
                                 <strong><i class="ri-fingerprint-line me-2"></i>Document UUID:</strong>
                                 <div class="input-group input-group-sm mt-1">
                                     <input type="text" class="form-control" id="uuidText" value="${esc(json.uuid || "N/A")}" readonly>
-                                    <button onclick="copyUUID()" class="btn btn-outline-primary" type="button">
+                                    <button data-on-click="copyUUID" class="btn btn-outline-primary" type="button">
                                         <i class="ri-file-copy-line"></i> Copy
                                     </button>
                                 </div>

@@ -59,6 +59,8 @@
     <script src="~/assets/libs/flatpickr/flatpickr.min.js"></script>
 
     @await Html.PartialAsync("_GoogleAnalytics")
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 <body data-logout-reason="@logoutReason" class="einv-auth">
     <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>

@@ -36,7 +36,7 @@
                                     <div class="irow">
                                         <div class="irow-num">@(i + 1)</div>
                                         <div class="irow-desc">
-                                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, @i)">
+                                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" data-on-change="autoFillItem" data-args='["$this", @Json.Serialize(i)]'>
                                                 <option value="">-- Select Saved Item --</option>
                                                 @if (Model.SavedItems != null && Model.SavedItems.Any())
                                                 {
@@ -79,10 +79,10 @@
                                             <div class="irow-num-val irow-total-val" id="rowtotal-@i">0.00</div>
                                         </div>
                                         <div class="irow-actions">
-                                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate" aria-label="Duplicate item">
+                                            <button type="button" class="btn btn-sm btn-link text-success p-0" data-on-click="duplicateItem" data-args='["$this"]' title="Duplicate" aria-label="Duplicate item">
                                                 <i class="ri-file-copy-line" aria-hidden="true"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove" aria-label="Remove item">
+                                            <button type="button" class="btn btn-sm btn-link text-danger p-0" data-on-click="removeItem" data-args='["$this"]' title="Remove" aria-label="Remove item">
                                                 <i class="ri-delete-bin-line" aria-hidden="true"></i>
                                             </button>
                                         </div>
@@ -167,7 +167,7 @@
                                                                     <input asp-for="Invoice.InvoiceLines[i].Taxes[j].TaxPercentage" value="@InvoiceFormatting.Fmt2(Model.Invoice?.InvoiceLines[i].Taxes?[j].TaxPercentage)" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                                                                 </div>
                                                                 <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                                                                    <button type="button" class="btn btn-link text-danger p-0 lh-1" onclick="removeTaxRow(this)" title="Remove tax" aria-label="Remove tax" style="font-size: 16px;"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
+                                                                    <button type="button" class="btn btn-link text-danger p-0 lh-1" data-on-click="removeTaxRow" data-args='["$this"]' title="Remove tax" aria-label="Remove tax" style="font-size: 16px;"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
                                                                 </div>
                                                             </div>
                                                             <div class="mt-2 tax-exemption-reason" style="display: none;">
@@ -178,7 +178,7 @@
                                                     }
                                                 }
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(@i)">
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" data-on-click="addTaxRow" data-args='[@Json.Serialize(i)]'>
                                                 <i class="ri-add-line me-1"></i>Tax
                                             </button>
                                         </div>
@@ -262,10 +262,10 @@
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-center gap-2 flex-wrap">
-                            <button type="button" class="btn btn-outline-warning" onclick="validateItemRequirements()">
+                            <button type="button" class="btn btn-outline-warning" data-on-click="validateItemRequirements">
                                 <i class="ri-check-line me-1"></i>Check Item Requirements
                             </button>
-                            <button type="button" class="btn btn-outline-success" onclick="addTaxToAllItems()">
+                            <button type="button" class="btn btn-outline-success" data-on-click="addTaxToAllItems">
                                 <i class="ri-add-line me-1"></i>Add Taxes to All Items
                             </button>
 
@@ -275,16 +275,18 @@
 
                 <!-- Step Navigation -->
                 <div class="einv-wiz-actions">
-                    <button type="button" class="btn btn-outline-secondary" onclick="prevStep()">
+                    <button type="button" class="btn btn-outline-secondary" data-on-click="prevStep">
                         <i class="ri-arrow-left-line" aria-hidden="true"></i>Previous
                     </button>
                     <span class="einv-wiz-spacer"></span>
                     <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
                             <i class="ri-file-copy-line" aria-hidden="true"></i>Save as template
                         </button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep()">
+                    <button type="button" class="btn btn-primary" data-on-click="nextStep">
                         Next: review and submit <i class="ri-arrow-right-line" aria-hidden="true"></i>
                     </button>
                 </div>
                 </div>
             </div>
+
+<script>einvActions.allow(["autoFillItem", "duplicateItem", "removeItem", "removeTaxRow", "addTaxRow", "validateItemRequirements", "addTaxToAllItems", "prevStep", "nextStep"]);</script>

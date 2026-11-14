@@ -62,7 +62,7 @@
                             </div>
                             <div class="col">
                                 <button type="submit" class="btn btn-secondary">Filter</button>
-                                <button type="button" class="btn btn-danger" onclick="clearFilters()">Clear</button>
+                                <button type="button" class="btn btn-danger" data-on-click="clearFilters">Clear</button>
                             </div>
                         </div>
                     </form>
@@ -119,7 +119,7 @@
                                                     <li><a asp-page="./Details" asp-route-id="@item.PartyInfoId" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
                                                     <li><a asp-page="./Edit" asp-route-id="@item.PartyInfoId" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
                                                     <li><hr class="dropdown-divider"></li>
-                                                    <li><a href="javascript:void(0);" class="dropdown-item text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                                    <li><a href="#" data-no-nav class="dropdown-item text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -246,3 +246,5 @@
         </script>
     }
 }
+
+<script>einvActions.allow(["clearFilters"]);</script>

@@ -60,7 +60,7 @@
                     </div>
                     <div class="col-md-4">
                         <button type="submit" class="btn btn-secondary">Filter</button>
-                        <button type="button" class="btn btn-danger" onclick="clearFilters()">Clear</button>
+                        <button type="button" class="btn btn-danger" data-on-click="clearFilters">Clear</button>
                     </div>
                 </div>
             </form>
@@ -111,7 +111,7 @@
                                         <div class="form-check form-switch me-2">
                                             <input class="form-check-input" type="checkbox"
                                                    data-user-id="@user.Id" data-approved="@user.IsApproved.ToString().ToLowerInvariant()"
-                                                   onchange="confirmApprovalChange(this.dataset.userId, this.dataset.approved)"
+                                                   data-on-change="confirmApprovalChange" data-args='["$data:userId", "$data:approved"]'
                                                    @(user.IsApproved ? "checked" : "") />
                                         </div>
                                         <span class="small @(user.IsApproved ? "text-success" : "text-warning")">
@@ -128,14 +128,14 @@
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li>
-                                                <a class="dropdown-item" href="javascript:void(0);" data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openAddRoleModal(this.dataset.userId, this.dataset.userName)">
+                                                <a class="dropdown-item" href="#" data-no-nav data-user-id="@user.Id" data-user-name="@user.FullName" data-on-click="openAddRoleModal" data-args='["$data:userId", "$data:userName"]'>
                                                     <i class="ri-shield-user-line align-bottom me-2 text-muted"></i> Change Role
                                                 </a>
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item" asp-page="/Admin/Users/AddEditUser" asp-route-id="@user.Id"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit User</a></li>
                                             <li>
-                                                <form method="post" asp-page-handler="Delete" asp-route-id="@user.Id" class="d-inline" onsubmit="return confirm('Permanently delete this user?');">
+                                                <form method="post" asp-page-handler="Delete" asp-route-id="@user.Id" class="d-inline" data-confirm="Permanently delete this user?">
                                                     <input type="hidden" name="CurrentPage" value="@Model.CurrentPage" />
                                                     <input type="hidden" name="SortBy" value="@Model.SortBy" />
                                                     <input type="hidden" name="SortOrder" value="@Model.SortOrder" />
@@ -310,3 +310,5 @@
         }
     </script>
 }
+
+<script>einvActions.allow(["clearFilters", "confirmApprovalChange", "openAddRoleModal"]);</script>

@@ -135,7 +135,7 @@
                             </div>
 
                             <div class="d-flex justify-content-end mt-4">
-                                <button class="btn btn-primary" type="button" onclick="nextTab('step2-tab')">Next</button>
+                                <button class="btn btn-primary" type="button" data-on-click="nextTab" data-args='["step2-tab"]'>Next</button>
                             </div>
                         </div>
 
@@ -213,8 +213,8 @@
                             </div>
 
                             <div class="d-flex justify-content-between mt-4">
-                                <button class="btn btn-light" type="button" onclick="prevTab('step1-tab')">Back</button>
-                                <button class="btn btn-primary" type="button" onclick="nextTab('step3-tab')">Next</button>
+                                <button class="btn btn-light" type="button" data-on-click="prevTab" data-args='["step1-tab"]'>Back</button>
+                                <button class="btn btn-primary" type="button" data-on-click="nextTab" data-args='["step3-tab"]'>Next</button>
                             </div>
                         </div>
 
@@ -244,7 +244,7 @@
                                 <partial name="_TurnstilePartial" />
 
                             <div class="d-flex justify-content-between mt-4">
-                                <button class="btn btn-light" type="button" onclick="prevTab('step2-tab')">Back</button>
+                                <button class="btn btn-light" type="button" data-on-click="prevTab" data-args='["step2-tab"]'>Back</button>
                                 <button type="submit" class="btn btn-success">Submit</button>
                             </div>
                         </div>
@@ -382,3 +382,5 @@
 
     <partial name="_ValidationScriptsPartial" />
 }
+
+<script>einvActions.allow(["nextTab", "prevTab"]);</script>

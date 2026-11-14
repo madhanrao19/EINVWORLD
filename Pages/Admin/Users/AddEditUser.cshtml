@@ -99,7 +99,7 @@
                                     <label asp-for="Password" class="form-label">Initial Password</label>
                                     <div class="input-group">
                                         <input asp-for="Password" type="password" class="form-control bg-light border-light" id="newUserPassword" />
-                                        <button type="button" class="btn btn-outline-secondary border-light" onclick="togglePasswordVisibility('newUserPassword', this)">
+                                        <button type="button" class="btn btn-outline-secondary border-light" data-on-click="togglePasswordVisibility" data-args='["newUserPassword", "$this"]'>
                                             <i class="ri-eye-line"></i>
                                         </button>
                                     </div>
@@ -109,7 +109,7 @@
                                     <label asp-for="ConfirmPassword" class="form-label">Confirm Initial Password</label>
                                     <div class="input-group">
                                         <input asp-for="ConfirmPassword" type="password" class="form-control bg-light border-light" id="newUserConfirmPassword" />
-                                        <button type="button" class="btn btn-outline-secondary border-light" onclick="togglePasswordVisibility('newUserConfirmPassword', this)">
+                                        <button type="button" class="btn btn-outline-secondary border-light" data-on-click="togglePasswordVisibility" data-args='["newUserConfirmPassword", "$this"]'>
                                             <i class="ri-eye-line"></i>
                                         </button>
                                     </div>
@@ -133,7 +133,7 @@
                                         <label asp-for="Password" class="form-label">New Password</label>
                                         <div class="input-group">
                                             <input asp-for="Password" type="password" class="form-control bg-light border-light" id="editUserPassword" />
-                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" onclick="togglePasswordVisibility('editUserPassword', this)">
+                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" data-on-click="togglePasswordVisibility" data-args='["editUserPassword", "$this"]'>
                                                 <i class="ri-eye-line"></i>
                                             </button>
                                         </div>
@@ -143,7 +143,7 @@
                                         <label asp-for="ConfirmPassword" class="form-label">Confirm New Password</label>
                                         <div class="input-group">
                                             <input asp-for="ConfirmPassword" type="password" class="form-control bg-light border-light" id="editUserConfirmPassword" />
-                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" onclick="togglePasswordVisibility('editUserConfirmPassword', this)">
+                                            <button type="button" class="btn btn-outline-secondary border-light bg-white" data-on-click="togglePasswordVisibility" data-args='["editUserConfirmPassword", "$this"]'>
                                                 <i class="ri-eye-line"></i>
                                             </button>
                                         </div>
@@ -205,3 +205,5 @@
         }
     </script>
 }
+
+<script>einvActions.allow(["togglePasswordVisibility"]);</script>

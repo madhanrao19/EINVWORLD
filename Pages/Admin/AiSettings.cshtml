@@ -106,7 +106,7 @@ else if (!Model.ProviderReady)
         <h3 class="card-title">Connection Test</h3>
     </div>
     <div class="card-body">
-        <form method="post" asp-page-handler="TestConnection" onsubmit="document.getElementById('testBtn').disabled=true;document.getElementById('testSpin').style.display='inline-block';">
+        <form method="post" asp-page-handler="TestConnection" data-busy-disable="testBtn" data-busy-show="testSpin">
             <button type="submit" class="btn btn-primary" id="testBtn">
                 <span class="spinner-border spinner-border-sm me-1" id="testSpin" role="status" style="display:none;"></span>
                 <i class="ri-pulse-line align-bottom me-1"></i> Test Connection

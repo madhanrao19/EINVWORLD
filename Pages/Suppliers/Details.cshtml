@@ -248,7 +248,7 @@
                                                            data-type="access"
                                                            aria-label="Company access for @user.FullName"
                                                            @(userCompany?.HasCompanyAccess == true ? "checked" : "")
-                                                           onchange="updatePermission('@user.Id', 'access', true)">
+                                                           data-on-change="updatePermission" data-args='[@Json.Serialize($"{user.Id}"), "access", true]'>
                                                 </td>
                                                 <td class="text-center" data-label="View Only">
                                                     <input type="radio" class="form-check-input permission-radio"
@@ -257,7 +257,7 @@
                                                            data-type="view"
                                                            aria-label="View only for @user.FullName"
                                                            @(userCompany?.IsViewOnly == true ? "checked" : "")
-                                                           onchange="updatePermission('@user.Id', 'view', true)">
+                                                           data-on-change="updatePermission" data-args='[@Json.Serialize($"{user.Id}"), "view", true]'>
                                                 </td>
                                             }
                                             else
@@ -269,7 +269,7 @@
                                         <td class="text-center" data-label="Role">
                                             <span class="einv-badge @(userRole == "Admin" ? "einv-badge-danger" : userRole == "Supplier" ? "einv-badge-success" : "einv-badge-neutral")">@userRole</span>
                                             <button type="button" class="btn btn-sm btn-link text-decoration-none shadow-none p-0 ms-1"
-                                                    data-user-id="@user.Id" data-user-name="@user.FullName" onclick="openChangeRoleModal(this.dataset.userId, this.dataset.userName)" title="Change Role" aria-label="Change role for @user.FullName">
+                                                    data-user-id="@user.Id" data-user-name="@user.FullName" data-on-click="openChangeRoleModal" data-args='["$data:userId", "$data:userName"]' title="Change Role" aria-label="Change role for @user.FullName">
                                                 <i class="ri-edit-line fs-14" aria-hidden="true"></i>
                                             </button>
                                         </td>
@@ -279,7 +279,7 @@
                                                     <i class="ri-more-fill align-middle"></i>
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignUser('@Model.PartyInfo.PartyInfoId', '@user.Id')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                    <li><button type="button" class="dropdown-item text-danger" data-on-click="unassignUser" data-args='[@Json.Serialize($"{Model.PartyInfo.PartyInfoId}"), @Json.Serialize($"{user.Id}")]'><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -356,7 +356,7 @@
                                                     {
                                                         <li><a href="mailto:@buyer.Email" class="dropdown-item"><i class="ri-mail-line align-bottom me-2 text-muted"></i> Email Buyer</a></li>
                                                     }
-                                                    <li><button type="button" class="dropdown-item text-danger" onclick="unassignBuyer(@Model.PartyInfo.PartyInfoId, @buyer.PartyInfoId, '@(isPublic ? "PC" : "PI")')"><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
+                                                    <li><button type="button" class="dropdown-item text-danger" data-on-click="unassignBuyer" data-args='[@Json.Serialize(Model.PartyInfo.PartyInfoId), @Json.Serialize(buyer.PartyInfoId), @(Json.Serialize(isPublic ? "PC" : "PI"))]'><i class="ri-user-unfollow-line align-bottom me-2"></i> Unassign</button></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -519,10 +519,10 @@
                     <input type="hidden" name="userId" id="changeRoleUserId" />
                     @Html.AntiForgeryToken()
                     <div class="list-group list-group-flush border-top">
-                        <button type="button" onclick="submitRoleChange('Supplier')" class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
+                        <button type="button" data-on-click="submitRoleChange" data-args='["Supplier"]' class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
                             Supplier <i class="ri-briefcase-line text-primary"></i>
                         </button>
-                        <button type="button" onclick="submitRoleChange('Buyer')" class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
+                        <button type="button" data-on-click="submitRoleChange" data-args='["Buyer"]' class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
                             Buyer <i class="ri-shopping-cart-line text-success"></i>
                         </button>
                     </div>
@@ -823,3 +823,5 @@
     }
 </script>
 
+
+<script>einvActions.allow(["updatePermission", "openChangeRoleModal", "unassignUser", "submitRoleChange", "unassignBuyer"]);</script>
