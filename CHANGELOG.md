@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.67`** (`AppInfo:Version` in `appsettings.json`). v1.50.67 is a **patch**
+> **Current version: `v1.50.68`** (`AppInfo:Version` in `appsettings.json`). v1.50.68 is a **patch**
+> release: "Refresh from API" no longer fails between midnight and 08:00 Malaysia time — see the dated entry below. v1.50.67 was a **patch**
 > release: Invoice Lists checks Submitted invoices more often and refreshes when they turn Valid — see the dated entry below. v1.50.66 was a **patch**
 > release: Production's CSP allows Cloudflare's two tag-gateway loader scripts by hash, so it can be enforced without losing analytics — see the dated entry below. v1.50.65 was a **patch**
 > release: printing a PDF from Invoice Lists works under the enforced CSP — see the dated entry below. v1.50.64 was a **patch**
@@ -505,6 +506,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-15 — v1.50.68 ("Refresh from API" after midnight)
+
+- **Fixed: "Refresh from API" (and the background status sync) failed with LHDN 400 between 00:00 and 08:00 MYT.**
+  `LHDNApiService.GetAllUuidsForTinAsync` took Malaysia dates but sent them to LHDN's `/documents/search` as UTC
+  (`2026-11-15T00:00:00Z`) and capped the end at UTC "now", so just after midnight the window ended before it began
+  (seen on Production 15 Nov 00:30, sync job 102). The same mistake meant documents issued 00:00–08:00 MYT were outside
+  every search window, so they were only picked up by other paths.
+- The window is now whole Malaysia days converted to UTC (`SearchWindowUtc`: 15 Nov MYT = 14 Nov 16:00Z onwards), the
+  end still capped at now, and "today" is Malaysia's date regardless of the server's time zone. Chunking, pagination,
+  directions and rate-limit handling are unchanged.
+- Tests: `LhdnSearchWindowTests` (00:30 MYT case, whole past days, local-kind dates).
+- No database change.
 
 ## 📅 2026-11-15 — v1.50.67 (Invoice Lists: Submitted invoices refresh to Valid sooner)
 
