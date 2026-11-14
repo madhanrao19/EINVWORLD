@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace eInvWorld.Pages.RecurringInvoices
 {
-    [Authorize]
+    [Authorize(Roles = "Admin,Supplier")] // same as Templates: a Buyer has no recurring invoices
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
