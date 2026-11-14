@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.59`** (`AppInfo:Version` in `appsettings.json`). v1.50.59 is a **patch**
+> **Current version: `v1.50.60`** (`AppInfo:Version` in `appsettings.json`). v1.50.60 is a **patch**
+> release: a deploy's app backup no longer leaves `web.config` readable by local users — see the dated entry below. v1.50.59 was a **patch**
 > release: requests the browser cancelled are no longer logged as server errors — see the dated entry below. v1.50.58 was a **patch**
 > release: the deploy script only deploys a clean checkout of origin/main — see the dated entry below. v1.50.57 was a **patch**
 > release: the Recurring Invoices pages are for Admin and Supplier only — see the dated entry below. v1.50.56 was a **patch**
@@ -497,6 +498,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.60 (deploy backups keep `web.config` readable only by administrators)
+
+- **`scripts\Deploy-Staging.ps1`: the pre-deploy app backup no longer exposes server secrets.** The backup copies
+  `App\` including `web.config` (connection strings, LHDN client secret, SMTP password). A copied file takes its new
+  parent folder's permissions, so every `App_Backup_*\web.config` was readable by any local user, even after the
+  live `web.config` was locked down. Right after the backup copy, every `web.config` in it (including stray copies
+  such as `App\temp\web.config`, found on both servers holding the full server settings) and, if the key ring was left
+  inside `App\`, `DataProtectionKeys` are restricted to Administrators and SYSTEM (`Protect-BackupSecrets`). If that
+  fails, the deploy stops before `App\` is touched.
+  - The rollback is unaffected: it never reads the backup's `web.config`.
+  - Existing backups are not changed by this; restrict or delete old `App_Backup_*` folders by hand.
+  - Tests: `DeployGuardsTests.Backup_SecretsAreReadableOnlyByAdministratorsAndSystem` (asserts the permissions when
+    run elevated, as CI is). Verified on the server in a scratch folder, locally and over the deploy's UNC path.
+- No application code or database change.
 
 ## 📅 2026-11-14 — v1.50.59 (cancelled requests are not logged as HTTP 500)
 

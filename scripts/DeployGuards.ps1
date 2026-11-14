@@ -288,6 +288,26 @@ function Compare-DeployedFiles([string]$source, [string]$dest, [string[]]$relati
     finally { $sha.Dispose() }
 }
 
+# The pre-deploy backup copies web.config (every server secret) and, if the key ring was left inside App\, the
+# DataProtection keys. A copy inherits its new parent's permissions, which let any local user read it, so both are
+# cut down to Administrators and SYSTEM (by SID: the names are localised). The rollback never reads either.
+function Protect-BackupSecrets([string]$backupPath) {
+    if (-not (Test-Path -LiteralPath $backupPath)) { return }
+    # Every web.config, not only the top one: servers have held full copies with secrets in App\temp\.
+    $targets = @(Get-ChildItem -LiteralPath $backupPath -Recurse -File -Filter 'web.config*' -Force | ForEach-Object FullName) +
+               @(Join-Path $backupPath 'DataProtectionKeys')
+    foreach ($p in $targets) {
+        if (-not (Test-Path -LiteralPath $p)) { continue }
+        # Children before their folder: once the folder is closed, a non-elevated owner can no longer list it.
+        $items = @(Get-ChildItem -LiteralPath $p -Recurse -Force | Sort-Object { $_.FullName.Length } -Descending) + (Get-Item -LiteralPath $p -Force)
+        foreach ($item in $items) {
+            $flags = if ($item.PSIsContainer) { '(OI)(CI)F' } else { 'F' }
+            $out = icacls $item.FullName /inheritance:r /grant:r "*S-1-5-32-544:$flags" "*S-1-5-18:$flags" 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "Could not restrict $($item.FullName) to Administrators and SYSTEM: $out" }
+        }
+    }
+}
+
 # Rollback: undoes what a deploy changed in App\, from the pre-deploy backup. A deploy writes only this release's
 # files and the manifest, and deletes only files the previous manifest listed - so exactly those are put back as the
 # backup has them, and the release's files the backup lacks are deleted. Everything else (IIS stdout logs written

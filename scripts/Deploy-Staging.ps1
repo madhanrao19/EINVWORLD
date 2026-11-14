@@ -457,6 +457,7 @@ if (-not $SkipBackup) {
         robocopy @rcArgs | Select-Object -Last 6
         # Robocopy exit codes 0-7 are all non-fatal ("files copied" etc); only 8+ means real trouble.
         if ($LASTEXITCODE -ge 8) { throw "Backup robocopy failed (exit code $LASTEXITCODE) - aborting before touching App\." }
+        Protect-BackupSecrets $plannedBackup   # throws before App\ is touched
         $backupPath = $plannedBackup
         Write-Host "Backup complete: $backupPath" -ForegroundColor Green
     }
