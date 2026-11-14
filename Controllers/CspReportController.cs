@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -43,13 +44,16 @@ namespace eInvWorld.Controllers
                 var read = await reader.ReadBlockAsync(buffer, 0, MaxBodyBytes);
                 var body = new string(buffer, 0, read);
 
-                if (!string.IsNullOrWhiteSpace(body) && TryParse(body, out var directive, out var blocked, out var documentUri))
+                if (!string.IsNullOrWhiteSpace(body))
                 {
-                    var key = directive + "|" + blocked;
-                    if (ShouldLog(key))
-                        _logger.LogInformation(
-                            "CSP violation (distinct): directive={Directive} blocked={Blocked} on={Document}",
-                            directive, blocked, documentUri);
+                    foreach (var (directive, blocked, document, source) in Parse(body))
+                    {
+                        var key = directive + "|" + blocked + "|" + document + "|" + source;
+                        if (ShouldLog(key))
+                            _logger.LogInformation(
+                                "CSP violation (distinct): directive={Directive} blocked={Blocked} on={Document} source={Source}",
+                                directive, blocked, document, source);
+                    }
                 }
             }
             catch
@@ -77,25 +81,55 @@ namespace eInvWorld.Controllers
             return fresh;
         }
 
-        /// <summary>Extracts (effective/violated) directive, blocked-uri and document-uri from a CSP report.</summary>
-        private static bool TryParse(string body, out string directive, out string blocked, out string documentUri)
+        /// <summary>
+        /// Reads violations from either report format: the classic <c>{"csp-report":{…}}</c> (report-uri) or the
+        /// Reporting API's array of <c>{"type":"csp-violation","body":{…}}</c> (report-to). URLs are reduced to
+        /// origin + path, so query strings (reset tokens, invoice numbers, TINs) and fragments are never logged;
+        /// the script sample is never read.
+        /// </summary>
+        internal static List<(string Directive, string Blocked, string Document, string Source)> Parse(string body)
         {
-            directive = blocked = documentUri = "?";
+            var found = new List<(string, string, string, string)>();
             try
             {
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;
-                if (root.TryGetProperty("csp-report", out var rep))
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("csp-report", out var rep))
                 {
-                    directive = Str(rep, "effective-directive") ?? Str(rep, "violated-directive") ?? "?";
-                    blocked = Str(rep, "blocked-uri") ?? "?";
-                    documentUri = Str(rep, "document-uri") ?? "?";
-                    return true;
+                    found.Add(From(rep, "effective-directive", "violated-directive", "blocked-uri", "document-uri", "source-file", "line-number"));
+                }
+                else if (root.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var r in root.EnumerateArray())
+                    {
+                        if (found.Count >= 20) break; // a report batch is small; ignore anything larger
+                        if (Str(r, "type") == "csp-violation" && r.TryGetProperty("body", out var b) && b.ValueKind == JsonValueKind.Object)
+                            found.Add(From(b, "effectiveDirective", "violatedDirective", "blockedURL", "documentURL", "sourceFile", "lineNumber"));
+                    }
                 }
             }
             catch (JsonException) { }
-            return false;
+            return found;
         }
+
+        private static (string, string, string, string) From(JsonElement e, string dir, string dir2, string blocked, string doc, string src, string line)
+        {
+            var source = StripUrl(Str(e, src));
+            if (e.TryGetProperty(line, out var l) && l.ValueKind == JsonValueKind.Number) source += ":" + l.GetRawText();
+            return (Clip(Str(e, dir) ?? Str(e, dir2) ?? "?"), StripUrl(Str(e, blocked)), StripUrl(Str(e, doc)), source);
+        }
+
+        /// <summary>Keeps scheme, host and path of a URL (or a keyword such as inline / eval); drops query and fragment.</summary>
+        internal static string StripUrl(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "?";
+            if (Uri.TryCreate(value, UriKind.Absolute, out var u) && (u.Scheme == "http" || u.Scheme == "https"))
+                return Clip(u.GetLeftPart(UriPartial.Path));
+            var cut = value.IndexOfAny(new[] { '?', '#', ',' }); // data:/blob: payloads and anything else: just the start
+            return Clip(cut >= 0 ? value[..cut] : value);
+        }
+
+        private static string Clip(string s) => s.Length <= 200 ? s : s[..200];
 
         private static string? Str(JsonElement e, string name) =>
             e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
