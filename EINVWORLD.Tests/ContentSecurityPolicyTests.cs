@@ -51,6 +51,18 @@ namespace EINVWORLD.Tests
             Assert.DoesNotContain("https:", d["img-src"].Replace("https://", "")); // no bare https: wildcard
         }
 
+        // Invoice Lists prints a PDF by loading a blob: URL into a hidden frame; without these the enforced policy blocks it.
+        [Fact]
+        public void Frames_AllowOwnPagesAndBlobPdfs_ButNoWildcard()
+        {
+            var frame = Directives(ContentSecurityPolicy.Build("n", analytics: false, upgradeInsecure: true))["frame-src"];
+            Assert.Contains("'self'", frame);
+            Assert.Contains("blob:", frame);
+            Assert.DoesNotContain("*", frame);
+            Assert.DoesNotContain(" https: ", frame + " ");
+            Assert.DoesNotContain(" data:", frame);
+        }
+
         [Fact]
         public void Analytics_HostsAppearOnlyWhereAnalyticsIsConfigured()
         {

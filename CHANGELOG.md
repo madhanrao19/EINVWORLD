@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.64`** (`AppInfo:Version` in `appsettings.json`). v1.50.64 is a **patch**
+> **Current version: `v1.50.65`** (`AppInfo:Version` in `appsettings.json`). v1.50.65 is a **patch**
+> release: printing a PDF from Invoice Lists works under the enforced CSP — see the dated entry below. v1.50.64 was a **patch**
 > release: Invoice Lists no longer adds styles at runtime that an enforced CSP would refuse — see the dated entry below. v1.50.63 was a **patch**
 > release: the Report-Only CSP no longer causes a console error on every page — see the dated entry below. v1.50.62 was a **patch**
 > release: no inline event handlers or `javascript:` links left, ready for an enforced CSP — see the dated entry below. v1.50.61 was a **patch**
@@ -502,6 +503,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.65 (CSP: Invoice Lists PDF print allowed)
+
+- **`frame-src` now allows `'self'` and `blob:`.** Invoice Lists' Print action (`printInvoicePdf`) fetches the PDF,
+  loads it from a `blob:` URL into a hidden frame and prints it; with `frame-src` limited to Turnstile and Google, the
+  enforced policy blocked that frame. Found on Staging right after `Security:CspMode=Enforce` was switched on. No
+  wildcard or other host was added.
+- Tests: `ContentSecurityPolicyTests.Frames_AllowOwnPagesAndBlobPdfs_ButNoWildcard`.
+- No database change.
 
 ## 📅 2026-11-14 — v1.50.64 (Invoice Lists: no runtime style elements)
 
