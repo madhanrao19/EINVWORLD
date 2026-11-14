@@ -112,7 +112,7 @@
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li>
                                                             <form method="post" asp-page-handler="Delete" asp-route-accountId="@a.Id" asp-route-companyId="@Model.CompanyId"
-                                                                  onsubmit="return confirm('Delete this bank account? Invoices already created keep the account they were issued with.');">
+                                                                  data-confirm="Delete this bank account? Invoices already created keep the account they were issued with.">
                                                                 <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
                                                             </form>
                                                         </li>

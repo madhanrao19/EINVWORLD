@@ -17,7 +17,7 @@
                 <a class="btn btn-outline-secondary" asp-page-handler="ExportCsv">
                     <i class="ri-download-2-line align-bottom me-1"></i> Export CSV
                 </a>
-                <button type="button" class="btn btn-danger" id="remove-actions" onClick="deleteMultiple()" data-bs-toggle="tooltip"
+                <button type="button" class="btn btn-danger" id="remove-actions" data-on-click="deleteMultiple" data-bs-toggle="tooltip"
                         data-bs-placement="top" title="Select at least one template to enable">
                     <i class="ri-delete-bin-6-line align-bottom me-1"></i> Delete Selected
                 </button>
@@ -106,7 +106,7 @@
                                         <li><a href="/Invoices/InvoiceEdit?templateId=@item.Id" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
                                         <li><a href="/RecurringInvoices/Create?templateId=@item.Id" class="dropdown-item"><i class="ri-calendar-todo-line align-bottom me-2 text-muted"></i> Set Recurring</a></li>
                                         <li><hr class="dropdown-divider"></li>
-                                        <li><a href="javascript:void(0);" class="dropdown-item text-danger remove-item-btn" data-template-id="@item.Id" onclick="confirmDeleteSingle(@item.Id)"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                        <li><a href="#" data-no-nav class="dropdown-item text-danger remove-item-btn" data-template-id="@item.Id" data-on-click="confirmDeleteSingle" data-args='[@Json.Serialize(item.Id)]'><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
                                     </ul>
                                 </div>
                             </td>
@@ -216,3 +216,5 @@
         });
     </script>
 }
+
+<script>einvActions.allow(["confirmDeleteSingle", "deleteMultiple"]);</script>

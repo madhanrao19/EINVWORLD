@@ -61,7 +61,7 @@
                             </div>
                             <div class="col">
                                 <button type="submit" class="btn btn-secondary">Filter</button>
-                                <button type="button" class="btn btn-danger" onclick="clearFilters()">Clear</button>
+                                <button type="button" class="btn btn-danger" data-on-click="clearFilters">Clear</button>
                             </div>
                         </div>
                     </form>
@@ -98,7 +98,7 @@
                                                 <input class="form-check-input einv-bulk-row" type="checkbox" form="bulkForm" name="ids" value="@item.PartyInfoId" aria-label="Select @item.CompanyName">
                                             }
                                         </td>
-                                        <td class="id" style="display:none;"><a href="javascript:void(0);" class="fw-medium link-primary">#VZ001</a></td>
+                                        <td class="id" style="display:none;"><a href="#" data-no-nav class="fw-medium link-primary">#VZ001</a></td>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="flex-shrink-0">
@@ -125,14 +125,14 @@
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     @if (User.IsInRole("Admin"))
                                                     {
-                                                        <li><a href="javascript:void(0);" class="dropdown-item text-success approveBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-checkbox-circle-line align-bottom me-2"></i> Approve</a></li>
+                                                        <li><a href="#" data-no-nav class="dropdown-item text-success approveBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-checkbox-circle-line align-bottom me-2"></i> Approve</a></li>
                                                     }
                                                     <li><a asp-page="/Suppliers/Details" asp-route-id="@item.PartyInfoId" asp-route-from="lead" class="dropdown-item"><i class="ri-eye-fill align-bottom me-2 text-muted"></i> View</a></li>
                                                     @if (User.IsInRole("Admin"))
                                                     {
                                                         <li><a asp-page="/Suppliers/Edit" asp-route-id="@item.PartyInfoId" asp-route-from="lead" class="dropdown-item"><i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit</a></li>
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li><a href="javascript:void(0);" class="dropdown-item text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
+                                                        <li><a href="#" data-no-nav class="dropdown-item text-danger deleteBtn" data-id="@item.PartyInfoId" data-name="@item.CompanyName"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</a></li>
                                                     }
                                                 </ul>
                                             </div>
@@ -304,3 +304,5 @@
         </script>
     }
 }
+
+<script>einvActions.allow(["clearFilters"]);</script>

@@ -53,6 +53,8 @@
 
     @await Html.PartialAsync("_GoogleAnalytics")
 
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 
 <body>
@@ -216,7 +218,7 @@
         </footer>
         <!-- end footer -->
         <!--start back-to-top-->
-    <button onclick="topFunction()" class="btn btn-danger btn-icon landing-back-top" id="back-to-top">
+    <button data-on-click="topFunction" class="btn btn-danger btn-icon landing-back-top" id="back-to-top">
         <i class="ri-arrow-up-line"></i>
     </button>
     <!--end back-to-top-->
@@ -241,6 +243,7 @@
         <!-- Select2 CSS + JS -->
         <link href="~/assets/libs/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
         <script src="~/assets/libs/select2/js/select2.min.js"></script>
+<script>einvActions.allow(["topFunction"]);</script>
 </body>
 </html>
 @RenderSection("Scripts", required: false)

@@ -38,7 +38,7 @@
                    class="form-control form-control-sm"
                    value="@(Model.FilterType == "Month" ? Model.FilterDate?.ToString("yyyy-MM") : Model.FilterDate?.ToString("yyyy-MM-dd"))"
                    data-default-date="@(Model.FilterDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"))"
-                   onkeydown="return false;" />
+                   data-no-typing />
             @* display:none is toggled by dashboard.js (Year mode) *@
             <select id="filterYear" class="form-select form-select-sm" aria-label="Year" style="display: none;">
                 @for (int i = 2020; i <= DateTime.Now.Year + 5; i++)
@@ -321,7 +321,7 @@ else if (isSupplier)
             <span class="einv-panel-sub">Latest 5</span>
             <div data-einv-columns-for="dash-recent"></div>
             <a href="/Invoices/ImportCsv" class="btn btn-sm btn-outline-secondary"><i class="ri-upload-cloud-2-line" aria-hidden="true"></i>Bulk import</a>
-            <button type="button" onclick="exportRecentInvoices()" class="btn btn-sm btn-outline-secondary"><i class="ri-download-2-line" aria-hidden="true"></i>Export</button>
+            <button type="button" data-on-click="exportRecentInvoices" class="btn btn-sm btn-outline-secondary"><i class="ri-download-2-line" aria-hidden="true"></i>Export</button>
         </div>
         <div class="table-responsive einv-table-scroll-x">
             <table data-einv-table="dash-recent" class="table table-hover align-middle einv-mobile-stack" id="recentInvoicesTable">
@@ -551,3 +551,5 @@ else if (Model.UserType == "Buyer")
     <script src="/assets/libs/chartjs-plugin-zoom/chartjs-plugin-zoom.min.js"></script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
 }
+
+<script>einvActions.allow(["exportRecentInvoices"]);</script>

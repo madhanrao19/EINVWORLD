@@ -1,6 +1,7 @@
 ﻿# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.61`** (`AppInfo:Version` in `appsettings.json`). v1.50.61 is a **patch**
+> **Current version: `v1.50.62`** (`AppInfo:Version` in `appsettings.json`). v1.50.62 is a **patch**
+> release: no inline event handlers or `javascript:` links left, ready for an enforced CSP — see the dated entry below. v1.50.61 was a **patch**
 > release: a strict nonce-based Content-Security-Policy, still Report-Only — see the dated entry below. v1.50.60 was a **patch**
 > release: a deploy's app backup no longer leaves `web.config` readable by local users — see the dated entry below. v1.50.59 was a **patch**
 > release: requests the browser cancelled are no longer logged as server errors — see the dated entry below. v1.50.58 was a **patch**
@@ -499,6 +500,28 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-14 — v1.50.62 (no inline event handlers or javascript: links)
+
+- **All 130 inline event handlers and 9 `javascript:` links are gone** (CSP stage 2), so the strict policy can be
+  enforced without breaking pages. Behaviour is declared with data- attributes, handled by one delegated script,
+  `wwwroot/js/einv-actions.js`, loaded in the `<head>` of every layout:
+  - `data-on-click|change|input|submit="fn"` + `data-args` (JSON; `$this`, `$event`, `$value`, `$data:name`) call a page
+    function, **but only one the page allows** with `einvActions.allow([...])`, so injected markup can't trigger
+    arbitrary page functions. A function returning `false` cancels the event, as `return f()` did.
+  - `data-confirm` (forms), `data-autosubmit`, `data-reload`, `data-print`, `data-no-paste`, `data-no-typing`,
+    `data-no-submit`, `data-no-nav` (was `href="javascript:void(0)"`), `data-file-label`, `data-show`,
+    `data-busy-disable` / `data-busy-show`.
+  - Pages: Create e-Invoice (all three steps), Edit Invoice, Invoice Lists, Details, Smart Capture, Create from File,
+    Templates, Recurring, Suppliers (list, create, edit, details, users, roles, audit), Buyers (list, create, edit,
+    import), Leads, Dashboards, Profile, Resources, Admin (users, roles, logs, sync jobs, invoice sync, system health,
+    webhooks, AI settings, resources), the Tabler shell, the marketing and rollback layouts, and Register. Markup built
+    in JavaScript (`create-invoice.js`, `invoice-submit-core.js`, Edit Invoice) uses the same attributes.
+  - Arguments keep their type (values that were quoted strings stay strings); Razor values go through
+    `Json.Serialize`, so names with quotes can't break the markup.
+- Tests: `ContentSecurityPolicyTests` now also fails on any inline handler (any case) or `javascript:` link in a view
+  or page script, and on any `data-on-*` action that no page allows.
+- Still Report-Only: nothing is enforced until `Security:CspMode=Enforce`. No database change.
 
 ## 📅 2026-11-14 — v1.50.61 (strict nonce-based Content-Security-Policy, Report-Only)
 

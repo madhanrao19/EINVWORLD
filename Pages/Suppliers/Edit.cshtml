@@ -21,7 +21,7 @@
     <partial name="_CompanyWorkspaceTabs" model="workspaceTabsModel" />
 }
 
-<form method="post" enctype="multipart/form-data" onsubmit="return checkValidationBeforeSubmit();">
+<form method="post" enctype="multipart/form-data" data-on-submit="checkValidationBeforeSubmit">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div id="saved-data-notice" class="alert alert-warning d-none" role="alert">
         <i class="ri-error-warning-line align-bottom me-1"></i>
@@ -71,7 +71,7 @@
                             <label asp-for="PartyInfo.TIN" class="form-label">Tax Identification Number (TIN)</label>
                             <div class="input-group">
                                 <input asp-for="PartyInfo.TIN" class="form-control" placeholder="eg: C123456789" list="tinOptions" required readonly="@Model.TinLocked" />
-                                <button class="btn btn-info btn-validate" type="button" onclick="validateLHDN()">Validate with LHDN</button>
+                                <button class="btn btn-info btn-validate" type="button" data-on-click="validateLHDN">Validate with LHDN</button>
                                 <datalist id="tinOptions">
                                     <option value="EI00000000010">General Public</option>
                                     <option value="EI00000000020">Foreign Buyer</option>
@@ -312,3 +312,5 @@
         initLhdnTinValidation({ tinId: 'PartyInfo_TIN', regTypeId: 'PartyInfo_RegTypeCode', regNoId: 'PartyInfo_RegNo', url: '@Url.Page("/Suppliers/Create", "ValidateTIN")', entityLabel: 'Company', startValidated: @(HttpMethods.IsGet(ViewContext.HttpContext.Request.Method) ? "true" : "false") });
     </script>
 }
+
+<script>einvActions.allow(["checkValidationBeforeSubmit", "validateLHDN"]);</script>

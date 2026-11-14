@@ -61,7 +61,7 @@
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
                                             <li>
-                                                <form method="post" asp-page-handler="DeleteIdentityRole" data-confirm="Delete the &quot;@role.Name&quot; role?" onsubmit="return confirm(this.dataset.confirm);">
+                                                <form method="post" asp-page-handler="DeleteIdentityRole" data-confirm="Delete the &quot;@role.Name&quot; role?">
                                                     <input type="hidden" name="roleId" value="@role.Id" />
                                                     <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
                                                 </form>

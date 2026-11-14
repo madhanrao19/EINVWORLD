@@ -28,21 +28,21 @@
 <div class="row mb-3">
     <div class="col-md-4">
         <label>Period</label>
-        <select class="form-control" id="filterPeriod" onchange="reloadDashboard()">
+        <select class="form-control" id="filterPeriod" data-on-change="reloadDashboard">
             <option>Monthly</option>
             <option>Quarterly</option>
         </select>
     </div>
     <div class="col-md-4">
         <label>Year</label>
-        <select class="form-control" id="filterYear" onchange="reloadDashboard()">
+        <select class="form-control" id="filterYear" data-on-change="reloadDashboard">
             <option>2025</option>
             <option>2024</option>
         </select>
     </div>
     <div class="col-md-4">
         <label>Currency</label>
-        <select class="form-control" id="filterCurrency" onchange="reloadDashboard()">
+        <select class="form-control" id="filterCurrency" data-on-change="reloadDashboard">
             <option>MYR</option>
             <option>USD</option>
         </select>
@@ -112,3 +112,5 @@
     <script src="/assets/libs/chart.js/chart.umd.js"></script>
     <script src="~/js/main-dashboard.js" asp-append-version="true"></script>
 }
+
+<script>einvActions.allow(["reloadDashboard"]);</script>

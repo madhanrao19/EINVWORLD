@@ -98,7 +98,7 @@
             key-ring folder is backed up. Losing the key-ring makes these columns permanently unreadable.
         </div>
         <form method="post" asp-page-handler="EncryptPii"
-              onsubmit="return confirm('Encrypt existing PII values now? Ensure a database backup has been taken first. This is safe to re-run.');">
+              data-confirm="Encrypt existing PII values now? Ensure a database backup has been taken first. This is safe to re-run.">
             <button type="submit" class="btn btn-outline-primary btn-sm">Encrypt existing PII</button>
         </form>
     </div>

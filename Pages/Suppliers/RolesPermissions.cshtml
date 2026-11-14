@@ -158,7 +158,7 @@
                                             <ul class="dropdown-menu dropdown-menu-end">
                                                 <li>
                                                     @* Name goes through data-confirm, not a JS string literal: a ' in a role name must not break out of it. *@
-                                                    <form method="post" asp-page-handler="DeleteRole" data-confirm="Delete the &quot;@role.Name&quot; role? Members holding it will fall back to no role." onsubmit="return confirm(this.dataset.confirm);">
+                                                    <form method="post" asp-page-handler="DeleteRole" data-confirm="Delete the &quot;@role.Name&quot; role? Members holding it will fall back to no role.">
                                                         <input type="hidden" name="partyInfoId" value="@Model.PartyInfo.PartyInfoId" />
                                                         <input type="hidden" name="companyRoleId" value="@role.CompanyRoleId" />
                                                         <button type="submit" class="dropdown-item text-danger"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>

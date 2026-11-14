@@ -60,7 +60,7 @@
                         <span class="fw-semibold d-block">Click to choose a CSV file, or drag it here</span>
                         <span class="text-muted small" id="einvDropzoneFile">No file selected</span>
                         <input type="file" asp-for="UploadFile" class="d-none" accept=".csv" required
-                               onchange="document.getElementById('einvDropzoneFile').textContent = this.files.length ? this.files[0].name : 'No file selected';" />
+                               data-file-label="einvDropzoneFile" data-file-empty="No file selected" />
                     </label>
                     <span asp-validation-for="UploadFile" class="text-danger"></span>
 

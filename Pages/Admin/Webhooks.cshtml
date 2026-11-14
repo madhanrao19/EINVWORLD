@@ -125,14 +125,14 @@
                             </li>
                             <li>
                                 <form method="post" asp-page-handler="Rotate" asp-route-id="@s.Id"
-                                  onsubmit="return confirm('Rotate the signing secret? The old secret stops working immediately — update the receiver.');">
+                                  data-confirm="Rotate the signing secret? The old secret stops working immediately — update the receiver.">
                                     <button class="dropdown-item text-warning" type="submit"><i class="ri-key-2-line align-bottom me-2"></i> Rotate secret</button>
                                 </form>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="post" asp-page-handler="Delete" asp-route-id="@s.Id"
-                                  onsubmit="return confirm('Delete this subscription? This cannot be undone.');">
+                                  data-confirm="Delete this subscription? This cannot be undone.">
                                     <button class="dropdown-item text-danger" type="submit"><i class="ri-delete-bin-fill align-bottom me-2"></i> Delete</button>
                                 </form>
                             </li>

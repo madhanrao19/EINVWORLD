@@ -139,6 +139,8 @@
 
     </style>
 
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 <body>
     <div id="invoiceContainer">
@@ -321,8 +323,8 @@
         </div>
 
         <!-- Buttons for automation -->
-        <button id="printBtn" onclick="window.print()" style="display:none;">Print</button>
-        <a id="savePdfBtn" href="javascript:window.print()" style="display:none;">Download</a>
+        <button id="printBtn" data-print style="display:none;">Print</button>
+        <a id="savePdfBtn" href="#" data-print style="display:none;">Download</a>
 
     </div> <!-- CLOSE WRAPPER HERE -->
 

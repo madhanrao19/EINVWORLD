@@ -21,13 +21,13 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="hstack gap-2 flex-wrap">
-            <form method="post" asp-page-handler="FullImportAll" onsubmit="showLoader()">
+            <form method="post" asp-page-handler="FullImportAll" data-on-submit="showLoader">
                 <button type="submit" class="btn btn-warning" id="importButton">
                     <i class="ri-download-cloud-2-line align-bottom me-1"></i> Import All Invoices from LHDN
                 </button>
             </form>
 
-            <form method="post" asp-page-handler="Run" onsubmit="showLoader()">
+            <form method="post" asp-page-handler="Run" data-on-submit="showLoader">
                 <button type="submit" class="btn btn-primary" id="syncButton">
                     <i class="ri-refresh-line align-bottom me-1"></i> Run Invoice Sync Now
                 </button>
@@ -62,3 +62,5 @@
 
     </script>
 }
+
+<script>einvActions.allow(["showLoader"]);</script>

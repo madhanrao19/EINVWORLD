@@ -20,7 +20,7 @@
     </div>
 </div>
 
-<form method="post" enctype="multipart/form-data" onsubmit="return checkValidationBeforeSubmit();">
+<form method="post" enctype="multipart/form-data" data-on-submit="checkValidationBeforeSubmit">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <input type="hidden" asp-for="PublicCustomer.CreatedBy" value="@User.Identity?.Name ?? \" System\"" />
@@ -85,7 +85,7 @@
                             <label asp-for="PublicCustomer.TIN" class="form-label">Tax Identification Number (TIN)</label>
                             <div class="input-group">
                                 <input asp-for="PublicCustomer.TIN" class="form-control" placeholder="eg: C123456789" list="tinOptions" required />
-                                <button class="btn btn-info btn-validate" type="button" onclick="validateLHDN()">Validate with LHDN</button>
+                                <button class="btn btn-info btn-validate" type="button" data-on-click="validateLHDN">Validate with LHDN</button>
                                 <datalist id="tinOptions">
                                     <option value="EI00000000010">General Public</option>
                                     <option value="EI00000000020">Foreign Buyer</option>
@@ -180,7 +180,7 @@
             </div>
 
             <div class="d-flex justify-content-end mt-4">
-                <button class="btn btn-primary" type="button" onclick="nextTab('step2-tab')">Next: Address &amp; Contact</button>
+                <button class="btn btn-primary" type="button" data-on-click="nextTab" data-args='["step2-tab"]'>Next: Address &amp; Contact</button>
             </div>
 
         </div>
@@ -283,7 +283,7 @@
             </div>
 
             <div class="d-flex justify-content-between mt-4">
-                <button class="btn btn-light" type="button" onclick="prevTab('step1-tab')">Back</button>
+                <button class="btn btn-light" type="button" data-on-click="prevTab" data-args='["step1-tab"]'>Back</button>
                 <div class="d-flex">
                     <button type="submit" class="btn btn-success"><i class="ri-save-line align-bottom me-1"></i> Save New Buyer</button>
                 </div>
@@ -325,3 +325,5 @@
     </script>
     <partial name="_ValidationScriptsPartial" />
 }
+
+<script>einvActions.allow(["checkValidationBeforeSubmit", "validateLHDN", "nextTab", "prevTab"]);</script>

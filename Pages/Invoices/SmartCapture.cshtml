@@ -70,7 +70,7 @@
                         <span class="einv-dropzone-title">Choose files, or drag them here</span>
                         <span class="einv-dropzone-file" id="einvScDropzoneFile">No files selected</span>
                         <input type="file" id="scUpload" name="Uploads" accept=".pdf,.jpg,.jpeg,.png" class="visually-hidden" multiple
-                               onchange="document.getElementById('einvScDropzoneFile').textContent = this.files.length ? (this.files.length === 1 ? this.files[0].name : this.files.length + ' files selected') : 'No files selected';" />
+                               data-file-label="einvScDropzoneFile" data-file-empty="No files selected" data-file-many=" files selected" />
                     </label>
                     <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
                         <span class="einv-badge einv-badge-neutral"><i class="ri-file-list-3-line" aria-hidden="true"></i>@string.Join(", ", Model.AllowedExtensions).ToUpperInvariant()</span>

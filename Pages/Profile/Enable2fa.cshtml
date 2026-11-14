@@ -74,7 +74,7 @@
                             </button>
                         </form>
 
-                        <form method="post" asp-page-handler="Disable" asp-route-returnUrl="@Model.ReturnUrl" onsubmit="return confirm('Are you sure you want to disable 2FA? Your account will be less secure.');">
+                        <form method="post" asp-page-handler="Disable" asp-route-returnUrl="@Model.ReturnUrl" data-confirm="Are you sure you want to disable 2FA? Your account will be less secure.">
                             <button type="submit" class="btn btn-outline-danger w-100">
                                 <i class="ri-lock-unlock-line me-1"></i> Disable 2FA
                             </button>

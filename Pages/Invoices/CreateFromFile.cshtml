@@ -80,7 +80,7 @@
                         <span class="fw-semibold d-block">Click to choose a PDF invoice, or drag it here</span>
                         <span class="text-muted small" id="einvCaptureDropzoneFile">No file selected</span>
                         <input type="file" id="captureUpload" name="Upload" accept="application/pdf,.pdf" class="d-none"
-                               onchange="document.getElementById('einvCaptureDropzoneFile').textContent = this.files.length ? this.files[0].name : 'No file selected';" />
+                               data-file-label="einvCaptureDropzoneFile" data-file-empty="No file selected" />
                     </label>
                     <div class="d-flex justify-content-center gap-2 mb-3 flex-wrap">
                         <span class="einv-badge einv-badge-neutral"><i class="ri-file-pdf-2-line"></i>PDF Only</span>

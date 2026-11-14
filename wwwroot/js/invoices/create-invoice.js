@@ -1,3 +1,5 @@
+// Functions the markup this file builds may call (einv-actions.js; inline handlers are refused by the CSP).
+if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "autoFillItem", "duplicateItem", "removeItem", "addTaxRow"]);
         // currentStep and totalSteps moved to line 2696 to avoid duplicate declaration
 
         // Track the last selected buyer
@@ -927,7 +929,7 @@
                                     if (response.submissionUid) {
                                         htmlMessage += `<div class="detail-item mb-2">
                                             <strong>Submission UID:</strong>
-                                            <button class="copy-btn float-end" onclick="copyToClipboard('${response.submissionUid}', this)" title="Copy Submission UID">
+                                            <button class="copy-btn float-end" data-on-click="copyToClipboard" data-args='["${response.submissionUid}", "$this"]' title="Copy Submission UID">
                                                 <i class="ri-file-copy-line"></i>
                                             </button>
                                             <br>
@@ -938,7 +940,7 @@
                                     if (response.uuid) {
                                         htmlMessage += `<div class="detail-item mb-2">
                                             <strong>UUID:</strong>
-                                            <button class="copy-btn float-end" onclick="copyToClipboard('${response.uuid}', this)" title="Copy UUID">
+                                            <button class="copy-btn float-end" data-on-click="copyToClipboard" data-args='["${response.uuid}", "$this"]' title="Copy UUID">
                                                 <i class="ri-file-copy-line"></i>
                                             </button>
                                             <br>
@@ -2594,7 +2596,7 @@
                         <input name="Invoice.InvoiceLines[${itemIndex}].Taxes[${taxCount}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" required />
                     </div>
                     <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                        <button type="button" class="btn btn-link text-danger p-0 lh-1" onclick="removeTaxRow(this)" title="Remove tax" aria-label="Remove tax" style="font-size: 16px;"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-link text-danger p-0 lh-1" data-on-click="removeTaxRow" data-args='["$this"]' title="Remove tax" aria-label="Remove tax" style="font-size: 16px;"><i class="ri-close-circle-line" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="mt-2 tax-exemption-reason" style="display: none;">
@@ -2692,7 +2694,7 @@
                     <div class="irow">
                         <div class="irow-num">${itemCount + 1}</div>
                         <div class="irow-desc">
-                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" data-on-change="autoFillItem" data-args='["$this", ${itemCount}]'>
                                 <option value="">-- Select Saved Item --</option>
                                 ${savedItemsOptionsHtml}
                             </select>
@@ -2730,10 +2732,10 @@
                             <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
                         </div>
                         <div class="irow-actions">
-                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate" aria-label="Duplicate item">
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" data-on-click="duplicateItem" data-args='["$this"]' title="Duplicate" aria-label="Duplicate item">
                                 <i class="ri-file-copy-line" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove" aria-label="Remove item">
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" data-on-click="removeItem" data-args='["$this"]' title="Remove" aria-label="Remove item">
                                 <i class="ri-delete-bin-line" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -2793,7 +2795,7 @@
                         </div>
                         <div class="collapse irow-extras-panel" id="taxesCollapse-${itemCount}">
                             <div class="tax-section" id="taxes-${itemCount}"></div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" data-on-click="addTaxRow" data-args='[${itemCount}]'>
                                 <i class="ri-add-line me-1"></i>Tax
                             </button>
                         </div>
@@ -3049,7 +3051,7 @@
                     <div class="irow">
                         <div class="irow-num">${itemCount + 1}</div>
                         <div class="irow-desc">
-                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" onchange="autoFillItem(this, ${itemCount})">
+                            <select class="form-select form-select-sm saved-item-select bg-light border-primary mb-2" data-on-change="autoFillItem" data-args='["$this", ${itemCount}]'>
                                 <option value="">-- Select Saved Item --</option>
                                 ${savedItemsOptionsHtml}
                             </select>
@@ -3087,10 +3089,10 @@
                             <div class="irow-num-val irow-total-val" id="rowtotal-${itemCount}">0.00</div>
                         </div>
                         <div class="irow-actions">
-                            <button type="button" class="btn btn-sm btn-link text-success p-0" onclick="duplicateItem(this)" title="Duplicate" aria-label="Duplicate item">
+                            <button type="button" class="btn btn-sm btn-link text-success p-0" data-on-click="duplicateItem" data-args='["$this"]' title="Duplicate" aria-label="Duplicate item">
                                 <i class="ri-file-copy-line" aria-hidden="true"></i>
                             </button>
-                            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeItem(this)" title="Remove" aria-label="Remove item">
+                            <button type="button" class="btn btn-sm btn-link text-danger p-0" data-on-click="removeItem" data-args='["$this"]' title="Remove" aria-label="Remove item">
                                 <i class="ri-delete-bin-line" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -3150,7 +3152,7 @@
                         </div>
                         <div class="collapse irow-extras-panel" id="taxesCollapse-${itemCount}">
                             <div class="tax-section" id="taxes-${itemCount}"></div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addTaxRow(${itemCount})">
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" data-on-click="addTaxRow" data-args='[${itemCount}]'>
                                 <i class="ri-add-line me-1"></i>Tax
                             </button>
                         </div>
@@ -3299,7 +3301,7 @@
                                     <input name="Invoice.InvoiceLines[${itemCount}].Taxes[${taxIndex}].TaxPercentage" type="number" class="form-control form-control-sm" placeholder="%" step="0.01" value="${tax.percentage}" />
                                 </div>
                                 <div class="tax-action-wrapper" style="flex: 0 0 auto;">
-                                    <button type="button" class="btn btn-sm btn-outline-danger delete-btn" onclick="removeTaxRow(this)">
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-btn" data-on-click="removeTaxRow" data-args='["$this"]'>
                                         <i class="ri-delete-bin-line"></i>
                                     </button>
                                 </div>

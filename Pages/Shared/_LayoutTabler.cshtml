@@ -65,6 +65,8 @@
 
     <!-- Page-specific CSS (e.g. TinyMCE's skin, only needed on the 2 pages with a rich-text editor) -->
     @RenderSection("Styles", required: false)
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 <body>
     <a class="visually-hidden-focusable" href="#einv-main-content">Skip to main content</a>

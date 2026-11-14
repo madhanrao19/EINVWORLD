@@ -59,7 +59,7 @@
         <h5 class="mb-0 fw-semibold">Log Results (@Model.TotalLogs found)</h5>
 
         <div class="d-flex gap-2">
-            <form method="post" asp-page-handler="ClearAll" onsubmit="return confirm('ARE YOU SURE?\n\nThis will permanently delete ALL system logs from the database.');" class="d-inline">
+            <form method="post" asp-page-handler="ClearAll" data-confirm="@("ARE YOU SURE?\n\nThis will permanently delete ALL system logs from the database.")" class="d-inline">
                 <button type="submit" class="btn btn-outline-danger btn-sm">
                     <i class="ri-delete-bin-line align-bottom me-1"></i> Delete Logs
                 </button>
@@ -69,11 +69,11 @@
                     <i class="ri-download-2-line align-bottom me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow">
-                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('csv')">Export as CSV (.csv)</a></li>
-                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="exportLogs('txt')">Export as Text (.txt)</a></li>
+                    <li><a class="dropdown-item" href="#" data-no-nav data-on-click="exportLogs" data-args='["csv"]'>Export as CSV (.csv)</a></li>
+                    <li><a class="dropdown-item" href="#" data-no-nav data-on-click="exportLogs" data-args='["txt"]'>Export as Text (.txt)</a></li>
                 </ul>
             </div>
-            <button class="btn btn-outline-primary btn-sm" onclick="location.reload();">
+            <button class="btn btn-outline-primary btn-sm" data-reload>
                 <i class="ri-refresh-line align-bottom me-1"></i> Refresh
             </button>
         </div>
@@ -234,3 +234,5 @@
         }
     </script>
 }
+
+<script>einvActions.allow(["exportLogs"]);</script>

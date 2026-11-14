@@ -54,6 +54,8 @@
 
     <!-- ✅ Load jQuery (self-hosted) -->
     <script src="~/assets/libs/jquery/dist/jquery.min.js"></script>
+    <!-- Event wiring for data- attributes; must load before page scripts (CSP: no inline handlers). -->
+    <script src="~/js/einv-actions.js" asp-append-version="true"></script>
 </head>
 <body>
 
@@ -110,7 +112,7 @@
     </div>
    
     <!--start back-to-top-->
-    <button onclick="topFunction()" class="btn btn-danger btn-icon" id="back-to-top">
+    <button data-on-click="topFunction" class="btn btn-danger btn-icon" id="back-to-top">
         <i class="ri-arrow-up-line"></i>
     </button>
     <!--end back-to-top-->
@@ -1472,5 +1474,6 @@
         });
     </script>
     @RenderSection("Scripts", required: false)
+<script>einvActions.allow(["topFunction"]);</script>
 </body>
 </html>

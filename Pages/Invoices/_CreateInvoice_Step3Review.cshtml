@@ -148,7 +148,7 @@
                                 </button>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-link text-secondary text-decoration-none" onclick="prevStep()">
+                        <button type="button" class="btn btn-link text-secondary text-decoration-none" data-on-click="prevStep">
                             <i class="ri-arrow-left-line me-1"></i>Back to Items
                         </button>
                     </div>
@@ -159,3 +159,5 @@
         <input type="hidden" id="draftFilePath" value="@ViewData["DraftFilePath"]" />
     </div>
 </div>
+
+<script>einvActions.allow(["prevStep"]);</script>

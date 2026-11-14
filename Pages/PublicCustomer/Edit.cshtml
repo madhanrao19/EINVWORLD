@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<form method="post" enctype="multipart/form-data" onsubmit="return checkValidationBeforeSubmit();">
+<form method="post" enctype="multipart/form-data" data-on-submit="checkValidationBeforeSubmit">
     <input type="hidden" asp-for="PublicCustomer.PublicCustomerId" />
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <div id="saved-data-notice" class="alert alert-warning d-none" role="alert">
@@ -72,7 +72,7 @@
                     <label asp-for="PublicCustomer.TIN" class="form-label">Tax Identification Number (TIN)</label>
                     <div class="input-group">
                         <input asp-for="PublicCustomer.TIN" class="form-control" placeholder="eg: C123456789" list="tinOptions" required />
-                        <button class="btn btn-info btn-validate" type="button" onclick="validateLHDN()">Validate with LHDN</button>
+                        <button class="btn btn-info btn-validate" type="button" data-on-click="validateLHDN">Validate with LHDN</button>
                         <datalist id="tinOptions">
                             <option value="EI00000000010">General Public</option>
                             <option value="EI00000000020">Foreign Buyer</option>
@@ -288,3 +288,5 @@
         initLhdnTinValidation({ tinId: 'PublicCustomer_TIN', regTypeId: 'PublicCustomer_RegTypeCode', regNoId: 'PublicCustomer_RegNo', url: '@Url.Page("/PublicCustomer/Create", "ValidateTIN")', entityLabel: 'Buyer', startValidated: @(HttpMethods.IsGet(ViewContext.HttpContext.Request.Method) ? "true" : "false") });
     </script>
 }
+
+<script>einvActions.allow(["checkValidationBeforeSubmit", "validateLHDN"]);</script>
