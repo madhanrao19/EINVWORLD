@@ -376,6 +376,43 @@ function Get-BuiltCommit([string]$dllPath) {
 
 function Test-ProductionTarget([string]$destAppPath) { $destAppPath -match '\\EINVWORLD\\App\\?$' }
 
+# Verified database backup, mandatory before every Production deploy (migrations or not): for each database,
+# BACKUP ... COPY_ONLY, CHECKSUM into the instance's default backup folder, RESTORE VERIFYONLY ... WITH CHECKSUM, then
+# msdb must list the file as checksummed, undamaged and copy-only. Runs as the caller's Windows identity, which needs
+# BACKUP DATABASE + CREATE DATABASE (VERIFYONLY's requirement), i.e. sysadmin or dbcreator - the app's own login
+# rightly has neither. Self-contained, so the deploy can run it on the SQL host with Invoke-Command. Throws on any failure;
+# returns one { Database, File } per database.
+function Invoke-VerifiedDbBackup([string]$dataSource, [string[]]$databases, [string]$label) {
+    $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $conn = New-Object System.Data.SqlClient.SqlConnection "Data Source=$dataSource;Initial Catalog=master;Integrated Security=True;TrustServerCertificate=True"
+    $conn.Open()
+    try {
+        foreach ($db in $databases) {
+            if ([string]::IsNullOrWhiteSpace($db)) { throw 'a database name is empty - nothing was backed up for it' }
+            $k = $conn.CreateCommand()
+            $k.CommandTimeout = 3600
+            $k.CommandText = "SET NOCOUNT ON; " +
+                "DECLARE @d nvarchar(400) = CAST(COALESCE(SERVERPROPERTY('InstanceDefaultBackupPath'), SERVERPROPERTY('InstanceDefaultDataPath')) AS nvarchar(400)); " +
+                "IF RIGHT(@d, 1) <> N'\' SET @d += N'\'; DECLARE @f nvarchar(500) = @d + @file; " +
+                "DECLARE @sql nvarchar(max) = N'BACKUP DATABASE ' + QUOTENAME(@db) + N' TO DISK = @f WITH COPY_ONLY, CHECKSUM, INIT'; " +
+                "EXEC sp_executesql @sql, N'@f nvarchar(500)', @f; " +
+                "RESTORE VERIFYONLY FROM DISK = @f WITH CHECKSUM; " +
+                "SELECT TOP 1 f.physical_device_name, bs.has_backup_checksums, bs.is_damaged, bs.is_copy_only FROM msdb.dbo.backupset bs " +
+                "JOIN msdb.dbo.backupmediafamily f ON f.media_set_id = bs.media_set_id WHERE f.physical_device_name = @f ORDER BY bs.backup_finish_date DESC;"
+            [void]$k.Parameters.AddWithValue('@db', $db)
+            [void]$k.Parameters.AddWithValue('@file', "${db}_predeploy_${label}_$stamp.bak")
+            $r = $k.ExecuteReader()
+            try {
+                if (-not $r.Read()) { throw "[$db] the backup is not recorded in msdb" }
+                if (-not $r.GetBoolean(1) -or $r.GetBoolean(2) -or -not $r.GetBoolean(3)) { throw "[$db] the backup is not a checksummed, undamaged COPY_ONLY backup" }
+                [pscustomobject]@{ Database = $db; File = $r.GetString(0) }
+            }
+            finally { $r.Close() }
+        }
+    }
+    finally { $conn.Close() }
+}
+
 # Public hostname for a deploy target; $null for a target with no known public site (e.g. a local test folder).
 function Get-DefaultPublicBaseUrl([string]$destAppPath) {
     switch -Regex ($destAppPath) {

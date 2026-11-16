@@ -29,6 +29,12 @@
          longer in this release, so old JS/CSS/DLLs don't pile up. Files it never shipped (uploads
          under wwwroot, server-only files) are never touched; the first run only lists candidates.
 
+    Production database backups (always, cannot be skipped): before migrations and before the site goes offline,
+    every database in Production's web.config gets a COPY_ONLY + CHECKSUM backup checked with RESTORE VERIFYONLY
+    WITH CHECKSUM and msdb (scripts\DeployGuards.ps1 Invoke-VerifiedDbBackup). It runs on the SQL host over
+    PowerShell remoting as your Windows identity, which must be sysadmin or dbcreator (the app's login is not, by
+    design). Any failure stops the deploy with the old build still online. -WhatIf checks that identity read-only.
+
     Database migrations (unless -SkipMigrations): for each database in the target's web.config
     (ConnectionStrings__DefaultConnection -> ApplicationDbContext, ConnectionStrings__WebsiteDb ->
     WebsiteDbContext), the migrations in the repo that are missing from `__EFMigrationsHistory` are
@@ -464,6 +470,51 @@ if (-not $SkipBackup) {
 }
 else {
     Write-Host "Skipping backup (-SkipBackup) - make sure you have a rollback point already." -ForegroundColor Yellow
+}
+
+# -- 2a. Verified database backups: mandatory for every Production deploy --------------------------
+# Migrations or not, and regardless of -SkipBackup/-SkipMigrations: each database in Production's web.config gets a
+# COPY_ONLY + CHECKSUM backup that RESTORE VERIFYONLY has checked, before anything else changes. It runs on the SQL
+# host over PowerShell remoting as your Windows identity (sysadmin or dbcreator needed); any failure stops the deploy
+# while the site is still running the old build.
+if (Test-ProductionTarget $DestAppPath) {
+    Write-Host ""
+    Write-Host "Production: verified database backups (mandatory) ..." -ForegroundColor Cyan
+    $prodWebConfig = Join-Path $DestAppPath 'web.config'
+    if (-not (Test-Path $prodWebConfig)) { throw "No web.config at $prodWebConfig - can't find the databases to back up. Nothing was deployed." }
+    $prodVars = @{}
+    ([xml](Get-Content $prodWebConfig -Raw)).SelectNodes('//environmentVariable') | ForEach-Object { $prodVars[$_.name] = $_.value }
+    $dbSpecs = @(foreach ($setting in 'ConnectionStrings__DefaultConnection', 'ConnectionStrings__WebsiteDb') {
+        if (-not $prodVars[$setting]) { throw "$setting not found in $prodWebConfig - can't back up its database. Nothing was deployed." }
+        $csb = New-Object System.Data.SqlClient.SqlConnectionStringBuilder -ArgumentList $prodVars[$setting]
+        [pscustomobject]@{ Source = $csb['Data Source']; Db = $csb['Initial Catalog'] }
+    })
+    if (@($dbSpecs.Source | Select-Object -Unique).Count -ne 1) { throw "The databases are on different SQL servers ($(($dbSpecs.Source | Select-Object -Unique) -join ', ')) - back them up by hand. Nothing was deployed." }
+    $dbNames = @($dbSpecs.Db)
+    $remote = @{}
+    if ($DestAppPath -like '\\*') { $remote.ComputerName = ($DestAppPath -split '\\')[2] }   # the connection string says localhost: run there
+
+    if ($PSCmdlet.ShouldProcess(($dbNames -join ', '), 'verified COPY_ONLY + CHECKSUM backup')) {
+        $label = Get-AppVersion (Join-Path $repoRoot 'appsettings.json')
+        $dbBackups = @(Invoke-Command @remote -ScriptBlock ${function:Invoke-VerifiedDbBackup} -ArgumentList $dbSpecs[0].Source, $dbNames, $label)
+        if ($dbBackups.Count -ne $dbNames.Count) { throw "Only $($dbBackups.Count) of $($dbNames.Count) database backups were verified. Nothing was deployed." }
+        foreach ($x in $dbBackups) { Write-Host "  [$($x.Database)] backed up and verified: $($x.File) (on the SQL server)" -ForegroundColor Green }
+    }
+    elseif ($WhatIfPreference) {
+        # Read-only preflight: can the real run back up and verify as you?
+        try {
+            $rights = Invoke-Command @remote -ArgumentList $dbSpecs[0].Source -ScriptBlock {
+                param($src)
+                $c = New-Object System.Data.SqlClient.SqlConnection "Data Source=$src;Initial Catalog=master;Integrated Security=True;TrustServerCertificate=True"
+                $c.Open()
+                try { $k = $c.CreateCommand(); $k.CommandText = "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 OR IS_SRVROLEMEMBER('dbcreator') = 1 THEN 1 ELSE 0 END"; $k.ExecuteScalar() }
+                finally { $c.Close() }
+            }
+            if ($rights -eq 1) { Write-Host "  Preflight: can back up and verify $($dbNames -join ', ') - OK." -ForegroundColor Green }
+            else { Write-Warning "Preflight: your SQL identity is neither sysadmin nor dbcreator - the real run will stop at the database backup." }
+        }
+        catch { Write-Warning "Preflight: can't reach SQL as your Windows identity ($($_.Exception.Message)) - the real run will stop at the database backup." }
+    }
 }
 
 # -- 2b. Database migrations (backup DB -> run pending Apply_*.sql -> verify) ----------------------

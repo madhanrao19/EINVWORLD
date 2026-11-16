@@ -95,6 +95,44 @@ try {{
             if (problem == "") Assert.Equal("", problems); else Assert.Contains(problem, problems);
         }
 
+        // Verified DB backup (mandatory for Production): runs for real against the SQL Server the integration tests use.
+        [Fact]
+        public void VerifiedDbBackup_BacksUpVerifiesAndRecordsEachDatabase()
+        {
+            var cs = Environment.GetEnvironmentVariable("INTEGRATION_SQLSERVER");
+            if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(cs)) return;
+            var server = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(cs).DataSource;
+            var db = "deploybak_" + Guid.NewGuid().ToString("N")[..12];
+            void Exec(string sql)
+            {
+                using var c = new Microsoft.Data.SqlClient.SqlConnection(new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(cs) { InitialCatalog = "master" }.ConnectionString);
+                c.Open();
+                using var k = c.CreateCommand(); k.CommandText = sql; k.ExecuteNonQuery();
+            }
+            Exec($"CREATE DATABASE [{db}]");
+            try
+            {
+                Passes($@"$r = @(Invoke-VerifiedDbBackup '{server}' @('{db}') 'v9.9.9')
+if ($r.Count -ne 1 -or $r[0].Database -ne '{db}') {{ throw ""unexpected result: $($r | Out-String)"" }}
+if ($r[0].File -notlike '*{db}_predeploy_v9.9.9_*.bak' -or -not (Test-Path -LiteralPath $r[0].File)) {{ throw ""no backup file: $($r[0].File)"" }}
+Remove-Item -LiteralPath $r[0].File");
+                // A missing database stops the run (the deploy stops before anything changes).
+                Throws($"Invoke-VerifiedDbBackup '{server}' @('{db}', 'no_such_db_{Guid.NewGuid():N}') 'v9.9.9'", "does not exist");
+                Throws($"Invoke-VerifiedDbBackup '{server}' @('') 'v9.9.9'", "database name is empty");
+            }
+            finally
+            {
+                Exec($"ALTER DATABASE [{db}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{db}]");
+                // The failing run backed the first database up before it stopped: remove that file too.
+                using var c = new Microsoft.Data.SqlClient.SqlConnection(cs);
+                c.Open();
+                using var k = c.CreateCommand();
+                k.CommandText = "SELECT CAST(COALESCE(SERVERPROPERTY('InstanceDefaultBackupPath'), SERVERPROPERTY('InstanceDefaultDataPath')) AS nvarchar(400))";
+                if (k.ExecuteScalar() is string dir && Directory.Exists(dir))
+                    foreach (var f in Directory.GetFiles(dir, db + "_predeploy_*.bak")) File.Delete(f);
+            }
+        }
+
         [Fact] public void SourceGuard_KnowsProductionFromStaging() =>
             Passes(@"if (-not (Test-ProductionTarget '\\srv\e$\EINVWORLD\App')) { throw 'prod' }; if (Test-ProductionTarget '\\srv\e$\EINVWORLD_STAGING\App') { throw 'staging' }");
 
