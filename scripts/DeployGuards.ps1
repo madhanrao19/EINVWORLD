@@ -379,11 +379,12 @@ function Test-ProductionTarget([string]$destAppPath) { $destAppPath -match '\\EI
 # Verified database backup, mandatory before every Production deploy (migrations or not): for each database,
 # BACKUP ... COPY_ONLY, CHECKSUM into the instance's default backup folder, RESTORE VERIFYONLY ... WITH CHECKSUM, then
 # msdb must list the file as checksummed, undamaged and copy-only. Runs as the caller's Windows identity, which needs
-# BACKUP DATABASE + CREATE DATABASE (VERIFYONLY's requirement), i.e. sysadmin or dbcreator - the app's own login
-# rightly has neither. Self-contained, so the deploy can run it on the SQL host with Invoke-Command. Throws on any failure;
-# returns one { Database, File } per database.
+# BACKUP DATABASE on each database + CREATE DATABASE (VERIFYONLY's requirement): sysadmin, or dbcreator plus
+# db_backupoperator/db_owner - the app's own login rightly has neither. Self-contained, so the deploy can run it on the
+# SQL host with Invoke-Command. Throws on any failure; returns one { Database, File } per database.
 function Invoke-VerifiedDbBackup([string]$dataSource, [string[]]$databases, [string]$label) {
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+    $started = (Get-Date).AddMinutes(-1)   # msdb rows from this run only (local server clock; a minute of slack)
     $conn = New-Object System.Data.SqlClient.SqlConnection "Data Source=$dataSource;Initial Catalog=master;Integrated Security=True;TrustServerCertificate=True"
     $conn.Open()
     try {
@@ -398,8 +399,10 @@ function Invoke-VerifiedDbBackup([string]$dataSource, [string[]]$databases, [str
                 "EXEC sp_executesql @sql, N'@f nvarchar(500)', @f; " +
                 "RESTORE VERIFYONLY FROM DISK = @f WITH CHECKSUM; " +
                 "SELECT TOP 1 f.physical_device_name, bs.has_backup_checksums, bs.is_damaged, bs.is_copy_only FROM msdb.dbo.backupset bs " +
-                "JOIN msdb.dbo.backupmediafamily f ON f.media_set_id = bs.media_set_id WHERE f.physical_device_name = @f ORDER BY bs.backup_finish_date DESC;"
+                "JOIN msdb.dbo.backupmediafamily f ON f.media_set_id = bs.media_set_id " +
+                "WHERE f.physical_device_name = @f AND bs.database_name = @db AND bs.backup_finish_date >= @started ORDER BY bs.backup_finish_date DESC;"
             [void]$k.Parameters.AddWithValue('@db', $db)
+            [void]$k.Parameters.AddWithValue('@started', $started)
             [void]$k.Parameters.AddWithValue('@file', "${db}_predeploy_${label}_$stamp.bak")
             $r = $k.ExecuteReader()
             try {
@@ -408,6 +411,23 @@ function Invoke-VerifiedDbBackup([string]$dataSource, [string[]]$databases, [str
                 [pscustomobject]@{ Database = $db; File = $r.GetString(0) }
             }
             finally { $r.Close() }
+        }
+    }
+    finally { $conn.Close() }
+}
+
+# Read-only: the databases the caller's Windows identity could NOT back up and verify (empty = all fine). Same rule as
+# Invoke-VerifiedDbBackup: sysadmin, or dbcreator (VERIFYONLY) plus BACKUP DATABASE on the database. Self-contained.
+function Get-DbBackupRightsProblems([string]$dataSource, [string[]]$databases) {
+    $conn = New-Object System.Data.SqlClient.SqlConnection "Data Source=$dataSource;Initial Catalog=master;Integrated Security=True;TrustServerCertificate=True"
+    $conn.Open()
+    try {
+        foreach ($db in $databases) {
+            $k = $conn.CreateCommand()
+            $k.CommandText = "SELECT CASE WHEN IS_SRVROLEMEMBER('sysadmin') = 1 OR (IS_SRVROLEMEMBER('dbcreator') = 1 " +
+                "AND HAS_PERMS_BY_NAME(@db, 'DATABASE', 'BACKUP DATABASE') = 1) THEN 1 ELSE 0 END"
+            [void]$k.Parameters.AddWithValue('@db', $db)
+            if ($k.ExecuteScalar() -ne 1) { $db }
         }
     }
     finally { $conn.Close() }

@@ -517,7 +517,7 @@
 - `scripts\Deploy-Staging.ps1`: every Production deploy, migrations or not, now backs up each database in
   Production's `web.config` (`COPY_ONLY, CHECKSUM`), checks it with `RESTORE VERIFYONLY ... WITH CHECKSUM` and msdb
   (checksummed, undamaged, copy-only), and stops before the site goes offline if any of that fails. It cannot be
-  skipped. Runs on the SQL host over PowerShell remoting as the operator's Windows identity (sysadmin/dbcreator; the
+  skipped. Runs on the SQL host over PowerShell remoting as the operator's Windows identity (sysadmin, or dbcreator plus BACKUP DATABASE on each database; the
   app login can't run VERIFYONLY by design). `-WhatIf` checks that identity read-only. Staging is unchanged.
 - Before, a deploy without pending migrations backed up only `App\`, never the databases (seen in the v1.50.73
   readiness review).

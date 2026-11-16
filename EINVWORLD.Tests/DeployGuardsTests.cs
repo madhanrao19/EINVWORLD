@@ -115,7 +115,13 @@ try {{
                 Passes($@"$r = @(Invoke-VerifiedDbBackup '{server}' @('{db}') 'v9.9.9')
 if ($r.Count -ne 1 -or $r[0].Database -ne '{db}') {{ throw ""unexpected result: $($r | Out-String)"" }}
 if ($r[0].File -notlike '*{db}_predeploy_v9.9.9_*.bak' -or -not (Test-Path -LiteralPath $r[0].File)) {{ throw ""no backup file: $($r[0].File)"" }}
-Remove-Item -LiteralPath $r[0].File");
+Remove-Item -LiteralPath $r[0].File
+# The way the deploy calls it: the function as a script block through Invoke-Command, the database list as one argument.
+$r2 = @(Invoke-Command -ScriptBlock ${{function:Invoke-VerifiedDbBackup}} -ArgumentList '{server}', @('{db}'), 'v1.0.0-to-v1.0.1')
+if ($r2.Count -ne 1 -or -not (Test-Path -LiteralPath $r2[0].File)) {{ throw ""Invoke-Command path failed: $($r2 | Out-String)"" }}
+Remove-Item -LiteralPath $r2[0].File
+$lacking = @(Invoke-Command -ScriptBlock ${{function:Get-DbBackupRightsProblems}} -ArgumentList '{server}', @('{db}'))
+if ($lacking.Count) {{ throw ""rights check failed for the database owner: $lacking"" }}");
                 // A missing database stops the run (the deploy stops before anything changes).
                 Throws($"Invoke-VerifiedDbBackup '{server}' @('{db}', 'no_such_db_{Guid.NewGuid():N}') 'v9.9.9'", "does not exist");
                 Throws($"Invoke-VerifiedDbBackup '{server}' @('') 'v9.9.9'", "database name is empty");
