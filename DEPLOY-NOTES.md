@@ -34,6 +34,15 @@ changes are additive and AI/features stay off unless already enabled.
    server (when the Hosting Bundle needs installing), and the SQL login's backup/DDL rights (when
    migrations are pending). Any problem shows as a warning. It also covers step 2 itself: it drops
    `app_offline.htm` into `App\` for the copy only, so on Staging you don't need to stop the site by hand.
+   **Production database backups are mandatory**: every Production run, with or without migrations, first takes a
+   `COPY_ONLY, CHECKSUM` backup of each database in Production's `web.config` and checks it with
+   `RESTORE VERIFYONLY ... WITH CHECKSUM` and msdb, before the site goes offline. No switch skips it. It runs on the
+   SQL host over PowerShell remoting as **your Windows identity**, which must be `sysadmin`, or `dbcreator` plus `BACKUP DATABASE` on each database (the app's
+   login is not, by design); `-WhatIf` checks that identity. Any failure stops the deploy with the old build online.
+   Files: `<db>_predeploy_<deployed>-to-<new>_<timestamp>.bak` in the instance's default backup folder. They are never
+   deleted automatically (two full backups per deploy): prune old ones by hand, keeping at least the last two deploys,
+   and watch free space if that folder shares a volume with the data/log files. PowerShell remoting from your PC to the
+   server is required (there is no credential fallback; without it the deploy stops at this step, site untouched).
    **It copies nothing until the app has stopped:** it waits (up to `-ShutdownTimeoutSeconds`, default 120)
    until no `.dll`/`.exe` in that `App\` is held open; on timeout it stops, nothing was copied, and the old
    version comes back online. After the copy every shipped file is checked against the build. **If the copy,
