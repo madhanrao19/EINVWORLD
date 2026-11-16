@@ -70,10 +70,6 @@ namespace eInvWorld.Pages.Invoices
         public int BuyerCancelledCount { get; set; }
         public decimal BuyerCancelledAmount { get; set; }
         public int BuyerTotalSuppliersCount { get; set; }
-        public int BuyerNewIncomingCount { get; set; }
-        public int BuyerPendingReviewCount { get; set; }
-        public int BuyerUnmatchedCount { get; set; }
-        public int BuyerOverdueCount { get; set; }
         private readonly eInvWorld.Services.FinanceTodayService _today;
 
         /// <summary>The Today card (Supplier dashboard); null when it couldn't be loaded.</summary>
@@ -214,10 +210,8 @@ namespace eInvWorld.Pages.Invoices
                     if (UserType == "Buyer")
                     {
                         RecentInvoices = _context.InvoiceHeaders.AsNoTracking()
-                            .Where(i => companyIds.Contains(i.CustomerId ?? 0))
-                            .Where(UserExtensions.VisibleToTins(tins))
+                            .Where(UserExtensions.ReceivedByTins(tins))
                             .Include(i => i.Supplier)
-                            .Where(i => i.InternalStatusId != "Draft")
                             // 🔥 Risk Sorting: Bring "RequestReject" and "Invalid" to the very top!
                             .OrderByDescending(i => i.InternalStatusId == "RequestReject" || i.LHDNStatusId == "Invalid")
                             .ThenByDescending(i => i.CreatedDate)
@@ -268,58 +262,23 @@ namespace eInvWorld.Pages.Invoices
                             .Where(sb => companyIds.Contains(sb.BuyerId ?? 0))
                             .Select(sb => sb.SupplierId).Distinct().Count();
 
-                        // 2. Base Query: Incoming invoices (where they are the Customer)
-                        var buyerInvoices = _context.InvoiceHeaders
-                            .AsNoTracking()
-                            .Where(i => companyIds.Contains(i.CustomerId ?? 0) && i.InternalStatusId != "Draft")
-                            .Where(UserExtensions.VisibleToTins(tins));
+                        // 2. Received invoices: exactly the Received tab's rule (addressed to this company, LHDN-validated).
+                        var buyerInvoices = _context.InvoiceHeaders.AsNoTracking().Where(UserExtensions.ReceivedByTins(tins));
 
                         // Apply Date Filters
                         if (FilterType == "Day") { buyerInvoices = buyerInvoices.Where(i => i.CreatedDate.Date == FilterDate.Value.Date); }
                         else if (FilterType == "Month") { buyerInvoices = buyerInvoices.Where(i => i.CreatedDate.Year == FilterDate.Value.Year && i.CreatedDate.Month == FilterDate.Value.Month); }
                         else if (FilterType == "Year") { buyerInvoices = buyerInvoices.Where(i => i.CreatedDate.Year == FilterDate.Value.Year); }
 
-                        // 3. Calculate KPIs matching the specific statuses in the screenshot
-                        var buyerStats = buyerInvoices
-                            .GroupBy(i => 1)
-                            .Select(g => new
-                            {
-                                TotalCount = g.Count(),
-                                TotalAmount = g.Sum(i => i.TotalAmountIncTax ?? 0m),
-
-                                // Valid & Accepted
-                                ValidCount = g.Count(i => i.LHDNStatusId == "Valid" && i.InternalStatusId != "Request Reject"),
-                                ValidAmount = g.Sum(i => (i.LHDNStatusId == "Valid" && i.InternalStatusId != "Request Reject") ? (i.TotalAmountIncTax ?? 0m) : 0m),
-
-                                // Disputed by Buyer
-                                RejectCount = g.Count(i => i.InternalStatusId == "RequestReject"),
-                                RejectAmount = g.Sum(i => i.InternalStatusId == "RequestReject" ? (i.TotalAmountIncTax ?? 0m) : 0m),
-
-                                // Cancelled by Supplier
-                                CancelledCount = g.Count(i => i.LHDNStatusId == "Cancelled"),
-                                CancelledAmount = g.Sum(i => i.LHDNStatusId == "Cancelled" ? (i.TotalAmountIncTax ?? 0m) : 0m),
-
-                                // New Incoming (Using last 24 hours as a proxy if LastLoginDate isn't available)
-                                NewIncomingCount = g.Count(i => i.CreatedDate >= DateTime.Now.AddDays(-1)),
-                                // Pending Review (Valid with LHDN, but not actioned internally)
-                                PendingReviewCount = g.Count(i => i.LHDNStatusId == "Valid" && i.InternalStatusId == "Pending"),
-                                // Unmatched PO (Using your existing PoDoNo field)
-                                UnmatchedCount = g.Count(i => string.IsNullOrEmpty(i.PoDoNo)),
-                            })
-                            .ToList()
-                            .FirstOrDefault();
-
-                        if (buyerStats != null)
-                        {
-                            BuyerTotalReceivedCount = buyerStats.TotalCount;
-                            BuyerTotalReceivedAmount = buyerStats.TotalAmount;
-                            BuyerValidCount = buyerStats.ValidCount;
-                            BuyerValidAmount = buyerStats.ValidAmount;
-                            BuyerRequestRejectCount = buyerStats.RejectCount;
-                            BuyerRequestRejectAmount = buyerStats.RejectAmount;
-                            BuyerCancelledCount = buyerStats.CancelledCount;
-                            BuyerCancelledAmount = buyerStats.CancelledAmount;
-                        }
+                        var t = BuyerTotalsOf(buyerInvoices);
+                        BuyerTotalReceivedCount = t.TotalCount;
+                        BuyerTotalReceivedAmount = t.TotalAmount;
+                        BuyerValidCount = t.ValidCount;
+                        BuyerValidAmount = t.ValidAmount;
+                        BuyerRequestRejectCount = t.RejectCount;
+                        BuyerRequestRejectAmount = t.RejectAmount;
+                        BuyerCancelledCount = t.CancelledCount;
+                        BuyerCancelledAmount = t.CancelledAmount;
                     }
                 }
             }
@@ -330,6 +289,29 @@ namespace eInvWorld.Pages.Invoices
         
         }
 
+
+        internal sealed record BuyerTotals(int TotalCount, decimal TotalAmount, int ValidCount, decimal ValidAmount,
+            int RejectCount, decimal RejectAmount, int CancelledCount, decimal CancelledAmount);
+
+        /// <summary>Buyer dashboard tiles over received (LHDN-validated) invoices. The three buckets are exclusive, so
+        /// Valid + Reject requested + Cancelled = Total: a reject request (internal RequestReject) keeps the document LHDN
+        /// Valid, so it is counted as a request, not as Valid; "Rejected" from LHDN (defensive) counts as a request too.</summary>
+        internal static BuyerTotals BuyerTotalsOf(IQueryable<InvoiceHeader> received)
+        {
+            var r = received.GroupBy(i => 1).Select(g => new
+            {
+                TotalCount = g.Count(),
+                TotalAmount = g.Sum(i => i.TotalAmountIncTax ?? 0m),
+                ValidCount = g.Count(i => i.LHDNStatusId == "Valid" && i.InternalStatusId != "RequestReject"),
+                ValidAmount = g.Sum(i => i.LHDNStatusId == "Valid" && i.InternalStatusId != "RequestReject" ? (i.TotalAmountIncTax ?? 0m) : 0m),
+                RejectCount = g.Count(i => (i.LHDNStatusId == "Valid" && i.InternalStatusId == "RequestReject") || i.LHDNStatusId == "Rejected"),
+                RejectAmount = g.Sum(i => (i.LHDNStatusId == "Valid" && i.InternalStatusId == "RequestReject") || i.LHDNStatusId == "Rejected" ? (i.TotalAmountIncTax ?? 0m) : 0m),
+                CancelledCount = g.Count(i => i.LHDNStatusId == "Cancelled"),
+                CancelledAmount = g.Sum(i => i.LHDNStatusId == "Cancelled" ? (i.TotalAmountIncTax ?? 0m) : 0m),
+            }).FirstOrDefault();
+            return r == null ? new BuyerTotals(0, 0, 0, 0, 0, 0, 0, 0)
+                : new BuyerTotals(r.TotalCount, r.TotalAmount, r.ValidCount, r.ValidAmount, r.RejectCount, r.RejectAmount, r.CancelledCount, r.CancelledAmount);
+        }
 
         public JsonResult OnGetInvoiceData(string FilterType = "Month", DateTime? FilterDate = null, string? FilterStatus = null, string? FilterSupplier = null)
         {
