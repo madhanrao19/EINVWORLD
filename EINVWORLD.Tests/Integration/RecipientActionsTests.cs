@@ -61,7 +61,7 @@ namespace EINVWORLD.Tests.Integration
             var uuids = new[] { normal, creditNote, selfBilled, selfBilledRefund }.Select(i => i.UUID!).ToList();
 
             List<string> Scope(PartyInfo p) => eInvWorld.Pages.Invoices.InvoiceListsModel
-                .SendToBuyersScope(ctx.InvoiceHeaders, uuids, new List<string> { p.TIN! }).Select(i => i.InvoiceNo).OrderBy(x => x).ToList();
+                .SendToBuyersScope(ctx.InvoiceHeaders, uuids, new List<int> { p.PartyInfoId }).Select(i => i.InvoiceNo).OrderBy(x => x).ToList();
 
             Assert.Equal(new[] { normal.InvoiceNo, creditNote.InvoiceNo }.OrderBy(x => x), Scope(b));
             Assert.Equal(new[] { selfBilled.InvoiceNo, selfBilledRefund.InvoiceNo }.OrderBy(x => x), Scope(a));
@@ -100,8 +100,10 @@ namespace EINVWORLD.Tests.Integration
         private sealed class RecordingNotifications : IEInvoiceNotificationService
         {
             public readonly List<string> Received = new();
+            public readonly List<string> Validated = new();
             public readonly Dictionary<string, int?> Recipient = new();
-            public Task SendValidatedNotificationEmail(string recipientName, PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, DateTime validatedTimestamp, PublicCustomer? publicCustomer = null) => Task.CompletedTask;
+            public Task SendValidatedNotificationEmail(string recipientName, PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, DateTime validatedTimestamp, PublicCustomer? publicCustomer = null)
+            { Validated.Add(documentId); return Task.CompletedTask; }
             public Task<bool> SendRejectionNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string rejectionReason, DateTime rejectedTimestamp) => Task.FromResult(true);
             public Task<bool> SendCancellationNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, string cancellationReason, DateTime cancelledTimestamp) => Task.FromResult(true);
             public Task<bool> SendNewInvoiceReceivedNotificationEmail(PartyInfo? buyer, PartyInfo? supplier, string documentId, DateTime issueDate, PublicCustomer? publicCustomer = null)

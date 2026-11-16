@@ -165,21 +165,7 @@ namespace EINVWORLD.Pages.Invoices
 
             InvoiceLines = InvoiceDetail.InvoiceLines.ToList();
 
-            // ✅ Load invoice history (with Malaysia time)
-            var histories = await _context.InvoiceHistories
-                .Where(h => h.InvoiceNo == InvoiceDetail.InvoiceNo)
-                .OrderByDescending(h => h.Timestamp)
-                .ToListAsync();
-
-            InvoiceHistories = histories.Select(h => new InvoiceHistory
-            {
-                Id = h.Id,
-                InvoiceNo = h.InvoiceNo,
-                Action = h.Action,
-                PerformedBy = h.PerformedBy,
-                Remarks = h.Remarks,
-                Timestamp = DateTimeHelper.ToMalaysiaTime(h.Timestamp)
-            }).ToList();
+            InvoiceHistories = await LoadHistoryAsync(InvoiceDetail.InvoiceNo, newestFirst: true);
 
             // Map the Document Type Code to its Description
             var typeEntry = await _context.EInvoiceTypes
@@ -218,6 +204,18 @@ namespace EINVWORLD.Pages.Invoices
             return Page();
         }
 
+        /// <summary>The activity history in Malaysia time: in full for the issuer and Admins, otherwise only the
+        /// recipient's lifecycle view (<see cref="EINVWORLD.Helpers.RecipientInvoiceHistory"/>). The page and the CSV export both use this.</summary>
+        private async Task<List<InvoiceHistory>> LoadHistoryAsync(string invoiceNo, bool newestFirst)
+        {
+            var query = _context.InvoiceHistories.AsNoTracking().Where(h => h.InvoiceNo == invoiceNo);
+            var rows = await (newestFirst ? query.OrderByDescending(h => h.Timestamp) : query.OrderBy(h => h.Timestamp)).ToListAsync();
+            foreach (var h in rows) h.Timestamp = DateTimeHelper.ToMalaysiaTime(h.Timestamp);
+
+            return await EINVWORLD.Helpers.UserExtensions.IsIssuerOfInvoiceAsync(User, _context, invoiceNo)
+                ? rows : EINVWORLD.Helpers.RecipientInvoiceHistory.For(rows);
+        }
+
         public async Task<IActionResult> OnGetExportHistoryAsync(string invoiceNo)
         {
             if (string.IsNullOrEmpty(invoiceNo))
@@ -232,28 +230,14 @@ namespace EINVWORLD.Pages.Invoices
                 return Forbid();
             }
 
-            var histories = await _context.InvoiceHistories
-                .Where(h => h.InvoiceNo == invoiceNo)
-                .OrderBy(h => h.Timestamp)
-                .ToListAsync();
-
-            // Convert all timestamps to Malaysia time
-            InvoiceHistories = histories.Select(h => new InvoiceHistory
-            {
-                Id = h.Id,
-                InvoiceNo = h.InvoiceNo,
-                Action = h.Action,
-                PerformedBy = h.PerformedBy,
-                Remarks = h.Remarks,
-                Timestamp = DateTimeHelper.ToMalaysiaTime(h.Timestamp)
-            }).ToList();
+            var histories = await LoadHistoryAsync(invoiceNo, newestFirst: false);
 
             var csv = new StringBuilder();
             csv.AppendLine("Timestamp,Action,PerformedBy,Remarks");
 
             foreach (var h in histories)
             {
-                var timestamp = DateTimeHelper.ToMalaysiaTime(h.Timestamp).ToString("yyyy-MM-dd HH:mm:ss");
+                var timestamp = h.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"); // already Malaysia time
                 csv.AppendLine(string.Join(",", new[] { timestamp, h.Action, h.PerformedBy, h.Remarks }.Select(EINVWORLD.Helpers.CsvExportHelper.EscapeCsv)));
             }
 

@@ -227,22 +227,50 @@ namespace EINVWORLD.Helpers
             if (string.IsNullOrWhiteSpace(invoiceNo)) return false;
             if (user.IsAdmin(db)) return true;
 
+            var ids = await user.OwnCompanyIdsAsync(db, forWrite: true);
+            return ids.Count > 0 && await db.InvoiceHeaders.Where(i => i.InvoiceNo == invoiceNo).Where(IssuedByCompanies(ids)).AnyAsync();
+        }
+
+        /// <summary>
+        /// True when the user may see the issuer's internal records for an invoice (staff usernames, the full activity
+        /// history): an Admin, or any member — view-only included — of the issuing company. A recipient is not.
+        /// </summary>
+        public static async Task<bool> IsIssuerOfInvoiceAsync(this ClaimsPrincipal user, ApplicationDbContext db, string invoiceNo)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceNo)) return false;
+            if (user.IsAdmin(db)) return true;
+            var ids = await user.OwnCompanyIdsAsync(db, forWrite: false);
+            return ids.Count > 0 && await db.InvoiceHeaders.Where(i => i.InvoiceNo == invoiceNo).Where(IssuedByCompanies(ids)).AnyAsync();
+        }
+
+        /// <summary>
+        /// The issuer rule for actions and internal data: the invoice's issuing company RECORD (self-billed 11–14: the
+        /// customer) is one of <paramref name="companyIds"/>. Stricter than <see cref="IssuedByTins"/>, which decides
+        /// visibility by TIN: an address-book PublicCustomer that merely shares a company's TIN never makes that company
+        /// the issuer. Translates to SQL.
+        /// </summary>
+        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> IssuedByCompanies(List<int> companyIds)
+        {
+            var selfBilled = new[] { "11", "12", "13", "14" };
+            return i => (!selfBilled.Contains(i.DocTypeCode) && i.SupplierId != null && companyIds.Contains(i.SupplierId.Value))
+                     || (selfBilled.Contains(i.DocTypeCode) && i.CustomerId != null && companyIds.Contains(i.CustomerId.Value));
+        }
+
+        /// <summary>The user's company ids, never a shared LHDN general-TIN party (common to every tenant).
+        /// <paramref name="forWrite"/> drops view-only memberships (view, print and download only).</summary>
+        public static async Task<List<int>> OwnCompanyIdsAsync(this ClaimsPrincipal user, ApplicationDbContext db, bool forWrite)
+        {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(userId)) return false;
+            if (string.IsNullOrWhiteSpace(userId)) return new List<int>();
 
-            var issuer = await db.InvoiceHeaders
-                .Where(i => i.InvoiceNo == invoiceNo)
-                .Select(i => i.DocTypeCode == "11" || i.DocTypeCode == "12" || i.DocTypeCode == "13" || i.DocTypeCode == "14"
-                    ? new { Id = i.CustomerId, Tin = i.Customer != null ? i.Customer.TIN : null }
-                    : new { Id = (int?)i.SupplierId, Tin = (string?)i.Supplier.TIN })
-                .FirstOrDefaultAsync();
-
-            // Match the issuing company itself (not its TIN), and never treat a shared LHDN general TIN
-            // (EI00000000010 etc.) as owned: those parties are common to every tenant, so membership of one
-            // must not grant write access to every invoice issued under it.
-            if (issuer?.Id is not int issuerId || GeneralTINHelper.IsGeneralTIN(issuer.Tin)) return false;
-
-            return await db.UserCompanies.AnyAsync(uc => uc.UserId == userId && uc.PartyInfoId == issuerId && !uc.IsViewOnly);
+            return (await db.UserCompanies
+                    .Where(uc => uc.UserId == userId && (!forWrite || !uc.IsViewOnly))
+                    .Select(uc => new { uc.PartyInfoId, uc.PartyInfo.TIN })
+                    .ToListAsync())
+                .Where(uc => !GeneralTINHelper.IsGeneralTIN(uc.TIN))
+                .Select(uc => uc.PartyInfoId)
+                .Distinct()
+                .ToList();
         }
 
         /// <summary>

@@ -796,7 +796,9 @@
                                                             </button>
                                                             @if (invoice.AttentionResolvedAt != null)
                                                             {
-                                                                <small class="text-muted d-block mt-1" title="Marked as resolved by @invoice.AttentionResolvedBy on @invoice.AttentionResolvedAt?.ToString("yyyy-MM-dd hh:mm tt")"><i class="ri-check-double-line"></i> Resolved</small>
+                                                                @* the resolver is the issuer's staff: name them only to the issuer (and Admins) *@
+                                                                var resolvedBy = Model.CreatorVisibleInvoiceNos.Contains(invoice.InvoiceNo) ? $" by {invoice.AttentionResolvedBy}" : "";
+                                                                <small class="text-muted d-block mt-1" title="Marked as resolved@(resolvedBy) on @invoice.AttentionResolvedAt?.ToString("yyyy-MM-dd hh:mm tt")"><i class="ri-check-double-line"></i> Resolved</small>
                                                             }
                                                             @if (!string.IsNullOrWhiteSpace(invoice.RejectedReason))
                                                             {
@@ -832,7 +834,8 @@
                                                             @InvoiceStatusBadge.Render(invoice.LHDNStatusId)
                                                         }
                                                     </td>
-                                                    <td class="col-created-by truncate" data-label="Created By" title="@invoice.CreatedBy">@invoice.CreatedBy</td>
+                                                    @{ var createdByShown = Model.CreatorVisibleInvoiceNos.Contains(invoice.InvoiceNo) ? invoice.CreatedBy : null; }
+                                                    <td class="col-created-by truncate" data-label="Created By" title="@createdByShown">@createdByShown</td>
                                                     @if (invoiceDirection != "Draft")
                                                     {
                                                         <td class="col-uuid truncate" data-label="UUID" title="@invoice.UUID"><a asp-page="./InvoiceDetails2" asp-route-uuid="@invoice.UUID" class="fw-medium link-primary">@invoice.UUID</a></td>

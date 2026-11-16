@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.72`** (`AppInfo:Version` in `appsettings.json`). v1.50.72 is a **patch**
+> **Current version: `v1.50.73`** (`AppInfo:Version` in `appsettings.json`). v1.50.73 is a **patch**
+> release: recipients no longer see the issuer's internal history or staff usernames; "Send to buyers" is capped and rate limited — see the dated entry below. v1.50.72 was a **patch**
 > release: only the issuer can send to buyers, accurate Buyer dashboard, received-invoice email only once validated — see the dated entry below. v1.50.71 was a **patch**
 > release: recipients see an invoice only once LHDN validated it, everywhere — see the dated entry below. v1.50.70 was a **patch**
 > release: buyers no longer see a supplier's drafts — see the dated entry below. v1.50.69 was a **patch**
@@ -510,6 +511,30 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-16 — v1.50.73 (issuer internals stay with the issuer, Send to buyers limits)
+
+- **Fixed: a recipient could read the issuer's internal activity history.** Invoice Details and its "Export CSV" showed
+  the receiving company every history row: the issuer's staff usernames, edits, emails, PDF/submission errors and
+  attention notes. A recipient now sees only the LHDN lifecycle (submitted, status, validated, cancelled, rejected and
+  its own rejection request), with "Issuer" / "LHDN MyInvois" instead of usernames (`RecipientInvoiceHistory`, an
+  allowlist). The issuer's members (view-only too) and Admins still see everything (`UserExtensions.IsIssuerOfInvoiceAsync`).
+- **Fixed: Invoice Lists showed the issuer's "Created By" username on received invoices**, and its "Created By" filter
+  let a recipient probe the counterparty's usernames. Both now apply only to invoices the user's company issued; so
+  does the "Marked as resolved by …" tooltip on reject-requested rows. The dashboard's staff figures use the same rule.
+- **Issuer actions use the issuing company record.** `UserExtensions.IssuedByCompanies` is the one rule for
+  edit/cancel (`CanManageInvoiceAsync`, unchanged behaviour), "Send to buyers" and seeing internals: an address-book
+  (PublicCustomer) record that merely shares a company's TIN never makes that company the issuer. Visibility still
+  follows the TIN (`IssuedByTins`/`ReceivedByTins`). Company TINs are unique (DB index; only LHDN general TINs exempt).
+- **"Send to buyers" limits:** at most `Invoices:SendToBuyersMaxBatch` (default 50) invoices per request (a larger
+  selection is refused, nothing is sent) and `RateLimiting:SendToBuyersPerMinute` (default 5) requests per user per
+  minute (429; the page says to wait).
+- Webhooks: a walk-in (PublicCustomer) buyer's company now gets the events for invoices it receives, like its Received
+  tab; a shared LHDN general TIN never gets any.
+- Startup validator warns when `AllowedHosts` is `*` in Production (no config changed).
+- Tests: `RecipientInvoiceHistoryTests` (unit), `IssuerInternalsTests` (SQL Server: shared-TIN PublicCustomer, view-only,
+  history CSV per viewer, send handler cap/recipient/view-only with a fake mailer, webhook recipients).
+- No database change.
 
 ## 📅 2026-11-16 — v1.50.72 (send to buyers, Buyer dashboard, received-invoice email)
 
