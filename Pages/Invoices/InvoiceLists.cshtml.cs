@@ -521,29 +521,15 @@ namespace eInvWorld.Pages.Invoices
         internal static IQueryable<InvoiceHeader> ApplyDirectionFilter(
             IQueryable<InvoiceHeader> query, string direction, List<string> userTINs)
         {
-            var selfBilledTypes = new[] { "11", "12", "13", "14" };
+            var issued = EINVWORLD.Helpers.UserExtensions.IssuedByTins(userTINs);
             return direction switch
             {
                 // TransmissionError (submission never reached LHDN) is kept alongside Draft — the user
                 // needs to be able to fix and resubmit it exactly like a draft, not chase it into Sent.
-                "Draft" => query.Where(i =>
-                    (i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError") &&
-                    (
-                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                    )),
-                "Sent" => query.Where(i =>
-                    i.InternalStatusId != "Draft" && i.InternalStatusId != "TransmissionError" &&
-                    (
-                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
-                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
-                    )),
-                // Recipients see a document only once LHDN validated it (same lifecycle rule as VisibleToTins).
-                "Received" => query.Where(EINVWORLD.Helpers.UserExtensions.IsDeliveredStatus()).Where(i =>
-                    (
-                        (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
-                        (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
-                    )),
+                "Draft" => query.Where(issued).Where(i => i.InternalStatusId == "Draft" || i.InternalStatusId == "TransmissionError"),
+                "Sent" => query.Where(issued).Where(i => i.InternalStatusId != "Draft" && i.InternalStatusId != "TransmissionError"),
+                // Recipients see a document only once LHDN validated it.
+                "Received" => query.Where(EINVWORLD.Helpers.UserExtensions.ReceivedByTins(userTINs)),
                 _ => query.Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
             };
         }
@@ -2254,9 +2240,16 @@ namespace eInvWorld.Pages.Invoices
         // Deliberately does NOT touch IsValidationEmailSent/ValidationEmailSentAt (those record the
         // original automatic send); a manual resend is logged as a separate "EmailResent" history
         // entry instead, so the audit trail keeps both facts.
+        /// <summary>Invoices "Send to buyers" may email: only those the caller's company issued (self-billed 11–14: the
+        /// customer). A recipient can see a validated invoice but must not send the issuer's email for it.</summary>
+        internal static IQueryable<InvoiceHeader> SendToBuyersScope(IQueryable<InvoiceHeader> query, List<string> uuids, List<string> issuerTins) =>
+            query.Where(i => uuids.Contains(i.UUID!)).Where(EINVWORLD.Helpers.UserExtensions.IssuedByTins(issuerTins));
+
         public async Task<JsonResult> OnPostBulkSendToBuyersAsync([FromBody] List<string> uuids)
         {
-            if (uuids == null || !uuids.Any())
+            // A blank UUID would match the caller's own drafts (UUID IS NULL); duplicates would skew the skipped count.
+            uuids = (uuids ?? new List<string>()).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().ToList();
+            if (uuids.Count == 0)
                 return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
 
             var user = await _userManager.GetUserAsync(User);
@@ -2274,17 +2267,17 @@ namespace eInvWorld.Pages.Invoices
             if (!userTINs.Any())
                 return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
 
-            // Same mandatory per-TIN ownership scope as every other bulk/export path on this page.
-            var invoices = await _context.InvoiceHeaders
+            var invoices = await SendToBuyersScope(_context.InvoiceHeaders, uuids, userTINs)
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => uuids.Contains(i.UUID!))
-                .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
                 .ToListAsync(HttpContext.RequestAborted);
 
             int sentCount = 0;
             var skipped = new List<string>();
+            int notIssuer = uuids.Count - invoices.Count;
+            if (notIssuer > 0)
+                skipped.Add($"{notIssuer} invoice(s) skipped: only the issuing company can send them.");
             foreach (var invoice in invoices)
             {
                 // Only a Valid document actually has a validated PDF + timestamp to email — sending the

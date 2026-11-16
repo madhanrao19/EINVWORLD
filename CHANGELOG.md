@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.71`** (`AppInfo:Version` in `appsettings.json`). v1.50.71 is a **patch**
+> **Current version: `v1.50.72`** (`AppInfo:Version` in `appsettings.json`). v1.50.72 is a **patch**
+> release: only the issuer can send to buyers, accurate Buyer dashboard, received-invoice email only once validated — see the dated entry below. v1.50.71 was a **patch**
 > release: recipients see an invoice only once LHDN validated it, everywhere — see the dated entry below. v1.50.70 was a **patch**
 > release: buyers no longer see a supplier's drafts — see the dated entry below. v1.50.69 was a **patch**
 > release: security audit fixes (invoice reference list, PDF upload check, external-login 2FA) — see the dated entry below. v1.50.68 was a **patch**
@@ -510,6 +511,27 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-16 — v1.50.72 (send to buyers, Buyer dashboard, received-invoice email)
+
+- **Fixed: the receiving company could trigger "Send to buyers".** The bulk handler checked visibility, so a recipient
+  could make the app send the issuer's "validated invoice" email. It now requires the issuing company (self-billed
+  11–14: the customer) and a non-view-only membership (`InvoiceListsModel.SendToBuyersScope`); others are reported as
+  skipped. The button was already shown only on the Sent tab.
+- **Fixed: Buyer dashboard counts.** "Valid" excluded `"Request Reject"` (with a space, a status that never exists),
+  so reject-requested invoices were counted as Valid and as reject requests. The tiles now cover exactly the Received
+  tab's invoices (validated by LHDN, addressed to the company — self-billed documents the buyer issued are no longer
+  counted as received) and Valid + Reject requested + Cancelled = Total. Four never-shown buyer figures removed.
+- **Fixed: "new e-invoice received" email for documents not validated.** Synced received documents were emailed
+  whatever their LHDN status. Now only a Valid document with a UUID is notified; a pending (Submitted) one waits for a
+  later pass however long LHDN takes (the 1-day window now runs from validation, and the background scan skips
+  pending rows); Invalid or Cancelled ones are closed without an email. Still at most one email per invoice (atomic
+  claim). Self-billed (11–14) received documents now notify the supplier, who receives them, not the issuing customer.
+- "Send to buyers" ignores blank and repeated UUIDs (a blank one matched the caller's own drafts).
+- One rule each for "issued by" and "received by" (`UserExtensions.IssuedByTins`, `ReceivedByTins`); "visible to"
+  combines them, and the Draft/Sent/Received tabs use them.
+- Tests (SQL Server): `RecipientActionsTests` — send-to-buyers scope for 01/02/11/14, Buyer totals vs the Received
+  tab, received-invoice email (pending waits, Valid once, Invalid/Cancelled never, pending → Valid sends once).
+- No database change.
 ## 📅 2026-11-16 — v1.50.71 (recipient visibility follows the LHDN lifecycle everywhere)
 
 - **Fixed: a recipient could see documents still pending LHDN validation.** v1.50.70's rule (and the older Received

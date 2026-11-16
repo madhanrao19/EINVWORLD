@@ -229,8 +229,18 @@ namespace eInvWorld.Services
                 return await MarkDoneWithoutSendingAsync("Skipped (feature disabled)");
             }
 
+            // The recipient is told about a document only once LHDN validated it (the same rule that decides what a
+            // recipient may see, UserExtensions.ReceivedByTins). Still pending: leave it for a later pass, however
+            // long LHDN or the import takes (the background scan skips pending rows). Invalid, Cancelled before
+            // notice, or unknown: never notify.
+            if (string.IsNullOrEmpty(invoice.LHDNStatusId) || invoice.LHDNStatusId == "Submitted")
+                return false;
+            if (invoice.LHDNStatusId != "Valid" || string.IsNullOrEmpty(invoice.UUID))
+                return await MarkDoneWithoutSendingAsync($"Skipped (LHDN status {invoice.LHDNStatusId})");
+
+            // The age window runs from validation, so a document LHDN validated late is still announced.
             int maxAgeDays = _configuration.GetValue<int?>("EmailConfiguration:NewInvoiceReceivedEmailSettings:MaxAgeDaysForNotification") ?? 1;
-            var referenceDate = invoice.DateTimeReceived ?? invoice.IssueDate ?? invoice.CreatedDate;
+            var referenceDate = invoice.DateTimeValidated ?? invoice.DateTimeReceived ?? invoice.IssueDate ?? invoice.CreatedDate;
             if (referenceDate < DateTime.Now.AddDays(-maxAgeDays))
             {
                 _logger.LogDebug("New-invoice-received email for {InvoiceNo} expired: reference date {ReferenceDate} older than the {MaxAgeDays}-day window.",
@@ -256,10 +266,16 @@ namespace eInvWorld.Services
             try
             {
                 _logger.LogInformation("📧 Sending new-invoice-received email for invoice {InvoiceNo}", invoiceNo);
-                bool sent = await _notificationService.SendNewInvoiceReceivedNotificationEmail(
-                    invoice.Customer, invoice.Supplier, invoice.InvoiceNo, invoice.IssueDate ?? DateTime.Now, invoice.PublicCustomer);
+                // Self-billed 11–14 are issued by the customer, so the supplier is the one receiving the document.
+                bool selfBilled = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(invoice.DocTypeCode);
+                bool sent = selfBilled
+                    ? await _notificationService.SendNewInvoiceReceivedNotificationEmail(
+                        invoice.Supplier, invoice.Customer, invoice.InvoiceNo, invoice.IssueDate ?? DateTime.Now)
+                    : await _notificationService.SendNewInvoiceReceivedNotificationEmail(
+                        invoice.Customer, invoice.Supplier, invoice.InvoiceNo, invoice.IssueDate ?? DateTime.Now, invoice.PublicCustomer);
 
-                var recipient = sent ? (invoice.Customer?.Email ?? invoice.PublicCustomer?.Email) : "Skipped (no valid buyer email)";
+                var recipient = !sent ? "Skipped (no valid recipient email)"
+                    : selfBilled ? invoice.Supplier?.Email : (invoice.Customer?.Email ?? invoice.PublicCustomer?.Email);
                 await _context.InvoiceHeaders
                     .Where(i => i.InvoiceNo == invoiceNo)
                     .ExecuteUpdateAsync(s => s.SetProperty(i => i.NewInvoiceReceivedEmailSentTo, recipient), cancellationToken);

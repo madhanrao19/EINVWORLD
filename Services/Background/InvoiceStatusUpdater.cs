@@ -147,7 +147,8 @@ public class InvoiceStatusUpdater : BackgroundService
     {
         var invoiceNos = await dbContext.InvoiceHeaders
             .AsNoTracking()
-            .Where(i => !i.IsNewInvoiceReceivedEmailSent)
+            // Still pending at LHDN: nothing to decide yet, so not loaded every cycle (the finalizer waits for Valid).
+            .Where(i => !i.IsNewInvoiceReceivedEmailSent && i.LHDNStatusId != null && i.LHDNStatusId != "Submitted")
             .Select(i => i.InvoiceNo)
             .ToListAsync(stoppingToken);
 

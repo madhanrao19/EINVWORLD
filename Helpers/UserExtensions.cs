@@ -115,24 +115,38 @@ namespace EINVWORLD.Helpers
 
         /// <summary>
         /// The invoices a non-Admin holding <paramref name="tins"/> may see: everything their company issues, in any
-        /// status, and what they receive once LHDN has validated it — <see cref="IsDeliveredStatus"/>: LHDN status Valid
+        /// status, and what they receive once LHDN has validated it — <see cref="ReceivedByTins"/>: LHDN status Valid
         /// or Cancelled (LHDN cancels only validated documents; a buyer's rejection leaves it Valid). Never Draft,
         /// pending (Submitted) or Invalid. Self-billed types 11–14 (incl. CN/DN/RN 12–14) are issued by the customer.
         /// Translates to SQL; callers remove general TINs from <paramref name="tins"/> first.
         /// </summary>
         public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> VisibleToTins(List<string> tins)
         {
+            // IssuedByTins OR ReceivedByTins, as one SQL-translatable predicate (the two rules live in one place each).
+            var issued = IssuedByTins(tins);
+            var received = ReceivedByTins(tins);
+            var i = issued.Parameters[0];
+            var body = System.Linq.Expressions.Expression.OrElse(issued.Body, new Rebind(received.Parameters[0], i).Visit(received.Body));
+            return System.Linq.Expressions.Expression.Lambda<Func<InvoiceHeader, bool>>(body, i);
+        }
+
+        private sealed class Rebind(System.Linq.Expressions.ParameterExpression from, System.Linq.Expressions.ParameterExpression to)
+            : System.Linq.Expressions.ExpressionVisitor
+        {
+            protected override System.Linq.Expressions.Expression VisitParameter(System.Linq.Expressions.ParameterExpression node) =>
+                node == from ? to : base.VisitParameter(node);
+        }
+
+        /// <summary>The recipient side of <see cref="VisibleToTins"/>: documents addressed to a company holding
+        /// <paramref name="tins"/> (self-billed 11–14: the supplier receives) that LHDN has validated — a UUID and one of
+        /// <see cref="DeliveredLhdnStatuses"/>. The Received tab and the Buyer dashboard use exactly this.</summary>
+        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> ReceivedByTins(List<string> tins)
+        {
             var selfBilled = new[] { "11", "12", "13", "14" };
-            return i =>
-                // issuer side
-                (!selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN)) ||
-                (selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
-                                                       || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN)))) ||
-                // recipient side, only once LHDN validated it (keep in step with IsDeliveredStatus)
-                (i.UUID != null && i.UUID != "" && DeliveredLhdnStatuses.Contains(i.LHDNStatusId!)
-                 && ((!selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
-                                                              || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN))))
-                     || (selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN))));
+            return i => i.UUID != null && i.UUID != "" && DeliveredLhdnStatuses.Contains(i.LHDNStatusId!)
+                && ((!selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
+                                                             || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN))))
+                    || (selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN)));
         }
 
         /// <summary>The issuer side of <see cref="VisibleToTins"/>: invoices a company holding <paramref name="tins"/> issued
@@ -153,13 +167,6 @@ namespace EINVWORLD.Helpers
             return db.PartyInfos.AsNoTracking().Where(p => ids.Contains(p.PartyInfoId) && p.TIN != null)
                 .Select(p => p.TIN!).ToList().Where(t => !GeneralTINHelper.IsGeneralTIN(t)).Distinct().ToList();
         }
-
-        /// <summary>
-        /// The recipient-side lifecycle condition of <see cref="VisibleToTins"/>, for the Received tab: the document has a
-        /// UUID and one of <see cref="DeliveredLhdnStatuses"/>.
-        /// </summary>
-        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> IsDeliveredStatus() =>
-            i => i.UUID != null && i.UUID != "" && DeliveredLhdnStatuses.Contains(i.LHDNStatusId!);
 
         /// <summary>LHDN statuses a recipient may see: validated, or cancelled/rejected after validation. Never
         /// Submitted (pending), Invalid or an unmapped value. "Rejected" is defensive: LHDN leaves a rejected document Valid.</summary>
