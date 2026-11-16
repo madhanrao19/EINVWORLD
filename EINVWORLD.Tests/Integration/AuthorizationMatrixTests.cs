@@ -75,7 +75,8 @@ namespace EINVWORLD.Tests.Integration
             var uuid = $"MX{Guid.NewGuid():N}"[..26];
             ctx.InvoiceHeaders.Add(new InvoiceHeader
             {
-                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = docType, Currency = "MYR", UUID = uuid,
+                // A validated document: the recipient sees (and may reject) it only once LHDN says Valid.
+                InvoiceNo = invoiceNo, PrefixedID = invoiceNo, DocTypeCode = docType, Currency = "MYR", UUID = uuid, LHDNStatusId = "Valid",
                 CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test", InternalStatusId = status,
                 SupplierId = supplierId, CustomerId = customerId,
             });

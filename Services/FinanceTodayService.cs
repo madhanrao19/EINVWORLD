@@ -57,8 +57,9 @@ namespace eInvWorld.Services
             var writable = memberships.Where(m => !m.IsViewOnly).Select(m => m.PartyInfoId).ToHashSet();
 
             var nowMyt = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow);
-            var scoped = _db.InvoiceHeaders.AsNoTracking()
-                .Where(i => companyIds.Contains(i.SupplierId ?? 0) || companyIds.Contains(i.CustomerId ?? 0));
+            // Issuer: everything; recipient: only what LHDN validated — never the other company's drafts or errors.
+            var tins = memberships.Select(m => m.TIN!).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+            var scoped = _db.InvoiceHeaders.AsNoTracking().Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(tins));
 
             model.ProcessingWithLhdn = await scoped.CountAsync(i => i.LHDNStatusId == "Submitted", ct);
             var today = nowMyt.Date;
