@@ -35,6 +35,9 @@ namespace eInvWorld.Controllers
             var isBuyer = User.IsInRole("Buyer");
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Data scope uses the app-wide Admin test (role AND user type), like CanAccessInvoiceAsync; the role alone
+            // still decides which page shortcuts are offered.
+            var isDataAdmin = EINVWORLD.Helpers.UserExtensions.IsAdmin(User, _context);
 
             // ==========================================
             // 1. GET USER'S COMPANY IDs & TINs
@@ -42,7 +45,7 @@ namespace eInvWorld.Controllers
             int? userPartyId = null;
             List<string> userTINs = new List<string>();
 
-            if (!isAdmin)
+            if (!isDataAdmin)
             {
                 // Get the PartyId for the page shortcuts
                 userPartyId = await _context.UserCompanies
@@ -134,7 +137,7 @@ namespace eInvWorld.Controllers
             // ==========================================
             // 3. SEARCH USERS (Admin Only)
             // ==========================================
-            if (isAdmin)
+            if (isDataAdmin)
             {
                 var users = await _context.Users
                     .Where(u => u.FullName.ToLower().Contains(query) || (u.Email != null && u.Email.ToLower().Contains(query)))
@@ -155,7 +158,7 @@ namespace eInvWorld.Controllers
                 .Include(i => i.PublicCustomer)
                 .AsQueryable();
 
-            if (isAdmin)
+            if (isDataAdmin)
             {
                 // Admins see all invoices without restriction
             }

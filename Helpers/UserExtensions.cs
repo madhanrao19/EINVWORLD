@@ -115,8 +115,9 @@ namespace EINVWORLD.Helpers
 
         /// <summary>
         /// The invoices a non-Admin holding <paramref name="tins"/> may see: everything their company issues, in any
-        /// status, and what they receive once it has reached LHDN (the Received tab's rule: not Draft, not Invalid,
-        /// has a UUID). So a buyer never sees the issuer's drafts. Self-billed types 11–14 are issued by the customer.
+        /// status, and what they receive once LHDN has validated it — <see cref="IsDeliveredStatus"/>: LHDN status Valid
+        /// or Cancelled (LHDN cancels only validated documents; a buyer's rejection leaves it Valid). Never Draft,
+        /// pending (Submitted) or Invalid. Self-billed types 11–14 (incl. CN/DN/RN 12–14) are issued by the customer.
         /// Translates to SQL; callers remove general TINs from <paramref name="tins"/> first.
         /// </summary>
         public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> VisibleToTins(List<string> tins)
@@ -127,13 +128,42 @@ namespace EINVWORLD.Helpers
                 (!selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN)) ||
                 (selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
                                                        || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN)))) ||
-                // recipient side, only once delivered
-                (i.InternalStatusId != "Draft" && i.InternalStatusId != "Invalid" && i.LHDNStatusId != "Invalid"
-                 && i.UUID != null && i.UUID != ""
+                // recipient side, only once LHDN validated it (keep in step with IsDeliveredStatus)
+                (i.UUID != null && i.UUID != "" && DeliveredLhdnStatuses.Contains(i.LHDNStatusId!)
                  && ((!selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
                                                               || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN))))
                      || (selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN))));
         }
+
+        /// <summary>The issuer side of <see cref="VisibleToTins"/>: invoices a company holding <paramref name="tins"/> issued
+        /// (self-billed 11–14: the customer). For data only the issuer may see, e.g. its drafts or its staff's usernames.</summary>
+        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> IssuedByTins(List<string> tins)
+        {
+            var selfBilled = new[] { "11", "12", "13", "14" };
+            return i =>
+                (!selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN)) ||
+                (selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
+                                                       || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN))));
+        }
+
+        /// <summary>Company TINs for <paramref name="companyIds"/>, without the shared LHDN general TINs (for the rules above).</summary>
+        public static List<string> TinsOf(ApplicationDbContext db, IEnumerable<int> companyIds)
+        {
+            var ids = companyIds.ToList();
+            return db.PartyInfos.AsNoTracking().Where(p => ids.Contains(p.PartyInfoId) && p.TIN != null)
+                .Select(p => p.TIN!).ToList().Where(t => !GeneralTINHelper.IsGeneralTIN(t)).Distinct().ToList();
+        }
+
+        /// <summary>
+        /// The recipient-side lifecycle condition of <see cref="VisibleToTins"/>, for the Received tab: the document has a
+        /// UUID and one of <see cref="DeliveredLhdnStatuses"/>.
+        /// </summary>
+        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> IsDeliveredStatus() =>
+            i => i.UUID != null && i.UUID != "" && DeliveredLhdnStatuses.Contains(i.LHDNStatusId!);
+
+        /// <summary>LHDN statuses a recipient may see: validated, or cancelled/rejected after validation. Never
+        /// Submitted (pending), Invalid or an unmapped value. "Rejected" is defensive: LHDN leaves a rejected document Valid.</summary>
+        public static readonly string[] DeliveredLhdnStatuses = { "Valid", "Cancelled", "Rejected" };
 
         /// <summary>Same ownership check as <see cref="CanAccessInvoiceAsync"/> but keyed by the document UUID (for cancel/reject handlers).
         /// <paramref name="forWrite"/> ignores view-only memberships: view-only members may only view, print and download.</summary>
@@ -154,20 +184,7 @@ namespace EINVWORLD.Helpers
             userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
             if (userTins.Count == 0) return false;
 
-            var party = await db.InvoiceHeaders
-                .Where(i => i.UUID == uuid)
-                .Select(i => new
-                {
-                    S = (string?)i.Supplier.TIN,
-                    C = i.Customer != null ? i.Customer.TIN : null,
-                    P = i.PublicCustomer != null ? i.PublicCustomer.TIN : null
-                })
-                .FirstOrDefaultAsync();
-            if (party == null) return false;
-
-            return (party.S != null && userTins.Contains(party.S))
-                || (party.C != null && userTins.Contains(party.C))
-                || (party.P != null && userTins.Contains(party.P));
+            return await db.InvoiceHeaders.Where(i => i.UUID == uuid).Where(VisibleToTins(userTins)).AnyAsync();
         }
 
         /// <summary>

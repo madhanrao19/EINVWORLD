@@ -90,8 +90,12 @@ namespace eInvWorld.Services.Webhooks
                 ct.ThrowIfCancellationRequested();
                 var status = invoice.LHDNStatusId!;
 
-                // Candidate owning TINs: the company that sent the invoice and the one that received it.
-                var tins = new[] { invoice.Supplier?.TIN, invoice.Customer?.TIN }
+                // Candidate owning TINs: the issuer always (self-billed 11–14: the customer); the recipient only for a
+                // status it may see (UserExtensions.DeliveredLhdnStatuses) — never an Invalid document it never received.
+                var selfBilled = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(invoice.DocTypeCode);
+                var issuerTin = selfBilled ? invoice.Customer?.TIN : invoice.Supplier?.TIN;
+                var recipientTin = selfBilled ? invoice.Supplier?.TIN : invoice.Customer?.TIN;
+                var tins = new[] { issuerTin, EINVWORLD.Helpers.UserExtensions.DeliveredLhdnStatuses.Contains(status) ? recipientTin : null }
                     .Where(t => !string.IsNullOrWhiteSpace(t))
                     .Select(t => t!)
                     .Distinct(StringComparer.OrdinalIgnoreCase);

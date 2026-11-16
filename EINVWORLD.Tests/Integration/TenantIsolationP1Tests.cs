@@ -247,25 +247,120 @@ namespace EINVWORLD.Tests.Integration
                 ctx.InvoiceHeaders.Add(inv);
                 return inv;
             }
-            var draft = Invoice("01", b.PartyInfoId, a.PartyInfoId, "Draft", null);              // B issues to A
-            var delivered = Invoice("01", b.PartyInfoId, a.PartyInfoId, "Valid", $"D{Guid.NewGuid():N}"[..26]);
-            var selfBilledDraft = Invoice("11", b.PartyInfoId, a.PartyInfoId, "Draft", null);    // A issues (self-billed)
+            // Every document type, every lifecycle state. LHDN document statuses are Submitted (pending validation),
+            // Valid, Invalid and Cancelled; a buyer's rejection request leaves the document Valid (internal RequestReject).
+            // The recipient may see it only once LHDN validated it: Valid or Cancelled, with a UUID.
+            var states = new (string Internal, string? Lhdn, bool Uuid, bool RecipientSees)[]
+            {
+                ("Draft", null, false, false),
+                ("Submitted", "Submitted", true, false),    // pending validation
+                ("Invalid", "Invalid", true, false),
+                ("Valid", "Valid", true, true),
+                ("RequestReject", "Valid", true, true),     // buyer asked to reject: still Valid, buyer must see it
+                ("Cancelled", "Cancelled", true, true),
+            };
+            var cases = new List<(InvoiceHeader Inv, bool SelfBilled, bool RecipientSees)>();
+            foreach (var type in new[] { "01", "02", "03", "04", "11", "12", "13", "14" })
+                foreach (var s in states)
+                {
+                    var inv = Invoice(type, b.PartyInfoId, a.PartyInfoId, s.Internal, s.Uuid ? $"U{Guid.NewGuid():N}"[..26] : null);
+                    inv.LHDNStatusId = s.Lhdn;
+                    cases.Add((inv, type.StartsWith("1"), s.RecipientSees));
+                }
             await ctx.SaveChangesAsync();
 
-            async Task<bool> Can(ClaimsPrincipal u, InvoiceHeader i) => await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(u, ctx, i.InvoiceNo);
-            Assert.True(await Can(ownerB, draft));            // issuer sees its own draft
-            Assert.False(await Can(ownerA, draft));           // recipient does not
-            Assert.True(await Can(ownerA, delivered));        // ...until it has reached LHDN
-            Assert.True(await Can(ownerA, selfBilledDraft));  // self-billed: the customer is the issuer
-            Assert.False(await Can(ownerB, selfBilledDraft)); // and the supplier only receives it
+            foreach (var (inv, selfBilled, recipientSees) in cases)
+            {
+                var (issuer, recipient) = selfBilled ? (ownerA, ownerB) : (ownerB, ownerA); // 11–14: the customer issues
+                var label = $"{inv.DocTypeCode}/{inv.InternalStatusId}/{inv.LHDNStatusId}";
+                Assert.True(await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(issuer, ctx, inv.InvoiceNo), "issuer " + label);
+                Assert.True(recipientSees == await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(recipient, ctx, inv.InvoiceNo), "recipient " + label);
+            }
 
-            // The same rule as a query (All tab, search, bulk PDF): A sees the delivered one and its self-billed draft only.
+            // The same rule as queries: the All tab / search / bulk handlers (VisibleToTins) and the Received tab.
+            var ids = cases.Select(c => c.Inv.InvoiceNo).ToList();
+            var mine = ctx.InvoiceHeaders.Where(i => ids.Contains(i.InvoiceNo));
             var aTins = new List<string> { a.TIN! };
-            var visible = await ctx.InvoiceHeaders
-                .Where(i => i.InvoiceNo == draft.InvoiceNo || i.InvoiceNo == delivered.InvoiceNo || i.InvoiceNo == selfBilledDraft.InvoiceNo)
-                .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(aTins))
-                .Select(i => i.InvoiceNo).ToListAsync();
-            Assert.Equal(new[] { delivered.InvoiceNo, selfBilledDraft.InvoiceNo }.OrderBy(x => x), visible.OrderBy(x => x));
+            var expectedForA = cases.Where(c => c.SelfBilled || c.RecipientSees).Select(c => c.Inv.InvoiceNo).OrderBy(x => x).ToList();
+            var receivedByA = cases.Where(c => !c.SelfBilled && c.RecipientSees).Select(c => c.Inv.InvoiceNo).OrderBy(x => x).ToList();
+            Assert.Equal(expectedForA, (await mine.Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(aTins)).Select(i => i.InvoiceNo).ToListAsync()).OrderBy(x => x));
+            Assert.Equal(expectedForA, (await eInvWorld.Pages.Invoices.InvoiceListsModel.ApplyDirectionFilter(mine, "All", aTins).Select(i => i.InvoiceNo).ToListAsync()).OrderBy(x => x));
+            Assert.Equal(receivedByA, (await eInvWorld.Pages.Invoices.InvoiceListsModel.ApplyDirectionFilter(mine, "Received", aTins).Select(i => i.InvoiceNo).ToListAsync()).OrderBy(x => x));
+        }
+
+        [Fact]
+        public async Task Today_Card_Never_Shows_The_Counterpartys_Drafts_Or_Errors()
+        {
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (a, b, _, ownerA) = await SeedAsync(ctx, "today");
+            InvoiceHeader Add(string internalStatus, string? lhdn, string? uuid)
+            {
+                var no = $"INV-TD-{Guid.NewGuid():N}"[..20];
+                var inv = new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = "01", Currency = "MYR", CreatedBy = "integration-test",
+                    CreatedDate = DateTime.Now.AddDays(-10), IssueDate = DateTime.Now, LastUpdated = DateTime.UtcNow,
+                    InternalStatusId = internalStatus, LHDNStatusId = lhdn, UUID = uuid, SupplierId = b.PartyInfoId, CustomerId = a.PartyInfoId,
+                };
+                ctx.InvoiceHeaders.Add(inv);
+                return inv;
+            }
+            var draft = Add("Draft", null, null);                                         // B's aging draft to A
+            var invalid = Add("Invalid", "Invalid", $"T{Guid.NewGuid():N}"[..26]);        // B's Invalid to A
+            await ctx.SaveChangesAsync();
+
+            var today = await new eInvWorld.Services.FinanceTodayService(ctx).GetAsync(ownerA);
+            Assert.DoesNotContain(today.Items, i => i.Title == draft.InvoiceNo || i.Title == invalid.InvoiceNo);
+        }
+
+        private sealed class RecordingJobs : EINVWORLD.Services.Background.ISyncJobTracker
+        {
+            public readonly List<(string Tin, string Payload)> Created = new();
+            public Task<int> CreateAsync(string tin, string jobType, string? triggeredBy, string? payloadJson = null)
+            { Created.Add((tin, payloadJson ?? "")); return Task.FromResult(Created.Count); }
+            public Task MarkRunningAsync(int jobId) => Task.CompletedTask;
+            public Task MarkCompletedAsync(int jobId, string? message, int importedCount = 0, int errorCount = 0) => Task.CompletedTask;
+            public Task MarkFailedAsync(int jobId, string? message) => Task.CompletedTask;
+        }
+
+        [Fact]
+        public async Task Webhook_Invalid_Event_Goes_To_The_Issuer_Only()
+        {
+            // The recipient's subscription must not learn about a document LHDN marked Invalid (it never received it);
+            // a Cancelled one goes to both parties. Self-billed: the customer issues.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (a, b, _, _) = await SeedAsync(ctx, "hook");
+            foreach (var p in new[] { a, b })
+                ctx.Set<eInvWorld.Models.Webhooks.WebhookSubscription>().Add(new() { Tin = p.TIN!, CallbackUrl = "https://example.invalid/hook", Secret = "test", CreatedAtUtc = DateTime.UtcNow });
+            InvoiceHeader Add(string type, string lhdn)
+            {
+                var no = $"INV-WH-{Guid.NewGuid():N}"[..20];
+                var inv = new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = type, Currency = "MYR", CreatedDate = DateTime.UtcNow, CreatedBy = "integration-test",
+                    InternalStatusId = lhdn, LHDNStatusId = lhdn, UUID = $"W{Guid.NewGuid():N}"[..26], LastUpdated = new DateTime(2000, 1, 1),
+                    SupplierId = b.PartyInfoId, CustomerId = a.PartyInfoId,
+                };
+                ctx.InvoiceHeaders.Add(inv);
+                return inv;
+            }
+            var invalid = Add("01", "Invalid");            // B issues to A
+            var selfBilledInvalid = Add("11", "Invalid");  // A issues (self-billed)
+            var cancelled = Add("01", "Cancelled");
+            await ctx.SaveChangesAsync();
+
+            var jobs = new RecordingJobs();
+            var dispatcher = new eInvWorld.Services.Webhooks.WebhookDispatchService(jobs,
+                Options.Create(new eInvWorld.Models.Settings.WebhookSettings { Enabled = true }),
+                NullLogger<eInvWorld.Services.Webhooks.WebhookDispatchService>.Instance);
+            await dispatcher.ScanAndEnqueueAsync(ctx);
+
+            List<string> TinsFor(InvoiceHeader i) => jobs.Created.Where(c => c.Payload.Contains(i.InvoiceNo)).Select(c => c.Tin).OrderBy(t => t).ToList();
+            Assert.Equal(new[] { b.TIN! }, TinsFor(invalid));
+            Assert.Equal(new[] { a.TIN! }, TinsFor(selfBilledInvalid));
+            Assert.Equal(new[] { a.TIN!, b.TIN! }.OrderBy(t => t), TinsFor(cancelled));
         }
 
         [Fact]

@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.70`** (`AppInfo:Version` in `appsettings.json`). v1.50.70 is a **patch**
+> **Current version: `v1.50.71`** (`AppInfo:Version` in `appsettings.json`). v1.50.71 is a **patch**
+> release: recipients see an invoice only once LHDN validated it, everywhere — see the dated entry below. v1.50.70 was a **patch**
 > release: buyers no longer see a supplier's drafts — see the dated entry below. v1.50.69 was a **patch**
 > release: security audit fixes (invoice reference list, PDF upload check, external-login 2FA) — see the dated entry below. v1.50.68 was a **patch**
 > release: "Refresh from API" no longer fails between midnight and 08:00 Malaysia time — see the dated entry below. v1.50.67 was a **patch**
@@ -509,6 +510,26 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-16 — v1.50.71 (recipient visibility follows the LHDN lifecycle everywhere)
+
+- **Fixed: a recipient could see documents still pending LHDN validation.** v1.50.70's rule (and the older Received
+  tab) showed the recipient anything with a UUID that wasn't Draft/Invalid, which included LHDN **Submitted**. The rule
+  is now an allowlist: UUID and LHDN status **Valid, Cancelled** (LHDN cancels only validated documents) or
+  **Rejected** (defensive; LHDN leaves a rejected document Valid). A buyer's rejection request (internal RequestReject)
+  stays visible to the buyer. The Received tab uses the same rule (`UserExtensions.IsDeliveredStatus`).
+- **Fixed: other paths still matched "any party" (independent review):**
+  - Dashboard: the Today card (`FinanceTodayService`), the stat tiles, Needs Attention counts and recent invoices,
+    and the `InvoiceData` JSON handler. It returned the counterparty's aging drafts, its Invalid/pending documents
+    and **its staff usernames**. Drafts and staff names now come from invoices the company issued only.
+  - "Validation details" (`CanAccessInvoiceByUuidAsync`) let a recipient read an Invalid document's LHDN errors and
+    fetch them with the issuer's LHDN token. It now uses the shared rule, and the token TIN must be the caller's own.
+  - Webhooks sent "Invalid" events to the recipient's subscription. Now only to the issuer.
+  - Global search and the main dashboard decided "Admin" by role only; they now use the app-wide `IsAdmin`
+    (role and user type), like every invoice page.
+- Tests (SQL Server): every document type 01–04 and 11–14 × every lifecycle state for issuer and recipient
+  (`CanAccessInvoiceAsync`, `VisibleToTins`, the All and Received tabs), webhook recipients, the Today card. The
+  authorization matrix's invoice is now explicitly LHDN Valid.
+- No database change.
 ## 📅 2026-11-16 — v1.50.70 (buyers no longer see a supplier's drafts)
 
 - **Changed (owner decision): the receiving company sees an invoice only once it has reached LHDN.** Before, any party

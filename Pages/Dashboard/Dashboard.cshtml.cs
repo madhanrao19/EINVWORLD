@@ -118,10 +118,12 @@ namespace eInvWorld.Pages.Invoices
 
                     PrimaryCompanyId = companyIds.OrderBy(c => c).FirstOrDefault();
 
-                    // Base query for invoices applying company filter
+                    // Base query: the company's own invoices, and what it receives once LHDN validated it (never the
+                    // other company's drafts, errors or pending documents).
+                    var tins = UserExtensions.TinsOf(_context, companyIds);
                     var invoiceQuery = _context.InvoiceHeaders
                         .AsNoTracking()
-                        .Where(i => companyIds.Contains(i.CustomerId ?? 0) || companyIds.Contains(i.SupplierId ?? 0));
+                        .Where(UserExtensions.VisibleToTins(tins));
 
                     ActionTransmissionErrorCount = invoiceQuery.Count(i => i.InternalStatusId == "TransmissionError");
 
@@ -213,6 +215,7 @@ namespace eInvWorld.Pages.Invoices
                     {
                         RecentInvoices = _context.InvoiceHeaders.AsNoTracking()
                             .Where(i => companyIds.Contains(i.CustomerId ?? 0))
+                            .Where(UserExtensions.VisibleToTins(tins))
                             .Include(i => i.Supplier)
                             .Where(i => i.InternalStatusId != "Draft")
                             // 🔥 Risk Sorting: Bring "RequestReject" and "Invalid" to the very top!
@@ -268,7 +271,8 @@ namespace eInvWorld.Pages.Invoices
                         // 2. Base Query: Incoming invoices (where they are the Customer)
                         var buyerInvoices = _context.InvoiceHeaders
                             .AsNoTracking()
-                            .Where(i => companyIds.Contains(i.CustomerId ?? 0) && i.InternalStatusId != "Draft");
+                            .Where(i => companyIds.Contains(i.CustomerId ?? 0) && i.InternalStatusId != "Draft")
+                            .Where(UserExtensions.VisibleToTins(tins));
 
                         // Apply Date Filters
                         if (FilterType == "Day") { buyerInvoices = buyerInvoices.Where(i => i.CreatedDate.Date == FilterDate.Value.Date); }
@@ -339,11 +343,11 @@ namespace eInvWorld.Pages.Invoices
                 if (!companyIds.Any())
                     return new JsonResult(new { error = "No companies linked to user." });
 
+                var tins = UserExtensions.TinsOf(_context, companyIds);
                 var invoiceQuery = _context.InvoiceHeaders
                     .Include(i => i.Customer)
-                    .Where(i => i.InternalStatusId != "Draft" &&
-                                (companyIds.Contains(i.CustomerId ?? 0) ||
-                                 companyIds.Contains(i.SupplierId ?? 0)))
+                    .Where(i => i.InternalStatusId != "Draft")
+                    .Where(UserExtensions.VisibleToTins(tins))
                     .AsNoTracking();
 
                 // ✅ Apply the exact same Date Filters so the charts match the top cards
@@ -493,8 +497,10 @@ namespace eInvWorld.Pages.Invoices
                     .Take(5)
                     .ToList();
 
+                // Staff usernames only from invoices this company issued — never the counterparty's staff.
+                var issuedNos = invoiceQuery.Where(UserExtensions.IssuedByTins(tins)).Select(i => i.InvoiceNo).ToHashSet();
                 var internalErrorRates = invoices
-                    .Where(i => !string.IsNullOrEmpty(i.CreatedBy))
+                    .Where(i => issuedNos.Contains(i.InvoiceNo) && !string.IsNullOrEmpty(i.CreatedBy))
                     .GroupBy(i => i.CreatedBy)
                     .Select(g => new
                     {
@@ -522,8 +528,8 @@ namespace eInvWorld.Pages.Invoices
                     .Include(i => i.Customer)
                     .Include(i => i.PublicCustomer)
                     .Where(i => i.InternalStatusId == "Draft" &&
-                                i.CreatedDate <= threeDaysAgo && // Only grab drafts older than 3 days
-                                (companyIds.Contains(i.CustomerId ?? 0) || companyIds.Contains(i.SupplierId ?? 0)))
+                                i.CreatedDate <= threeDaysAgo) // Only grab drafts older than 3 days
+                    .Where(UserExtensions.IssuedByTins(tins)) // drafts are the issuer's alone
                     .AsNoTracking()
                     .Select(i => new
                     {

@@ -165,6 +165,12 @@ namespace eInvWorld.Pages.Invoices
                     .FirstOrDefaultAsync();
                 if (partyTins == null || !partyTins.Contains(tin))
                     return new JsonResult(new { success = false, message = "TIN does not match this invoice." });
+                // ...and to one of the caller's own companies: a counterparty must not spend the issuer's token.
+                var callerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!EINVWORLD.Helpers.UserExtensions.IsAdmin(User, _context)
+                    && (GeneralTINHelper.IsGeneralTIN(tin)
+                        || !await _context.UserCompanies.AnyAsync(uc => uc.UserId == callerId && uc.PartyInfo.TIN == tin)))
+                    return new JsonResult(new { success = false, message = "TIN does not match this invoice." });
 
                 var accessToken = await _tokenService.GetAccessTokenForTIN(tin);
                 if (string.IsNullOrEmpty(accessToken))
@@ -512,7 +518,7 @@ namespace eInvWorld.Pages.Invoices
         // the tab badge counts so the counts can never drift from what a tab actually shows — the
         // "All" branch is also the security backstop for an unrecognised direction value (same mandatory
         // scoping the export handler applies).
-        private static IQueryable<InvoiceHeader> ApplyDirectionFilter(
+        internal static IQueryable<InvoiceHeader> ApplyDirectionFilter(
             IQueryable<InvoiceHeader> query, string direction, List<string> userTINs)
         {
             var selfBilledTypes = new[] { "11", "12", "13", "14" };
@@ -532,11 +538,8 @@ namespace eInvWorld.Pages.Invoices
                         (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN)) ||
                         (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN))
                     )),
-                "Received" => query.Where(i =>
-                    i.InternalStatusId != "Draft" &&
-                    i.InternalStatusId != "Invalid" &&
-                    i.LHDNStatusId != "Invalid" &&
-                    !string.IsNullOrEmpty(i.UUID) &&
+                // Recipients see a document only once LHDN validated it (same lifecycle rule as VisibleToTins).
+                "Received" => query.Where(EINVWORLD.Helpers.UserExtensions.IsDeliveredStatus()).Where(i =>
                     (
                         (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
                         (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))

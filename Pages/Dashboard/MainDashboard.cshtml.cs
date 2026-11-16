@@ -28,7 +28,7 @@ namespace eInvWorld.Pages.Dashboard
                     .Where(i => i.InternalStatusId != "Draft" && i.IssueDate.HasValue);
 
                 // Tenant scope: same rule as the invoice list — only invoices where one party is the user's company.
-                if (!User.IsInRole("Admin"))
+                if (!EINVWORLD.Helpers.UserExtensions.IsAdmin(User, _context))
                 {
                     var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                     var userTins = _context.UserCompanies
