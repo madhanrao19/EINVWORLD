@@ -2121,20 +2121,11 @@ namespace EINVWORLD.Pages.Invoices
 
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-                // SECURITY: Get user's companies to ensure only their invoices are returned
-                var userCompanies = await _context.UserCompanies
-                    .Where(uc => uc.UserId == userId)
-                    .Select(uc => uc.PartyInfoId)
-                    .ToListAsync();
-
-                if (!userCompanies.Any())
-                {
-                    _logger.LogWarning("🔒 User {userId} has no associated companies - denying RefUUID access", userId);
-                    return new JsonResult(new List<object>());
-                }
-
-                // SECURITY: Verify the requested supplier belongs to the current user
-                if (!userCompanies.Contains(supplierId))
+                // SECURITY: the shared ownership guard — excludes view-only memberships and the LHDN general TINs
+                // every tenant shares, which a raw UserCompanies check would let list other tenants' invoices.
+                var supplierTin = await _context.PartyInfos.AsNoTracking()
+                    .Where(p => p.PartyInfoId == supplierId).Select(p => p.TIN).FirstOrDefaultAsync();
+                if (!await User.OwnsTinAsync(_context, supplierTin))
                 {
                     _logger.LogWarning("🔒 Security violation: User {userId} attempted to access invoices for supplier {supplierId} which doesn't belong to them", userId, supplierId);
                     return new JsonResult(new List<object>());
@@ -2181,8 +2172,7 @@ namespace EINVWORLD.Pages.Invoices
                     .ToListAsync();
 
                 _logger.LogInformation("✅ Found {count} invoices for reference selection (supplier access verified)", invoices.Count);
-                _logger.LogInformation("🔒 Security context: User {userId} with {companyCount} companies, accessing supplier {supplierId}",
-                    userId, userCompanies.Count, supplierId);
+                _logger.LogInformation("🔒 Security context: User {userId} accessing supplier {supplierId}", userId, supplierId);
 
                 // Log first few invoices for debugging
                 foreach (var inv in invoices.Take(3))

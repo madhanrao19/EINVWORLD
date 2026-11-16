@@ -61,6 +61,9 @@ namespace eInvWorld.Controllers
                     return StatusCode(403, new { success = false, message = "You can't save a PDF for this invoice." });
                 }
 
+                if (!await LooksLikePdfAsync(file))
+                    return BadRequest(new { success = false, message = "Only .pdf files are allowed." });
+
                 if (!Directory.Exists(pdfFolderPath))
                     Directory.CreateDirectory(pdfFolderPath);
 
@@ -79,6 +82,15 @@ namespace eInvWorld.Controllers
                 _logger.LogError(ex, "Error saving PDF");
                 return StatusCode(500, new { success = false, message = "An error occurred while saving the PDF." });
             }
+        }
+
+        /// <summary>True when the upload starts with the PDF signature "%PDF-" (decided by content, not name).</summary>
+        internal static async Task<bool> LooksLikePdfAsync(IFormFile file)
+        {
+            var head = new byte[5];
+            await using var stream = file.OpenReadStream();
+            int read = await stream.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false);
+            return read == head.Length && head.AsSpan().SequenceEqual("%PDF-"u8);
         }
 
 

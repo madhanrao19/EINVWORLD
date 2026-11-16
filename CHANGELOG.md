@@ -1,6 +1,7 @@
-﻿# 🧾 EINVWORLD Developer Change Log
+# 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.68`** (`AppInfo:Version` in `appsettings.json`). v1.50.68 is a **patch**
+> **Current version: `v1.50.69`** (`AppInfo:Version` in `appsettings.json`). v1.50.69 is a **patch**
+> release: security audit fixes (invoice reference list, PDF upload check, external-login 2FA) — see the dated entry below. v1.50.68 was a **patch**
 > release: "Refresh from API" no longer fails between midnight and 08:00 Malaysia time — see the dated entry below. v1.50.67 was a **patch**
 > release: Invoice Lists checks Submitted invoices more often and refreshes when they turn Valid — see the dated entry below. v1.50.66 was a **patch**
 > release: Production's CSP allows Cloudflare's two tag-gateway loader scripts by hash, so it can be enforced without losing analytics — see the dated entry below. v1.50.65 was a **patch**
@@ -507,6 +508,18 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-16 — v1.50.69 (security audit fixes)
+
+- **Fixed: the credit/debit/refund note reference list used a weaker company check.** `CreateInvoice`'s
+  `GetInvoicesForReference` checked raw company membership, so a membership of a shared LHDN general-TIN party
+  (e.g. General Public) or a view-only membership could list invoices issued under that party. It now uses the shared
+  `OwnsTinAsync` guard like the other invoice handlers.
+- **Hardened: `/api/invoice/save-pdf` keeps only real PDFs.** The upload must start with the `%PDF-` signature, not just
+  carry a `.pdf` name.
+- **Hardened: an external login can no longer skip 2FA.** No external provider is registered today; if one is added it
+  now goes through `LoginWith2fa` like a password sign-in.
+- Tests: `SavePdfSignatureTests`; `TenantIsolationP1Tests.Membership_Of_A_General_Tin_Party_Or_A_View_Only_Membership_Owns_Nothing`.
+- No database change.
 ## 📅 2026-11-15 — v1.50.68 ("Refresh from API" after midnight)
 
 - **Fixed: "Refresh from API" (and the background status sync) failed with LHDN 400 between 00:00 and 08:00 MYT.**
