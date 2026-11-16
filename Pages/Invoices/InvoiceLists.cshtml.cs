@@ -541,10 +541,7 @@ namespace eInvWorld.Pages.Invoices
                         (!selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Customer != null ? i.Customer.TIN : i.PublicCustomer!.TIN)) ||
                         (selfBilledTypes.Contains(i.DocTypeCode) && userTINs.Contains(i.Supplier.TIN))
                     )),
-                _ => query.Where(i =>
-                    userTINs.Contains(i.Supplier.TIN) ||
-                    (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                    (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN)))
+                _ => query.Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
             };
         }
 
@@ -2131,10 +2128,8 @@ namespace eInvWorld.Pages.Invoices
                     .Include(i => i.Supplier)
                     .Include(i => i.Customer)
                     .Where(i => visibleInvoiceNos.Contains(i.InvoiceNo) &&
-                                (i.LHDNStatusId == "Submitted" || (i.LHDNStatusId == "Valid" && i.DateTimeValidated > settledBeforeMyt)) &&
-                                (userTINs.Contains(i.Supplier.TIN) ||
-                                 (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                                 (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                                (i.LHDNStatusId == "Submitted" || (i.LHDNStatusId == "Valid" && i.DateTimeValidated > settledBeforeMyt)))
+                    .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
                     .ToListAsync(HttpContext.RequestAborted);
 
                 // A few per tick (the page asks every 30s): right after an app restart the in-memory cooldowns are empty, and
@@ -2212,10 +2207,8 @@ namespace eInvWorld.Pages.Invoices
                 var invoicesToCheck = await _context.InvoiceHeaders
                     .Include(i => i.Supplier)
                     .Include(i => i.Customer)
-                    .Where(i => uuids.Contains(i.UUID!) &&
-                                (userTINs.Contains(i.Supplier.TIN) ||
-                                 (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                                 (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                    .Where(i => uuids.Contains(i.UUID!))
+                    .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
                     .ToListAsync(HttpContext.RequestAborted);
 
                 foreach (var invoice in invoicesToCheck)
@@ -2283,10 +2276,8 @@ namespace eInvWorld.Pages.Invoices
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => uuids.Contains(i.UUID!) &&
-                            (userTINs.Contains(i.Supplier.TIN) ||
-                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .Where(i => uuids.Contains(i.UUID!))
+                .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
                 .ToListAsync(HttpContext.RequestAborted);
 
             int sentCount = 0;
@@ -2370,10 +2361,8 @@ namespace eInvWorld.Pages.Invoices
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)
-                .Where(i => (byInvoiceNo ? uuidList.Contains(i.InvoiceNo) : uuidList.Contains(i.UUID!)) &&
-                            (userTINs.Contains(i.Supplier.TIN) ||
-                             (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                             (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))))
+                .Where(i => byInvoiceNo ? uuidList.Contains(i.InvoiceNo) : uuidList.Contains(i.UUID!))
+                .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs))
                 .ToListAsync(HttpContext.RequestAborted);
 
             if (invoices.Count == 0)

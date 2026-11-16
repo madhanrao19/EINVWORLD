@@ -225,6 +225,50 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task Recipient_Cannot_See_The_Issuers_Draft_Until_It_Reaches_Lhdn()
+        {
+            // Owner decision 2026-11-16: buyers must not see a supplier's drafts (details, PDF, All tab, search).
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (a, b, _, ownerA) = await SeedAsync(ctx, "draft");
+            var ownerBId = await CreateUserAsync(ctx, "iso-draft-ownerb");
+            ctx.UserCompanies.Add(new UserCompany { UserId = ownerBId, PartyInfoId = b.PartyInfoId, HasCompanyAccess = true, IsPrimaryCompany = true });
+            await ctx.SaveChangesAsync();
+            var ownerB = PrincipalFor(ownerBId, (await ctx.Users.FindAsync(ownerBId))!.UserName!, "Supplier");
+
+            InvoiceHeader Invoice(string type, int supplierId, int customerId, string status, string? uuid)
+            {
+                var no = $"INV-DRF-{Guid.NewGuid():N}"[..20];
+                var inv = new InvoiceHeader
+                {
+                    InvoiceNo = no, PrefixedID = no, DocTypeCode = type, Currency = "MYR", CreatedDate = DateTime.UtcNow,
+                    CreatedBy = "integration-test", InternalStatusId = status, SupplierId = supplierId, CustomerId = customerId, UUID = uuid,
+                };
+                ctx.InvoiceHeaders.Add(inv);
+                return inv;
+            }
+            var draft = Invoice("01", b.PartyInfoId, a.PartyInfoId, "Draft", null);              // B issues to A
+            var delivered = Invoice("01", b.PartyInfoId, a.PartyInfoId, "Valid", $"D{Guid.NewGuid():N}"[..26]);
+            var selfBilledDraft = Invoice("11", b.PartyInfoId, a.PartyInfoId, "Draft", null);    // A issues (self-billed)
+            await ctx.SaveChangesAsync();
+
+            async Task<bool> Can(ClaimsPrincipal u, InvoiceHeader i) => await EINVWORLD.Helpers.UserExtensions.CanAccessInvoiceAsync(u, ctx, i.InvoiceNo);
+            Assert.True(await Can(ownerB, draft));            // issuer sees its own draft
+            Assert.False(await Can(ownerA, draft));           // recipient does not
+            Assert.True(await Can(ownerA, delivered));        // ...until it has reached LHDN
+            Assert.True(await Can(ownerA, selfBilledDraft));  // self-billed: the customer is the issuer
+            Assert.False(await Can(ownerB, selfBilledDraft)); // and the supplier only receives it
+
+            // The same rule as a query (All tab, search, bulk PDF): A sees the delivered one and its self-billed draft only.
+            var aTins = new List<string> { a.TIN! };
+            var visible = await ctx.InvoiceHeaders
+                .Where(i => i.InvoiceNo == draft.InvoiceNo || i.InvoiceNo == delivered.InvoiceNo || i.InvoiceNo == selfBilledDraft.InvoiceNo)
+                .Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(aTins))
+                .Select(i => i.InvoiceNo).ToListAsync();
+            Assert.Equal(new[] { delivered.InvoiceNo, selfBilledDraft.InvoiceNo }.OrderBy(x => x), visible.OrderBy(x => x));
+        }
+
+        [Fact]
         public async Task Supplier_Cannot_Open_Or_Post_Company_Create()
         {
             if (!_fx.Available) return;

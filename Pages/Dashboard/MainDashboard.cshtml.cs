@@ -36,9 +36,7 @@ namespace eInvWorld.Pages.Dashboard
                         .Select(uc => uc.PartyInfo.TIN)
                         .ToList();
                     userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
-                    query = query.Where(i => userTins.Contains(i.Supplier.TIN)
-                        || (i.Customer != null && userTins.Contains(i.Customer.TIN))
-                        || (i.PublicCustomer != null && userTins.Contains(i.PublicCustomer.TIN)));
+                    query = query.Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTins));
                 }
 
                 var invoices = query.AsNoTracking().ToList();

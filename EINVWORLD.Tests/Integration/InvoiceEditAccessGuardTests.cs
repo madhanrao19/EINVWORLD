@@ -170,7 +170,9 @@ namespace EINVWORLD.Tests.Integration
 
             var supplierPrincipal = PrincipalFor(supplierUserId, supplierUserName);
             var customerPrincipal = PrincipalFor(customerUserId, customerUserName);
-            Assert.True(await UserExtensions.CanAccessInvoiceAsync(supplierPrincipal, ctx, invoiceNo));
+            // Not yet at LHDN (no UUID): only the issuer (the customer, for self-billed) sees it; the supplier is the
+            // recipient here and must not see the undelivered document (owner decision 2026-11-16).
+            Assert.False(await UserExtensions.CanAccessInvoiceAsync(supplierPrincipal, ctx, invoiceNo));
             Assert.True(await UserExtensions.CanAccessInvoiceAsync(customerPrincipal, ctx, invoiceNo));
         }
 
@@ -201,8 +203,8 @@ namespace EINVWORLD.Tests.Integration
         [Fact]
         public async Task CanManageInvoiceAsync_Allows_Only_The_Issuer_Not_The_Counterparty()
         {
-            // Write access (delete from list, later save-draft) must be issuer-only: the buyer can SEE a
-            // supplier's draft through CanAccessInvoiceAsync but must not delete it. For self-billed (11-14)
+            // Write access (delete from list, later save-draft) must be issuer-only. Since 2026-11-16 the buyer
+            // can't even see a supplier's undelivered draft (CanAccessInvoiceAsync). For self-billed (11-14)
             // the issuer is the customer, so the roles flip.
             if (!_fx.Available) return;
             await using var ctx = _fx.CreateContext();
@@ -234,8 +236,8 @@ namespace EINVWORLD.Tests.Integration
             var supplier = PrincipalFor(supplierUserId, "manage-supplier");
             var buyer = PrincipalFor(buyerUserId, "manage-buyer");
 
-            Assert.True(await UserExtensions.CanAccessInvoiceAsync(buyer, ctx, normalNo));   // can see it...
-            Assert.False(await UserExtensions.CanManageInvoiceAsync(buyer, ctx, normalNo));  // ...but not change it
+            Assert.False(await UserExtensions.CanAccessInvoiceAsync(buyer, ctx, normalNo));  // can't see the draft...
+            Assert.False(await UserExtensions.CanManageInvoiceAsync(buyer, ctx, normalNo));  // ...nor change it
             Assert.True(await UserExtensions.CanManageInvoiceAsync(supplier, ctx, normalNo));
 
             Assert.True(await UserExtensions.CanManageInvoiceAsync(buyer, ctx, selfBilledNo));
