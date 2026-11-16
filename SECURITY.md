@@ -6,10 +6,9 @@ report a problem responsibly.
 
 ## Reporting a vulnerability
 
-**Do not open a public GitHub issue for a security vulnerability.** Instead, email:
-
-> **security@einvworld.com** *(replace with your organisation's actual monitored security inbox before
-> publishing this file — see the note at the bottom)*
+**Do not open a public GitHub issue for a security vulnerability.** Instead, report it privately through
+GitHub: open this repository's **Security** tab and choose **Report a vulnerability**
+(<https://github.com/madhanrao19/EINVWORLD/security/advisories/new>). Only the maintainers can see the report.
 
 Include, if possible:
 - A description of the vulnerability and its potential impact.
@@ -61,7 +60,3 @@ Given the domain, these categories are treated as **high priority**:
 Confirmed vulnerabilities are fixed in a dedicated, CI-gated PR (per `CLAUDE.md`'s engineering loop),
 noted in `CHANGELOG.md` at a level of detail that doesn't itself constitute a disclosure advisory before a
 fix has shipped to affected deployments, and credited to the reporter if they wish.
-
----
-*Maintainers: replace the placeholder email above with a real, monitored inbox (and consider a PGP key)
-before relying on this policy in production.*
