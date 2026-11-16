@@ -911,7 +911,6 @@
     <None Include="wwwroot\assets\js\pages\job-list.init.js" />
     <None Include="wwwroot\assets\js\pages\job-statistics.init.js" />
     <None Include="wwwroot\assets\js\pages\landing.init.js" />
-    <None Include="wwwroot\assets\js\pages\leaflet-map.init.js" />
     <None Include="wwwroot\assets\js\pages\leaflet-us-states.js" />
     <None Include="wwwroot\assets\js\pages\listjs.init.js" />
     <None Include="wwwroot\assets\js\pages\mailbox.init.js" />
