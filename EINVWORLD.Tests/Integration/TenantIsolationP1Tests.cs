@@ -205,6 +205,26 @@ namespace EINVWORLD.Tests.Integration
         }
 
         [Fact]
+        public async Task Membership_Of_A_General_Tin_Party_Or_A_View_Only_Membership_Owns_Nothing()
+        {
+            // CreateInvoice's GetInvoicesForReference relies on OwnsTinAsync: a (legacy) membership of the shared
+            // "General Public" party must not list every tenant's invoices issued under it; view-only can't issue.
+            if (!_fx.Available) return;
+            await using var ctx = _fx.CreateContext();
+            var (a, b, ownerId, owner) = await SeedAsync(ctx, "gentin");
+            b.TIN = "EI00000000010";
+            ctx.UserCompanies.Add(new UserCompany { UserId = ownerId, PartyInfoId = b.PartyInfoId, HasCompanyAccess = true });
+            var viewerId = await CreateUserAsync(ctx, "iso-gentin-viewer");
+            ctx.UserCompanies.Add(new UserCompany { UserId = viewerId, PartyInfoId = a.PartyInfoId, IsViewOnly = true });
+            await ctx.SaveChangesAsync();
+            var viewer = PrincipalFor(viewerId, (await ctx.Users.FindAsync(viewerId))!.UserName!, "Supplier");
+
+            Assert.False(await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(owner, ctx, b.TIN));
+            Assert.True(await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(owner, ctx, a.TIN));
+            Assert.False(await EINVWORLD.Helpers.UserExtensions.OwnsTinAsync(viewer, ctx, a.TIN));
+        }
+
+        [Fact]
         public async Task Supplier_Cannot_Open_Or_Post_Company_Create()
         {
             if (!_fx.Available) return;
