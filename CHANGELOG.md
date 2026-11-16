@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.69`** (`AppInfo:Version` in `appsettings.json`). v1.50.69 is a **patch**
+> **Current version: `v1.50.70`** (`AppInfo:Version` in `appsettings.json`). v1.50.70 is a **patch**
+> release: buyers no longer see a supplier's drafts — see the dated entry below. v1.50.69 was a **patch**
 > release: security audit fixes (invoice reference list, PDF upload check, external-login 2FA) — see the dated entry below. v1.50.68 was a **patch**
 > release: "Refresh from API" no longer fails between midnight and 08:00 Malaysia time — see the dated entry below. v1.50.67 was a **patch**
 > release: Invoice Lists checks Submitted invoices more often and refreshes when they turn Valid — see the dated entry below. v1.50.66 was a **patch**
@@ -508,6 +509,18 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-16 — v1.50.70 (buyers no longer see a supplier's drafts)
+
+- **Changed (owner decision): the receiving company sees an invoice only once it has reached LHDN.** Before, any party
+  on an invoice could open it in every status, so a buyer could see the supplier's unsubmitted drafts through the
+  "All" tab, Invoice Details, PDF download, bulk PDF and global search, although the "Received" tab hid them.
+- One shared rule now decides visibility: `UserExtensions.VisibleToTins` — the issuer sees all its invoices; the
+  recipient sees them only when they are not Draft or Invalid and have an LHDN UUID (the Received tab's rule).
+  Self-billed types 11–14 are issued by the customer. Used by `CanAccessInvoiceAsync` (details, PDF, clone, edit),
+  the Invoice Lists "All" tab and bulk handlers, global search and the main dashboard. Admins are unchanged.
+- Tests: `TenantIsolationP1Tests.Recipient_Cannot_See_The_Issuers_Draft_Until_It_Reaches_Lhdn`; two
+  `InvoiceEditAccessGuardTests` updated to the new rule.
+- No database change.
 ## 📅 2026-11-16 — v1.50.69 (security audit fixes)
 
 - **Fixed: the credit/debit/refund note reference list used a weaker company check.** `CreateInvoice`'s

@@ -89,9 +89,9 @@ namespace EINVWORLD.Helpers
 
         /// <summary>
         /// Authorization check for invoice access (prevents IDOR on download/detail endpoints).
-        /// A user may access an invoice only if one of its party TINs (Supplier / Customer /
-        /// PublicCustomer) belongs to one of the user's companies — the SAME rule the invoice list
-        /// uses for visibility — or if the user is an Admin.
+        /// A user may access an invoice only if <see cref="VisibleToTins"/> allows it for the user's company TINs
+        /// (the issuer always; the recipient once it reached LHDN — the SAME rule the invoice list uses), or if
+        /// the user is an Admin.
         /// </summary>
         public static async Task<bool> CanAccessInvoiceAsync(this ClaimsPrincipal user, ApplicationDbContext db, string invoiceNo)
         {
@@ -110,20 +110,29 @@ namespace EINVWORLD.Helpers
             userTins.RemoveAll(GeneralTINHelper.IsGeneralTIN);
             if (userTins.Count == 0) return false;
 
-            var party = await db.InvoiceHeaders
-                .Where(i => i.InvoiceNo == invoiceNo)
-                .Select(i => new
-                {
-                    S = (string?)i.Supplier.TIN,
-                    C = i.Customer != null ? i.Customer.TIN : null,
-                    P = i.PublicCustomer != null ? i.PublicCustomer.TIN : null
-                })
-                .FirstOrDefaultAsync();
-            if (party == null) return false;
+            return await db.InvoiceHeaders.Where(i => i.InvoiceNo == invoiceNo).Where(VisibleToTins(userTins)).AnyAsync();
+        }
 
-            return (party.S != null && userTins.Contains(party.S))
-                || (party.C != null && userTins.Contains(party.C))
-                || (party.P != null && userTins.Contains(party.P));
+        /// <summary>
+        /// The invoices a non-Admin holding <paramref name="tins"/> may see: everything their company issues, in any
+        /// status, and what they receive once it has reached LHDN (the Received tab's rule: not Draft, not Invalid,
+        /// has a UUID). So a buyer never sees the issuer's drafts. Self-billed types 11–14 are issued by the customer.
+        /// Translates to SQL; callers remove general TINs from <paramref name="tins"/> first.
+        /// </summary>
+        public static System.Linq.Expressions.Expression<Func<InvoiceHeader, bool>> VisibleToTins(List<string> tins)
+        {
+            var selfBilled = new[] { "11", "12", "13", "14" };
+            return i =>
+                // issuer side
+                (!selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN)) ||
+                (selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
+                                                       || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN)))) ||
+                // recipient side, only once delivered
+                (i.InternalStatusId != "Draft" && i.InternalStatusId != "Invalid" && i.LHDNStatusId != "Invalid"
+                 && i.UUID != null && i.UUID != ""
+                 && ((!selfBilled.Contains(i.DocTypeCode) && ((i.Customer != null && tins.Contains(i.Customer.TIN))
+                                                              || (i.PublicCustomer != null && tins.Contains(i.PublicCustomer.TIN))))
+                     || (selfBilled.Contains(i.DocTypeCode) && tins.Contains(i.Supplier.TIN))));
         }
 
         /// <summary>Same ownership check as <see cref="CanAccessInvoiceAsync"/> but keyed by the document UUID (for cancel/reject handlers).

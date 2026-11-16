@@ -162,11 +162,7 @@ namespace eInvWorld.Controllers
             else if (userTINs.Any())
             {
                 // ✅ Safe TIN-based filtering matching your list page logic
-                invoiceQuery = invoiceQuery.Where(i =>
-                    (i.Supplier != null && userTINs.Contains(i.Supplier.TIN)) ||
-                    (i.Customer != null && userTINs.Contains(i.Customer.TIN)) ||
-                    (i.PublicCustomer != null && userTINs.Contains(i.PublicCustomer.TIN))
-                );
+                invoiceQuery = invoiceQuery.Where(EINVWORLD.Helpers.UserExtensions.VisibleToTins(userTINs));
             }
             else
             {
