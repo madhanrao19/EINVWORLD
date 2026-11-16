@@ -480,7 +480,7 @@ namespace eInvWorld.Pages.Invoices
                     .ToList();
 
                 // Staff usernames only from invoices this company issued — never the counterparty's staff.
-                var issuedNos = invoiceQuery.Where(UserExtensions.IssuedByTins(tins)).Select(i => i.InvoiceNo).ToHashSet();
+                var issuedNos = invoiceQuery.Where(UserExtensions.IssuedByCompanies(companyIds)).Select(i => i.InvoiceNo).ToHashSet();
                 var internalErrorRates = invoices
                     .Where(i => issuedNos.Contains(i.InvoiceNo) && !string.IsNullOrEmpty(i.CreatedBy))
                     .GroupBy(i => i.CreatedBy)

@@ -73,6 +73,7 @@ namespace eInvWorld.Services.Webhooks
             var pending = await db.InvoiceHeaders
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
+                .Include(i => i.PublicCustomer)
                 .Where(i => i.LHDNStatusId != null
                             && TerminalStatuses.Contains(i.LHDNStatusId)
                             && (i.WebhookNotifiedStatus == null || i.WebhookNotifiedStatus != i.LHDNStatusId)
@@ -94,9 +95,10 @@ namespace eInvWorld.Services.Webhooks
                 // status it may see (UserExtensions.DeliveredLhdnStatuses) — never an Invalid document it never received.
                 var selfBilled = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(invoice.DocTypeCode);
                 var issuerTin = selfBilled ? invoice.Customer?.TIN : invoice.Supplier?.TIN;
-                var recipientTin = selfBilled ? invoice.Supplier?.TIN : invoice.Customer?.TIN;
+                // A walk-in (PublicCustomer) buyer is a recipient too: the company holding that TIN sees it in its Received tab.
+                var recipientTin = selfBilled ? invoice.Supplier?.TIN : invoice.Customer?.TIN ?? invoice.PublicCustomer?.TIN;
                 var tins = new[] { issuerTin, EINVWORLD.Helpers.UserExtensions.DeliveredLhdnStatuses.Contains(status) ? recipientTin : null }
-                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Where(t => !string.IsNullOrWhiteSpace(t) && !EINVWORLD.Helpers.GeneralTINHelper.IsGeneralTIN(t)) // shared by every tenant
                     .Select(t => t!)
                     .Distinct(StringComparer.OrdinalIgnoreCase);
 

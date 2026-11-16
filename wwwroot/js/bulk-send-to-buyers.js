@@ -67,10 +67,15 @@ async function executeBulkSendToBuyers(uuids) {
             body: JSON.stringify(uuids)
         });
 
+        if (response.status === 429) {
+            Swal.fire('Too Many Sends', 'Please wait a minute before sending again.', 'warning');
+            return;
+        }
+
         const data = await response.json();
 
         if (!data.success) {
-            Swal.fire('Could Not Send', 'Please try again.', 'warning');
+            Swal.fire('Could Not Send', escapeBulkHtml(data.message || 'Please try again.'), 'warning');
             return;
         }
 

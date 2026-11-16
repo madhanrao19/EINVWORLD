@@ -38,6 +38,7 @@ using Documents = eInvWorld.Models.JsonModels.Documents;
 namespace eInvWorld.Pages.Invoices
 {
     [Authorize(Roles = "Admin,Supplier,Buyer")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(EINVWORLD.Helpers.SendToBuyersRateLimit.Policy)] // BulkSendToBuyers only
     public class InvoiceListsModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -79,6 +80,9 @@ namespace eInvWorld.Pages.Invoices
         public string UserType { get; set; } = null!;
         public bool IsViewOnly { get; set; } = false;
         public List<string> UserTINs { get; set; } = new();
+
+        /// <summary>Rows whose "Created By" (the issuer's staff username) this user may see: their company issued them, or they are an Admin.</summary>
+        public HashSet<string> CreatorVisibleInvoiceNos { get; set; } = new();
         public string? SortBy { get; set; }
         public string? SortOrder { get; set; }
 
@@ -479,6 +483,14 @@ namespace eInvWorld.Pages.Invoices
                 // KPI strip total value — same tab-wide, pre-filter scope as InvoiceSummaryByStatus above.
                 TabTotalAmount = await query.SumAsync(i => (decimal?)i.TotalAmountIncTax) ?? 0m;
 
+                // "Created By" is the issuer's staff username: shown, and searchable, only on invoices the user's own
+                // company issued (Admins: all), so a recipient can neither read nor probe the counterparty's usernames.
+                var seesAllCreators = EINVWORLD.Helpers.UserExtensions.IsAdmin(User, _context);
+                var issuedByMe = EINVWORLD.Helpers.UserExtensions.IssuedByCompanies(
+                    await EINVWORLD.Helpers.UserExtensions.OwnCompanyIdsAsync(User, _context, forWrite: false));
+                if (!string.IsNullOrEmpty(createdBy) && !seesAllCreators)
+                    query = query.Where(issuedByMe);
+
                 //  Apply additional filters. Always call this — besides filtering, ApplyFilters applies a
                 //  deterministic OrderBy that pagination (Skip/Take below) requires.
                 query = ApplyFilters(query, submissionDateFrom, submissionDateTo, status, documentType, searchQuery,
@@ -493,6 +505,8 @@ namespace eInvWorld.Pages.Invoices
                              .Take(pageSizeValue);
 
                 Invoices = await query.ToListAsync();
+                var isIssuedByMe = issuedByMe.Compile();
+                CreatorVisibleInvoiceNos = Invoices.Where(i => seesAllCreators || isIssuedByMe(i)).Select(i => i.InvoiceNo).ToHashSet();
 
                 Metadata = new Metadata
                 {
@@ -2242,8 +2256,12 @@ namespace eInvWorld.Pages.Invoices
         // entry instead, so the audit trail keeps both facts.
         /// <summary>Invoices "Send to buyers" may email: only those the caller's company issued (self-billed 11–14: the
         /// customer). A recipient can see a validated invoice but must not send the issuer's email for it.</summary>
-        internal static IQueryable<InvoiceHeader> SendToBuyersScope(IQueryable<InvoiceHeader> query, List<string> uuids, List<string> issuerTins) =>
-            query.Where(i => uuids.Contains(i.UUID!)).Where(EINVWORLD.Helpers.UserExtensions.IssuedByTins(issuerTins));
+        internal static IQueryable<InvoiceHeader> SendToBuyersScope(IQueryable<InvoiceHeader> query, List<string> uuids, List<int> issuerCompanyIds) =>
+            query.Where(i => uuids.Contains(i.UUID!)).Where(EINVWORLD.Helpers.UserExtensions.IssuedByCompanies(issuerCompanyIds));
+
+        /// <summary>Most invoices one "Send to buyers" request may email (config <c>Invoices:SendToBuyersMaxBatch</c>, default 50).</summary>
+        internal static int SendToBuyersMaxBatch(IConfiguration config) =>
+            Math.Clamp(config.GetValue("Invoices:SendToBuyersMaxBatch", 50), 1, 500);
 
         public async Task<JsonResult> OnPostBulkSendToBuyersAsync([FromBody] List<string> uuids)
         {
@@ -2252,22 +2270,22 @@ namespace eInvWorld.Pages.Invoices
             if (uuids.Count == 0)
                 return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
 
+            // Each one sends a real email, synchronously: refuse oversized batches outright rather than send part of one.
+            var maxBatch = SendToBuyersMaxBatch(_configuration);
+            if (uuids.Count > maxBatch)
+                return new JsonResult(new { success = false, sentCount = 0, skippedCount = 0, message = $"Select at most {maxBatch} invoices per send." }) { StatusCode = 400 };
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
                 return new JsonResult(new { success = false, sentCount = 0, skippedCount = 0 });
 
-            // Emailing buyers is an action, so view-only memberships don't count (view, print and download only).
-            var userTINs = await _context.UserCompanies
-                .Where(uc => uc.UserId == user.Id && !uc.IsViewOnly)
-                .Select(uc => uc.PartyInfo.TIN)
-                .Distinct()
-                .ToListAsync(HttpContext.RequestAborted);
+            // Emailing buyers is an issuer action (same rule as cancel/edit): non-view-only memberships of the issuing company.
+            var issuerCompanyIds = await User.OwnCompanyIdsAsync(_context, forWrite: true);
+            if (issuerCompanyIds.Count == 0)
+                return new JsonResult(new { success = true, sentCount = 0, skippedCount = uuids.Count,
+                    skipped = new[] { $"{uuids.Count} invoice(s) skipped: only the issuing company can send them." } });
 
-            userTINs.RemoveAll(GeneralTINHelper.IsGeneralTIN); // shared LHDN placeholder TINs must never widen scope
-            if (!userTINs.Any())
-                return new JsonResult(new { success = true, sentCount = 0, skippedCount = 0 });
-
-            var invoices = await SendToBuyersScope(_context.InvoiceHeaders, uuids, userTINs)
+            var invoices = await SendToBuyersScope(_context.InvoiceHeaders, uuids, issuerCompanyIds)
                 .Include(i => i.Supplier)
                 .Include(i => i.Customer)
                 .Include(i => i.PublicCustomer)

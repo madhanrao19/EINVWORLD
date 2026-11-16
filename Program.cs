@@ -622,6 +622,25 @@ builder.Services.AddRateLimiter(options =>
             });
     });
 
+    // "Send to buyers" POSTs email real customers: cap them per user (the batch size is capped separately,
+    // Invoices:SendToBuyersMaxBatch). Configurable via RateLimiting:SendToBuyersPerMinute (default 5).
+    var sendToBuyersPerMinute = builder.Configuration.GetValue("RateLimiting:SendToBuyersPerMinute", 5);
+    options.AddPolicy(EINVWORLD.Helpers.SendToBuyersRateLimit.Policy, httpContext =>
+    {
+        if (!rateLimitEnabled || !EINVWORLD.Helpers.SendToBuyersRateLimit.Applies(httpContext))
+            return System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("not-a-send");
+        var user = httpContext.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "anon";
+        return System.Threading.RateLimiting.RateLimitPartition.GetSlidingWindowLimiter(user,
+            _ => new System.Threading.RateLimiting.SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = sendToBuyersPerMinute <= 0 ? 5 : sendToBuyersPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            });
+    });
+
     // Anonymous form POSTs (login, register, forgot/resend, contact, customer info, CSP reports): per IP and per
     // path, so one form's traffic never uses up another's (CSP reports can't block a login). GETs are not limited.
     // Configurable via RateLimiting:PublicFormsPerMinute (default 20, leaving room for an office behind one NAT IP).

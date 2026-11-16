@@ -104,6 +104,13 @@ namespace EINVWORLD.Helpers
             if (Blank(config["EmailConfiguration:Default:SmtpPassword"]))
                 warnings.Add("EmailConfiguration:Default:SmtpPassword is empty — outgoing email will fail unless the relay accepts unauthenticated mail.");
 
+            // ── Host filtering ────────────────────────────────────────────────────────────
+            // A warning, not an error: links are built from configured base URLs (EmailLinks), never the Host header,
+            // and the tunnel fixes Host — but naming the hosts is defence in depth against Host-header abuse.
+            var allowedHosts = config["AllowedHosts"];
+            if (isProduction && (Blank(allowedHosts) || allowedHosts!.Split(';').Any(h => h.Trim() == "*")))
+                warnings.Add("AllowedHosts is \"*\" in Production — set it to the site's host names (env var AllowedHosts, e.g. \"einvworld.com;www.einvworld.com\") so requests for any other Host are refused.");
+
             // ── AI (optional, off by default) ─────────────────────────────────────────────
             if (config.GetValue("AI:Enabled", false))
             {
