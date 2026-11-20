@@ -27,6 +27,6 @@
   },
   "homepage": "https://github.com/madhanrao19/EINVWORLD#readme",
   "devDependencies": {
-    "@playwright/test": "^1.65.0"
+    "@playwright/test": "^1.65.1"
   }
 }
