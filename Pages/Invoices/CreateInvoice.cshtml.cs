@@ -646,7 +646,7 @@ namespace EINVWORLD.Pages.Invoices
                 Invoice.ExchangeRate = originalInvoice.ExchangeRate;
 
                 // Set issue date to today for the adjustment document
-                Invoice.IssueDate = DateTime.Now.Date;
+                Invoice.IssueDate = DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow); // keep the time, as every other create path does
 
                 // Copy payment terms and other details
                 Invoice.PaymentTerms = originalInvoice.PaymentTerms;
