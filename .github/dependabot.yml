@@ -35,6 +35,11 @@ updates:
     labels:
       - "dependencies"
       - "ci"
+    # init and analyze must run the same version (CodeQL fails otherwise), so bump them in one PR.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
 
   # npm: the Playwright QA tooling (package.json). The vendored front-end libraries under wwwroot/assets/libs
   # and libman.json are not a format Dependabot reads; check those by hand when updating them.
