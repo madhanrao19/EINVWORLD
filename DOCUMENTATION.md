@@ -226,9 +226,10 @@ submit/cancel/reject/poll/search.
 Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed RN.
 
 **Original-invoice reference (02-04, 12-14)** — LHDN checks `BillingReference/InvoiceDocumentReference/ID` against
-the ID the original was submitted under (DR313). `InvoiceMapper` sends the original's EINVWORLD invoice number, found
-by Reference UUID within the issuing company (supplier, or buyer for self-billed). Only when the original isn't in
-EINVWORLD (or its number carries sync's "(n)" collision suffix) does it send the typed Reference Document Number,
+the ID the original was submitted under (DR313). `InvoiceMapper` sends the original's LHDN internal ID (`PrefixedID`:
+its invoice number when issued here; for a synced invoice, LHDN's ID without the "(n)" suffix sync adds to its
+InvoiceNo when that number is taken, since v1.50.79), found by Reference UUID within the issuing company (supplier, or
+buyer for self-billed). Only when the original isn't in EINVWORLD does it send the typed Reference Document Number,
 and "Ready for LHDN" warns that it must match exactly. Reference Document Number is otherwise the user's own reference
 for the PDF. The JSON is built on save, so a draft saved before v1.50.74 needs saving again. The same holds when the
 original reaches EINVWORLD (e.g. by sync) after the note was saved: "Ready for LHDN" looks the original up at submit

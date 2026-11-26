@@ -391,7 +391,7 @@ namespace eInvWorld.Services.Mappers
 
         /// <summary>
         /// The original's internal ID for InvoiceDocumentReference. LHDN checks it against the ID the original was
-        /// submitted under (DR313), which for an original issued here is its InvoiceNo, not the user's free-text
+        /// submitted under (DR313), which is its PrefixedID (its InvoiceNo when issued here), not the user's free-text
         /// Reference Document Number. Falls back to that text when the original isn't found here (issued elsewhere).
         /// </summary>
         private string ReferencedDocumentId(InputModel.InvoiceHeader header)
@@ -405,22 +405,13 @@ namespace eInvWorld.Services.Mappers
             return original;
         }
 
-        // Sync appends "(n)" to an LHDN internal ID that collides with an existing InvoiceNo (InvoiceFullSyncHelper).
-        private static readonly System.Text.RegularExpressions.Regex SyncCollisionSuffix =
-            new(@"\(\d+\)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+        /// <summary>The ID LHDN holds the original under, or null when no original was found here.</summary>
+        public static string? OriginalInternalId(string? originalId) =>
+            string.IsNullOrWhiteSpace(originalId) ? null : originalId.Trim();
 
         /// <summary>
-        /// The ID LHDN holds the original under: its InvoiceNo, or null when unknown (none found, or an InvoiceNo with
-        /// sync's "(n)" collision suffix, which LHDN never saw).
-        /// shortcut: the suffix check also drops a real LHDN ID ending in "(n)" (fallback + warning only); upgrade by
-        /// storing LHDN's internal ID in its own column.
-        /// </summary>
-        public static string? OriginalInternalId(string? originalInvoiceNo) =>
-            string.IsNullOrWhiteSpace(originalInvoiceNo) || SyncCollisionSuffix.IsMatch(originalInvoiceNo.Trim())
-                ? null : originalInvoiceNo.Trim();
-
-        /// <summary>
-        /// InvoiceNo of the original an adjustment note (02-04, 12-14) references by RefUUID, issued by the same party
+        /// LHDN internal ID (PrefixedID: sync keeps it without the "(n)" collision suffix its InvoiceNo may carry) of the
+        /// original an adjustment note (02-04, 12-14) references by RefUUID, issued by the same party
         /// as the note (the supplier, or the buyer for self-billed), so another company's invoice is never used.
         /// Empty for other document types or without a real RefUUID.
         /// </summary>
@@ -431,12 +422,13 @@ namespace eInvWorld.Services.Mappers
             // Create/Edit build the header with the Supplier navigation set but SupplierId left null.
             var supplierId = note.SupplierId ?? note.Supplier?.PartyInfoId;
             var customerId = note.CustomerId ?? note.Customer?.PartyInfoId;
-            if (uuid == null) return invoices.Where(_ => false).Select(i => i.InvoiceNo);
+            if (uuid == null) return invoices.Where(_ => false).Select(i => i.PrefixedID);
             var matches = invoices.Where(i => i.UUID == uuid && i.InvoiceNo != noteNo);
             matches = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(note.DocTypeCode)
                 ? matches.Where(i => customerId != null && i.CustomerId == customerId)
                 : matches.Where(i => supplierId != null && i.SupplierId == supplierId);
-            return matches.Select(i => i.InvoiceNo).OrderBy(no => no); // deterministic if a UUID ever repeats
+            return matches.OrderBy(i => i.InvoiceNo) // deterministic if a UUID ever repeats
+                .Select(i => i.PrefixedID != null && i.PrefixedID != "" ? i.PrefixedID : i.InvoiceNo);
         }
 
 

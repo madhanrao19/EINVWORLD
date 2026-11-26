@@ -282,7 +282,7 @@ namespace EINVWORLD.Helpers
                     invoice = new InvoiceHeader
                     {
                         InvoiceNo = finalInvoiceNo,
-                        PrefixedID = finalInvoiceNo,
+                        PrefixedID = summary.internalId, // the ID LHDN holds it under; InvoiceNo may carry a "(n)" suffix
                         Currency = currencyCode,
                         ForeignCurrency = foreignCurrency,
                         ExchangeRate = exchangeRate,
