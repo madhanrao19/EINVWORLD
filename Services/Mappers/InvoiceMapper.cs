@@ -436,7 +436,7 @@ namespace eInvWorld.Services.Mappers
             matches = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(note.DocTypeCode)
                 ? matches.Where(i => customerId != null && i.CustomerId == customerId)
                 : matches.Where(i => supplierId != null && i.SupplierId == supplierId);
-            return matches.Select(i => i.InvoiceNo);
+            return matches.Select(i => i.InvoiceNo).OrderBy(no => no); // deterministic if a UUID ever repeats
         }
 
 
