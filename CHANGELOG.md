@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.76`** (`AppInfo:Version` in `appsettings.json`). v1.50.76 is a **patch**
+> **Current version: `v1.50.77`** (`AppInfo:Version` in `appsettings.json`). v1.50.77 is a **patch**
+> release: Invoice Edit sends self-billed documents with the right seller and buyer — see the dated entry below. v1.50.76 was a **patch**
 > release: credit/debit/refund notes keep the time they were created at, not 12:00 AM — see the dated entry below. v1.50.75 was a **patch**
 > release: the v1.50.74 DR313 fix now also works for notes created and edited on screen — see the dated entry below. v1.50.74 was a **patch**
 > release: credit, debit and refund notes send LHDN the original's e-Invoice number (fixes DR313) — see the dated entry below. v1.50.73 was a **patch**
@@ -514,6 +515,26 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.77 (self-billed documents saved in Invoice Edit)
+
+- **Fixed: saving a self-billed document (11-14) in Invoice Edit built the LHDN payload with the wrong parties.** The
+  general-TIN seller picked in the form (EI00000000010 or EI00000000030) was sent as the **buyer**, and the seller was
+  always forced to EI00000000010. Edit now assigns them like Create: the form's supplier is the seller, the user's own
+  company is the buyer. Found in the daily review: it also let a self-billed note's DR313 original lookup (v1.50.74)
+  match on the shared general-TIN buyer, so another company's invoice number could appear in that note's generated
+  JSON when its UUID was typed in (Low, CWE-639). Self-billed drafts last saved in Edit should be opened and saved again
+  before submitting.
+- The DR313 original lookup orders its matches, so the result is the same every time if a UUID ever repeats.
+- Test: `InvoiceEditSelfBilledHeaderTests` (fails on the old code, passes now).
+- **Deploy:** after each verified pre-deploy database backup, `Invoke-VerifiedDbBackup` (scripts/DeployGuards.ps1) deletes
+  that database's own pre-deploy `.bak` files older than 30 days from the same folder on the SQL host. Covered by
+  `DeployGuardsTests.VerifiedDbBackup_BacksUpVerifiesAndRecordsEachDatabase`.
+- **Dependencies:** Magick.NET-Q16-AnyCPU 15.1.0 → 15.1.1, Microsoft.Extensions.Http.Resilience 11.0.0 → 11.0.1.
+  Dependabot now ignores major versions of the runtime-bound ASP.NET Core / EF Core packages: production stays on
+  .NET 10 (10.0.15+, monthly patches) until .NET 11 reaches 11.0.1/11.0.2.
+- **Docs:** a credit/debit/refund note saved before its original reached EINVWORLD must be saved again before
+  submitting (DOCUMENTATION.md, Original-invoice reference).
 
 ## 📅 2026-11-26 — CI: Dependabot patch updates merge themselves (no app change)
 

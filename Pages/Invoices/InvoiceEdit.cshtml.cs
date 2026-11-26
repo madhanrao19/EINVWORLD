@@ -1394,7 +1394,7 @@ namespace eInvWorld.Pages.Invoices
         private static bool IsAdjustment(string? docTypeCode) => EINVWORLD.Helpers.TinHelper.IsAdjustmentDocType(docTypeCode);
 
         // ✅ Updated signature
-        private InputModels.InvoiceHeader CreateInvoiceHeader(
+        internal InputModels.InvoiceHeader CreateInvoiceHeader(
             PartyInfo supplier,
             PartyInfo? customer,
             eInvWorld.Models.InputModel.PublicCustomer? publicCustomer)
@@ -1442,24 +1442,11 @@ namespace eInvWorld.Pages.Invoices
 
             if (IsSelfBilled(Invoice.DocTypeCode))
             {
-                _logger.LogInformation("Self-Billed Document detected. Assigning General TIN as Supplier.");
-
-                invoiceHeader.Customer = supplier;
-                invoiceHeader.CustomerId = supplier.PartyInfoId;
-
-                var generalTIN = _context.PartyInfos
-                    .FirstOrDefault(p => p.TIN == "EI00000000010");
-
-                if (generalTIN != null)
-                {
-                    invoiceHeader.Supplier = generalTIN;
-                    _logger.LogInformation("Assigned General TIN as Supplier: {TIN} - {CompanyName}", generalTIN.TIN, generalTIN.CompanyName);
-                }
-                else
-                {
-                    _logger.LogError("No General TIN found! Self-billed document may be invalid.");
-                    invoiceHeader.Supplier = supplier;
-                }
+                // As in Create: the form's supplier is the general-TIN seller (EI...10 or EI...30, checked by
+                // InvoiceWriteGuard) and its buyer is the user's own company, which issues the document.
+                invoiceHeader.Supplier = supplier;
+                invoiceHeader.Customer = customer!;
+                invoiceHeader.CustomerId = customer?.PartyInfoId;
 
                 // PublicCustomer normally not used in self-billed flow
                 invoiceHeader.PublicCustomer = null;

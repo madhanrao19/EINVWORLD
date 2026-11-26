@@ -230,7 +230,10 @@ the ID the original was submitted under (DR313). `InvoiceMapper` sends the origi
 by Reference UUID within the issuing company (supplier, or buyer for self-billed). Only when the original isn't in
 EINVWORLD (or its number carries sync's "(n)" collision suffix) does it send the typed Reference Document Number,
 and "Ready for LHDN" warns that it must match exactly. Reference Document Number is otherwise the user's own reference
-for the PDF. The JSON is built on save, so a draft saved before v1.50.74 needs saving again.
+for the PDF. The JSON is built on save, so a draft saved before v1.50.74 needs saving again. The same holds when the
+original reaches EINVWORLD (e.g. by sync) after the note was saved: "Ready for LHDN" looks the original up at submit
+time and won't warn, but the saved JSON still carries the typed reference. Users save the note again before submitting
+(decision 2026-11-26: no automatic check of the saved JSON).
 
 **Field validation** — `InvoiceMapper` enforces LHDN SDK constraints before building the UBL JSON:
 currency exchange rate required when the currency isn't MYR, and every invoice line's unit-of-measure
