@@ -39,9 +39,9 @@ changes are additive and AI/features stay off unless already enabled.
    `RESTORE VERIFYONLY ... WITH CHECKSUM` and msdb, before the site goes offline. No switch skips it. It runs on the
    SQL host over PowerShell remoting as **your Windows identity**, which must be `sysadmin`, or `dbcreator` plus `BACKUP DATABASE` on each database (the app's
    login is not, by design); `-WhatIf` checks that identity. Any failure stops the deploy with the old build online.
-   Files: `<db>_predeploy_<deployed>-to-<new>_<timestamp>.bak` in the instance's default backup folder. They are never
-   deleted automatically (two full backups per deploy): prune old ones by hand, keeping at least the last two deploys,
-   and watch free space if that folder shares a volume with the data/log files. PowerShell remoting from your PC to the
+   Files: `<db>_predeploy_<deployed>-to-<new>_<timestamp>.bak` in the instance's default backup folder. Retention is 30
+   days: after this run's backup verifies, that database's `_predeploy_`/`_pre-deploy_` `.bak` files older than 30 days
+   in the same folder are deleted (the new one always stays). Watch free space if that folder shares a volume with the data/log files. PowerShell remoting from your PC to the
    server is required (there is no credential fallback; without it the deploy stops at this step, site untouched).
    **It copies nothing until the app has stopped:** it waits (up to `-ShutdownTimeoutSeconds`, default 120)
    until no `.dll`/`.exe` in that `App\` is held open; on timeout it stops, nothing was copied, and the old
