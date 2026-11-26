@@ -261,6 +261,18 @@ namespace EINVWORLD.Tests
             Assert.Equal(expected, InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note(docType, refUuid)).FirstOrDefault());
 
         [Fact]
+        public void OriginalInvoiceNoQuery_Uses_The_Party_Objects_When_The_Ids_Are_Not_Set()
+        {
+            // Create/Edit (CreateInvoiceHeader) set Supplier but not SupplierId: Staging DR313 on v1.50.74.
+            var note = Note("02", "UUID-OWN", supplierId: null, customerId: null);
+            note.Supplier = new PartyInfo { PartyInfoId = 1 };
+            note.Customer = new PartyInfo { PartyInfoId = 2 };
+            Assert.Equal("EINV00001", InvoiceMapper.OriginalInvoiceNoQuery(Saveds, note).FirstOrDefault());
+            note.Supplier = new PartyInfo { PartyInfoId = 9 };   // another supplier's object: still never matched
+            Assert.Null(InvoiceMapper.OriginalInvoiceNoQuery(Saveds, note).FirstOrDefault());
+        }
+
+        [Fact]
         public void OriginalInvoiceNoQuery_SelfBilled_Matches_On_The_Buyer_Who_Issued_It()
         {
             Assert.Equal("SB-ORIG-1", InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note("12", "UUID-SB", supplierId: 7, customerId: 2)).FirstOrDefault());

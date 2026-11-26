@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.74`** (`AppInfo:Version` in `appsettings.json`). v1.50.74 is a **patch**
+> **Current version: `v1.50.75`** (`AppInfo:Version` in `appsettings.json`). v1.50.75 is a **patch**
+> release: the v1.50.74 DR313 fix now also works for notes created and edited on screen — see the dated entry below. v1.50.74 was a **patch**
 > release: credit, debit and refund notes send LHDN the original's e-Invoice number (fixes DR313) — see the dated entry below. v1.50.73 was a **patch**
 > release: recipients no longer see the issuer's internal history or staff usernames; "Send to buyers" is capped and rate limited — see the dated entry below. v1.50.72 was a **patch**
 > release: only the issuer can send to buyers, accurate Buyer dashboard, received-invoice email only once validated — see the dated entry below. v1.50.71 was a **patch**
@@ -512,6 +513,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.75 (DR313 fix reaches Create and Edit)
+
+- **Fixed: v1.50.74 did not take effect for credit/debit/refund notes made on the Create or Edit page** (Staging:
+  fresh credit notes still came back DR313). Those pages give `InvoiceMapper` the header with the `Supplier` object set
+  but `SupplierId` left empty, so the issuer-scoped lookup of the original found nothing and fell back to the typed
+  reference. The lookup now takes the party's id from the object when the id field is empty. CSV import already set both.
+- Tests: `InvoiceMapperTests.OriginalInvoiceNoQuery_Uses_The_Party_Objects_When_The_Ids_Are_Not_Set`; the integration
+  test now builds the note the way Create does (objects set, ids empty).
 
 ## 📅 2026-11-26 — v1.50.74 (credit/debit/refund notes reference the original's e-Invoice number, DR313)
 
