@@ -30,7 +30,9 @@ namespace EINVWORLD.Helpers
         /// <summary>LHDN refuses documents whose issue date is more than 72 hours old.</summary>
         public const int MaxIssueAgeDays = 3;
 
-        public static List<ReadinessItem> Check(InvoiceHeader invoice, ISet<string>? activeUnitCodes, DateTime nowMyt)
+        /// <param name="originalFound">For an adjustment note: whether its original was found here (see
+        /// <see cref="InvoiceMapper.OriginalInvoiceNoQuery"/>); null when not looked up.</param>
+        public static List<ReadinessItem> Check(InvoiceHeader invoice, ISet<string>? activeUnitCodes, DateTime nowMyt, bool? originalFound = null)
         {
             ArgumentNullException.ThrowIfNull(invoice);
             var items = new List<ReadinessItem>();
@@ -51,6 +53,8 @@ namespace EINVWORLD.Helpers
             if (currencyError != null) items.Add(new(Invoice, true, currencyError, "Invoice.ExchangeRate"));
             if (TinHelper.IsAdjustmentDocType(invoice.DocTypeCode) && string.IsNullOrWhiteSpace(invoice.RefUUID))
                 items.Add(new(Invoice, true, "Reference UUID is required for credit, debit and refund notes.", "Invoice.RefUUID"));
+            else if (originalFound == false)
+                items.Add(new(Invoice, false, "The original e-Invoice for this Reference UUID isn't in EINVWORLD, so LHDN receives the Reference Document Number as the original's e-Invoice number. It must match the original exactly, or LHDN rejects the note (DR313).", "Invoice.RefDocumentNo"));
             if (invoice.IssueDate == null)
                 items.Add(new(Invoice, true, "Set the issue date.", "Invoice.IssueDate"));
             else if ((nowMyt - invoice.IssueDate.Value).TotalDays > MaxIssueAgeDays)
@@ -114,7 +118,9 @@ namespace EINVWORLD.Helpers
                 .FirstOrDefaultAsync(i => i.InvoiceNo == invoiceNo, ct);
             if (invoice == null) return null;
             var units = new HashSet<string>(await db.UnitTypes.Where(u => u.IsActive).Select(u => u.Code).ToListAsync(ct), StringComparer.OrdinalIgnoreCase);
-            return Check(invoice, units, DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow));
+            bool? originalFound = TinHelper.DisplayReferenceUuid(invoice.DocTypeCode, invoice.RefUUID) == null ? null
+                : InvoiceMapper.OriginalInternalId(await InvoiceMapper.OriginalInvoiceNoQuery(db.InvoiceHeaders, invoice).FirstOrDefaultAsync(ct)) != null;
+            return Check(invoice, units, DateTimeHelper.ToMalaysiaTime(DateTime.UtcNow), originalFound);
         }
 
         /// <summary>The blocking messages joined for a refusal message; null when the draft may be submitted.</summary>

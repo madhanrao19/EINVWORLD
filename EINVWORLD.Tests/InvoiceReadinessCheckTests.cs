@@ -152,6 +152,18 @@ namespace EINVWORLD.Tests
             Assert.Equal(blocked, Run(inv).Any(i => i.Blocking && i.Field == "Invoice.InvoiceLines[0].ClassificationCode"));
         }
 
+        [Theory]
+        [InlineData(false, true)]   // original not in EINVWORLD: warn (typed reference goes to LHDN)
+        [InlineData(true, false)]
+        [InlineData(null, false)]   // not looked up
+        public void Adjustment_Note_Warns_When_Its_Original_Is_Not_Here(bool? originalFound, bool warned)
+        {
+            var inv = Ready(); inv.DocTypeCode = "02"; inv.RefUUID = "REF";
+            var items = InvoiceReadinessCheck.Check(inv, Units, Now, originalFound);
+            Assert.Equal(warned, items.Any(i => !i.Blocking && i.Field == "Invoice.RefDocumentNo" && i.Message.Contains("DR313")));
+            Assert.DoesNotContain(items, i => i.Blocking);
+        }
+
         [Fact]
         public void Consolidated_Rule_Also_Reads_A_Public_Customer_Buyer()
         {

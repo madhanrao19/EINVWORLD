@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.73`** (`AppInfo:Version` in `appsettings.json`). v1.50.73 is a **patch**
+> **Current version: `v1.50.74`** (`AppInfo:Version` in `appsettings.json`). v1.50.74 is a **patch**
+> release: credit, debit and refund notes send LHDN the original's e-Invoice number (fixes DR313) — see the dated entry below. v1.50.73 was a **patch**
 > release: recipients no longer see the issuer's internal history or staff usernames; "Send to buyers" is capped and rate limited — see the dated entry below. v1.50.72 was a **patch**
 > release: only the issuer can send to buyers, accurate Buyer dashboard, received-invoice email only once validated — see the dated entry below. v1.50.71 was a **patch**
 > release: recipients see an invoice only once LHDN validated it, everywhere — see the dated entry below. v1.50.70 was a **patch**
@@ -511,6 +512,22 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.74 (credit/debit/refund notes reference the original's e-Invoice number, DR313)
+
+- **Fixed: credit, debit and refund notes came back Invalid with DR313** ("Internal ID for DocumentUUID … is mismatched";
+  seen on Production, two credit notes against one Valid invoice). The note sent the typed Reference Document Number
+  as the original's internal ID, but LHDN holds the original under its e-Invoice number (e.g. `EINV00001`).
+  `InvoiceMapper` now looks the original up by Reference UUID, within the issuing company only (supplier; buyer for
+  self-billed 12-14), and sends its e-Invoice number. Applies to every path that builds the JSON (Create, Resend,
+  Edit/draft reopen, CSV import, recurring, Smart Capture via Edit).
+- When the original isn't in EINVWORLD (issued elsewhere), or its number has sync's "(n)" collision suffix, the typed
+  Reference Document Number is still sent and "Ready for LHDN" shows a non-blocking warning that it must match exactly.
+- Reference Document Number is now described as your own reference, printed on the PDF (Create and Edit tooltips).
+- **Deploy note:** the LHDN JSON is built when a draft is saved. Open any unsubmitted credit/debit/refund note and
+  click Update Draft once after deploying, or it is submitted with the old reference.
+- Tests: `InvoiceMapperTests` (lookup scope, self-billed, suffix), `InvoiceReadinessCheckTests` (warning),
+  `Integration/AdjustmentOriginalReferenceTests` (real SQL Server: original's number sent, another company's UUID never resolved).
 
 ## 📅 2026-11-16 — deploy script: verified database backups are mandatory for Production (no app change)
 

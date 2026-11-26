@@ -225,6 +225,13 @@ submit/cancel/reject/poll/search.
 **Document types** (8): `01` Invoice, `02` Credit Note, `03` Debit Note, `04` Refund Note, `11`
 Self-billed Invoice, `12` Self-billed CN, `13` Self-billed DN, `14` Self-billed RN.
 
+**Original-invoice reference (02-04, 12-14)** — LHDN checks `BillingReference/InvoiceDocumentReference/ID` against
+the ID the original was submitted under (DR313). `InvoiceMapper` sends the original's EINVWORLD invoice number, found
+by Reference UUID within the issuing company (supplier, or buyer for self-billed). Only when the original isn't in
+EINVWORLD (or its number carries sync's "(n)" collision suffix) does it send the typed Reference Document Number,
+and "Ready for LHDN" warns that it must match exactly. Reference Document Number is otherwise the user's own reference
+for the PDF. The JSON is built on save, so a draft saved before v1.50.74 needs saving again.
+
 **Field validation** — `InvoiceMapper` enforces LHDN SDK constraints before building the UBL JSON:
 currency exchange rate required when the currency isn't MYR, and every invoice line's unit-of-measure
 code validated against the active `UnitType` table (the official LHDN unit-code list) — not just the

@@ -15,7 +15,7 @@ namespace EINVWORLD.Tests
     public class InvoiceMapperTests
     {
         // A PartyInfo with every field ValidatePartyInfo + MapSupplier require.
-        private static PartyInfo ValidParty(string tin, string company) => new()
+        internal static PartyInfo ValidParty(string tin, string company) => new()
         {
             IndustryClassificationCode = "01111",
             BizDescription = "Growing of maize",
@@ -33,7 +33,7 @@ namespace EINVWORLD.Tests
             TTX = "NA",
         };
 
-        private static InvoiceLine LineWithTax(decimal qty, decimal price, decimal taxPercent)
+        internal static InvoiceLine LineWithTax(decimal qty, decimal price, decimal taxPercent)
         {
             var line = new InvoiceLine
             {
@@ -50,7 +50,7 @@ namespace EINVWORLD.Tests
             return line;
         }
 
-        private static InvoiceHeader Header(string docType, params InvoiceLine[] lines)
+        internal static InvoiceHeader Header(string docType, params InvoiceLine[] lines)
         {
             var header = new InvoiceHeader
             {
@@ -233,6 +233,48 @@ namespace EINVWORLD.Tests
             Assert.Equal("INV-ORIG-1", idr[0].GetProperty("ID")[0].GetProperty("_").GetString());
             Assert.True(br.TryGetProperty("AdditionalDocumentReference", out _));
         }
+
+        // ── Adjustment notes reference the original by its e-Invoice number (DR313) ──────────
+        private static InvoiceHeader Saved(string no, string uuid, int? supplierId, int? customerId) =>
+            new() { InvoiceNo = no, UUID = uuid, SupplierId = supplierId, CustomerId = customerId };
+
+        private static InvoiceHeader Note(string docType, string? refUuid, int? supplierId = 1, int? customerId = 2) =>
+            new() { InvoiceNo = "EINV00002", DocTypeCode = docType, RefUUID = refUuid, SupplierId = supplierId, CustomerId = customerId, RefDocumentNo = "CN-REF" };
+
+        private static readonly IQueryable<InvoiceHeader> Saveds = new[]
+        {
+            Saved("EINV00001", "UUID-OWN", 1, 2),
+            Saved("OTHER-CO-1", "UUID-OTHER", 9, 2),   // another supplier's invoice
+            Saved("SB-ORIG-1", "UUID-SB", 7, 2),       // self-billed original: the buyer (2) issued it
+        }.AsQueryable();
+
+        [Theory]
+        [InlineData("02", "UUID-OWN", "EINV00001")]
+        [InlineData("03", "UUID-OWN", "EINV00001")]
+        [InlineData("04", "UUID-OWN", "EINV00001")]
+        [InlineData("02", "UUID-OTHER", null)]   // same UUID text under another supplier: never used
+        [InlineData("02", "NA", null)]
+        [InlineData("02", null, null)]
+        [InlineData("01", "UUID-OWN", null)]     // not an adjustment
+        [InlineData("11", "UUID-OWN", null)]
+        public void OriginalInvoiceNoQuery_Finds_Only_The_Issuers_Own_Original(string docType, string? refUuid, string? expected) =>
+            Assert.Equal(expected, InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note(docType, refUuid)).FirstOrDefault());
+
+        [Fact]
+        public void OriginalInvoiceNoQuery_SelfBilled_Matches_On_The_Buyer_Who_Issued_It()
+        {
+            Assert.Equal("SB-ORIG-1", InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note("12", "UUID-SB", supplierId: 7, customerId: 2)).FirstOrDefault());
+            Assert.Null(InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note("12", "UUID-SB", supplierId: 7, customerId: 3)).FirstOrDefault());
+        }
+
+        [Theory]
+        [InlineData("EINV00001", "EINV00001")]
+        [InlineData(" EINV00001 ", "EINV00001")]
+        [InlineData("INV-9(1)", null)]   // sync's collision suffix: not the ID LHDN holds
+        [InlineData("", null)]
+        [InlineData(null, null)]
+        public void OriginalInternalId_Drops_Unknown_And_Sync_Suffixed_Numbers(string? invoiceNo, string? expected) =>
+            Assert.Equal(expected, InvoiceMapper.OriginalInternalId(invoiceNo));
 
         // ── Party identification filtering ────────────────────────────────────────────────────
         [Fact]
