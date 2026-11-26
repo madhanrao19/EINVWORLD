@@ -278,7 +278,7 @@ namespace eInvWorld.Pages.Invoices
         }
 
 
-        private async Task LoadSuppliersAndCustomers()
+        internal async Task LoadSuppliersAndCustomers()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -309,7 +309,15 @@ namespace eInvWorld.Pages.Invoices
                 // ----------------------------------------------------
                 // 🔥 CRITICAL FIX: Use SAME buyer service as CreateInvoice
                 // ----------------------------------------------------
-                if (Invoice?.SupplierId > 0)
+                if (IsSelfBilled(Invoice?.DocTypeCode ?? ""))
+                {
+                    // Self-billed: the buyer is one of the user's own companies (as in OnGetLoadCustomersAsync),
+                    // not a buyer of the general-TIN seller, or the saved buyer is missing from the list.
+                    Customers = userCompanies
+                        .Select(uc => new SelectListItem { Value = $"PI_{uc.PartyInfoId}", Text = uc.PartyInfo.CompanyName })
+                        .ToList();
+                }
+                else if (Invoice?.SupplierId > 0)
                 {
                     Customers = await _buyerService
                         .GetCombinedBuyersBySupplierAsync(Invoice.SupplierId);

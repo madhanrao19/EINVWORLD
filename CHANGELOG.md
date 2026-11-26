@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.77`** (`AppInfo:Version` in `appsettings.json`). v1.50.77 is a **patch**
+> **Current version: `v1.50.78`** (`AppInfo:Version` in `appsettings.json`). v1.50.78 is a **patch**
+> release: self-billed drafts reopen in Invoice Edit with their buyer selected — see the dated entry below. v1.50.77 was a **patch**
 > release: Invoice Edit sends self-billed documents with the right seller and buyer — see the dated entry below. v1.50.76 was a **patch**
 > release: credit/debit/refund notes keep the time they were created at, not 12:00 AM — see the dated entry below. v1.50.75 was a **patch**
 > release: the v1.50.74 DR313 fix now also works for notes created and edited on screen — see the dated entry below. v1.50.74 was a **patch**
@@ -515,6 +516,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.78 (self-billed drafts reopen with their buyer)
+
+- **Fixed: reopening a self-billed draft (11-14) in Invoice Edit showed "Select Buyer".** The Buyer list was filled with
+  the general-TIN seller's buyers instead of the user's own companies, so the saved buyer (the own company) wasn't in it.
+  Edit now lists the user's own companies for self-billed documents, as Create and Edit's buyer reload already did.
+- Test: `InvoiceEditSelfBilledBuyerListTests` (SQL Server integration).
 
 ## 📅 2026-11-26 — v1.50.77 (self-billed documents saved in Invoice Edit)
 
