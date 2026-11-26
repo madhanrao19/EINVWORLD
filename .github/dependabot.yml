@@ -17,6 +17,15 @@ updates:
       serilog:
         patterns:
           - "Serilog.*"
+    # Stay on .NET 10 (LTS) with its monthly patches; revisit .NET 11 once it reaches 11.0.1/11.0.2 (Dec 2026/Jan 2027).
+    # Majors of the packages bound to the runtime are ignored; 10.0.x patches still arrive.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions used by the CI workflow itself.
   - package-ecosystem: "github-actions"
