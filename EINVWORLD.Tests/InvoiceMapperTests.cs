@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System;
 using System.Text.Json;
 using eInvWorld.Models.InputModel;
@@ -234,9 +234,9 @@ namespace EINVWORLD.Tests
             Assert.True(br.TryGetProperty("AdditionalDocumentReference", out _));
         }
 
-        // ── Adjustment notes reference the original by its e-Invoice number (DR313) ──────────
-        private static InvoiceHeader Saved(string no, string uuid, int? supplierId, int? customerId) =>
-            new() { InvoiceNo = no, UUID = uuid, SupplierId = supplierId, CustomerId = customerId };
+        // ── Adjustment notes reference the original by its LHDN internal ID (DR313) ──────────
+        private static InvoiceHeader Saved(string no, string uuid, int? supplierId, int? customerId, string? prefixedId = null) =>
+            new() { InvoiceNo = no, UUID = uuid, SupplierId = supplierId, CustomerId = customerId, PrefixedID = prefixedId! };
 
         private static InvoiceHeader Note(string docType, string? refUuid, int? supplierId = 1, int? customerId = 2) =>
             new() { InvoiceNo = "EINV00002", DocTypeCode = docType, RefUUID = refUuid, SupplierId = supplierId, CustomerId = customerId, RefDocumentNo = "CN-REF" };
@@ -246,6 +246,8 @@ namespace EINVWORLD.Tests
             Saved("EINV00001", "UUID-OWN", 1, 2),
             Saved("OTHER-CO-1", "UUID-OTHER", 9, 2),   // another supplier's invoice
             Saved("SB-ORIG-1", "UUID-SB", 7, 2),       // self-billed original: the buyer (2) issued it
+            Saved("INV-9(1)", "UUID-SYNCED", 1, 2, prefixedId: "INV-9"),   // synced; its LHDN ID collided with INV-9 here
+            Saved("INV-7(2)", "UUID-REAL-SUFFIX", 1, 2, prefixedId: "INV-7(2)"), // LHDN's own ID ends in "(2)"
         }.AsQueryable();
 
         [Theory]
@@ -257,6 +259,8 @@ namespace EINVWORLD.Tests
         [InlineData("02", null, null)]
         [InlineData("01", "UUID-OWN", null)]     // not an adjustment
         [InlineData("11", "UUID-OWN", null)]
+        [InlineData("02", "UUID-SYNCED", "INV-9")]           // LHDN's ID, not the local "(1)" InvoiceNo
+        [InlineData("02", "UUID-REAL-SUFFIX", "INV-7(2)")]   // a real "(n)" in LHDN's ID is kept
         public void OriginalInvoiceNoQuery_Finds_Only_The_Issuers_Own_Original(string docType, string? refUuid, string? expected) =>
             Assert.Equal(expected, InvoiceMapper.OriginalInvoiceNoQuery(Saveds, Note(docType, refUuid)).FirstOrDefault());
 
@@ -282,10 +286,10 @@ namespace EINVWORLD.Tests
         [Theory]
         [InlineData("EINV00001", "EINV00001")]
         [InlineData(" EINV00001 ", "EINV00001")]
-        [InlineData("INV-9(1)", null)]   // sync's collision suffix: not the ID LHDN holds
+        [InlineData("INV-7(2)", "INV-7(2)")]   // PrefixedID is LHDN's own ID, kept as is
         [InlineData("", null)]
         [InlineData(null, null)]
-        public void OriginalInternalId_Drops_Unknown_And_Sync_Suffixed_Numbers(string? invoiceNo, string? expected) =>
+        public void OriginalInternalId_Drops_Only_Blank_Ids(string? invoiceNo, string? expected) =>
             Assert.Equal(expected, InvoiceMapper.OriginalInternalId(invoiceNo));
 
         // ── Party identification filtering ────────────────────────────────────────────────────

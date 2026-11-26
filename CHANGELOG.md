@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.78`** (`AppInfo:Version` in `appsettings.json`). v1.50.78 is a **patch**
+> **Current version: `v1.50.79`** (`AppInfo:Version` in `appsettings.json`). v1.50.79 is a **patch**
+> release: notes against a synced invoice whose number got a "(n)" suffix send LHDN its real ID — see the dated entry below. v1.50.78 was a **patch**
 > release: self-billed drafts reopen in Invoice Edit with their buyer selected — see the dated entry below. v1.50.77 was a **patch**
 > release: Invoice Edit sends self-billed documents with the right seller and buyer — see the dated entry below. v1.50.76 was a **patch**
 > release: credit/debit/refund notes keep the time they were created at, not 12:00 AM — see the dated entry below. v1.50.75 was a **patch**
@@ -516,6 +517,19 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.79 (notes against synced originals with a "(n)" suffix, DR313)
+
+- **Fixed: a credit/debit/refund note against a synced invoice whose number was already taken here sent the typed
+  reference instead of the original's LHDN ID.** Sync stores such an invoice as "X(1)"; LHDN knows it as "X". The note
+  lookup (v1.50.74) skipped any "(n)" number, which also skipped real LHDN IDs ending in "(n)". Now it reads
+  `PrefixedID`, which the status sync already kept as LHDN's ID: the full sync stores LHDN's ID there for new invoices,
+  and the "(n)" check is gone.
+- **Database (data only, no schema change):** migration `20261126230000_BackfillSyncedLhdnInternalId`
+  (+ `Apply_BackfillSyncedLhdnInternalId.sql`) sets `PrefixedID` back to "X" for synced rows stored as "X(digits)" while
+  an "X" row exists. Rows created here, or whose `PrefixedID` already differs, are not touched. Down is a no-op (the old
+  value is still in `InvoiceNo`). Notes saved before this release keep their saved JSON: save them again before submitting.
+- Tests: `BackfillSyncedLhdnInternalIdTests` (SQL Server), `InvoiceMapperTests` (synced and real "(n)" originals).
 
 ## 📅 2026-11-26 — v1.50.78 (self-billed drafts reopen with their buyer)
 
