@@ -515,6 +515,12 @@
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
 
+## 📅 2026-11-26 — CI: Dependabot patch updates merge themselves (no app change)
+
+- A new `dependabot-automerge` job in `ci.yml` squash-merges a Dependabot PR when `build-and-test` passes and the
+  update is patch-level only (x.y.Z, read with `dependabot/fetch-metadata`). Minor and major bumps still wait for a
+  person. The merge does not start a CI run on main; the next push to main tests it. Deploys are unchanged.
+
 ## 📅 2026-11-26 — v1.50.76 (adjustment notes keep their issue time)
 
 - **Fixed: credit, debit and refund notes started from an original invoice showed an issue time of 12:00 AM.** The
