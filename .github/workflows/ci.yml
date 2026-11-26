@@ -60,3 +60,24 @@ jobs:
       - name: Publish (main only)
         if: github.ref == 'refs/heads/main'
         run: dotnet publish EINVWORLD.csproj --configuration Release --output publish
+
+  # Merges Dependabot patch-level bumps (x.y.Z) once build-and-test passes. Minor/major bumps stay for a person.
+  # A merge made with GITHUB_TOKEN does not start a new run on main; the next push to main tests the result.
+  dependabot-automerge:
+    needs: build-and-test
+    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Read the update type
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Merge patch updates
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge "$PR_URL" --squash --delete-branch
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
