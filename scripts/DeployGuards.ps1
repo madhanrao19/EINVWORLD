@@ -409,8 +409,17 @@ function Invoke-VerifiedDbBackup([string]$dataSource, [string[]]$databases, [str
                 if (-not $r.Read()) { throw "[$db] the backup is not recorded in msdb" }
                 if (-not $r.GetBoolean(1) -or $r.GetBoolean(2) -or -not $r.GetBoolean(3)) { throw "[$db] the backup is not a checksummed, undamaged COPY_ONLY backup" }
                 [pscustomobject]@{ Database = $db; File = $r.GetString(0) }
+                $newFile = $r.GetString(0)
             }
             finally { $r.Close() }
+            # Retention: only after this run's backup verified, drop this database's own pre-deploy backups older than 30 days.
+            $dir = Split-Path $newFile -Parent
+            if (Test-Path -LiteralPath $dir) {
+                Get-ChildItem -LiteralPath $dir -File -Filter "${db}_pre*deploy_*.bak" |
+                    Where-Object { $_.FullName -ne $newFile -and $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
+                    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force; Write-Host "  [$db] removed backup older than 30 days: $($_.Name)" }
+            }
+            else { Write-Warning "[$db] backup folder $dir isn't reachable from here; old backups were not cleaned up." }
         }
     }
     finally { $conn.Close() }

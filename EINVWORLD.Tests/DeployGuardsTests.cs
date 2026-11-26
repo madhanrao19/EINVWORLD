@@ -116,10 +116,19 @@ try {{
 if ($r.Count -ne 1 -or $r[0].Database -ne '{db}') {{ throw ""unexpected result: $($r | Out-String)"" }}
 if ($r[0].File -notlike '*{db}_predeploy_v9.9.9_*.bak' -or -not (Test-Path -LiteralPath $r[0].File)) {{ throw ""no backup file: $($r[0].File)"" }}
 Remove-Item -LiteralPath $r[0].File
+# Retention: the next run removes this database's pre-deploy backups older than 30 days, nothing else.
+$dir = Split-Path $r[0].File -Parent
+$old = Join-Path $dir '{db}_pre-deploy_20200101_000000.bak'; $recent = Join-Path $dir '{db}_predeploy_v0_20990101_000000.bak'; $other = Join-Path $dir '{db}x_predeploy_v0_20200101_000000.bak'
+foreach ($f in @($old, $recent, $other)) {{ Set-Content -LiteralPath $f 'x' }}
+(Get-Item -LiteralPath $old).LastWriteTime = (Get-Date).AddDays(-31); (Get-Item -LiteralPath $other).LastWriteTime = (Get-Date).AddDays(-31)
+(Get-Item -LiteralPath $recent).LastWriteTime = (Get-Date).AddDays(-29)
 # The way the deploy calls it: the function as a script block through Invoke-Command, the database list as one argument.
 $r2 = @(Invoke-Command -ScriptBlock ${{function:Invoke-VerifiedDbBackup}} -ArgumentList '{server}', @('{db}'), 'v1.0.0-to-v1.0.1')
 if ($r2.Count -ne 1 -or -not (Test-Path -LiteralPath $r2[0].File)) {{ throw ""Invoke-Command path failed: $($r2 | Out-String)"" }}
 Remove-Item -LiteralPath $r2[0].File
+$kept = (Test-Path -LiteralPath $recent) -and (Test-Path -LiteralPath $other); Remove-Item -LiteralPath $recent, $other -ErrorAction SilentlyContinue
+if (Test-Path -LiteralPath $old) {{ throw ""a backup older than 30 days was kept"" }}
+if (-not $kept) {{ throw ""retention removed a recent backup or another database's backup"" }}
 $lacking = @(Invoke-Command -ScriptBlock ${{function:Get-DbBackupRightsProblems}} -ArgumentList '{server}', @('{db}'))
 if ($lacking.Count) {{ throw ""rights check failed for the database owner: $lacking"" }}");
                 // A missing database stops the run (the deploy stops before anything changes).
