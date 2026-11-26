@@ -299,12 +299,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="PuppeteerSharp" Version="25.15.0" />
     <PackageReference Include="QRCoder" Version="1.8.1" />
-    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="11.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="11.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="11.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.1" />
     <!-- SixLabors.ImageSharp removed: v4.0+ requires a paid commercial license, and the 3.x split-license
          is also restrictive for commercial use. Image resize/WebP now done with Magick.NET (Apache-2.0, already referenced). -->
     <PackageReference Include="SkiaSharp" Version="4.156.0" />
