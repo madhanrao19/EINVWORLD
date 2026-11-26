@@ -44,7 +44,7 @@ namespace EINVWORLD.Tests.Integration
                 {
                     InvoiceNo = no, PrefixedID = no, DocTypeCode = docType, Currency = "MYR", CreatedDate = DateTime.Now,
                     CreatedBy = "integration-test", InternalStatusId = "Draft", SupplierId = supplierId, CustomerId = buyer.PartyInfoId,
-                    UUID = uuid, RefUUID = refUuid, RefDocumentNo = "DCN/1806/362-02/26", IssueDate = DateTime.Now,
+                    UUID = uuid, RefUUID = refUuid, RefDocumentNo = "CN-REF/26", IssueDate = DateTime.Now,
                 });
                 return no;
             }
@@ -59,12 +59,12 @@ namespace EINVWORLD.Tests.Integration
             // The mapper sends the original's number, whatever was typed.
             var note = InvoiceMapperTests.Header("02", InvoiceMapperTests.LineWithTax(1, 10, 0));
             note.SupplierId = own.PartyInfoId; note.CustomerId = buyer.PartyInfoId;
-            note.RefUUID = ownUuid; note.RefDocumentNo = "DCN/1806/362-02/26";
+            note.RefUUID = ownUuid; note.RefDocumentNo = "CN-REF/26";
             Assert.Equal(original, ReferencedId(new InvoiceMapper(ctx).MapToJsonModel(note)));
 
             // Another company's UUID is never resolved: the typed text goes, and the check warns.
             note.RefUUID = otherUuid;
-            Assert.Equal("DCN/1806/362-02/26", ReferencedId(new InvoiceMapper(ctx).MapToJsonModel(note)));
+            Assert.Equal("CN-REF/26", ReferencedId(new InvoiceMapper(ctx).MapToJsonModel(note)));
 
             static bool Warns(System.Collections.Generic.List<ReadinessItem>? items) =>
                 items!.Any(i => !i.Blocking && i.Field == "Invoice.RefDocumentNo");

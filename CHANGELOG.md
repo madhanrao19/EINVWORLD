@@ -517,7 +517,7 @@
 
 - **Fixed: credit, debit and refund notes came back Invalid with DR313** ("Internal ID for DocumentUUID … is mismatched";
   seen on Production, two credit notes against one Valid invoice). The note sent the typed Reference Document Number
-  as the original's internal ID, but LHDN holds the original under its e-Invoice number (e.g. `EINV00053`).
+  as the original's internal ID, but LHDN holds the original under its e-Invoice number (e.g. `EINV00001`).
   `InvoiceMapper` now looks the original up by Reference UUID, within the issuing company only (supplier; buyer for
   self-billed 12-14), and sends its e-Invoice number. Applies to every path that builds the JSON (Create, Resend,
   Edit/draft reopen, CSV import, recurring, Smart Capture via Edit).
