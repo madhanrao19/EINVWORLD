@@ -58,7 +58,9 @@ namespace EINVWORLD.Tests.Integration
 
             // The mapper sends the original's number, whatever was typed.
             var note = InvoiceMapperTests.Header("02", InvoiceMapperTests.LineWithTax(1, 10, 0));
-            note.SupplierId = own.PartyInfoId; note.CustomerId = buyer.PartyInfoId;
+            // As Create/Edit build it (CreateInvoiceHeader): the party objects, but SupplierId left null.
+            note.Supplier.PartyInfoId = own.PartyInfoId; note.Customer.PartyInfoId = buyer.PartyInfoId;
+            note.SupplierId = null; note.CustomerId = null;
             note.RefUUID = ownUuid; note.RefDocumentNo = "CN-REF/26";
             Assert.Equal(original, ReferencedId(new InvoiceMapper(ctx).MapToJsonModel(note)));
 

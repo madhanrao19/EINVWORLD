@@ -428,8 +428,9 @@ namespace eInvWorld.Services.Mappers
         {
             var uuid = EINVWORLD.Helpers.TinHelper.DisplayReferenceUuid(note.DocTypeCode, note.RefUUID);
             var noteNo = note.InvoiceNo;
-            var supplierId = note.SupplierId;
-            var customerId = note.CustomerId;
+            // Create/Edit build the header with the Supplier navigation set but SupplierId left null.
+            var supplierId = note.SupplierId ?? note.Supplier?.PartyInfoId;
+            var customerId = note.CustomerId ?? note.Customer?.PartyInfoId;
             if (uuid == null) return invoices.Where(_ => false).Select(i => i.InvoiceNo);
             var matches = invoices.Where(i => i.UUID == uuid && i.InvoiceNo != noteNo);
             matches = EINVWORLD.Helpers.TinHelper.IsSelfBilledDocType(note.DocTypeCode)
