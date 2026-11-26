@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.75`** (`AppInfo:Version` in `appsettings.json`). v1.50.75 is a **patch**
+> **Current version: `v1.50.76`** (`AppInfo:Version` in `appsettings.json`). v1.50.76 is a **patch**
+> release: credit/debit/refund notes keep the time they were created at, not 12:00 AM — see the dated entry below. v1.50.75 was a **patch**
 > release: the v1.50.74 DR313 fix now also works for notes created and edited on screen — see the dated entry below. v1.50.74 was a **patch**
 > release: credit, debit and refund notes send LHDN the original's e-Invoice number (fixes DR313) — see the dated entry below. v1.50.73 was a **patch**
 > release: recipients no longer see the issuer's internal history or staff usernames; "Send to buyers" is capped and rate limited — see the dated entry below. v1.50.72 was a **patch**
@@ -513,6 +514,13 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-26 — v1.50.76 (adjustment notes keep their issue time)
+
+- **Fixed: credit, debit and refund notes started from an original invoice showed an issue time of 12:00 AM.** The
+  Create page set their issue date to midnight (`DateTime.Now.Date`); it now uses the current Malaysia time like every
+  other create path. LHDN always got the right moment (midnight MYT), so already-submitted notes are not affected;
+  their stored time stays 12:00 AM.
 
 ## 📅 2026-11-26 — v1.50.75 (DR313 fix reaches Create and Edit)
 
