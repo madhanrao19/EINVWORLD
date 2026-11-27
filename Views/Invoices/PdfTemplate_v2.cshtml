@@ -508,7 +508,7 @@
                     <tr>
                         <td class="col-itemno" style="text-align:center; font-weight:bold;">@(i + 1)</td>
                         <td class="col-desc" style="white-space:pre-wrap; text-align:left;">
-                            @Html.Raw(System.Net.WebUtility.HtmlEncode(item.ItemDescription ?? "").Replace("\n", "<br/>"))
+                            @Html.Raw(System.Net.WebUtility.HtmlEncode(EINVWORLD.Helpers.DescriptionWrap.Wrap(item.ItemDescription)).Replace("\n", "<br/>"))
                         </td>
                         <td class="col-qty" style="text-align:center;">@item.Quantity?.ToString("N2")</td>
                         <td class="col-unit" style="text-align:right;">@item.UnitPrice?.ToString("N2")</td>

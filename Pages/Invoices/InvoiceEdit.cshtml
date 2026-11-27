@@ -1842,6 +1842,32 @@
 
         // Removed auto-fill tax function - users should fill their own tax values
 
+        // Same as create-invoice.js enforceLineLength and the server's DescriptionWrap (PDF/Print): 56-char description lines.
+        function enforceLineLength(textarea, maxLength) {
+            const lines = textarea.value.split(/\r?\n/);
+            if (!lines.some(line => line.length > maxLength)) return; // nothing to wrap: leave typing alone
+            const start = textarea.selectionStart;
+            const formattedLines = [];
+            for (let line of lines) {
+                while (line.length > maxLength) {
+                    const lastSpaceIndex = line.substring(0, maxLength).lastIndexOf(' ');
+                    if (lastSpaceIndex === -1) {
+                        formattedLines.push(line.substring(0, maxLength));
+                        line = line.substring(maxLength);
+                    } else {
+                        formattedLines.push(line.substring(0, lastSpaceIndex));
+                        line = line.substring(lastSpaceIndex + 1);
+                    }
+                }
+                formattedLines.push(line);
+            }
+            const newText = formattedLines.join('\n');
+            if (textarea.value !== newText) {
+                textarea.value = newText;
+                textarea.setSelectionRange(start, start);
+            }
+        }
+
         // Real-time field validation functions
         function validateField(field) {
             try {
@@ -3028,6 +3054,7 @@
                     }
                     // Validate other required fields on input
                     if (e.target.name && (e.target.name.includes('ItemDescription'))) {
+                        enforceLineLength(e.target, 56);
                         validateField(e.target);
                     }
                 });
@@ -5464,6 +5491,8 @@
         // No-arg call below now validates nothing (no field has been touched yet on page load) —
         // kept only so the MutationObserver's later no-arg refresh calls share the same code path.
         document.addEventListener('DOMContentLoaded', function() {
+            // Draft reopen / imported / Smart Capture text arrives unwrapped: same 56-char lines as the PDF and Print.
+            document.querySelectorAll('.item-description').forEach(t => enforceLineLength(t, 56));
             setTimeout(() => {
                 forceValidationStyling();
 
@@ -5518,7 +5547,7 @@
 
                         // Fill the fields
                         if (codeInput) codeInput.value = itemData.ItemCode || '';
-                        if (descTextarea) descTextarea.value = itemData.Description || '';
+                        if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); }
 
                         // Same as Create: the catalogue item's own Unit, when it has one.
                         const unitSelect = row.querySelector('select[name*=".UnitOfMeasure"]');

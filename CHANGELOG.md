@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.81`** (`AppInfo:Version` in `appsettings.json`). v1.50.81 is a **patch**
+> **Current version: `v1.50.82`** (`AppInfo:Version` in `appsettings.json`). v1.50.82 is a **patch**
+> release: item descriptions break into the same lines on screen, in the PDF and in Print — see the dated entry below. v1.50.81 was a **patch**
 > release: the login page's "Remember me" box now works — see the dated entry below. v1.50.80 was a **patch**
 > release: typing an Item Description no longer makes the screen flicker on small screens — see the dated entry below. v1.50.79 was a **patch**
 > release: notes against a synced invoice whose number got a "(n)" suffix send LHDN its real ID — see the dated entry below. v1.50.78 was a **patch**
@@ -519,6 +520,21 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-27 — v1.50.82 (item description lines match everywhere)
+
+- **Fixed: an item description could break into different lines in Create/Edit, the invoice preview, the PDF and
+  Print.** Only typing in Create wrapped text at 56 characters. Invoice Edit, picking a saved item, and text from
+  CSV/Bulk Import, Smart Capture, templates and recurring invoices were not wrapped, so each view wrapped them at
+  its own column width.
+- New `Helpers/DescriptionWrap` (same rule as the forms' `enforceLineLength`: break at the last space within 56
+  characters, or hard at 56) is used by the PDF (`PdfTemplate_v2`) and the invoice preview (`InvoiceDetails2`), so
+  every entry path prints the same lines. Invoice Edit now wraps while typing like Create; both pages wrap after a
+  saved item is picked and wrap existing descriptions when the page opens.
+- Known limit: the PDF column is narrower than the form box, so a line of very wide characters (e.g. all capitals)
+  can still wrap once more in the PDF.
+- No database change; stored descriptions change only when a draft is saved again. Tests: `DescriptionWrapTests`
+  (+ a check that both JS copies produce the same lines).
 
 ## 📅 2026-11-27 — v1.50.81 (login "Remember me")
 
