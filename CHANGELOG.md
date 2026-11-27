@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.82`** (`AppInfo:Version` in `appsettings.json`). v1.50.82 is a **patch**
+> **Current version: `v1.50.83`** (`AppInfo:Version` in `appsettings.json`). v1.50.83 is a **patch**
+> release: the item description box grows to fit its text — see the dated entry below. v1.50.82 was a **patch**
 > release: item descriptions break into the same lines on screen, in the PDF and in Print — see the dated entry below. v1.50.81 was a **patch**
 > release: the login page's "Remember me" box now works — see the dated entry below. v1.50.80 was a **patch**
 > release: typing an Item Description no longer makes the screen flicker on small screens — see the dated entry below. v1.50.79 was a **patch**
@@ -520,6 +521,15 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-27 — v1.50.83 (description box grows to fit)
+
+- **Changed: the item description box in Create e-Invoice and Invoice Edit grows to fit its text** instead of showing
+  a scrollbar at three lines, and keeps growing as lines are added (typing, saved item, reopened draft). Uses CSS
+  `field-sizing: content` on `#lineItemsTable textarea`; browsers without it (Firefox, Chrome/Edge before 123) get a
+  small script fallback that sizes the box on load and on input. It still starts at the old minimum height and can be
+  dragged taller. Picking a saved item now fires `input` on the description, so validation refreshes too.
+- No database change.
 
 ## 📅 2026-11-27 — v1.50.82 (item description lines match everywhere)
 

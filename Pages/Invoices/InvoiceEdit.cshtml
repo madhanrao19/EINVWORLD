@@ -315,6 +315,7 @@
     #lineItemsTable textarea {
         resize: vertical;
         min-height: 70px;
+        field-sizing: content; /* grow to fit the description, no scrollbar; older browsers keep the fixed box */
     }
 
         /* REMOVE the ugly green validation ticks and borders from table inputs */
@@ -5493,6 +5494,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Draft reopen / imported / Smart Capture text arrives unwrapped: same 56-char lines as the PDF and Print.
             document.querySelectorAll('.item-description').forEach(t => enforceLineLength(t, 56));
+            // Auto-grow fallback for browsers without CSS field-sizing (Firefox, Chrome/Edge < 123).
+            if (!(window.CSS && CSS.supports('field-sizing', 'content'))) {
+                const grow = t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+                document.querySelectorAll('.item-description').forEach(grow);
+                document.addEventListener('input', e => { if (e.target.classList?.contains('item-description')) grow(e.target); });
+            }
             setTimeout(() => {
                 forceValidationStyling();
 
@@ -5547,7 +5554,7 @@
 
                         // Fill the fields
                         if (codeInput) codeInput.value = itemData.ItemCode || '';
-                        if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); }
+                        if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); descTextarea.dispatchEvent(new Event('input', { bubbles: true })); }
 
                         // Same as Create: the catalogue item's own Unit, when it has one.
                         const unitSelect = row.querySelector('select[name*=".UnitOfMeasure"]');
