@@ -564,7 +564,7 @@ blank in files and supplied via env vars / user-secrets.
 | `FilePathConfig` | Document/draft/submitted/valid/invalid/cancelled/PDF/logo/resource folders. |
 | `Serilog` / `Logging` | File + `SystemLogs` sink config. |
 | `InvoiceStatusUpdaterSettings` | Status-sync polling cadence & UI cooldowns. |
-| `SessionSettings` / `IdentityLockout` | Session timeout/cookie; lockout policy. |
+| `SessionSettings` / `IdentityLockout` | Session timeout/cookie (`IdleTimeoutMinutes`, 60); "Remember me" sliding sign-in lifetime (`RememberMeDays`, 14; 0 = same as idle timeout); lockout policy. |
 | `LogCleanupSettings` | `RetentionDays` (default 30) and `BatchSize` (default 5000) for the batched `SystemLogs` prune. |
 | `InvoiceSettings` | e.g. `BackdateSeconds`. |
 | `Turnstile` | Cloudflare CAPTCHA (`SecretKey` **secret**). |

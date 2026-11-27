@@ -549,6 +549,13 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // "Remember me": a longer sliding lifetime (SessionSettings:RememberMeDays). Sliding renewal keeps this span.
+    options.Events.OnSigningIn = ctx =>
+    {
+        var expiry = sessionSettings.RememberMeExpiry(ctx.Properties.IsPersistent, DateTimeOffset.UtcNow);
+        if (expiry.HasValue) ctx.Properties.ExpiresUtc = expiry;
+        return Task.CompletedTask;
+    };
 });
 
 //builder.Services.Configure<RouteOptions>(options =>

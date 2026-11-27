@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.80`** (`AppInfo:Version` in `appsettings.json`). v1.50.80 is a **patch**
+> **Current version: `v1.50.81`** (`AppInfo:Version` in `appsettings.json`). v1.50.81 is a **patch**
+> release: the login page's "Remember me" box now works — see the dated entry below. v1.50.80 was a **patch**
 > release: typing an Item Description no longer makes the screen flicker on small screens — see the dated entry below. v1.50.79 was a **patch**
 > release: notes against a synced invoice whose number got a "(n)" suffix send LHDN its real ID — see the dated entry below. v1.50.78 was a **patch**
 > release: self-billed drafts reopen in Invoice Edit with their buyer selected — see the dated entry below. v1.50.77 was a **patch**
@@ -518,6 +519,18 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-27 — v1.50.81 (login "Remember me")
+
+- **Fixed: ticking "Remember me" on the login page did nothing.** The checkbox had no `name` (and `value=""`), so the
+  browser never sent it and sign-in was always non-persistent. It is now bound with `asp-for="Input.RememberMe"`.
+  The server already passed the choice to `PasswordSignInAsync` and through the 2FA step.
+- **Ticked:** the sign-in survives closing the browser and lasts `SessionSettings:RememberMeDays` (new, default 14) of
+  inactivity, sliding. **Not ticked:** unchanged — ends when the browser closes, or after `IdleTimeoutMinutes` (60) idle.
+  Set `RememberMeDays` to 0 to keep remembered sign-ins on the 60-minute limit. Changing the password, "sign out
+  everywhere" (security stamp) or locking the account still ends a remembered sign-in within 5 minutes, and admin MFA
+  enforcement is unchanged. Set in `Program.cs` (`OnSigningIn`) via `SessionSettings.RememberMeExpiry`.
+- No database change. Tests: `SessionSettingsTests`.
 
 ## 📅 2026-11-27 — v1.50.80 (Item Description flicker)
 
