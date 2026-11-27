@@ -1,6 +1,7 @@
 # 🧾 EINVWORLD Developer Change Log
 
-> **Current version: `v1.50.79`** (`AppInfo:Version` in `appsettings.json`). v1.50.79 is a **patch**
+> **Current version: `v1.50.80`** (`AppInfo:Version` in `appsettings.json`). v1.50.80 is a **patch**
+> release: typing an Item Description no longer makes the screen flicker on small screens — see the dated entry below. v1.50.79 was a **patch**
 > release: notes against a synced invoice whose number got a "(n)" suffix send LHDN its real ID — see the dated entry below. v1.50.78 was a **patch**
 > release: self-billed drafts reopen in Invoice Edit with their buyer selected — see the dated entry below. v1.50.77 was a **patch**
 > release: Invoice Edit sends self-billed documents with the right seller and buyer — see the dated entry below. v1.50.76 was a **patch**
@@ -517,6 +518,16 @@
 > by default** in Development and Production; enabled on Staging only, for verification (real Ollama
 > sign-off still outstanding — see
 > `POST-DEPLOY-CHECKLIST.md`).
+
+## 📅 2026-11-27 — v1.50.80 (Item Description flicker)
+
+- **Fixed: typing in Item Description made the screen flicker on some laptops** (Create e-Invoice and Invoice Edit).
+  Each keystroke added Bootstrap's `is-valid` class to the line field and then removed it again. That class adds
+  right-hand padding, so the description re-wrapped twice per key and the lines table jumped. It showed only on
+  narrow screens or high Windows scaling, where the text sits near the wrap point. Line fields no longer get
+  `is-valid` (the line table already hid its green style), and the duplicate `keyup` validation binding is gone
+  (`input` already covers typing). Red "required" errors are unchanged.
+- No database change. No tests: browser-only styling, checked with a JS syntax check and the build.
 
 ## 📅 2026-11-26 — v1.50.79 (notes against synced originals with a "(n)" suffix, DR313)
 
