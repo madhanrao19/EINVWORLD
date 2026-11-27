@@ -558,6 +558,13 @@
 - **Docs:** a credit/debit/refund note saved before its original reached EINVWORLD must be saved again before
   submitting (DOCUMENTATION.md, Original-invoice reference).
 
+## 📅 2026-11-27 — CI: Dependabot auto-merge waits for every required check (no app change)
+
+- The `dependabot-automerge` job failed on every PR: it ran right after `build-and-test`, while the required CodeQL
+  check (`Analyze (csharp)`, another workflow) was still running, so GitHub refused the merge. It now turns on
+  auto-merge (`gh pr merge --auto`) and GitHub merges once all required checks pass. The repo's "Allow auto-merge"
+  setting is on (2026-11-27). CodeQL `init`/`analyze` bumps are grouped into one PR (#535), as they must match.
+
 ## 📅 2026-11-26 — CI: Dependabot patch updates merge themselves (no app change)
 
 - A new `dependabot-automerge` job in `ci.yml` squash-merges a Dependabot PR when `build-and-test` passes and the
