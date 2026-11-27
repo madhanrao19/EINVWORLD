@@ -3820,6 +3820,8 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
         // No-arg call below now validates nothing (no field has been touched yet on page load) —
         // kept only so the MutationObserver's later no-arg refresh calls share the same code path.
         document.addEventListener('DOMContentLoaded', function() {
+            // Template / resend / imported text arrives unwrapped: same 56-char lines as typing, the PDF and Print.
+            document.querySelectorAll('.item-description').forEach(t => enforceLineLength(t, 56));
             setTimeout(() => {
                 forceValidationStyling();
 
@@ -4135,7 +4137,7 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
 
                 // Fill the fields
                 if (codeInput) codeInput.value = itemData.ItemCode || '';
-                if (descTextarea) descTextarea.value = itemData.Description || '';
+                if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); }
 
                 // Unit/Unit Price are the catalogue item's own defaults — only prefill when the
                 // catalogue actually has them set; never blank out whatever the user already typed.
