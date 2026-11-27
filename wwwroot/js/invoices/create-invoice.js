@@ -219,8 +219,9 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
                 if (!field) return;
 
                 if (isValid) {
-                    field.classList.remove('is-invalid');
-                    field.classList.add('is-valid');
+                    // No .is-valid: the line table hides it anyway, and its extra padding re-wrapped the
+                    // Item Description textarea on every keystroke (forceValidationStyling strips it again) = flicker.
+                    field.classList.remove('is-invalid', 'is-valid');
                 } else {
                     field.classList.remove('is-valid');
                     field.classList.add('is-invalid');
@@ -3827,7 +3828,6 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
                 requiredFields.forEach(field => {
                     field.addEventListener('input', forceValidationStyling);
                     field.addEventListener('blur', forceValidationStyling);
-                    field.addEventListener('keyup', forceValidationStyling);
                     // Select2-enhanced fields (classification/unit) commit via jQuery's
                     // .trigger('change'), which a plain addEventListener('change', ...) never
                     // receives — bind through jQuery too so a Select2 pick is actually caught.
