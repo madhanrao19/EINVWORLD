@@ -3822,6 +3822,12 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
         document.addEventListener('DOMContentLoaded', function() {
             // Template / resend / imported text arrives unwrapped: same 56-char lines as typing, the PDF and Print.
             document.querySelectorAll('.item-description').forEach(t => enforceLineLength(t, 56));
+            // Auto-grow fallback for browsers without CSS field-sizing (Firefox, Chrome/Edge < 123).
+            if (!(window.CSS && CSS.supports('field-sizing', 'content'))) {
+                const grow = t => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; };
+                document.querySelectorAll('.item-description').forEach(grow);
+                document.addEventListener('input', e => { if (e.target.classList?.contains('item-description')) grow(e.target); });
+            }
             setTimeout(() => {
                 forceValidationStyling();
 
@@ -4137,7 +4143,7 @@ if (window.einvActions) einvActions.allow(["copyToClipboard", "removeTaxRow", "a
 
                 // Fill the fields
                 if (codeInput) codeInput.value = itemData.ItemCode || '';
-                if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); }
+                if (descTextarea) { descTextarea.value = itemData.Description || ''; enforceLineLength(descTextarea, 56); descTextarea.dispatchEvent(new Event('input', { bubbles: true })); }
 
                 // Unit/Unit Price are the catalogue item's own defaults — only prefill when the
                 // catalogue actually has them set; never blank out whatever the user already typed.
